@@ -1,0 +1,182 @@
+package party.qwer.twentyq.service.riddle.hint
+
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.api.dto.QuestionHistory
+import party.qwer.twentyq.redis.session.HistoryStore
+import party.qwer.twentyq.redis.tracking.HintCountStore
+import party.qwer.twentyq.redis.voting.BlindedTokensStore
+import party.qwer.twentyq.service.riddle.model.HintResult
+import party.qwer.twentyq.util.hint.HintBlindService
+
+@Component
+class HintBlindProcessor(
+    private val historyStore: HistoryStore,
+    private val hintCountStore: HintCountStore,
+    private val blindedTokensStore: BlindedTokensStore,
+    private val blindService: HintBlindService,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(HintBlindProcessor::class.java)
+    }
+
+    class HintWithBlind(
+        val index: Int,
+        val hintNumber: Int,
+        val answer: String,
+        val tokens: List<String>,
+    )
+
+    suspend fun findNext(
+        roomId: String,
+        hints: List<QuestionHistory>,
+    ): HintWithBlind? {
+        hints.forEachIndexed { index, history ->
+            val hintNumber = index + 1
+            val tokens = blindedTokensStore.get(roomId, hintNumber)
+            if (tokens.isNotEmpty()) {
+                return HintWithBlind(
+                    index = index,
+                    hintNumber = hintNumber,
+                    answer = history.answer,
+                    tokens = tokens,
+                )
+            }
+        }
+        return null
+    }
+
+    suspend fun revealPartial(
+        roomId: String,
+        hint: HintWithBlind,
+    ): HintResult.PartiallyRevealed {
+        val revealCount = (hint.tokens.size - 1).coerceAtLeast(1)
+        val outcome = blindService.revealTokens(hint.answer, hint.tokens, revealCount)
+
+        historyStore.updateAt(
+            roomId = roomId,
+            index = hint.index,
+            questionNumber = -hint.hintNumber,
+            question = "힌트 #${hint.hintNumber}",
+            answer = outcome.updatedHint,
+        )
+        blindedTokensStore.update(roomId, hint.hintNumber, outcome.remainingTokens)
+
+        // 텍스트에 보이는 [BLIND] 개수 기준
+        val blindCount = outcome.updatedHint.split("[BLIND]").size - 1
+        log.info(
+            "PARTIAL_REVEAL room={}, hint={}, revealed={}, remainingTokens={}, blindCount={}",
+            roomId,
+            hint.hintNumber,
+            outcome.revealedTokens.size,
+            outcome.remainingTokens.size,
+            blindCount,
+        )
+        return HintResult.PartiallyRevealed(
+            hintNumber = hint.hintNumber,
+            content = outcome.updatedHint,
+            remainingBlinds = blindCount,
+        )
+    }
+
+    suspend fun revealFull(
+        roomId: String,
+        hint: HintWithBlind,
+    ): HintResult.FullyRevealed {
+        val outcome = blindService.revealTokens(hint.answer, hint.tokens, hint.tokens.size)
+
+        historyStore.updateAt(
+            roomId = roomId,
+            index = hint.index,
+            questionNumber = -hint.hintNumber,
+            question = "힌트 #${hint.hintNumber}",
+            answer = outcome.updatedHint,
+        )
+        blindedTokensStore.delete(roomId, hint.hintNumber)
+
+        log.info("FULL_REVEAL room={}, hint={}", roomId, hint.hintNumber)
+        return HintResult.FullyRevealed(
+            hintNumber = hint.hintNumber,
+            content = outcome.updatedHint,
+        )
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    suspend fun applyAndSave(
+        roomId: String,
+        hints: List<String>,
+        target: String,
+        selectedCategory: String?,
+        nextHintNumber: Int,
+    ): HintResult =
+        try {
+            applyAndSaveInternal(roomId, hints, target, selectedCategory, nextHintNumber)
+        } catch (e: Exception) {
+            log.error("APPLY_AND_SAVE_FAILED room={}, error={}", roomId, e.message, e)
+            HintResult.NotAvailable
+        }
+
+    private suspend fun applyAndSaveInternal(
+        roomId: String,
+        hints: List<String>,
+        target: String,
+        selectedCategory: String?,
+        nextHintNumber: Int,
+    ): HintResult {
+        log.info("BLIND_PROCESSING room={}, target={}, category={}", roomId, target, selectedCategory)
+        val blindResults = blindService.blindTargetInHints(hints, target, selectedCategory)
+
+        if (blindResults.isEmpty()) {
+            log.warn("BLIND_EMPTY room={}", roomId)
+            return HintResult.NotAvailable
+        }
+
+        val (hint, tokens) = blindResults.first()
+        log.debug("BLIND_RESULT room={}, hint='{}', tokens={}", roomId, hint, tokens.size)
+
+        // Reactive: hint count increment (non-blocking)
+        @Suppress("TooGenericExceptionCaught")
+        try {
+            log.debug("HINT_COUNT_INCREMENT_START room={}", roomId)
+            hintCountStore.increment(roomId)
+            log.debug("HINT_COUNT_INCREMENT_DONE room={}", roomId)
+        } catch (e: Exception) {
+            log.error("HINT_COUNT_INCREMENT_FAILED room={}, error={}", roomId, e.message, e)
+        }
+
+        if (tokens.isNotEmpty()) {
+            log.debug("BLIND_TOKENS_SAVE_START room={}, tokens={}", roomId, tokens.size)
+            blindedTokensStore.save(roomId, nextHintNumber, tokens)
+            log.debug("BLIND_TOKENS_SAVE_DONE room={}", roomId)
+        } else {
+            log.debug("BLIND_TOKENS_DELETE_START room={}", roomId)
+            blindedTokensStore.delete(roomId, nextHintNumber)
+            log.debug("BLIND_TOKENS_DELETE_DONE room={}", roomId)
+        }
+
+        log.debug("HISTORY_ADD_START room={}", roomId)
+        historyStore.add(
+            roomId = roomId,
+            questionNumber = -nextHintNumber,
+            question = "힌트 #$nextHintNumber",
+            answer = hint,
+        )
+        log.debug("HISTORY_ADD_DONE room={}", roomId)
+
+        // 텍스트에 보이는 [BLIND] 개수 기준
+        val blindCount = hint.split("[BLIND]").size - 1
+        log.info(
+            "SAVE_SUCCESS room={}, hint={}, tokens={}, blindCount={}",
+            roomId,
+            nextHintNumber,
+            tokens.size,
+            blindCount,
+        )
+
+        return HintResult.Generated(
+            hintNumber = nextHintNumber,
+            content = hint,
+            remainingBlinds = blindCount,
+        )
+    }
+}

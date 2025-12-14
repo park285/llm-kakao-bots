@@ -1,0 +1,8 @@
+refactor: migrate from LangChain4j to MCP SDK for LLM operations
+
+- Replace LangChain4j dependencies with MCP Kotlin SDK (0.5.0)
+- Add McpLlmClient for stdio-based MCP server communication
+- Refactor GameService and PuzzleService to use McpLlmClient
+- Remove LangChain4j AI Service interfaces (GameMasterService, SolutionValidator, etc)
+- Update Settings to use McpConfig instead of GeminiConfig/PuzzleGeneratorConfig
+- Security layer now delegated to mcp-llm-server (common for 20q + turtle-soup)

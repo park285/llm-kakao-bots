@@ -1,0 +1,1380 @@
+{
+  "concept": [
+    {
+      "name": "사랑 (Love)",
+      "details": { "category": "감정", "related_field": "심리학, 철학" }
+    },
+    {
+      "name": "우정 (Friendship)",
+      "details": { "category": "인간관계", "related_field": "사회학, 심리학" }
+    },
+    {
+      "name": "행복 (Happiness)",
+      "details": { "category": "감정/상태", "related_field": "심리학, 철학" }
+    },
+    {
+      "name": "슬픔 (Sadness)",
+      "details": { "category": "감정", "related_field": "심리학" }
+    },
+    {
+      "name": "평화 (Peace)",
+      "details": { "category": "상태/이념", "related_field": "정치학, 사회학" }
+    },
+    {
+      "name": "전쟁 (War)",
+      "details": { "category": "사회 현상", "related_field": "정치학, 역사학" }
+    },
+    {
+      "name": "자유 (Freedom)",
+      "details": { "category": "이념/권리", "related_field": "철학, 정치학" }
+    },
+    {
+      "name": "정의 (Justice)",
+      "details": { "category": "이념/철학", "related_field": "철학, 법학" }
+    },
+    {
+      "name": "진실 (Truth)",
+      "details": { "category": "철학", "related_field": "철학, 인식론" }
+    },
+    {
+      "name": "거짓 (Lie)",
+      "details": { "category": "사회 현상", "related_field": "심리학, 사회학" }
+    },
+    {
+      "name": "시간 (Time)",
+      "details": { "category": "물리학/철학", "related_field": "물리학, 철학" }
+    },
+    {
+      "name": "공간 (Space)",
+      "details": { "category": "물리학/철학", "related_field": "물리학, 철학, 지리학" }
+    },
+    {
+      "name": "죽음 (Death)",
+      "details": { "category": "철학/생물학", "related_field": "생물학, 철학, 의학" }
+    },
+    {
+      "name": "희망 (Hope)",
+      "details": { "category": "감정", "related_field": "심리학" }
+    },
+    {
+      "name": "지식 (Knowledge)",
+      "details": { "category": "인식론", "related_field": "철학, 교육학" }
+    },
+    {
+      "name": "용기 (Courage)",
+      "details": { "category": "미덕", "related_field": "심리학, 철학" }
+    },
+    {
+      "name": "겸손 (Humility)",
+      "details": { "category": "미덕", "related_field": "철학, 심리학" }
+    },
+    {
+      "name": "오만 (Arrogance)",
+      "details": { "category": "성격", "related_field": "심리학" }
+    },
+    {
+      "name": "예술 (Art)",
+      "details": { "category": "문화", "related_field": "미학, 역사학" }
+    },
+    {
+      "name": "과학 (Science)",
+      "details": { "category": "학문", "related_field": "자연과학, 철학" }
+    },
+    {
+      "name": "철학 (Philosophy)",
+      "details": { "category": "학문", "related_field": "인문학" }
+    },
+    {
+      "name": "종교 (Religion)",
+      "details": { "category": "문화/사회", "related_field": "종교학, 사회학" }
+    },
+    {
+      "name": "민주주의 (Democracy)",
+      "details": { "category": "정치 이념", "related_field": "정치학" }
+    },
+    {
+      "name": "자본주의 (Capitalism)",
+      "details": { "category": "경제 체제", "related_field": "경제학" }
+    },
+    {
+      "name": "사회주의 (Socialism)",
+      "details": { "category": "정치/경제 이념", "related_field": "정치학, 경제학" }
+    },
+    {
+      "name": "공산주의 (Communism)",
+      "details": { "category": "정치/경제 이념", "related_field": "정치학, 경제학" }
+    },
+    {
+      "name": "경제 (Economy)",
+      "details": { "category": "사회 과학", "related_field": "경제학" }
+    },
+    {
+      "name": "정치 (Politics)",
+      "details": { "category": "사회 과학", "related_field": "정치학" }
+    },
+    {
+      "name": "문화 (Culture)",
+      "details": { "category": "사회", "related_field": "사회학, 인류학" }
+    },
+    {
+      "name": "역사 (History)",
+      "details": { "category": "학문", "related_field": "역사학" }
+    },
+    {
+      "name": "법 (Law)",
+      "details": { "category": "사회 규범", "related_field": "법학" }
+    },
+    {
+      "name": "교육 (Education)",
+      "details": { "category": "사회 활동", "related_field": "교육학" }
+    },
+    {
+      "name": "중력 (Gravity)",
+      "details": { "category": "물리학", "related_field": "물리학" }
+    },
+    {
+      "name": "진화 (Evolution)",
+      "details": { "category": "생물학", "related_field": "생물학" }
+    },
+    {
+      "name": "에너지 (Energy)",
+      "details": { "category": "물리학", "related_field": "물리학" }
+    },
+    {
+      "name": "빛 (Light)",
+      "details": { "category": "물리학", "related_field": "물리학" }
+    },
+    {
+      "name": "소리 (Sound)",
+      "details": { "category": "물리학", "related_field": "물리학" }
+    },
+    {
+      "name": "인공지능 (Artificial Intelligence)",
+      "details": { "category": "기술", "related_field": "컴퓨터 과학" }
+    },
+    {
+      "name": "인터넷 (Internet)",
+      "details": { "category": "기술", "related_field": "컴퓨터 과학" }
+    },
+    {
+      "name": "환경 (Environment)",
+      "details": { "category": "자연/사회", "related_field": "생태학, 환경 공학" }
+    },
+    {
+      "name": "인권 (Human Rights)",
+      "details": { "category": "권리", "related_field": "법학, 정치학" }
+    },
+    {
+      "name": "정보 (Information)",
+      "details": { "category": "자산/데이터", "related_field": "정보이론, 컴퓨터공학" }
+    },
+    {
+      "name": "지혜 (Wisdom)",
+      "details": { "category": "인지/미덕", "related_field": "철학, 심리학" }
+    },
+    {
+      "name": "성장 (Growth)",
+      "details": { "category": "과정/발전", "related_field": "교육학, 생물학" }
+    },
+    {
+      "name": "변화 (Change)",
+      "details": { "category": "현상", "related_field": "철학, 사회학" }
+    },
+    {
+      "name": "발전 (Development)",
+      "details": { "category": "과정", "related_field": "경제학, 사회학" }
+    },
+    {
+      "name": "선 (Goodness)",
+      "details": { "category": "도덕적 가치", "related_field": "윤리학, 철학" }
+    },
+    {
+      "name": "악 (Evil)",
+      "details": { "category": "도덕적 가치", "related_field": "윤리학, 종교학" }
+    },
+    {
+      "name": "도덕 (Morality)",
+      "details": { "category": "사회 규범", "related_field": "윤리학, 사회학" }
+    },
+    {
+      "name": "이성 (Reason)",
+      "details": { "category": "사고 능력", "related_field": "철학, 심리학" }
+    },
+    {
+      "name": "감성 (Sensibility)",
+      "details": { "category": "정서 능력", "related_field": "심리학, 예술" }
+    },
+    {
+      "name": "창조 (Creation)",
+      "details": { "category": "행위", "related_field": "예술, 신학" }
+    },
+    {
+      "name": "파괴 (Destruction)",
+      "details": { "category": "행위/현상", "related_field": "물리학, 사회학" }
+    },
+    {
+      "name": "의식 (Consciousness)",
+      "details": { "category": "정신 상태", "related_field": "뇌과학, 심리학" }
+    },
+    {
+      "name": "무의식 (Unconscious)",
+      "details": { "category": "정신 상태", "related_field": "정신분석학, 심리학" }
+    },
+    {
+      "name": "이상 (Ideal)",
+      "details": { "category": "목표/가치", "related_field": "철학, 미학" }
+    },
+    {
+      "name": "운명 (Destiny)",
+      "details": { "category": "초월적 개념", "related_field": "종교학, 철학" }
+    },
+    {
+      "name": "우연 (Coincidence)",
+      "details": { "category": "사건의 성격", "related_field": "확률론, 철학" }
+    },
+    {
+      "name": "원인 (Cause)",
+      "details": { "category": "논리적 관계", "related_field": "논리학, 과학" }
+    },
+    {
+      "name": "결과 (Result)",
+      "details": { "category": "논리적 관계", "related_field": "논리학, 과학" }
+    },
+    {
+      "name": "정체성 (Identity)",
+      "details": { "category": "심리/사회적 특성", "related_field": "심리학, 사회학" }
+    },
+    {
+      "name": "문명 (Civilization)",
+      "details": { "category": "인류 발전 단계", "related_field": "역사학, 인류학" }
+    },
+    {
+      "name": "대중 (Public)",
+      "details": { "category": "사회 집단", "related_field": "사회학, 정치학" }
+    },
+    {
+      "name": "영토 (Territory)",
+      "details": { "category": "지리/정치", "related_field": "지리학, 정치학" }
+    },
+    {
+      "name": "금융 (Finance)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 경영학" }
+    },
+    {
+      "name": "권위 (Authority)",
+      "details": { "category": "사회적 힘", "related_field": "정치학, 사회학" }
+    },
+    {
+      "name": "권력 (Power)",
+      "details": { "category": "사회적 영향력", "related_field": "정치학, 사회학" }
+    },
+    {
+      "name": "권리 (Right)",
+      "details": { "category": "법적/도덕적 힘", "related_field": "법학, 윤리학" }
+    },
+    {
+      "name": "의무 (Duty)",
+      "details": { "category": "법적/도덕적 구속", "related_field": "법학, 윤리학" }
+    },
+    {
+      "name": "공화주의 (Republicanism)",
+      "details": { "category": "정치 이념", "related_field": "정치학, 법학" }
+    },
+    {
+      "name": "전체주의 (Totalitarianism)",
+      "details": { "category": "정치 체제", "related_field": "정치학, 역사학" }
+    },
+    {
+      "name": "시장경제 (Market Economy)",
+      "details": { "category": "경제 체제", "related_field": "경제학" }
+    },
+    {
+      "name": "기술 (Technology)",
+      "details": { "category": "응용 과학", "related_field": "공학" }
+    },
+    {
+      "name": "공학 (Engineering)",
+      "details": { "category": "응용 학문", "related_field": "공학" }
+    },
+    {
+      "name": "대중문화 (Pop Culture)",
+      "details": { "category": "문화 현상", "related_field": "문화학, 미디어학" }
+    },
+    {
+      "name": "신앙 (Faith)",
+      "details": { "category": "종교적 심리", "related_field": "종교학, 신학" }
+    },
+    {
+      "name": "신화 (Myth)",
+      "details": { "category": "전승 이야기", "related_field": "인류학, 문학" }
+    },
+    {
+      "name": "징벌 (Punishment)",
+      "details": { "category": "사회적 제재", "related_field": "법학, 교육학" }
+    },
+    {
+      "name": "보상 (Reward)",
+      "details": { "category": "강화 요인", "related_field": "심리학, 경영학" }
+    },
+    {
+      "name": "명예 (Honor)",
+      "details": { "category": "사회적 평가", "related_field": "윤리학, 사회학" }
+    },
+    {
+      "name": "수치 (Shame)",
+      "details": { "category": "감정/사회적 감각", "related_field": "심리학, 사회학" }
+    },
+    {
+      "name": "인내 (Patience)",
+      "details": { "category": "미덕", "related_field": "윤리학, 심리학" }
+    },
+    {
+      "name": "희생 (Sacrifice)",
+      "details": { "category": "행동 양식", "related_field": "윤리학, 종교학" }
+    },
+    {
+      "name": "전자기력 (Electromagnetic Force)",
+      "details": { "category": "물리학", "related_field": "물리학" }
+    },
+    {
+      "name": "불안 (Anxiety)",
+      "details": { "category": "감정", "related_field": "심리학, 정신의학" }
+    },
+    {
+      "name": "공포 (Fear)",
+      "details": { "category": "감정", "related_field": "심리학, 생물학" }
+    },
+    {
+      "name": "질투 (Jealousy)",
+      "details": { "category": "감정", "related_field": "심리학, 진화심리학" }
+    },
+    {
+      "name": "죄책감 (Guilt)",
+      "details": { "category": "감정", "related_field": "심리학, 윤리학" }
+    },
+    {
+      "name": "공감 (Empathy)",
+      "details": { "category": "능력/감정", "related_field": "심리학, 뇌과학" }
+    },
+    {
+      "name": "고독 (Solitude)",
+      "details": { "category": "상태", "related_field": "철학, 문학" }
+    },
+    {
+      "name": "절망 (Despair)",
+      "details": { "category": "감정", "related_field": "심리학, 문학" }
+    },
+    {
+      "name": "열정 (Passion)",
+      "details": { "category": "감정", "related_field": "심리학, 예술" }
+    },
+    {
+      "name": "향수 (Nostalgia)",
+      "details": { "category": "감정", "related_field": "심리학, 문화학" }
+    },
+    {
+      "name": "스트레스 (Stress)",
+      "details": { "category": "생리/심리 반응", "related_field": "의학, 심리학" }
+    },
+    {
+      "name": "트라우마 (Trauma)",
+      "details": { "category": "심리 상태", "related_field": "정신의학, 심리학" }
+    },
+    {
+      "name": "본능 (Instinct)",
+      "details": { "category": "생물학적 특성", "related_field": "생물학, 진화심리학" }
+    },
+    {
+      "name": "지각 (Perception)",
+      "details": { "category": "인지 과정", "related_field": "인지과학, 심리학" }
+    },
+    {
+      "name": "기억 (Memory)",
+      "details": { "category": "인지 기능", "related_field": "뇌과학, 심리학" }
+    },
+    {
+      "name": "상상 (Imagination)",
+      "details": { "category": "인지 능력", "related_field": "심리학, 예술" }
+    },
+    {
+      "name": "논리 (Logic)",
+      "details": { "category": "사고 체계", "related_field": "논리학, 수학" }
+    },
+    {
+      "name": "윤리 (Ethics)",
+      "details": { "category": "행동 규범", "related_field": "윤리학, 철학" }
+    },
+    {
+      "name": "미덕 (Virtue)",
+      "details": { "category": "가치", "related_field": "윤리학, 철학" }
+    },
+    {
+      "name": "악덕 (Vice)",
+      "details": { "category": "가치", "related_field": "윤리학, 종교학" }
+    },
+    {
+      "name": "존재 (Existence)",
+      "details": { "category": "철학적 개념", "related_field": "존재론, 형이상학" }
+    },
+    {
+      "name": "무 (Nothingness)",
+      "details": { "category": "철학적 개념", "related_field": "형이상학, 불교철학" }
+    },
+    {
+      "name": "본질 (Essence)",
+      "details": { "category": "철학적 개념", "related_field": "형이상학, 철학" }
+    },
+    {
+      "name": "현상 (Phenomenon)",
+      "details": { "category": "철학적 개념", "related_field": "현상학, 과학" }
+    },
+    {
+      "name": "역설 (Paradox)",
+      "details": { "category": "논리", "related_field": "논리학, 수사학" }
+    },
+    {
+      "name": "공리주의 (Utilitarianism)",
+      "details": { "category": "윤리 사상", "related_field": "철학, 정치학" }
+    },
+    {
+      "name": "자유의지 (Free Will)",
+      "details": { "category": "철학적 주제", "related_field": "형이상학, 뇌과학" }
+    },
+    {
+      "name": "결정론 (Determinism)",
+      "details": { "category": "철학적 주제", "related_field": "형이상학, 물리학" }
+    },
+    {
+      "name": "이타주의 (Altruism)",
+      "details": { "category": "행동 양식", "related_field": "윤리학, 진화생물학" }
+    },
+    {
+      "name": "이기주의 (Egoism)",
+      "details": { "category": "행동 양식", "related_field": "윤리학, 심리학" }
+    },
+    {
+      "name": "물질 (Matter)",
+      "details": { "category": "물리적 실체", "related_field": "물리학, 화학" }
+    },
+    {
+      "name": "원자 (Atom)",
+      "details": { "category": "물질의 단위", "related_field": "물리학, 화학" }
+    },
+    {
+      "name": "우주 (Universe)",
+      "details": { "category": "물리적 공간", "related_field": "천문학, 물리학" }
+    },
+    {
+      "name": "생태계 (Ecosystem)",
+      "details": { "category": "자연 시스템", "related_field": "생태학, 환경학" }
+    },
+    {
+      "name": "기후 (Climate)",
+      "details": { "category": "자연 현상", "related_field": "기상학, 지구과학" }
+    },
+    {
+      "name": "엔트로피 (Entropy)",
+      "details": { "category": "물리 법칙", "related_field": "열역학, 정보이론" }
+    },
+    {
+      "name": "상대성 (Relativity)",
+      "details": { "category": "물리 이론", "related_field": "물리학" }
+    },
+    {
+      "name": "양자 (Quantum)",
+      "details": { "category": "물리 단위", "related_field": "양자역학" }
+    },
+    {
+      "name": "차원 (Dimension)",
+      "details": { "category": "공간 개념", "related_field": "수학, 물리학" }
+    },
+    {
+      "name": "힘 (Force)",
+      "details": { "category": "물리 작용", "related_field": "물리학" }
+    },
+    {
+      "name": "생명 (Life)",
+      "details": { "category": "생물학적 현상", "related_field": "생물학, 철학" }
+    },
+    {
+      "name": "유기체 (Organism)",
+      "details": { "category": "생명체", "related_field": "생물학" }
+    },
+    {
+      "name": "유전자 (Gene)",
+      "details": { "category": "유전 단위", "related_field": "유전학, 생물학" }
+    },
+    {
+      "name": "바이러스 (Virus)",
+      "details": { "category": "병원체", "related_field": "미생물학, 의학" }
+    },
+    {
+      "name": "공동체 (Community)",
+      "details": { "category": "사회 집단", "related_field": "사회학, 인류학" }
+    },
+    {
+      "name": "가족 (Family)",
+      "details": { "category": "사회 단위", "related_field": "사회학, 인류학" }
+    },
+    {
+      "name": "결혼 (Marriage)",
+      "details": { "category": "사회 제도", "related_field": "사회학, 법학" }
+    },
+    {
+      "name": "혁명 (Revolution)",
+      "details": { "category": "사회 변동", "related_field": "정치학, 역사학" }
+    },
+    {
+      "name": "무정부 (Anarchy)",
+      "details": { "category": "정치 상태", "related_field": "정치학" }
+    },
+    {
+      "name": "외교 (Diplomacy)",
+      "details": { "category": "국가 간 관계", "related_field": "국제정치학" }
+    },
+    {
+      "name": "정책 (Policy)",
+      "details": { "category": "행정 수단", "related_field": "행정학, 정치학" }
+    },
+    {
+      "name": "복지 (Welfare)",
+      "details": { "category": "사회 제도", "related_field": "사회복지학, 경제학" }
+    },
+    {
+      "name": "세금 (Tax)",
+      "details": { "category": "경제 의무", "related_field": "경제학, 법학" }
+    },
+    {
+      "name": "노동 (Labor)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 사회학" }
+    },
+    {
+      "name": "무역 (Trade)",
+      "details": { "category": "경제 교류", "related_field": "경제학, 국제경영" }
+    },
+    {
+      "name": "세계화 (Globalization)",
+      "details": { "category": "사회 현상", "related_field": "국제학, 경제학" }
+    },
+    {
+      "name": "화폐 (Currency)",
+      "details": { "category": "교환 수단", "related_field": "경제학, 금융" }
+    },
+    {
+      "name": "시장 (Market)",
+      "details": { "category": "경제 기구", "related_field": "경제학" }
+    },
+    {
+      "name": "인플레이션 (Inflation)",
+      "details": { "category": "경제 현상", "related_field": "경제학" }
+    },
+    {
+      "name": "투자 (Investment)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 경영학" }
+    },
+    {
+      "name": "소비 (Consumption)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 심리학" }
+    },
+    {
+      "name": "생산 (Production)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 산업공학" }
+    },
+    {
+      "name": "혁신 (Innovation)",
+      "details": { "category": "기술/경영", "related_field": "경영학, 경제학" }
+    },
+    {
+      "name": "경쟁 (Competition)",
+      "details": { "category": "사회/경제 현상", "related_field": "생물학, 경제학" }
+    },
+    {
+      "name": "독점 (Monopoly)",
+      "details": { "category": "시장 형태", "related_field": "경제학, 법학" }
+    },
+    {
+      "name": "자산 (Asset)",
+      "details": { "category": "경제적 가치", "related_field": "회계학, 경제학" }
+    },
+    {
+      "name": "부채 (Debt)",
+      "details": { "category": "경제적 의무", "related_field": "회계학, 경제학" }
+    },
+    {
+      "name": "문학 (Literature)",
+      "details": { "category": "예술 장르", "related_field": "인문학" }
+    },
+    {
+      "name": "음악 (Music)",
+      "details": { "category": "예술 장르", "related_field": "예술학" }
+    },
+    {
+      "name": "회화 (Painting)",
+      "details": { "category": "예술 장르", "related_field": "미술사, 예술학" }
+    },
+    {
+      "name": "건축 (Architecture)",
+      "details": { "category": "기술/예술", "related_field": "건축학, 공학" }
+    },
+    {
+      "name": "미학 (Aesthetics)",
+      "details": { "category": "철학 분과", "related_field": "철학, 예술학" }
+    },
+    {
+      "name": "서사 (Narrative)",
+      "details": { "category": "표현 양식", "related_field": "문학, 영화학" }
+    },
+    {
+      "name": "상징 (Symbol)",
+      "details": { "category": "표현 기법", "related_field": "기호학, 문학" }
+    },
+    {
+      "name": "은유 (Metaphor)",
+      "details": { "category": "수사법", "related_field": "언어학, 문학" }
+    },
+    {
+      "name": "리듬 (Rhythm)",
+      "details": { "category": "예술 요소", "related_field": "음악, 시" }
+    },
+    {
+      "name": "조화 (Harmony)",
+      "details": { "category": "미적 상태", "related_field": "예술, 철학" }
+    },
+    {
+      "name": "가상현실 (Virtual Reality)",
+      "details": { "category": "기술 환경", "related_field": "컴퓨터공학" }
+    },
+    {
+      "name": "알고리즘 (Algorithm)",
+      "details": { "category": "문제 해결 절차", "related_field": "컴퓨터과학, 수학" }
+    },
+    {
+      "name": "데이터 (Data)",
+      "details": { "category": "정보의 원천", "related_field": "정보과학, 통계학" }
+    },
+    {
+      "name": "네트워크 (Network)",
+      "details": { "category": "연결 구조", "related_field": "컴퓨터과학, 사회학" }
+    },
+    {
+      "name": "생명공학 (Biotechnology)",
+      "details": { "category": "응용 과학", "related_field": "생물공학, 의학" }
+    },
+    {
+      "name": "자동화 (Automation)",
+      "details": { "category": "생산 방식", "related_field": "산업공학, 기계공학" }
+    },
+    {
+      "name": "한계 (Limit)",
+      "details": { "category": "철학/수학 개념", "related_field": "수학, 철학" }
+    },
+    {
+      "name": "무한 (Infinity)",
+      "details": { "category": "수/철학 개념", "related_field": "수학, 철학" }
+    },
+    {
+      "name": "균형 (Balance)",
+      "details": { "category": "상태", "related_field": "물리학, 예술" }
+    },
+    {
+      "name": "혼돈 (Chaos)",
+      "details": { "category": "상태/이론", "related_field": "물리학, 수학" }
+    },
+    {
+      "name": "질서 (Order)",
+      "details": { "category": "상태/체계", "related_field": "사회학, 철학" }
+    },
+    {
+      "name": "순환 (Cycle)",
+      "details": { "category": "과정", "related_field": "자연과학, 철학" }
+    },
+    {
+      "name": "패턴 (Pattern)",
+      "details": { "category": "규칙성", "related_field": "수학, 디자인" }
+    },
+    {
+      "name": "구조 (Structure)",
+      "details": { "category": "구성 형태", "related_field": "공학, 사회학" }
+    },
+    {
+      "name": "시스템 (System)",
+      "details": { "category": "체계", "related_field": "시스템공학" }
+    },
+    {
+      "name": "방법 (Method)",
+      "details": { "category": "절차", "related_field": "방법론, 논리학" }
+    },
+    {
+      "name": "언어 (Language)",
+      "details": { "category": "의사소통 수단", "related_field": "언어학, 인지과학" }
+    },
+    {
+      "name": "소통 (Communication)",
+      "details": { "category": "상호작용", "related_field": "커뮤니케이션학" }
+    },
+    {
+      "name": "신뢰 (Trust)",
+      "details": { "category": "사회적 자본", "related_field": "사회학, 심리학" }
+    },
+    {
+      "name": "배신 (Betrayal)",
+      "details": { "category": "행위/사건", "related_field": "심리학, 윤리학" }
+    },
+    {
+      "name": "복수 (Revenge)",
+      "details": { "category": "행위/감정", "related_field": "심리학, 문학" }
+    },
+    {
+      "name": "용서 (Forgiveness)",
+      "details": { "category": "행위/미덕", "related_field": "심리학, 종교학" }
+    },
+    {
+      "name": "기적 (Miracle)",
+      "details": { "category": "초자연적 현상", "related_field": "종교학, 신학" }
+    },
+    {
+      "name": "숫자 (Number)",
+      "details": { "category": "수학", "related_field": "수학, 철학" }
+    },
+    {
+      "name": "기하학 (Geometry)",
+      "details": { "category": "수학", "related_field": "수학, 예술" }
+    },
+    {
+      "name": "확률 (Probability)",
+      "details": { "category": "수학", "related_field": "통계학, 철학" }
+    },
+    {
+      "name": "통계 (Statistics)",
+      "details": { "category": "수학", "related_field": "데이터과학, 사회학" }
+    },
+    {
+      "name": "방정식 (Equation)",
+      "details": { "category": "수학", "related_field": "수학, 물리학" }
+    },
+    {
+      "name": "증명 (Proof)",
+      "details": { "category": "논리 과정", "related_field": "수학, 논리학" }
+    },
+    {
+      "name": "세포 (Cell)",
+      "details": { "category": "생명의 단위", "related_field": "생물학" }
+    },
+    {
+      "name": "분자 (Molecule)",
+      "details": { "category": "화학 물질", "related_field": "화학, 물리학" }
+    },
+    {
+      "name": "뇌 (Brain)",
+      "details": { "category": "신체 기관", "related_field": "생물학, 뇌과학" }
+    },
+    {
+      "name": "심장 (Heart)",
+      "details": { "category": "신체 기관", "related_field": "생물학, 의학" }
+    },
+    {
+      "name": "별 (Star)",
+      "details": { "category": "천체", "related_field": "천문학" }
+    },
+    {
+      "name": "행성 (Planet)",
+      "details": { "category": "천체", "related_field": "천문학" }
+    },
+    {
+      "name": "은하 (Galaxy)",
+      "details": { "category": "천체 시스템", "related_field": "천문학" }
+    },
+    {
+      "name": "블랙홀 (Black Hole)",
+      "details": { "category": "천체 현상", "related_field": "천문학, 물리학" }
+    },
+    {
+      "name": "고체 (Solid)",
+      "details": { "category": "물질 상태", "related_field": "물리학, 화학" }
+    },
+    {
+      "name": "액체 (Liquid)",
+      "details": { "category": "물질 상태", "related_field": "물리학, 화학" }
+    },
+    {
+      "name": "기체 (Gas)",
+      "details": { "category": "물질 상태", "related_field": "물리학, 화학" }
+    },
+    {
+      "name": "전기 (Electricity)",
+      "details": { "category": "에너지 형태", "related_field": "물리학, 공학" }
+    },
+    {
+      "name": "자기 (Magnetism)",
+      "details": { "category": "물리 현상", "related_field": "물리학" }
+    },
+    {
+      "name": "열 (Heat)",
+      "details": { "category": "에너지 형태", "related_field": "열역학" }
+    },
+    {
+      "name": "속도 (Velocity)",
+      "details": { "category": "물리량", "related_field": "물리학" }
+    },
+    {
+      "name": "질량 (Mass)",
+      "details": { "category": "물리량", "related_field": "물리학" }
+    },
+    {
+      "name": "대기 (Atmosphere)",
+      "details": { "category": "자연 환경", "related_field": "지구과학" }
+    },
+    {
+      "name": "해양 (Ocean)",
+      "details": { "category": "자연 환경", "related_field": "지구과학, 해양학" }
+    },
+    {
+      "name": "재난 (Disaster)",
+      "details": { "category": "자연/사회 현상", "related_field": "환경학, 사회학" }
+    },
+    {
+      "name": "생존 (Survival)",
+      "details": { "category": "생명 활동", "related_field": "생물학, 심리학" }
+    },
+    {
+      "name": "적응 (Adaptation)",
+      "details": { "category": "생명 활동", "related_field": "진화론, 심리학" }
+    },
+    {
+      "name": "멸종 (Extinction)",
+      "details": { "category": "생물 현상", "related_field": "생물학, 환경학" }
+    },
+    {
+      "name": "다양성 (Diversity)",
+      "details": { "category": "속성", "related_field": "생태학, 사회학" }
+    },
+    {
+      "name": "습관 (Habit)",
+      "details": { "category": "행동 양식", "related_field": "심리학" }
+    },
+    {
+      "name": "동기 (Motivation)",
+      "details": { "category": "심리 상태", "related_field": "심리학, 경영학" }
+    },
+    {
+      "name": "성격 (Personality)",
+      "details": { "category": "심리 특성", "related_field": "심리학" }
+    },
+    {
+      "name": "태도 (Attitude)",
+      "details": { "category": "심리 자세", "related_field": "심리학, 사회학" }
+    },
+    {
+      "name": "편견 (Prejudice)",
+      "details": { "category": "인지 오류", "related_field": "심리학, 사회학" }
+    },
+    {
+      "name": "고정관념 (Stereotype)",
+      "details": { "category": "인지 구조", "related_field": "사회학, 심리학" }
+    },
+    {
+      "name": "설득 (Persuasion)",
+      "details": { "category": "소통 기술", "related_field": "수사학, 심리학" }
+    },
+    {
+      "name": "협상 (Negotiation)",
+      "details": { "category": "사회적 상호작용", "related_field": "경영학, 정치학" }
+    },
+    {
+      "name": "리더십 (Leadership)",
+      "details": { "category": "사회적 능력", "related_field": "경영학, 심리학" }
+    },
+    {
+      "name": "경영 (Management)",
+      "details": { "category": "조직 운영", "related_field": "경영학" }
+    },
+    {
+      "name": "마케팅 (Marketing)",
+      "details": { "category": "경제 활동", "related_field": "경영학" }
+    },
+    {
+      "name": "브랜드 (Brand)",
+      "details": { "category": "무형 자산", "related_field": "경영학, 디자인" }
+    },
+    {
+      "name": "전략 (Strategy)",
+      "details": { "category": "계획/방법", "related_field": "군사학, 경영학" }
+    },
+    {
+      "name": "전술 (Tactic)",
+      "details": { "category": "실행 방법", "related_field": "군사학, 경영학" }
+    },
+    {
+      "name": "국가 (State)",
+      "details": { "category": "정치 공동체", "related_field": "정치학, 국제법" }
+    },
+    {
+      "name": "정부 (Government)",
+      "details": { "category": "통치 기구", "related_field": "정치학, 행정학" }
+    },
+    {
+      "name": "선거 (Election)",
+      "details": { "category": "정치 절차", "related_field": "정치학" }
+    },
+    {
+      "name": "투표 (Vote)",
+      "details": { "category": "의사 표시", "related_field": "정치학" }
+    },
+    {
+      "name": "정당 (Political Party)",
+      "details": { "category": "정치 단체", "related_field": "정치학" }
+    },
+    {
+      "name": "여론 (Public Opinion)",
+      "details": { "category": "사회 현상", "related_field": "사회학, 정치학" }
+    },
+    {
+      "name": "미디어 (Media)",
+      "details": { "category": "매체", "related_field": "언론학, 사회학" }
+    },
+    {
+      "name": "언론 (Journalism)",
+      "details": { "category": "사회 활동", "related_field": "언론학" }
+    },
+    {
+      "name": "검열 (Censorship)",
+      "details": { "category": "통제 행위", "related_field": "정치학, 미디어" }
+    },
+    {
+      "name": "선전 (Propaganda)",
+      "details": { "category": "설득 전술", "related_field": "정치학, 커뮤니케이션" }
+    },
+    {
+      "name": "전통 (Tradition)",
+      "details": { "category": "문화 유산", "related_field": "인류학, 역사학" }
+    },
+    {
+      "name": "관습 (Custom)",
+      "details": { "category": "사회 규범", "related_field": "사회학, 법학" }
+    },
+    {
+      "name": "축제 (Festival)",
+      "details": { "category": "문화 행사", "related_field": "인류학" }
+    },
+    {
+      "name": "의식 (Ceremony)",
+      "details": { "category": "형식적 행위", "related_field": "인류학, 종교학" }
+    },
+    {
+      "name": "놀이 (Play)",
+      "details": { "category": "문화 활동", "related_field": "문화인류학, 교육학" }
+    },
+    {
+      "name": "게임 (Game)",
+      "details": { "category": "규칙 활동", "related_field": "게임이론, 문화" }
+    },
+    {
+      "name": "스포츠 (Sports)",
+      "details": { "category": "신체 활동", "related_field": "체육학, 사회학" }
+    },
+    {
+      "name": "여행 (Travel)",
+      "details": { "category": "이동/여가", "related_field": "지리학, 관광학" }
+    },
+    {
+      "name": "모험 (Adventure)",
+      "details": { "category": "도전적 활동", "related_field": "심리학, 문학" }
+    },
+    {
+      "name": "음식 (Food)",
+      "details": { "category": "생존 수단/문화", "related_field": "생물학, 문화" }
+    },
+    {
+      "name": "주거 (Housing)",
+      "details": { "category": "생활 환경", "related_field": "건축학, 사회복지" }
+    },
+    {
+      "name": "도시 (City)",
+      "details": { "category": "거주 형태", "related_field": "도시공학, 지리학" }
+    },
+    {
+      "name": "시골 (Countryside)",
+      "details": { "category": "거주 형태", "related_field": "지리학, 사회학" }
+    },
+    {
+      "name": "농업 (Agriculture)",
+      "details": { "category": "산업", "related_field": "농학, 경제학" }
+    },
+    {
+      "name": "산업 (Industry)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 공학" }
+    },
+    {
+      "name": "서비스 (Service)",
+      "details": { "category": "경제 활동", "related_field": "경제학, 경영학" }
+    },
+    {
+      "name": "운송 (Transport)",
+      "details": { "category": "물류/이동", "related_field": "물류학, 공학" }
+    },
+    {
+      "name": "교통 (Traffic)",
+      "details": { "category": "이동 체계", "related_field": "도시공학" }
+    },
+    {
+      "name": "통신 (Telecommunication)",
+      "details": { "category": "기술/소통", "related_field": "공학, 미디어" }
+    },
+    {
+      "name": "보안 (Security)",
+      "details": { "category": "상태/기술", "related_field": "컴퓨터공학, 정치학" }
+    },
+    {
+      "name": "암호 (Cryptography)",
+      "details": { "category": "정보 보호", "related_field": "수학, 컴퓨터공학" }
+    },
+    {
+      "name": "해킹 (Hacking)",
+      "details": { "category": "기술 행위", "related_field": "컴퓨터공학" }
+    },
+    {
+      "name": "소프트웨어 (Software)",
+      "details": { "category": "기술", "related_field": "컴퓨터공학" }
+    },
+    {
+      "name": "하드웨어 (Hardware)",
+      "details": { "category": "기술", "related_field": "전자공학" }
+    },
+    {
+      "name": "클라우드 (Cloud)",
+      "details": { "category": "IT 인프라", "related_field": "컴퓨터공학" }
+    },
+    {
+      "name": "블록체인 (Blockchain)",
+      "details": { "category": "IT 기술", "related_field": "컴퓨터공학, 경제학" }
+    },
+    {
+      "name": "빅데이터 (Big Data)",
+      "details": { "category": "데이터 기술", "related_field": "데이터과학" }
+    },
+    {
+      "name": "사물인터넷 (IoT)",
+      "details": { "category": "네트워크 기술", "related_field": "통신공학" }
+    },
+    {
+      "name": "우주여행 (Space Travel)",
+      "details": { "category": "탐사 활동", "related_field": "항공우주공학" }
+    },
+    {
+      "name": "나노기술 (Nanotechnology)",
+      "details": { "category": "첨단 기술", "related_field": "재료공학" }
+    },
+    {
+      "name": "영혼 (Soul)",
+      "details": { "category": "종교/철학 개념", "related_field": "종교학, 신학" }
+    },
+    {
+      "name": "신 (God)",
+      "details": { "category": "초월적 존재", "related_field": "종교학, 신학" }
+    },
+    {
+      "name": "윤회 (Reincarnation)",
+      "details": { "category": "종교적 개념", "related_field": "불교, 힌두교" }
+    },
+    {
+      "name": "업 (Karma)",
+      "details": { "category": "인과응보", "related_field": "불교, 철학" }
+    },
+    {
+      "name": "깨달음 (Enlightenment)",
+      "details": { "category": "정신적 경지", "related_field": "종교학, 철학" }
+    },
+    {
+      "name": "회의주의 (Skepticism)",
+      "details": { "category": "철학 사상", "related_field": "인식론" }
+    },
+    {
+      "name": "독단 (Dogma)",
+      "details": { "category": "신념 체계", "related_field": "종교학, 철학" }
+    },
+    {
+      "name": "이단 (Heresy)",
+      "details": { "category": "종교적 일탈", "related_field": "종교학, 역사학" }
+    },
+    {
+      "name": "낭만주의 (Romanticism)",
+      "details": { "category": "예술 사조", "related_field": "문학, 예술사" }
+    },
+    {
+      "name": "사실주의 (Realism)",
+      "details": { "category": "예술 사조", "related_field": "문학, 미술" }
+    },
+    {
+      "name": "모더니즘 (Modernism)",
+      "details": { "category": "예술 사조", "related_field": "예술, 건축" }
+    },
+    {
+      "name": "포스트모더니즘 (Postmodernism)",
+      "details": { "category": "철학/예술 사조", "related_field": "철학, 비평" }
+    },
+    {
+      "name": "장르 (Genre)",
+      "details": { "category": "분류 양식", "related_field": "예술학" }
+    },
+    {
+      "name": "스타일 (Style)",
+      "details": { "category": "표현 양식", "related_field": "디자인, 예술" }
+    },
+    {
+      "name": "형식 (Form)",
+      "details": { "category": "구성 요소", "related_field": "미학, 철학" }
+    },
+    {
+      "name": "내용 (Content)",
+      "details": { "category": "구성 요소", "related_field": "미디어, 예술" }
+    },
+    {
+      "name": "주제 (Theme)",
+      "details": { "category": "핵심 아이디어", "related_field": "문학, 예술" }
+    },
+    {
+      "name": "소재 (Subject Matter)",
+      "details": { "category": "구성 재료", "related_field": "예술, 창작" }
+    },
+    {
+      "name": "배경 (Setting)",
+      "details": { "category": "구성 요소", "related_field": "문학, 연극" }
+    },
+    {
+      "name": "인물 (Character)",
+      "details": { "category": "구성 요소", "related_field": "문학, 영화" }
+    },
+    {
+      "name": "갈등 (Conflict)",
+      "details": { "category": "사건 전개", "related_field": "문학, 사회학" }
+    },
+    {
+      "name": "해소 (Resolution)",
+      "details": { "category": "사건 전개", "related_field": "문학, 심리학" }
+    },
+    {
+      "name": "반전 (Twist)",
+      "details": { "category": "서사 기법", "related_field": "문학, 영화" }
+    },
+    {
+      "name": "복선 (Foreshadowing)",
+      "details": { "category": "서사 기법", "related_field": "문학, 영화" }
+    },
+    {
+      "name": "광고 (Advertisement)",
+      "details": { "category": "설득 커뮤니케이션", "related_field": "마케팅, 미디어" }
+    },
+    {
+      "name": "디자인 (Design)",
+      "details": { "category": "응용 예술", "related_field": "미술, 공학" }
+    },
+    {
+      "name": "패션 (Fashion)",
+      "details": { "category": "문화/산업", "related_field": "디자인, 사회학" }
+    },
+    {
+      "name": "사진 (Photography)",
+      "details": { "category": "시각 예술", "related_field": "미술, 미디어" }
+    },
+    {
+      "name": "영상 (Video)",
+      "details": { "category": "미디어", "related_field": "방송, 예술" }
+    },
+    {
+      "name": "조각 (Sculpture)",
+      "details": { "category": "조형 예술", "related_field": "미술" }
+    },
+    {
+      "name": "공예 (Craft)",
+      "details": { "category": "응용 예술", "related_field": "미술, 디자인" }
+    },
+    {
+      "name": "무용 (Dance)",
+      "details": { "category": "공연 예술", "related_field": "예술, 체육" }
+    },
+    {
+      "name": "연극 (Theater)",
+      "details": { "category": "공연 예술", "related_field": "예술" }
+    },
+    {
+      "name": "악기 (Instrument)",
+      "details": { "category": "음악 도구", "related_field": "음악" }
+    },
+    {
+      "name": "연주 (Performance)",
+      "details": { "category": "음악 행위", "related_field": "음악" }
+    },
+    {
+      "name": "작곡 (Composition)",
+      "details": { "category": "창작 행위", "related_field": "음악" }
+    },
+    {
+      "name": "지휘 (Conducting)",
+      "details": { "category": "음악 조정", "related_field": "음악" }
+    },
+    {
+      "name": "관객 (Audience)",
+      "details": { "category": "수용자", "related_field": "예술, 커뮤니케이션" }
+    },
+    {
+      "name": "평론 (Criticism)",
+      "details": { "category": "분석/평가", "related_field": "문학, 예술" }
+    },
+    {
+      "name": "전시 (Exhibition)",
+      "details": { "category": "문화 행사", "related_field": "미술, 박물관학" }
+    },
+    {
+      "name": "박물관 (Museum)",
+      "details": { "category": "문화 기관", "related_field": "역사, 문화" }
+    },
+    {
+      "name": "도서관 (Library)",
+      "details": { "category": "지식 기관", "related_field": "문헌정보학" }
+    },
+    {
+      "name": "회사 (Company)",
+      "details": { "category": "경제 조직", "related_field": "경영학" }
+    },
+    {
+      "name": "은행 (Bank)",
+      "details": { "category": "금융 기관", "related_field": "경제학, 금융" }
+    },
+    {
+      "name": "광업 (Mining)",
+      "details": { "category": "산업", "related_field": "자원공학" }
+    },
+    {
+      "name": "제조 (Manufacturing)",
+      "details": { "category": "산업", "related_field": "산업공학" }
+    },
+    {
+      "name": "건설 (Construction)",
+      "details": { "category": "산업", "related_field": "건축, 토목" }
+    },
+    {
+      "name": "유통 (Distribution)",
+      "details": { "category": "경제 활동", "related_field": "경영학, 물류" }
+    },
+    {
+      "name": "판매 (Sales)",
+      "details": { "category": "경제 활동", "related_field": "경영학" }
+    },
+    {
+      "name": "상담 (Counseling)",
+      "details": { "category": "전문 활동", "related_field": "심리학, 사회복지" }
+    },
+    {
+      "name": "치료 (Therapy)",
+      "details": { "category": "의료 행위", "related_field": "의학, 심리학" }
+    },
+    {
+      "name": "간호 (Nursing)",
+      "details": { "category": "의료 행위", "related_field": "간호학" }
+    },
+    {
+      "name": "봉사 (Volunteering)",
+      "details": { "category": "사회 활동", "related_field": "사회복지, 윤리" }
+    },
+    {
+      "name": "기부 (Donation)",
+      "details": { "category": "사회 활동", "related_field": "사회복지, 경제" }
+    },
+    {
+      "name": "자선 (Charity)",
+      "details": { "category": "사회 활동", "related_field": "윤리, 복지" }
+    },
+    {
+      "name": "협력 (Cooperation)",
+      "details": { "category": "상호작용", "related_field": "사회학, 진화생물학" }
+    },
+    {
+      "name": "타협 (Compromise)",
+      "details": { "category": "갈등 해결", "related_field": "정치학, 심리학" }
+    },
+    {
+      "name": "계약 (Contract)",
+      "details": { "category": "법률 행위", "related_field": "법학, 경제학" }
+    },
+    {
+      "name": "약속 (Promise)",
+      "details": { "category": "언어 행위", "related_field": "윤리, 화용론" }
+    },
+    {
+      "name": "비밀 (Secret)",
+      "details": { "category": "정보 상태", "related_field": "정보학, 심리학" }
+    },
+    {
+      "name": "폭로 (Disclosure)",
+      "details": { "category": "사회 행위", "related_field": "언론, 윤리" }
+    },
+    {
+      "name": "스캔들 (Scandal)",
+      "details": { "category": "사회 사건", "related_field": "사회학, 미디어" }
+    },
+    {
+      "name": "유행 (Trend)",
+      "details": { "category": "사회 현상", "related_field": "마케팅, 사회학" }
+    },
+    {
+      "name": "소문 (Rumor)",
+      "details": { "category": "정보 전파", "related_field": "사회심리학" }
+    },
+    {
+      "name": "명성 (Fame)",
+      "details": { "category": "사회적 지위", "related_field": "사회학" }
+    },
+    {
+      "name": "인기 (Popularity)",
+      "details": { "category": "사회적 선호", "related_field": "사회심리학" }
+    },
+    {
+      "name": "성공 (Success)",
+      "details": { "category": "목표 달성", "related_field": "심리학, 자기계발" }
+    },
+    {
+      "name": "실패 (Failure)",
+      "details": { "category": "결과", "related_field": "심리학, 공학" }
+    },
+    {
+      "name": "도전 (Challenge)",
+      "details": { "category": "행동", "related_field": "심리학, 경영" }
+    },
+    {
+      "name": "포기 (Giving Up)",
+      "details": { "category": "행동", "related_field": "심리학" }
+    },
+    {
+      "name": "승리 (Victory)",
+      "details": { "category": "경쟁 결과", "related_field": "스포츠, 군사" }
+    },
+    {
+      "name": "패배 (Defeat)",
+      "details": { "category": "경쟁 결과", "related_field": "스포츠, 군사" }
+    },
+    {
+      "name": "건강 (Health)",
+      "details": { "category": "신체/정신 상태", "related_field": "의학, 보건학" }
+    },
+    {
+      "name": "질병 (Disease)",
+      "details": { "category": "병리 현상", "related_field": "의학" }
+    },
+    {
+      "name": "약 (Medicine)",
+      "details": { "category": "치료 물질", "related_field": "약학, 의학" }
+    },
+    {
+      "name": "수술 (Surgery)",
+      "details": { "category": "의료 처치", "related_field": "의학" }
+    },
+    {
+      "name": "꿈 (Dream)",
+      "details": { "category": "수면 현상", "related_field": "심리학, 뇌과학" }
+    },
+    {
+      "name": "수면 (Sleep)",
+      "details": { "category": "생리 현상", "related_field": "생물학, 의학" }
+    }
+  ]
+}

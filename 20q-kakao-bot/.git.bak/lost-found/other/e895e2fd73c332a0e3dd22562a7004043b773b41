@@ -1,0 +1,242 @@
+package party.qwer.twentyq.service
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import kotlinx.coroutines.delay
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.ai.AIProvider
+import party.qwer.twentyq.ai.ResponseSchema
+import party.qwer.twentyq.util.MarkdownJsonExtractor
+
+// 현재 지연이슈로 인해 미사용
+@Component
+class HintValidator(
+    private val aiProvider: AIProvider,
+    private val promptManager: party.qwer.twentyq.llm.RiddlePromptManager,
+    private val riddleConfigProvider: party.qwer.twentyq.config.RiddleConfigProvider,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(HintValidator::class.java)
+    }
+
+    private val objectMapper = jacksonObjectMapper()
+
+    private val hintEstimationSchema: Map<String, Any> by lazy {
+        try {
+            val res =
+                this::class.java.classLoader
+                    .getResource(party.qwer.twentyq.config.PromptResourcePaths.SCHEMA_HINT_ESTIMATION)
+                    ?: throw IllegalStateException("hint-estimation.schema.json not found")
+            objectMapper.readValue<Map<String, Any>>(res.readText())
+        } catch (e: Exception) {
+            log.warn("hint-estimation schema load failed, using inline schema: {}", e.message)
+            mapOf(
+                "\$schema" to "https://json-schema.org/draft/2020-12/schema",
+                "title" to "HintEstimation",
+                "type" to "object",
+                "additionalProperties" to false,
+                "properties" to
+                    mapOf(
+                        "estimatedCandidates" to mapOf("type" to "integer", "minimum" to 0),
+                        "hintNumber" to mapOf("type" to "integer", "minimum" to 1, "maximum" to 3),
+                        "rationale" to mapOf("type" to "string"),
+                    ),
+                "required" to listOf("estimatedCandidates", "hintNumber"),
+            )
+        }
+    }
+
+    data class ValidationResult(
+        val isValid: Boolean,
+        val actualCount: Int,
+        val expectedRange: IntRange,
+        val feedback: String,
+    )
+
+    suspend fun validateAndImproveHint(
+        hint: String,
+        hintNumber: Int,
+        target: String,
+        maxRetries: Int = 2,
+    ): String {
+        var currentHint = hint
+        var retryCount = 0
+        var lastValidation: ValidationResult? = null
+
+        while (retryCount < maxRetries) {
+            val validation = validateHintDifficulty(currentHint, hintNumber)
+            lastValidation = validation
+
+            if (validation.isValid) {
+                log.info(
+                    "Hint validated successfully: hintNumber={}, actualCount={}, expectedRange={}",
+                    hintNumber,
+                    validation.actualCount,
+                    validation.expectedRange,
+                )
+                return currentHint
+            }
+
+            log.warn(
+                "Hint validation failed: hintNumber={}, actualCount={}, expectedRange={}, retrying...",
+                hintNumber,
+                validation.actualCount,
+                validation.expectedRange,
+            )
+
+            currentHint =
+                regenerateHint(
+                    target = target,
+                    hintNumber = hintNumber,
+                    previousHint = currentHint,
+                    feedback = validation.feedback,
+                )
+            retryCount++
+            delay(100)
+        }
+
+        log.warn(
+            "Max retries ({}) reached for hint #{} validation. Using last generated hint anyway.",
+            maxRetries,
+            hintNumber,
+        )
+        log.warn(
+            "Hint quality warning: hintNumber={}, actualCount={}, expectedRange={}",
+            hintNumber,
+            lastValidation?.actualCount,
+            lastValidation?.expectedRange,
+        )
+        return currentHint
+    }
+
+    private suspend fun validateHintDifficulty(
+        hint: String,
+        hintNumber: Int,
+    ): ValidationResult {
+        val expectedRange =
+            when (hintNumber) {
+                1 -> 100..300
+                2 -> 50..200
+                else -> 50..200
+            }
+
+        val sys = promptManager.getSystemPrompt("hint_estimation")
+        val usr = promptManager.getUserPrompt("hint_estimation").replace("{hint}", hint)
+        val combinedSys = promptManager.buildCombinedSystemPrompt(sys)
+
+        val response =
+            aiProvider.generate(
+                operation = "hint-validation",
+                systemPrompt = combinedSys,
+                userPrompt = usr,
+                temperature = 0.3,
+                topP = 0.9,
+                schema = ResponseSchema.JsonSchema(hintEstimationSchema),
+            )
+
+        val estimatedCount = parseEstimatedCandidates(response)
+
+        return ValidationResult(
+            isValid = estimatedCount in expectedRange,
+            actualCount = estimatedCount,
+            expectedRange = expectedRange,
+            feedback = generateFeedback(estimatedCount, expectedRange),
+        )
+    }
+
+    private fun parseEstimatedCandidates(response: String): Int {
+        try {
+            val cleaned = MarkdownJsonExtractor.extractJsonFromMarkdown(response)
+            val factory =
+                com.networknt.schema.JsonSchemaFactory.getInstance(
+                    com.networknt.schema.SpecVersion.VersionFlag.V202012,
+                )
+            val schemaNode = objectMapper.readTree(objectMapper.writeValueAsString(hintEstimationSchema))
+            val schema = factory.getSchema(schemaNode)
+            val jsonNode = objectMapper.readTree(cleaned)
+            val errors = schema.validate(jsonNode)
+            if (errors.isEmpty()) {
+                val node = jsonNode.get("estimatedCandidates")
+                val v = node?.asInt()
+                if (v != null) return v
+            } else {
+                log.warn("hint-validation JSON schema errors: {}", errors.firstOrNull()?.message)
+            }
+        } catch (e: Exception) {
+            log.warn("hint-validation JSON parse failed: {}", e.message)
+        }
+        val regex = """Estimated candidates:\s*(\d+)""".toRegex()
+        val match = regex.find(response)
+        return match?.groupValues?.get(1)?.toIntOrNull() ?: 100
+    }
+
+
+
+    private fun generateFeedback(
+        actualCount: Int,
+        expectedRange: IntRange,
+    ): String =
+        when {
+            actualCount < expectedRange.first ->
+                "힌트가 너무 구체적입니다. 더 추상적으로 만들어 ${expectedRange.first}-${expectedRange.last}개의 후보를 남겨야 합니다."
+            actualCount > expectedRange.last ->
+                "힌트가 너무 추상적입니다. 더 구체적으로 만들어 ${expectedRange.first}-${expectedRange.last}개의 후보로 좁혀야 합니다."
+            else -> "난이도가 적절합니다."
+        }
+
+    private suspend fun regenerateHint(
+        target: String,
+        hintNumber: Int,
+        previousHint: String,
+        feedback: String,
+    ): String {
+        val sys = promptManager.getSystemPrompt("hints")
+        val usrTemplate = promptManager.getUserPrompt("hints")
+
+        val targetJson = """{"target":"$target"}"""
+
+        val feedbackContext = """
+
+=== 이전 힌트 검증 결과 ===
+이전 힌트: "$previousHint"
+피드백: $feedback
+
+위 피드백을 반영하여, 힌트 #\${hintNumber}에 적합한 추상화 레벨로 새로운 힌트를 생성하세요.
+CRITICAL: 반드시 프롬프트의 추상화 규칙을 따르고, 목표 후보 개수 범위를 맞춰야 합니다.
+"""
+
+        val finalUsr =
+            usrTemplate
+                .replace("{json}", targetJson)
+                .replace("{hintNumber}", hintNumber.toString()) + feedbackContext
+
+        val combinedSys = promptManager.buildCombinedSystemPrompt(sys)
+        val config = riddleConfigProvider.getConfig()
+
+        log.info("regenerateHint feedback='$feedback', hintNumber=$hintNumber")
+
+        return aiProvider
+            .generate(
+                systemPrompt = combinedSys,
+                userPrompt = finalUsr,
+                operation = "hint-regeneration",
+                temperature = config.temperature.hints,
+                topP = config.topP.hints,
+            ).trim()
+    }
+
+    private fun getExpectedRange(hintNumber: Int): String =
+        when (hintNumber) {
+            1 -> "70-130"
+            2 -> "45-90"
+            else -> "12-30"
+        }
+}
+
+class HintValidationException(
+    message: String,
+    val hintNumber: Int,
+    val actualCount: Int,
+    val expectedRange: IntRange,
+) : RuntimeException(message)

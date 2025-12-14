@@ -1,0 +1,216 @@
+package party.qwer.twentyq.util.hint
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import party.qwer.twentyq.service.KomoranService
+
+@DisplayName("HintBlindRewriter 테스트")
+class HintBlindRewriterTest {
+    private lateinit var rewriter: HintBlindRewriter
+
+    @BeforeEach
+    fun setUp() {
+        rewriter = HintBlindRewriter()
+    }
+
+    @Test
+    @DisplayName("blindTokenWithSuffix는 조사와 함께 블라인드 처리한다")
+    fun shouldBlindTokenWithJosa() {
+        // given
+        val hint = "사과는 빨간색이다"
+        val tokenToBlind = "사과"
+        val tokens =
+            listOf(
+                KomoranService.Token(form = "사과", tag = "NNG", position = 0, length = 2),
+                KomoranService.Token(form = "는", tag = "JX", position = 2, length = 1),
+                KomoranService.Token(form = "빨간색", tag = "NNG", position = 4, length = 3),
+                KomoranService.Token(form = "이", tag = "VCP", position = 7, length = 1),
+                KomoranService.Token(form = "다", tag = "EF", position = 8, length = 1),
+            )
+
+        // when
+        val (blindedHint, blindedText) = rewriter.blindTokenWithSuffix(hint, tokenToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo("[BLIND] 빨간색이다")
+        assertThat(blindedText).isEqualTo("사과는")
+    }
+
+    @Test
+    @DisplayName("blindTokenWithSuffix는 토큰과 접미사를 함께 블라인드 처리한다")
+    fun shouldBlindTokenWithSuffix() {
+        // given
+        val hint = "강아지가 뛰어간다"
+        val tokenToBlind = "강아지"
+        val tokens =
+            listOf(
+                KomoranService.Token(form = "강아지", tag = "NNG", position = 0, length = 3),
+                KomoranService.Token(form = "가", tag = "JKS", position = 3, length = 1),
+                KomoranService.Token(form = "뛰어가", tag = "VV", position = 5, length = 3),
+                KomoranService.Token(form = "ㄴ다", tag = "EF", position = 8, length = 2),
+            )
+
+        // when
+        val (blindedHint, blindedText) = rewriter.blindTokenWithSuffix(hint, tokenToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo("[BLIND] 뛰어간다")
+        assertThat(blindedText).isEqualTo("강아지가")
+    }
+
+    @Test
+    @DisplayName("blindTokenWithSuffix는 토큰이 없으면 단순 치환한다")
+    fun shouldSimplyReplaceWhenTokenNotFound() {
+        // given
+        val hint = "고양이는 귀엽다"
+        val tokenToBlind = "고양이"
+        val tokens =
+            listOf(
+                KomoranService.Token(form = "귀엽", tag = "VA", position = 5, length = 2),
+                KomoranService.Token(form = "다", tag = "EF", position = 7, length = 1),
+            )
+
+        // when
+        val (blindedHint, blindedText) = rewriter.blindTokenWithSuffix(hint, tokenToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo("[BLIND]는 귀엽다")
+        assertThat(blindedText).isEqualTo("고양이")
+    }
+
+    @Test
+    @DisplayName("blindMultipleTokensWithSuffix는 여러 토큰을 블라인드 처리한다")
+    fun shouldBlindMultipleTokens() {
+        // given
+        val hint = "사자와 호랑이가 싸운다"
+        val tokensToBlind = listOf("사자", "호랑이")
+        val tokens =
+            listOf(
+                KomoranService.Token(form = "사자", tag = "NNG", position = 0, length = 2),
+                KomoranService.Token(form = "와", tag = "JKB", position = 2, length = 1),
+                KomoranService.Token(form = "호랑이", tag = "NNG", position = 4, length = 3),
+                KomoranService.Token(form = "가", tag = "JKS", position = 7, length = 1),
+                KomoranService.Token(form = "싸우", tag = "VV", position = 9, length = 2),
+                KomoranService.Token(form = "ㄴ다", tag = "EF", position = 11, length = 2),
+            )
+
+        // when
+        val (blindedHint, blindedTexts) = rewriter.blindMultipleTokensWithSuffix(hint, tokensToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo("[BLIND] 싸운다")
+        assertThat(blindedTexts).containsExactly("사자와", "호랑이가")
+    }
+
+    @Test
+    @DisplayName("blindMultipleTokensWithSuffix는 빈 리스트에 대해 원본을 반환한다")
+    fun shouldReturnOriginalForEmptyTokenList() {
+        // given
+        val hint = "테스트 힌트"
+        val tokensToBlind = emptyList<String>()
+        val tokens = emptyList<KomoranService.Token>()
+
+        // when
+        val (blindedHint, blindedTexts) = rewriter.blindMultipleTokensWithSuffix(hint, tokensToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo(hint)
+        assertThat(blindedTexts).isEmpty()
+    }
+
+    @Test
+    @DisplayName("blindMultipleTokensWithSuffix는 연속된 [BLIND]를 하나로 병합한다")
+    fun shouldMergeConsecutiveBlindTokens() {
+        // given
+        val hint = "빨간 사과는 맛있다"
+        val tokensToBlind = listOf("빨간", "사과")
+        val tokens =
+            listOf(
+                KomoranService.Token(form = "빨간", tag = "NNG", position = 0, length = 2),
+                KomoranService.Token(form = "사과", tag = "NNG", position = 3, length = 2),
+                KomoranService.Token(form = "는", tag = "JX", position = 5, length = 1),
+                KomoranService.Token(form = "맛있", tag = "VA", position = 7, length = 2),
+                KomoranService.Token(form = "다", tag = "EF", position = 9, length = 1),
+            )
+
+        // when
+        val (blindedHint, blindedTexts) = rewriter.blindMultipleTokensWithSuffix(hint, tokensToBlind, tokens)
+
+        // then
+        assertThat(blindedHint).isEqualTo("[BLIND] 맛있다")
+        // 연속 블라인드는 그룹화되어 1개로
+        assertThat(blindedTexts).hasSize(1)
+        assertThat(blindedTexts[0]).contains("빨간")
+        assertThat(blindedTexts[0]).contains("사과")
+    }
+
+    @Test
+    @DisplayName("revealTokens는 지정된 수만큼 토큰을 공개한다")
+    fun shouldRevealSpecifiedNumberOfTokens() {
+        // given
+        val hint = "[BLIND] [BLIND] 뛰어다닌다"
+        val blindedTokens = listOf("강아지가", "공원에서")
+        val revealCount = 1
+
+        // when
+        val outcome = rewriter.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(outcome.updatedHint).isEqualTo("강아지가 [BLIND] 뛰어다닌다")
+        assertThat(outcome.revealedTokens).containsExactly("강아지가")
+        assertThat(outcome.remainingTokens).containsExactly("공원에서")
+    }
+
+    @Test
+    @DisplayName("revealTokens는 모든 토큰을 공개할 수 있다")
+    fun shouldRevealAllTokens() {
+        // given
+        val hint = "[BLIND] [BLIND]"
+        val blindedTokens = listOf("첫번째", "두번째")
+        val revealCount = 2
+
+        // when
+        val outcome = rewriter.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(outcome.updatedHint).isEqualTo("첫번째 두번째")
+        assertThat(outcome.revealedTokens).containsExactly("첫번째", "두번째")
+        assertThat(outcome.remainingTokens).isEmpty()
+    }
+
+    @Test
+    @DisplayName("revealTokens는 빈 리스트에 대해 원본을 반환한다")
+    fun shouldReturnOriginalForEmptyRevealList() {
+        // given
+        val hint = "[BLIND] 테스트"
+        val blindedTokens = emptyList<String>()
+        val revealCount = 1
+
+        // when
+        val outcome = rewriter.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(outcome.updatedHint).isEqualTo(hint)
+        assertThat(outcome.revealedTokens).isEmpty()
+        assertThat(outcome.remainingTokens).isEmpty()
+    }
+
+    @Test
+    @DisplayName("revealTokens는 revealCount가 0이면 아무것도 공개하지 않는다")
+    fun shouldNotRevealWhenCountIsZero() {
+        // given
+        val hint = "[BLIND] 테스트"
+        val blindedTokens = listOf("토큰")
+        val revealCount = 0
+
+        // when
+        val outcome = rewriter.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(outcome.updatedHint).isEqualTo(hint)
+        assertThat(outcome.revealedTokens).isEmpty()
+        assertThat(outcome.remainingTokens).containsExactly("토큰")
+    }
+}

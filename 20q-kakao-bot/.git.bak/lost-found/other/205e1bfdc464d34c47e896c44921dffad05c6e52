@@ -1,0 +1,241 @@
+package party.qwer.twentyq.service
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.benmanes.caffeine.cache.Caffeine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import java.util.concurrent.TimeUnit
+
+/**
+ * 한글 맞춤법 검사 서비스
+ * - 네이버 맞춤법 검사 API 사용
+ * - PassportKey 자동 갱신 (1시간 캐시)
+ * - 로컬 패턴 fallback (5개 일반 오타)
+ * - 결과 캐싱 (10,000개, 1시간)
+ */
+@Service
+class SpellChecker(
+    private val objectMapper: ObjectMapper,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(SpellChecker::class.java)
+
+        // API 설정
+        private const val NAVER_SEARCH_URL = "https://search.naver.com/search.naver"
+        private const val NAVER_API_URL = "https://m.search.naver.com/p/csearch/ocontent/util/SpellerProxy"
+        private val PASSPORT_KEY_REGEX = Regex("""passportKey[=:]\s*["']?([a-zA-Z0-9]+)""")
+
+        // 제한
+        private const val MAX_LENGTH = 250
+        private const val TIMEOUT_MS = 3000L
+
+        // 로컬 패턴
+        private val TRAILING_JAMO = Regex("[ㄱ-ㅎㅏ-ㅣ]+$")
+        private val TYPO_PATTERNS =
+            listOf(
+                Regex("([가-힣]+)엇([어였])") to "$1었$2", // 먹엇어요 → 먹었어요
+                Regex("([가-힣]+)잇([어였])") to "$1있$2", // 살아잇나요 → 살아있나요
+                Regex("([가-힣]+)겟([어였습])") to "$1겠$2", // 하겟어요 → 하겠어요
+                Regex("([가-힣]+)찬([아요은])") to "$1찮$2", // 괜찬아요 → 괜찮아요
+                Regex("([가-힣]+)왓([어였])") to "$1았$2", // 왓어요 → 왔어요
+            )
+    }
+
+    private val httpClient =
+        OkHttpClient
+            .Builder()
+            .connectTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .readTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .writeTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            .build()
+
+    // 결과 캐시: 10,000개, 1시간 TTL
+    private val resultCache =
+        Caffeine
+            .newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .build<String, String>()
+
+    // PassportKey 캐시: 1개, 1시간 TTL
+    private val passportKeyCache =
+        Caffeine
+            .newBuilder()
+            .maximumSize(1)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .build<String, String>()
+
+    /**
+     * 맞춤법 교정
+     * - 캐시 확인 → 로컬 패턴 → API 호출 순서
+     * - API 실패 시 로컬 결과 반환
+     */
+    suspend fun correct(text: String): String {
+        if (text.isBlank() || text.length < 2) return text
+
+        // 캐시 확인
+        resultCache.getIfPresent(text)?.let { return it }
+
+        // 로컬 패턴 적용
+        val localResult = applyLocalPatterns(text)
+
+        // 길이 제한
+        if (localResult.length > MAX_LENGTH) {
+            resultCache.put(text, localResult)
+            return localResult
+        }
+
+        // API 호출 (실패 시 로컬 결과 사용)
+        val apiResult =
+            try {
+                callNaverAPI(localResult) ?: localResult
+            } catch (e: Exception) {
+                log.warn("Naver API failed: {}", e.message)
+                localResult
+            }
+
+        resultCache.put(text, apiResult)
+        if (apiResult != text) {
+            log.info("Corrected: '{}' -> '{}'", text, apiResult)
+        }
+        return apiResult
+    }
+
+    /**
+     * 로컬 패턴 적용
+     * - 끝 자모 제거 (ㅋㅋㅋ, ㅎㅎ)
+     * - 일반 오타 패턴 (엇→었, 잇→있, 겟→겠, 찬→찮, 왓→았)
+     */
+    private fun applyLocalPatterns(text: String): String {
+        var result = text.replace(TRAILING_JAMO, "").trim()
+        TYPO_PATTERNS.forEach { (pattern, replacement) ->
+            result = result.replace(pattern, replacement)
+        }
+        return result
+    }
+
+    /**
+     * 네이버 API 호출
+     */
+    private suspend fun callNaverAPI(text: String): String? =
+        withContext(Dispatchers.IO) {
+            val passportKey = getPassportKey() ?: return@withContext null
+
+            val url = buildNaverUrl(passportKey, text)
+            val request =
+                Request
+                    .Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0")
+                    .header("Referer", "https://search.naver.com/")
+                    .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    if (response.code == 401 || response.code == 403) {
+                        passportKeyCache.invalidateAll()
+                    }
+                    return@withContext null
+                }
+
+                val json = response.body?.string() ?: return@withContext null
+                parseResponse(json, text)
+            }
+        }
+
+    /**
+     * PassportKey 가져오기
+     * - 캐시에서 확인 → 없으면 네이버 검색 페이지에서 추출
+     */
+    private suspend fun getPassportKey(): String? =
+        withContext(Dispatchers.IO) {
+            passportKeyCache.getIfPresent("key")?.let { return@withContext it }
+
+            val request =
+                Request
+                    .Builder()
+                    .url("$NAVER_SEARCH_URL?query=네이버맞춤법검사기")
+                    .header("User-Agent", "Mozilla/5.0")
+                    .build()
+
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    val html = response.body?.string() ?: return@withContext null
+                    val key = PASSPORT_KEY_REGEX.find(html)?.groupValues?.get(1)
+
+                    key?.also {
+                        passportKeyCache.put("key", it)
+                        log.info("PassportKey refreshed")
+                    }
+                }
+            } catch (e: Exception) {
+                log.error("PassportKey fetch failed: {}", e.message)
+                null
+            }
+        }
+
+    /**
+     * 네이버 API URL 생성
+     */
+    private fun buildNaverUrl(
+        passportKey: String,
+        text: String,
+    ): String {
+        val encodedText = java.net.URLEncoder.encode(text, "UTF-8")
+        return "$NAVER_API_URL?" +
+            "passportKey=$passportKey&" +
+            "q=$encodedText&" +
+            "where=nexearch&" +
+            "color_blindness=0&" +
+            "_=${System.currentTimeMillis()}"
+    }
+
+    /**
+     * 네이버 응답 파싱
+     * - JSONP 형식 (window.speller=...) → JSON 변환
+     * - errata_list에서 교정 내용 추출
+     */
+    private fun parseResponse(
+        json: String,
+        original: String,
+    ): String {
+        try {
+            val jsonBody = json.removePrefix("window.speller=").removeSuffix(";").trim()
+
+            val root =
+                party.qwer.twentyq.util.JsonResponseParser
+                    .parseToJsonNode(jsonBody, objectMapper)
+                    .getOrElse { return original }
+
+            val errataList =
+                root
+                    .get("message")
+                    ?.get("result")
+                    ?.get("errata_list")
+                    ?: return original
+
+            if (errataList.isEmpty) return original
+
+            var corrected = original
+            errataList.forEach { errata ->
+                val orgStr = errata.get("org_str")?.asText()
+                val bestCandidate = errata.get("candid_list")?.firstOrNull()?.asText()
+
+                if (orgStr != null && bestCandidate != null && orgStr != bestCandidate) {
+                    corrected = corrected.replace(orgStr, bestCandidate)
+                }
+            }
+
+            return corrected
+        } catch (e: Exception) {
+            log.warn("Response parse failed: {}", e.message)
+            return original
+        }
+    }
+
+    fun getCacheStats() = resultCache.stats()
+}

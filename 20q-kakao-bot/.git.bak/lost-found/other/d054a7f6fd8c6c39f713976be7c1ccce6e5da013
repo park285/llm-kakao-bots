@@ -1,0 +1,22 @@
+package party.qwer.twentyq.service.riddle.model
+
+sealed class HintResult {
+    data class Generated(
+        val hintNumber: Int,
+        val content: String,
+        val remainingBlinds: Int,
+    ) : HintResult()
+
+    data class PartiallyRevealed(
+        val hintNumber: Int,
+        val content: String,
+        val remainingBlinds: Int,
+    ) : HintResult()
+
+    data class FullyRevealed(
+        val hintNumber: Int,
+        val content: String,
+    ) : HintResult()
+
+    data object NotAvailable : HintResult()
+}

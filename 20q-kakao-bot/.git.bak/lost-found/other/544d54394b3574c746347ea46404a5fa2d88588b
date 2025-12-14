@@ -1,0 +1,230 @@
+package party.qwer.twentyq.api
+
+import io.mockk.every
+import io.mockk.mockk
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
+import party.qwer.twentyq.service.exception.GameAlreadyExistsException
+import party.qwer.twentyq.service.exception.InvalidQuestionException
+import party.qwer.twentyq.service.exception.SessionNotFoundException
+import party.qwer.twentyq.util.GameMessageProvider
+
+@DisplayName("GlobalExceptionHandler 테스트")
+class GlobalExceptionHandlerTest {
+    private lateinit var handler: GlobalExceptionHandler
+
+    @BeforeEach
+    fun setup() {
+        val messageProvider = mockk<GameMessageProvider>()
+        every { messageProvider.get("error.no_session_short") } returns "진행 중인 게임이 없습니다"
+        every { messageProvider.get("error.session_already_exists") } returns "이미 진행 중인 게임이 있습니다"
+        every { messageProvider.get("error.invalid_question.default") } returns "이해할 수 없는 질문입니다"
+
+        handler = GlobalExceptionHandler(messageProvider)
+    }
+
+    @Nested
+    @DisplayName("SessionNotFoundException 처리")
+    inner class SessionNotFoundTests {
+        @Test
+        fun `기본 메시지로 400 응답`() {
+            val exception = SessionNotFoundException()
+
+            val response = handler.handleSessionNotFound(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("SESSION_NOT_FOUND")
+            assertThat(response.body?.message).isEqualTo("진행 중인 게임이 없습니다")
+        }
+
+        @Test
+        fun `커스텀 메시지로 400 응답`() {
+            val exception = SessionNotFoundException("세션을 찾을 수 없습니다")
+
+            val response = handler.handleSessionNotFound(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("SESSION_NOT_FOUND")
+            assertThat(response.body?.message).isEqualTo("세션을 찾을 수 없습니다")
+        }
+    }
+
+    @Nested
+    @DisplayName("GameAlreadyExistsException 처리")
+    inner class GameAlreadyExistsTests {
+        @Test
+        fun `기본 메시지로 409 응답`() {
+            val exception = GameAlreadyExistsException()
+
+            val response = handler.handleGameAlreadyExists(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.CONFLICT)
+            assertThat(response.body?.error).isEqualTo("GAME_ALREADY_EXISTS")
+            assertThat(response.body?.message).isEqualTo("이미 진행 중인 게임이 있습니다")
+        }
+
+        @Test
+        fun `커스텀 메시지로 409 응답`() {
+            val exception = GameAlreadyExistsException("게임이 이미 시작되었습니다")
+
+            val response = handler.handleGameAlreadyExists(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.CONFLICT)
+            assertThat(response.body?.error).isEqualTo("GAME_ALREADY_EXISTS")
+            assertThat(response.body?.message).isEqualTo("게임이 이미 시작되었습니다")
+        }
+    }
+
+    @Nested
+    @DisplayName("InvalidQuestionException 처리")
+    inner class InvalidQuestionTests {
+        @Test
+        fun `기본 메시지로 400 응답`() {
+            val exception = InvalidQuestionException()
+
+            val response = handler.handleInvalidQuestion(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("INVALID_QUESTION")
+            assertThat(response.body?.message).isEqualTo("이해할 수 없는 질문입니다")
+        }
+
+        @Test
+        fun `커스텀 메시지로 400 응답`() {
+            val exception = InvalidQuestionException("질문 형식이 올바르지 않습니다")
+
+            val response = handler.handleInvalidQuestion(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("INVALID_QUESTION")
+            assertThat(response.body?.message).isEqualTo("질문 형식이 올바르지 않습니다")
+        }
+    }
+
+    @Nested
+    @DisplayName("IllegalArgumentException 처리")
+    inner class IllegalArgumentTests {
+        @Test
+        fun `기본 메시지로 400 응답`() {
+            val exception = IllegalArgumentException()
+
+            val response = handler.handleIllegalArgument(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("BAD_REQUEST")
+            assertThat(response.body?.message).isEqualTo("Invalid request")
+        }
+
+        @Test
+        fun `커스텀 메시지로 400 응답`() {
+            val exception = IllegalArgumentException("count must be between 1 and 10")
+
+            val response = handler.handleIllegalArgument(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(response.body?.error).isEqualTo("BAD_REQUEST")
+            assertThat(response.body?.message).isEqualTo("count must be between 1 and 10")
+        }
+    }
+
+    @Nested
+    @DisplayName("IllegalStateException 처리")
+    inner class IllegalStateTests {
+        @Test
+        fun `기본 메시지로 502 응답`() {
+            val exception = IllegalStateException()
+
+            val response = handler.handleIllegalState(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_GATEWAY)
+            assertThat(response.body?.error).isEqualTo("UPSTREAM_ERROR")
+            assertThat(response.body?.message).isEqualTo("Upstream processing failed")
+        }
+
+        @Test
+        fun `커스텀 메시지로 502 응답`() {
+            val exception = IllegalStateException("AI 서비스 응답 실패")
+
+            val response = handler.handleIllegalState(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_GATEWAY)
+            assertThat(response.body?.error).isEqualTo("UPSTREAM_ERROR")
+            assertThat(response.body?.message).isEqualTo("AI 서비스 응답 실패")
+        }
+    }
+
+    @Nested
+    @DisplayName("Exception 일반 처리")
+    inner class GenericExceptionTests {
+        @Test
+        fun `일반 예외 - 500 응답`() {
+            val exception = RuntimeException("예상하지 못한 오류")
+
+            val response = handler.handleGeneric(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+            assertThat(response.body?.error).isEqualTo("INTERNAL_ERROR")
+            assertThat(response.body?.message).isEqualTo("Unexpected server error")
+        }
+
+        @Test
+        fun `NullPointerException - 500 응답`() {
+            val exception = NullPointerException("null 참조")
+
+            val response = handler.handleGeneric(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+            assertThat(response.body?.error).isEqualTo("INTERNAL_ERROR")
+            assertThat(response.body?.message).isEqualTo("Unexpected server error")
+        }
+
+        @Test
+        fun `Exception with null message - 500 응답`() {
+            val exception = Exception(null as String?)
+
+            val response = handler.handleGeneric(exception)
+
+            assertThat(response.statusCode).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+            assertThat(response.body?.error).isEqualTo("INTERNAL_ERROR")
+            assertThat(response.body?.message).isEqualTo("Unexpected server error")
+        }
+    }
+
+    @Nested
+    @DisplayName("ErrorResponse 데이터 클래스")
+    inner class ErrorResponseTests {
+        @Test
+        fun `ErrorResponse 생성 - details 없음`() {
+            val errorResponse =
+                ErrorResponse(
+                    error = "TEST_ERROR",
+                    message = "테스트 메시지",
+                )
+
+            assertThat(errorResponse.error).isEqualTo("TEST_ERROR")
+            assertThat(errorResponse.message).isEqualTo("테스트 메시지")
+            assertThat(errorResponse.details).isNull()
+        }
+
+        @Test
+        fun `ErrorResponse 생성 - details 포함`() {
+            val details = mapOf("field" to "value", "count" to 5)
+            val errorResponse =
+                ErrorResponse(
+                    error = "VALIDATION_ERROR",
+                    message = "유효성 검증 실패",
+                    details = details,
+                )
+
+            assertThat(errorResponse.error).isEqualTo("VALIDATION_ERROR")
+            assertThat(errorResponse.message).isEqualTo("유효성 검증 실패")
+            assertThat(errorResponse.details).isEqualTo(details)
+            assertThat(errorResponse.details?.get("field")).isEqualTo("value")
+            assertThat(errorResponse.details?.get("count")).isEqualTo(5)
+        }
+    }
+}

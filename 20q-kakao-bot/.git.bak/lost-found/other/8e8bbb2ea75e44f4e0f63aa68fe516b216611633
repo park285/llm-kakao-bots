@@ -1,0 +1,21 @@
+package party.qwer.twentyq.bridge.handlers
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+
+@Component
+@ConditionalOnProperty(prefix = "app.mqtt", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+class HealthCheckHandler(
+    private val appProperties: party.qwer.twentyq.config.AppProperties,
+    private val messageProvider: party.qwer.twentyq.util.GameMessageProvider,
+) {
+    fun handle(
+        userId: String,
+        nickname: String,
+    ): String {
+        if (!appProperties.admin.userIds.contains(userId)) {
+            return messageProvider.get("error.no_permission")
+        }
+        return messageProvider.get("health.alive", "nickname" to nickname)
+    }
+}

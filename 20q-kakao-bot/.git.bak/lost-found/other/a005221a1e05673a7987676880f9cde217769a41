@@ -1,0 +1,49 @@
+package party.qwer.twentyq.bridge.handlers
+
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import party.qwer.twentyq.api.dto.HintHistory
+import party.qwer.twentyq.api.dto.QuestionHistory
+import party.qwer.twentyq.api.dto.RiddleStatusResponse
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.redis.RiddleSessionRepository
+import party.qwer.twentyq.service.RiddleService
+import party.qwer.twentyq.util.IrisClient
+
+class HintsHandlerTest {
+    @Test
+    fun `handle returns formatted first hint when session exists`() =
+        runBlocking {
+            val riddleService = mockk<RiddleService>()
+            val sessionRepo = mockk<RiddleSessionRepository>(relaxed = true)
+            val appProps = mockk<AppProperties>(relaxed = true)
+            val iris = mockk<IrisClient>(relaxed = true)
+
+            every { riddleService.hasSession("room-1") } returns true
+            coEvery { riddleService.generateHints("room-1", 1) } returns listOf("hint-aaa")
+            coEvery { iris.sendText("room-1", any(), any()) } returns Unit
+            every {
+                riddleService.getStatus("room-1")
+            } returns
+                RiddleStatusResponse(
+                    questionCount = 0,
+                    questions = emptyList<QuestionHistory>(),
+                    hints = listOf(HintHistory(1, "hint-aaa")),
+                    hintCount = 1,
+                    maxHints = 3,
+                    selectedCategory = null,
+                )
+
+            val handler = HintsHandler(riddleService, iris)
+
+            val result = handler.handle("room-1", 2)
+
+            assertEquals("💡#1 hint-aaa", result)
+            coVerify { riddleService.generateHints("room-1", 1) }
+        }
+}

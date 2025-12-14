@@ -1,0 +1,163 @@
+# 20Q Kakao Bot - User-Facing Messages
+toon:
+
+  error:
+    no_session: "진행 중인 게임이 없습니다.
+
+'{prefix} 시작'으로 새 게임을 시작할 수 있습니다."
+    no_session_short: "진행 중인 게임이 없습니다"
+    
+    session_already_exists: "이미 진행 중인 게임이 있습니다"
+    
+    # Permission errors
+    no_permission: "관리자 권한이 필요합니다."
+
+    invalid_question:
+      default: "이해할 수 없는 질문입니다"
+      duplicate_question: "이미 질문하신 내용입니다"
+      easter_eggs:
+        - "질문 좀 똑바로 해라"
+        - "응애 나 아기 봇 후원해조 응애"
+        - "응애 나 아기 봇 얘내들 질문이 너무 멍청해서 못알아듣겠어요"
+        - "홍박사님을 아시나요?"
+        - "느자구 없네"
+        - "헛소리 작작 해라"
+        - "이상한소리좀 하지마라"
+        - "단디 질문해라 안캤나"
+    
+    # Hint errors with guidance
+    hint_limit_exceeded: "힌트는 최대 2회까지 사용할 수 있습니다.
+
+더 많은 질문을 하면 추가 힌트를 받을 수 있습니다!"
+    hint_not_available: "사용할 수 있는 힌트가 없습니다."
+    hint_no_more: "힌트를 더 이상 사용할 수 없습니다."
+    
+    unknown_command: "알 수 없는 명령어입니다.
+
+'{prefix} 도움'으로 명령어 목록을 확인할 수 있습니다."
+    access_denied: "접근 권한이 없습니다."
+    generic_error: "오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+
+  lock:
+    request_in_progress: "다른 요청이 처리 중입니다."
+    message_queued: "{user}님 잠시만 기다려주세요 (처리순서 {position}번째)"
+    queue_full: "대기열이 가득 찼습니다. 잠시 후 다시 시도해주세요."
+    game_in_progress: "게임이 이미 진행 중입니다."
+
+  queue:
+    processing: "{user}님의 대기 중이던 메시지를 처리합니다..."
+
+  start:
+    intro: "스무고개를 시작합니다"
+    ready: "준비 완료!"
+    ready_with_category: "{category}준비 완료!"
+    
+    easter_egg_1: "{category}스무고개 방은 CRS를 두려워하나요"
+    easter_egg_2: "{category}준비 완료! 질문을 해주세요. CRS 바보"
+    
+    invalid_category_warning: "선택이 불가능한 주제입니다. 랜덤으로 시작하겠습니다.\n\n"
+    
+    session_exists: "진행 중인 게임이 있습니다"
+    
+    waiting: "게임을 시작합니다. 잠시만 기다려주세요..."
+    
+    resume: |
+      진행 중인 게임이 있습니다.
+      
+      📊 현재 상황:
+      - 질문 수: {questionCount}개
+      - 힌트 사용: {hintCount}회
+      
+      게임을 계속하려면 질문을 입력하세요.
+
+  answer:
+    correct_default: "🎉 정답입니다!"
+    
+    success: |
+      🎉 정답입니다!
+      
+      정답: {target}
+      
+      📊 게임 통계:
+      - 질문 횟수: {questionCount}번
+      - 힌트 사용: {hintCount}/{maxHints}번{hintBlock}
+    
+    hint_section_used: "\n\n💡 사용한 힌트 ({hintCount}개):\n{hintList}"
+    hint_section_none: "\n\n💡 힌트 없이 맞추셨네요! 대단합니다! 🌟"
+    hint_item: "  {question}: {answer}"
+
+  surrender:
+    result: |
+      ㅋ 하남자시네요{hintBlock}
+      
+      정답은 {target}입니다{categoryLine}
+    
+    hint_block_header: "\n\n💡 생성된 힌트 ({hintCount}개):\n"
+    hint_item: "  힌트 #{hintNumber}: {content}"
+    category_line: "\n[주제:{category}]"
+    
+
+  reveal:
+    result: "정답: {target}"
+
+  hint:
+    waiting: "💡 힌트를 생성중입니다. 잠시만 기다려주세요..."
+    
+    generated: "💡#{hintNumber} {content}"
+    partially_revealed: "💡#{hintNumber} {content}"
+    fully_revealed: "💡#{hintNumber} {content}"
+    
+
+  status:
+    header_with_category: "[주제:{category}] 남은힌트{remaining}"
+    header_no_category: "남은힌트{remaining}"
+    
+    hint_line: "💡#{number} {content}"
+    wrong_guesses: "틀린 정답: {guesses}"
+    question_answer: "Q{number} {question} | A {answer}"
+    
+
+  vote:
+    start: "포기 투표를 시작했습니다. {required}명 이상 동의 필요. 현재 동의: {current}명\n'{prefix} 동의'로 투표해주세요."
+    
+    in_progress: "투표 진행 중입니다. 현재 동의: {current}/{required}명 (남은 {remain}명)\n'{prefix} 동의'로 투표해주세요."
+    
+    already_active: "이미 진행 중인 포기 투표가 있습니다."
+    
+    not_found: "진행 중인 포기 투표가 없습니다. '{prefix} 하남자'로 시작할 수 있습니다."
+    
+    cannot_vote: "투표할 수 없습니다. (진행자만 투표 가능)"
+    already_voted: "이미 투표하셨습니다."
+    
+    agree_progress: "동의 완료: {current}/{required}명 (남은 {remain}명)"
+    
+    processing_failed: "투표 처리에 실패했습니다."
+    processing_error: "투표 처리 중 오류가 발생했습니다."
+    
+    reject_not_supported: "거부 투표는 지원하지 않습니다. 2분 타임아웃 시 자동으로 투표가 취소됩니다."
+
+  admin:
+    force_end_prefix: "[관리자 강제 종료] "
+    
+    clear_all_success: "[관리자 전체 삭제] 해당 채팅방의 모든 데이터가 삭제되었습니다. (세션, 기록, 투표, 완료된 주제 등)"
+    
+    cache_refresh_success: "[관리자 모드] 캐시가 정상적으로 재생성되었습니다."
+    cache_refresh_failed: "[관리자 모드] 캐시 재생성에 실패했습니다. 로그를 확인해주세요."
+
+
+  health:
+    alive: "넵 살아있습니다 {nickname}님"
+    
+
+  help:
+    message: |
+      [스무고개 게임 (사실 스물 문항 아님)]
+      
+      📌 명령어:
+      /스자 시작 [카테고리] - 새 게임 시작 (카테고리: 생물/음식/사물/장소/개념/영화, 생략 시 자유)
+      /스자 [질문] - 질문하기
+      /스자 힌트 - 힌트받기 (최대 2회)
+      /스자 정답 [답] - 정답 맞추기
+      /스자 하남자 - 포기 투표 시작 (과반수 동의 필요)
+      /스자 동의 - 포기 투표에 동의
+      /스자 거부 - 포기 투표 거부

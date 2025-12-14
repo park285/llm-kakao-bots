@@ -1,0 +1,60 @@
+package party.qwer.twentyq.redis.tracking
+
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.runBlocking
+import org.redisson.api.RedissonReactiveClient
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import java.time.Duration
+
+@Component
+@ConditionalOnProperty(
+    prefix = "app.redis",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
+class HintCountStore(
+    private val redisson: RedissonReactiveClient,
+    private val props: AppProperties,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(HintCountStore::class.java)
+    }
+
+    // Blocking wrapper (CONVENTIONS: 허용됨 - Redis operations)
+    fun get(roomId: String): Int = runBlocking { getAsync(roomId) }
+
+    suspend fun getAsync(roomId: String): Int {
+        val bucket = redisson.getBucket<String>(key(roomId))
+        val count = bucket.get().awaitSingleOrNull()?.toIntOrNull() ?: 0
+        log.debug("GET room={}, count={}", roomId, count)
+        return count
+    }
+
+    suspend fun increment(roomId: String): Long {
+        val atomic = redisson.getAtomicLong(key(roomId))
+        val result = atomic.incrementAndGet().awaitSingleOrNull() ?: 0L
+        atomic.expire(Duration.ofMinutes(props.redis.sessionTtlMinutes)).awaitSingleOrNull()
+        log.debug("INCREMENT room={}, newCount={}", roomId, result)
+        return result
+    }
+
+    // Blocking wrapper (CONVENTIONS: 허용됨)
+    fun delete(roomId: String) = runBlocking { deleteAsync(roomId) }
+
+    suspend fun deleteAsync(roomId: String) {
+        redisson.getBucket<String>(key(roomId)).delete().awaitSingleOrNull()
+    }
+
+    suspend fun setTtl(
+        roomId: String,
+        ttl: Duration,
+    ) {
+        redisson.getBucket<String>(key(roomId)).expire(ttl).awaitSingleOrNull()
+    }
+
+    private fun key(roomId: String) = "${party.qwer.twentyq.redis.RedisKeys.HINTS}:$roomId"
+}

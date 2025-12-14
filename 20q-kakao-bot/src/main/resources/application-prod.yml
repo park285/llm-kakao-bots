@@ -1,0 +1,12 @@
+spring:
+  data:
+    r2dbc:
+      url: r2dbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:twentyq}
+      username: ${DB_USER:twentyq_app}
+      password: ${DB_PASSWORD:}
+      pool:
+        initial-size: 5
+        max-size: 20
+        max-idle-time: 30m
+        max-acquire-time: 3s
+        max-create-connection-time: 5s

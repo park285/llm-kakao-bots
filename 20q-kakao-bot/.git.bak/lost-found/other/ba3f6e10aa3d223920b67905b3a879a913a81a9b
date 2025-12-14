@@ -1,0 +1,168 @@
+# 20Q CONVENTIONS
+
+> Reusable components + critical rules
+
+---
+
+## COMPONENTS [USE>X CREATE]
+
+**Exception**: `GameExceptions.kt` - SessionNotFound, GameAlreadyExists, HintLimitExceeded, InvalidQuestion | Extend GameException
+
+**Utils**:
+- `Guards`: requireSessionOrThrow(chatId)
+- `LockManager`: acquire/release(chatId, userId, token)
+- `GameMessageProvider`: get(key, ...params), getInvalidQuestionMessage(probability)
+- `JsonResponseParser`: parseAndValidate(response, schema, mapper)
+- `HistoryContextFormatter`: formatForAnswer/formatForHints(history)
+- `HintBlindService`: blindTargetInHints(hints, target), revealTokens(hint, tokens, count), removeAllBlinds(text)
+
+**Redis** (X direct access!):
+- `SessionCoordinator`: game sessions (temp, player data)
+- `CacheCoordinator`: app cache (persistent, shared - difficulty, normalization)
+- `MessageQueueCoordinator`: message buffering (lock contention)
+
+**Redis Stores**: session/SessionStore, tracking/PlayerSetStore, voting/SurrenderVoteStore, queue/PendingMessageStore
+
+**Services**:
+- Text: KomoranService, SpellChecker, NormalizeService
+- Gemini: GeminiApiClient, GeminiCacheManager
+- Riddle: RiddleCreator, RiddleAnswerProcessor, HintGenerator
+
+**LLM**: PromptLoader.loadYamlAs(path, class), RiddlePromptManager
+**Config**: PromptResourcePaths (X hardcode paths!)
+
+---
+
+## RULES [OK→X]
+
+**Emoji**: X code/commits/logs | OK UI text only
+**YAML**: toon: top-level REQUIRED
+**Redis**: OK coordinators | X stringRedisTemplate/redissonClient
+**LLM**: OK JsonResponseParser | X objectMapper.readTree
+**runBlocking**: OK non-suspend→suspend, tests | X suspend→runBlocking
+**Cache**: OK Caffeine | X ConcurrentHashMap
+
+**Early Return** [CRITICAL]:
+```kotlin
+OK: if (fail) throw GameException(msg)  // Validates BEFORE waiting message
+X:  if (fail) return "error"            // Waiting message already sent
+```
+Handler에서 validation 실패 시 exception throw (X early return)
+
+**Exception Handling** [CRITICAL]:
+```kotlin
+// User-facing errors (GameException)
+catch (ex: GameException) {
+    log.error("ERROR {}", ex.message, ex)
+    emit(errorReply(ex.message))  // Show to user
+}
+
+// Internal errors (System exceptions)
+catch (ex: IllegalArgumentException) {
+    log.error("INTERNAL {}", ex.message, ex)
+    emit(errorReply(generic_error))  // X expose internals
+}
+
+// [X] Silent fail
+catch (ex: GameException) {
+    log.error()  // X No emit = user sees nothing
+}
+```
+
+**Pattern**:
+- Handlers: throw GameException for validation
+- gRPC: catch ALL exceptions → emit response (never silent)
+- GameException.message → user | System exception → generic error
+
+**Message Flow**: Validate (throw) → Waiting → Execute → Result | Exception → Error emit
+
+---
+
+## CHECKLIST
+
+- [ ] Exception: Extend GameException?
+- [ ] Redis: Coordinator (X direct)?
+- [ ] LLM: JsonResponseParser?
+- [ ] Prompts: PromptLoader + toon?
+- [ ] Paths: PromptResourcePaths?
+- [ ] Messages: GameMessageProvider?
+- [ ] Validation: Throw (X return)?
+- [ ] Exception: Emit response?
+
+---
+
+## REDIS REACTIVE [Redisson] ✅
+
+**사용 배경**: Suspend function 내에서 Redis 작업 시 blocking 방지 + thread-safe한 비동기 처리
+
+**아키텍처**:
+```kotlin
+// Redisson Reactive Client (이미 의존성 존재)
+@Component
+class XxxStore(
+    private val redisson: RedissonReactiveClient,  // Reactive client
+    private val props: AppProperties,
+    private val json: ObjectMapper,
+)
+```
+
+**패턴**: Blocking wrapper + Async implementation
+```kotlin
+// Non-suspend contexts용 blocking wrapper
+fun get(roomId: String): List<T> = runBlocking { getAsync(roomId) }
+
+// Suspend contexts용 reactive implementation
+suspend fun getAsync(roomId: String): List<T> {
+    val list = redisson.getList<String>(key(roomId))
+    val data = list.readAll().awaitSingleOrNull() ?: emptyList()
+    return data.map { parse(it) }
+}
+```
+
+**사용 규칙**:
+1. **Suspend context**: `xxxAsync()` 메서드 사용 (reactive, non-blocking)
+2. **Non-suspend context**: `xxx()` 메서드 사용 (blocking wrapper with runBlocking)
+3. **Import**: `import kotlinx.coroutines.reactor.awaitSingleOrNull`
+4. **Mono 변환**: `.awaitSingleOrNull()` - Mono<T> → T?
+
+**예시**:
+```kotlin
+// HistoryStore - Reactive implementation
+suspend fun add(roomId: String, question: String, answer: String) {
+    val data = json.writeValueAsString(history)
+    val list = redisson.getList<String>(key(roomId))
+    list.add(data).awaitSingleOrNull()  // Mono<Boolean> → Boolean?
+    list.expire(ttl).awaitSingleOrNull()  // Non-blocking
+}
+
+// Non-suspend caller (RiddleService)
+fun getHistory(chatId: String): List<QuestionHistory> {
+    return historyStore.get(chatId)  // Blocking wrapper
+}
+
+// Suspend caller (HintBlindProcessor)
+suspend fun saveHint(roomId: String, hint: String) {
+    historyStore.add(roomId, -1, "힌트", hint)  // Direct async call
+}
+```
+
+**CONVENTIONS 준수**:
+- ✅ `runBlocking` 허용: Redis blocking wrappers (non-suspend → suspend)
+- ✅ Redisson Reactive 사용: Redis 작업 시 thread-safe + non-blocking
+- ✅ Coroutines 우선: Suspend contexts에서는 `xxxAsync()` 직접 호출
+- ❌ `withContext(Dispatchers.IO)`: X 사용 (lock ownership 문제)
+
+**마이그레이션 완료** [ALL STORES]:
+- `HistoryStore`: List operations (readAll, add, fastSet)
+- `HintCountStore`: AtomicLong operations (incrementAndGet)
+- `BlindedTokensStore`: Bucket operations (set, get, delete, scan)
+- `WrongGuessSetStore`: List operations (add, getAll, delete, setTtl)
+- `SessionStore`: Bucket operations (get, save, delete, setTtl)
+- `CategoryStore`: Bucket operations (get, save, setTtl)
+- `TopicHistoryStore`: List operations (getRecent, add, clearAll)
+- `PlayerSetStore`: Set operations (add, getAll, clear, setTtl)
+- `SurrenderVoteStore`: Bucket operations (get, save, isActive, approve, clear)
+- `CacheCoordinator`: Bucket operations (get, set, expire, getExpire, delete)
+
+**Lock Safety**: Redisson Reactive는 thread 전환 없이 동작하므로 lock ownership 유지됨
+

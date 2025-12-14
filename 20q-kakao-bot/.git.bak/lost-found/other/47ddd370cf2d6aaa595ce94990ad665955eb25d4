@@ -1,0 +1,239 @@
+package party.qwer.twentyq.util.hint
+
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import party.qwer.twentyq.service.KomoranService
+
+@DisplayName("HintBlindServiceImpl 테스트")
+class HintBlindServiceImplTest {
+    private lateinit var selector: HintBlindSelector
+    private lateinit var rewriter: HintBlindRewriter
+    private lateinit var kiwiService: KomoranService
+    private lateinit var service: HintBlindServiceImpl
+
+    @BeforeEach
+    fun setUp() {
+        selector = mockk()
+        rewriter = mockk()
+        kiwiService = mockk()
+        service =
+            HintBlindServiceImpl(
+                selector = selector,
+                rewriter = rewriter,
+                kiwiService = kiwiService,
+            )
+    }
+
+    @Test
+    @DisplayName("blindTargetInHints는 selector와 rewriter를 조합하여 블라인드 처리한다")
+    fun shouldBlindHintsSuccessfully() =
+        runBlocking {
+            // given
+            val hints = listOf("사과는 빨갛다", "바나나는 노랗다")
+            val target = "과일"
+            val category = "음식"
+            val tokens =
+                listOf(
+                    KomoranService.Token(form = "사과", tag = "NNG", position = 0, length = 2),
+                )
+
+            coEvery {
+                selector.selectBlindToken("사과는 빨갛다", target, category)
+            } returns (listOf("사과") to tokens)
+
+            coEvery {
+                selector.selectBlindToken("바나나는 노랗다", target, category)
+            } returns (listOf("바나나") to tokens)
+
+            every {
+                rewriter.blindMultipleTokensWithSuffix("사과는 빨갛다", listOf("사과"), tokens)
+            } returns ("[BLIND] 빨갛다" to listOf("사과는"))
+
+            every {
+                rewriter.blindMultipleTokensWithSuffix("바나나는 노랗다", listOf("바나나"), tokens)
+            } returns ("[BLIND] 노랗다" to listOf("바나나는"))
+
+            // when
+            val results = service.blindTargetInHints(hints, target, category)
+
+            // then
+            assertThat(results).hasSize(2)
+            assertThat(results[0]).isEqualTo("[BLIND] 빨갛다" to listOf("사과는"))
+            assertThat(results[1]).isEqualTo("[BLIND] 노랗다" to listOf("바나나는"))
+        }
+
+    @Test
+    @DisplayName("blindTargetInHints는 블라인드 토큰이 없으면 원본 힌트와 빈 리스트를 반환한다")
+    fun shouldReturnOriginalHintWhenNoTokensToBlind() =
+        runBlocking {
+            // given
+            val hints = listOf("힌트 텍스트")
+            val target = "타겟"
+            val tokens = emptyList<KomoranService.Token>()
+
+            coEvery {
+                selector.selectBlindToken("힌트 텍스트", target, null)
+            } returns (emptyList<String>() to tokens)
+
+            // when
+            val results = service.blindTargetInHints(hints, target, null)
+
+            // then
+            assertThat(results).hasSize(1)
+            assertThat(results[0]).isEqualTo("힌트 텍스트" to emptyList<String>())
+        }
+
+    @Test
+    @DisplayName("blindTargetInHints는 IllegalArgumentException 발생 시 폴백 로직을 실행한다")
+    fun shouldFallbackOnIllegalArgumentException() =
+        runBlocking {
+            // given
+            val hints = listOf("강아지가 짖는다")
+            val target = "강아지"
+            val tokens =
+                listOf(
+                    KomoranService.Token(form = "강아지", tag = "NNG", position = 0, length = 3),
+                    KomoranService.Token(form = "가", tag = "JKS", position = 3, length = 1),
+                )
+
+            coEvery {
+                selector.selectBlindToken("강아지가 짖는다", target, null)
+            } throws IllegalArgumentException("Test error")
+
+            coEvery {
+                kiwiService.analyze("강아지가 짖는다")
+            } returns tokens
+
+            every {
+                rewriter.blindTokenWithSuffix("강아지가 짖는다", target, tokens)
+            } returns ("[BLIND] 짖는다" to "강아지가")
+
+            // when
+            val results = service.blindTargetInHints(hints, target, null)
+
+            // then
+            assertThat(results).hasSize(1)
+            assertThat(results[0]).isEqualTo("[BLIND] 짖는다" to listOf("강아지가"))
+        }
+
+    @Test
+    @DisplayName("blindTargetInHints는 IllegalStateException 발생 시 폴백 로직을 실행한다")
+    fun shouldFallbackOnIllegalStateException() =
+        runBlocking {
+            // given
+            val hints = listOf("고양이가 야옹")
+            val target = "고양이"
+            val tokens =
+                listOf(
+                    KomoranService.Token(form = "고양이", tag = "NNG", position = 0, length = 3),
+                    KomoranService.Token(form = "가", tag = "JKS", position = 3, length = 1),
+                )
+
+            coEvery {
+                selector.selectBlindToken("고양이가 야옹", target, null)
+            } throws IllegalStateException("Test error")
+
+            coEvery {
+                kiwiService.analyze("고양이가 야옹")
+            } returns tokens
+
+            every {
+                rewriter.blindTokenWithSuffix("고양이가 야옹", target, tokens)
+            } returns ("[BLIND] 야옹" to "고양이가")
+
+            // when
+            val results = service.blindTargetInHints(hints, target, null)
+
+            // then
+            assertThat(results).hasSize(1)
+            assertThat(results[0]).isEqualTo("[BLIND] 야옹" to listOf("고양이가"))
+        }
+
+    @Test
+    @DisplayName("blindTargetInHints는 예외 발생 시 타겟이 없으면 원본 힌트를 반환한다")
+    fun shouldReturnOriginalWhenExceptionAndTargetNotFound() =
+        runBlocking {
+            // given
+            val hints = listOf("텍스트 내용")
+            val target = "없는단어"
+            val tokens =
+                listOf(
+                    KomoranService.Token(form = "텍스트", tag = "NNG", position = 0, length = 3),
+                )
+
+            coEvery {
+                selector.selectBlindToken("텍스트 내용", target, null)
+            } throws IllegalArgumentException("Test error")
+
+            coEvery {
+                kiwiService.analyze("텍스트 내용")
+            } returns tokens
+
+            // when
+            val results = service.blindTargetInHints(hints, target, null)
+
+            // then
+            assertThat(results).hasSize(1)
+            assertThat(results[0]).isEqualTo("텍스트 내용" to emptyList<String>())
+        }
+
+    @Test
+    @DisplayName("revealTokens는 rewriter를 호출하고 결과를 반환한다")
+    fun shouldRevealTokensUsingRewriter() {
+        // given
+        val hint = "[BLIND] [BLIND] 뛴다"
+        val blindedTokens = listOf("강아지가", "공원에서")
+        val revealCount = 1
+        val rewriterOutcome =
+            HintBlindRewriter.Companion.RevealOutcome(
+                updatedHint = "강아지가 [BLIND] 뛴다",
+                revealedTokens = listOf("강아지가"),
+                remainingTokens = listOf("공원에서"),
+            )
+
+        every {
+            rewriter.revealTokens(hint, blindedTokens, revealCount)
+        } returns rewriterOutcome
+
+        // when
+        val result = service.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(result.updatedHint).isEqualTo("강아지가 [BLIND] 뛴다")
+        assertThat(result.revealedTokens).containsExactly("강아지가")
+        assertThat(result.remainingTokens).containsExactly("공원에서")
+    }
+
+    @Test
+    @DisplayName("revealTokens는 모든 토큰을 공개할 수 있다")
+    fun shouldRevealAllTokens() {
+        // given
+        val hint = "[BLIND] [BLIND]"
+        val blindedTokens = listOf("첫번째", "두번째")
+        val revealCount = 2
+        val rewriterOutcome =
+            HintBlindRewriter.Companion.RevealOutcome(
+                updatedHint = "첫번째 두번째",
+                revealedTokens = listOf("첫번째", "두번째"),
+                remainingTokens = emptyList(),
+            )
+
+        every {
+            rewriter.revealTokens(hint, blindedTokens, revealCount)
+        } returns rewriterOutcome
+
+        // when
+        val result = service.revealTokens(hint, blindedTokens, revealCount)
+
+        // then
+        assertThat(result.updatedHint).isEqualTo("첫번째 두번째")
+        assertThat(result.revealedTokens).hasSize(2)
+        assertThat(result.remainingTokens).isEmpty()
+    }
+}

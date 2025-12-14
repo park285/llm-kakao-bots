@@ -1,0 +1,23 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+mcp:
+  llm:
+    enabled: false
+
+app:
+  access:
+    enabled: false
+    allowedChatIds: []
+  cache:
+    enabled: true  # 캐시 활성화 (Mock RedissonReactiveClient 사용)
+    vector-embedding-max-size: 100  # 테스트용 작은 값 (약 1.2MB)
+  ai:
+    gemini:
+      api-key: "test-key"
+      api-keys: ""

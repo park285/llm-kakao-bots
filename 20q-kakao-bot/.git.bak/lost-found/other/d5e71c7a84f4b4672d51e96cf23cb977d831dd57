@@ -1,0 +1,92 @@
+package party.qwer.twentyq.redis.session
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.runBlocking
+import org.redisson.api.RedissonReactiveClient
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.api.dto.QuestionHistory
+import party.qwer.twentyq.config.AppProperties
+import java.time.Duration
+
+@Component
+@ConditionalOnProperty(
+    prefix = "app.redis",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
+class HistoryStore(
+    private val redisson: RedissonReactiveClient,
+    private val props: AppProperties,
+    private val json: ObjectMapper,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(HistoryStore::class.java)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun get(roomId: String): List<QuestionHistory> = runBlocking { getAsync(roomId) }
+
+    suspend fun getAsync(roomId: String): List<QuestionHistory> {
+        val list = redisson.getList<String>(key(roomId))
+        val range = list.readAll().awaitSingleOrNull() ?: emptyList()
+        val history = range.mapNotNull { parseOrNull(it, roomId) }
+        log.debug("GET room={}, size={}", roomId, history.size)
+        return history
+    }
+
+    suspend fun add(
+        roomId: String,
+        questionNumber: Int,
+        question: String,
+        answer: String,
+    ) {
+        val history = QuestionHistory(questionNumber, question, answer)
+        val data = json.writeValueAsString(history)
+        val list = redisson.getList<String>(key(roomId))
+        list.add(data).awaitSingleOrNull()
+        list.expire(Duration.ofMinutes(props.redis.sessionTtlMinutes)).awaitSingleOrNull()
+        log.debug("ADD room={}, qNum={}, answer={}", roomId, questionNumber, answer)
+    }
+
+    suspend fun updateAt(
+        roomId: String,
+        index: Int,
+        questionNumber: Int,
+        question: String,
+        answer: String,
+    ) {
+        val history = QuestionHistory(questionNumber, question, answer)
+        val data = json.writeValueAsString(history)
+        val list = redisson.getList<String>(key(roomId))
+        list.fastSet(index, data).awaitSingleOrNull()
+        list.expire(Duration.ofMinutes(props.redis.sessionTtlMinutes)).awaitSingleOrNull()
+        log.debug("UPDATE room={}, index={}, qNum={}, answer={}", roomId, index, questionNumber, answer)
+    }
+
+    // Blocking wrapper (CONVENTIONS: 허용됨)
+    fun clear(roomId: String) = runBlocking { clearAsync(roomId) }
+
+    suspend fun clearAsync(roomId: String) {
+        redisson.getList<String>(key(roomId)).delete().awaitSingleOrNull()
+        log.debug("CLEAR room={}", roomId)
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun parseOrNull(
+        data: String,
+        roomId: String,
+    ): QuestionHistory? =
+        try {
+            json.readValue<QuestionHistory>(data)
+        } catch (e: Exception) {
+            log.warn("PARSE_ERROR room={}, error={}", roomId, e.message)
+            null
+        }
+
+    private fun key(roomId: String) = "${party.qwer.twentyq.redis.RedisKeys.HISTORY}:$roomId"
+}

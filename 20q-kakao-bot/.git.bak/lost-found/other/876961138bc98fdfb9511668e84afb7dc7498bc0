@@ -1,0 +1,73 @@
+package party.qwer.twentyq.service
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+/**
+ * SpellChecker 테스트
+ */
+class SpellCheckerTest {
+    private lateinit var spellChecker: SpellChecker
+
+    @BeforeEach
+    fun setUp() {
+        spellChecker = SpellChecker(ObjectMapper())
+    }
+
+    @Test
+    fun `should remove trailing jamo`() =
+        runBlocking {
+            // 끝 자모 제거 테스트
+            val result = spellChecker.correct("생물인가요ㅕ")
+
+            assertThat(result).doesNotContain("ㅕ")
+        }
+
+    @Test
+    fun `should return original for empty text`() =
+        runBlocking {
+            val result = spellChecker.correct("")
+
+            assertThat(result).isEmpty()
+        }
+
+    @Test
+    fun `should return original for short text`() =
+        runBlocking {
+            val result = spellChecker.correct("a")
+
+            assertThat(result).isEqualTo("a")
+        }
+
+    @Test
+    fun `should use cache on second call`() =
+        runBlocking {
+            val text = "테스트 문장"
+
+            // 첫 번째 호출
+            val result1 = spellChecker.correct(text)
+
+            // 두 번째 호출 (캐시 히트)
+            val result2 = spellChecker.correct(text)
+
+            assertThat(result1).isEqualTo(result2)
+
+            // 캐시 통계 확인
+            val stats = spellChecker.getCacheStats()
+            assertThat(stats.hitCount()).isGreaterThan(0)
+        }
+
+    @Test
+    fun `should handle text longer than max length`() =
+        runBlocking {
+            val longText = "가".repeat(300)
+
+            val result = spellChecker.correct(longText)
+
+            // 길이 제한 초과시 전처리만 적용
+            assertThat(result).isNotNull()
+        }
+}

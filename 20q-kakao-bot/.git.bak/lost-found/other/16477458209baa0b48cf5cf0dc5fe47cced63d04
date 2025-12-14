@@ -1,0 +1,148 @@
+package party.qwer.twentyq.service
+
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import party.qwer.twentyq.ai.AIProvider
+import party.qwer.twentyq.config.RiddleConfigProvider
+import party.qwer.twentyq.llm.RiddlePromptManager
+
+@DisplayName("SynonymCheckService")
+class SynonymCheckServiceTest {
+    private lateinit var aiProvider: AIProvider
+    private lateinit var promptManager: RiddlePromptManager
+    private lateinit var riddleConfigProvider: RiddleConfigProvider
+    private lateinit var service: SynonymCheckService
+
+    @BeforeEach
+    fun setUp() {
+        aiProvider = mockk(relaxed = true)
+        promptManager = mockk(relaxed = true)
+        riddleConfigProvider = mockk(relaxed = true)
+
+        service =
+            SynonymCheckService(
+                aiProvider = aiProvider,
+                promptManager = promptManager,
+                riddleConfigProvider = riddleConfigProvider,
+            )
+
+        // 기본 mock 설정
+        every { promptManager.getSystemPrompt("synonym-check") } returns "system"
+        every { promptManager.getUserPrompt("synonym-check") } returns "{target} vs {guess}"
+        every { promptManager.buildCombinedSystemPrompt(any()) } returns "combined"
+
+        val config =
+            RiddleConfigProvider.ProviderConfig(
+                temperature =
+                    RiddleConfigProvider.TempConfig(
+                        create = 1.0,
+                        hints = 1.0,
+                        answer = 1.0,
+                        reveal = 1.0,
+                        normalize = 0.0,
+                        synonymCheck = 0.0,
+                        hintBlindJudgment = 0.3,
+                        hintValidation = 0.3,
+                        topicDifficulty = 0.3,
+                        metaQuestionValidation = 0.0,
+                    ),
+                topP =
+                    RiddleConfigProvider.TopPConfig(
+                        create = 1.0,
+                        hints = 1.0,
+                        answer = 1.0,
+                        reveal = 1.0,
+                        normalize = 1.0,
+                        synonymCheck = 1.0,
+                        hintBlindJudgment = 0.9,
+                        hintValidation = 0.9,
+                        topicDifficulty = 1.0,
+                        metaQuestionValidation = 0.0,
+                    ),
+            )
+        every { riddleConfigProvider.getConfig() } returns config
+    }
+
+    @Nested
+    @DisplayName("checkSynonym")
+    inner class CheckSynonymTest {
+        @Test
+        fun `EQUIVALENT 응답 - true 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns "EQUIVALENT"
+
+                val result = service.checkSynonym("사과", "애플")
+
+                assertThat(result).isTrue()
+            }
+
+        @Test
+        fun `NOT_EQUIVALENT 응답 - false 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns
+                    "NOT_EQUIVALENT"
+
+                val result = service.checkSynonym("사과", "바나나")
+
+                assertThat(result).isFalse()
+            }
+
+        @Test
+        fun `소문자 응답 - true 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns "equivalent"
+
+                val result = service.checkSynonym("자동차", "차")
+
+                assertThat(result).isTrue()
+            }
+
+        @Test
+        fun `공백 포함 응답 - true 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns
+                    "  EQUIVALENT  "
+
+                val result = service.checkSynonym("컴퓨터", "PC")
+
+                assertThat(result).isTrue()
+            }
+
+        @Test
+        fun `개행 포함 응답 - true 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns "EQUIVALENT\n"
+
+                val result = service.checkSynonym("휴대폰", "핸드폰")
+
+                assertThat(result).isTrue()
+            }
+
+        @Test
+        fun `예상하지 못한 응답 - false 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns "UNKNOWN"
+
+                val result = service.checkSynonym("사과", "바나나")
+
+                assertThat(result).isFalse()
+            }
+
+        @Test
+        fun `빈 응답 - false 반환`() =
+            runBlocking {
+                coEvery { aiProvider.generate(any(), any(), any(), any(), any(), any(), any()) } returns ""
+
+                val result = service.checkSynonym("사과", "바나나")
+
+                assertThat(result).isFalse()
+            }
+    }
+}

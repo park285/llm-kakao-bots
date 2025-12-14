@@ -1,0 +1,49 @@
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+
+# Environment
+.env
+.env.local
+*.local.json
+
+# Logs
+logs/
+*.log
+
+# Redis
+dump.rdb
+
+# Test
+.kotest/
+
+# Claude/AI artifacts (settings only, NOT skills/instructions)
+.claude/settings.local.json
+*.claude.json
+
+# Claude (local settings and skills)
+.claude/
+
+# Serena (local cache/memories)
+.serena/
+
+# Temp files
+*.pid
+file.txt

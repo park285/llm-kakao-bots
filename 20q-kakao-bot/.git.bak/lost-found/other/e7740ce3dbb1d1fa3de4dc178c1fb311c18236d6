@@ -1,0 +1,146 @@
+package party.qwer.twentyq.bridge.handlers
+
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.model.RiddleCategory
+import party.qwer.twentyq.redis.RiddleSessionRepository
+import party.qwer.twentyq.service.RiddleService
+
+@Component
+@ConditionalOnProperty(prefix = "app.mqtt", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+class StartHandler(
+    private val riddleService: RiddleService,
+    private val sessionRepo: RiddleSessionRepository,
+    private val messageProvider: party.qwer.twentyq.util.GameMessageProvider,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    suspend fun handle(
+        chatId: String,
+        category: String? = null,
+    ): String {
+        log.info("HANDLE_START chatId={}, category={}", chatId, category)
+
+        val allowedCategories = setOf("생물", "음식", "사물", "장소", "개념", "영화")
+        var validatedCategory = category
+
+        if (!category.isNullOrBlank() && !allowedCategories.contains(category)) {
+            log.warn("INVALID_CATEGORY chatId={}, category={}", chatId, category)
+            validatedCategory = null
+        }
+
+        if (riddleService.hasSession(chatId)) {
+            log.info("EXISTING_SESSION_FOUND chatId={}", chatId)
+            val statusMsg = getStatusMessages(chatId)
+            return statusMsg.primary
+        }
+
+        return try {
+            riddleService.createRiddle(chatId, validatedCategory)
+
+            val selectedCategory = sessionRepo.getSelectedCategory(chatId)
+            val categoryText =
+                selectedCategory?.let {
+                    val categoryEnum = RiddleCategory.fromString(it)
+                    "[주제:${categoryEnum.koreanName}] "
+                } ?: ""
+
+            val rand = Math.random()
+            when {
+                rand < 0.05 -> {
+                    log.info("EASTER_EGG_1_TRIGGERED chatId={}", chatId)
+                    messageProvider.get("start.easter_egg_1", "category" to categoryText)
+                }
+                rand < 0.10 -> {
+                    log.info("EASTER_EGG_2_TRIGGERED chatId={}", chatId)
+                    messageProvider.get("start.easter_egg_2", "category" to categoryText)
+                }
+                else -> {
+                    if (categoryText.isNotEmpty()) {
+                        messageProvider.get("start.ready_with_category", "category" to categoryText)
+                    } else {
+                        messageProvider.get("start.ready")
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            log.error("Failed to create riddle", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    fun hasExistingSession(chatId: String): Boolean = riddleService.hasSession(chatId)
+
+    data class StatusMessage(
+        val primary: String,
+        val secondary: List<String> = emptyList(),
+    )
+
+    fun getStatusMessages(chatId: String): StatusMessage {
+        val status = riddleService.getStatus(chatId)
+        val questionCount = status.questionCount
+        val hintCount = status.hintCount
+        val maxHints = status.maxHints
+        val questions = status.questions
+        val hints = status.hints
+        val wrongGuesses = sessionRepo.getWrongGuesses(chatId)
+
+        val header =
+            buildString {
+                status.selectedCategory?.let {
+                    val category = RiddleCategory.fromString(it)
+                    append("[주제:${category.koreanName}] ")
+                }
+                append("남은힌트${maxHints - hintCount}")
+            }
+
+        val hintLines =
+            if (hints.isNotEmpty()) {
+                hints.joinToString("\n") { h -> "\uD83D\uDCA1#${h.hintNumber} ${h.content}" }
+            } else {
+                null
+            }
+
+        val wrongGuessLine =
+            if (wrongGuesses.isNotEmpty()) {
+                "틀린 정답: ${wrongGuesses.joinToString(", ")}"
+            } else {
+                null
+            }
+
+        val parts = mutableListOf(header)
+        if (!hintLines.isNullOrBlank()) parts.add(hintLines)
+        if (!wrongGuessLine.isNullOrBlank()) parts.add(wrongGuessLine)
+
+        return if (questionCount <= 14) {
+            if (questions.isNotEmpty()) {
+                val qnaLines =
+                    questions
+                        .mapIndexed { idx, h ->
+                            "Q${idx + 1} ${h.question} | A ${h.answer}"
+                        }.joinToString("\n")
+                parts.add(qnaLines)
+            }
+            StatusMessage(primary = parts.joinToString("\n"))
+        } else {
+            val firstPart =
+                questions
+                    .take(14)
+                    .mapIndexed { idx, h ->
+                        "Q${idx + 1} ${h.question} | A ${h.answer}"
+                    }.joinToString("\n")
+            if (firstPart.isNotBlank()) parts.add(firstPart)
+
+            val secondaryMessages =
+                questions.drop(14).chunked(14).mapIndexed { chunkIdx, chunk ->
+                    chunk
+                        .mapIndexed { idx, h ->
+                            val qNum = chunkIdx * 14 + 15 + idx
+                            "Q$qNum ${h.question} | A ${h.answer}"
+                        }.joinToString("\n")
+                }
+            StatusMessage(primary = parts.joinToString("\n"), secondary = secondaryMessages)
+        }
+    }
+}

@@ -1,0 +1,56 @@
+package party.qwer.twentyq.bridge.handlers
+
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.service.RiddleService
+import party.qwer.twentyq.service.exception.HintLimitExceededException
+import party.qwer.twentyq.service.exception.SessionNotFoundException
+
+@Component
+@ConditionalOnProperty(prefix = "app.mqtt", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+class HintsHandler(
+    private val riddleService: RiddleService,
+    private val messageProvider: party.qwer.twentyq.util.GameMessageProvider,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    suspend fun handle(
+        chatId: String,
+        count: Int,
+    ): String {
+        log.info("HANDLE_HINTS chatId={}, requestedCount={}, fixedCount=1", chatId, count)
+        return try {
+            requireSession(chatId)
+            val hints = riddleService.generateHints(chatId, 1)
+            if (hints.isEmpty()) {
+                messageProvider.get("error.hint_not_available")
+            } else {
+                val s = riddleService.getStatus(chatId)
+                val hintNumber = s.hintCount
+                messageProvider.get("hint.generated", "hintNumber" to hintNumber, "content" to hints.first())
+            }
+        } catch (ex: SessionNotFoundException) {
+            messageProvider.get("error.no_session_short")
+        } catch (ex: HintLimitExceededException) {
+            ex.message ?: messageProvider.get("error.hint_no_more")
+        } catch (ex: Exception) {
+            log.error("Failed to generate hints", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    private fun requireSession(chatId: String) {
+        if (!riddleService.hasSession(chatId)) {
+            throw SessionNotFoundException()
+        }
+    }
+
+    fun isHintAvailable(chatId: String): Boolean {
+        if (!riddleService.hasSession(chatId)) {
+            return false
+        }
+        val status = riddleService.getStatus(chatId)
+        return status.hintCount < status.maxHints
+    }
+}

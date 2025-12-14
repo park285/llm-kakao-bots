@@ -1,0 +1,11 @@
+{
+  "title": "NormalizeResponse",
+  "type": "object",
+  "properties": {
+    "normalized": {
+      "type": "string",
+      "description": "The normalized/corrected version of the input question"
+    }
+  },
+  "required": ["normalized"]
+}

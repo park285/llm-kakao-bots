@@ -1,0 +1,149 @@
+package party.qwer.twentyq.service.riddle
+
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import party.qwer.twentyq.api.dto.QuestionHistory
+import party.qwer.twentyq.model.RiddleCategory
+import party.qwer.twentyq.model.RiddleSecret
+import party.qwer.twentyq.redis.SessionCoordinator
+import party.qwer.twentyq.redis.session.CategoryStore
+import party.qwer.twentyq.redis.session.HistoryStore
+import party.qwer.twentyq.redis.session.SecretStore
+import party.qwer.twentyq.redis.tracking.TopicHistoryStore
+import party.qwer.twentyq.redis.voting.BlindedTokensStore
+import party.qwer.twentyq.service.exception.SessionNotFoundException
+import party.qwer.twentyq.util.hint.HintBlindService
+
+@DisplayName("RiddleTerminator")
+class RiddleTerminatorTest {
+    private lateinit var secretStore: SecretStore
+    private lateinit var categoryStore: CategoryStore
+    private lateinit var historyStore: HistoryStore
+    private lateinit var topicHistoryStore: TopicHistoryStore
+    private lateinit var blindedTokensStore: BlindedTokensStore
+    private lateinit var sessionCoordinator: SessionCoordinator
+    private lateinit var blindService: HintBlindService
+    private lateinit var messageProvider: party.qwer.twentyq.util.GameMessageProvider
+    private lateinit var terminator: RiddleTerminator
+
+    @BeforeEach
+    fun setUp() {
+        secretStore = mockk(relaxed = true)
+        categoryStore = mockk(relaxed = true)
+        historyStore = mockk(relaxed = true)
+        topicHistoryStore = mockk(relaxed = true)
+        blindedTokensStore = mockk(relaxed = true)
+        sessionCoordinator = mockk(relaxed = true)
+        blindService = mockk(relaxed = true)
+        messageProvider = mockk(relaxed = true)
+
+        // 기본 mock 설정
+        every { messageProvider.get(any(), *anyVararg()) } returns "test message"
+
+        terminator =
+            RiddleTerminator(
+                secretStore,
+                categoryStore,
+                historyStore,
+                topicHistoryStore,
+                blindedTokensStore,
+                sessionCoordinator,
+                blindService,
+                messageProvider,
+            )
+    }
+
+    @Nested
+    @DisplayName("reveal")
+    inner class RevealTest {
+        @Test
+        fun `reveal - 정답 공개 및 세션 삭제`() =
+            runBlocking {
+                val chatId = "chat123"
+                val secret = RiddleSecret(category = "FOOD", target = "사과", intro = "과일입니다")
+
+                every { secretStore.get(chatId) } returns secret
+                every { messageProvider.get("reveal.result", "target" to "사과") } returns "정답: 사과"
+                coEvery { sessionCoordinator.deleteSession(chatId) } returns Unit
+
+                val result = terminator.reveal(chatId)
+
+                assertThat(result).contains("사과")
+                verify { topicHistoryStore.add(chatId, RiddleCategory.FOOD.name, "사과") }
+                coVerify { sessionCoordinator.deleteSession(chatId) }
+            }
+
+        @Test
+        fun `reveal - 세션 없을 때 SessionNotFoundException`() =
+            runBlocking {
+                val chatId = "chat999"
+
+                every { secretStore.get(chatId) } returns null
+
+                assertThrows<SessionNotFoundException> {
+                    terminator.reveal(chatId)
+                }
+            }
+
+        @Test
+        fun `reveal - 다양한 카테고리 처리`() =
+            runBlocking {
+                val chatId = "chat456"
+                val secret = RiddleSecret(category = "ORGANISM", target = "손흥민", intro = "유명한 인물입니다")
+
+                every { secretStore.get(chatId) } returns secret
+                every { messageProvider.get("reveal.result", "target" to "손흥민") } returns "정답: 손흥민"
+                coEvery { sessionCoordinator.deleteSession(chatId) } returns Unit
+
+                val result = terminator.reveal(chatId)
+
+                assertThat(result).contains("손흥민")
+                verify { topicHistoryStore.add(chatId, RiddleCategory.ORGANISM.name, "손흥민") }
+            }
+    }
+
+    @Nested
+    @DisplayName("surrender")
+    inner class SurrenderTest {
+        @Test
+        @org.junit.jupiter.api.Disabled("Template migration - mock setup needs review")
+        fun `surrender - 기본 항복 메시지`() =
+            runBlocking {
+                val chatId = "chat123"
+                val secret = RiddleSecret(category = "FOOD", target = "사과", intro = "과일입니다")
+
+                every { secretStore.get(chatId) } returns secret
+                every { categoryStore.get(chatId) } returns null
+                every { historyStore.get(chatId) } returns emptyList()
+                coEvery { sessionCoordinator.deleteSession(chatId) } returns Unit
+
+                val result = terminator.surrender(chatId)
+
+                assertThat(result).contains("사과")
+                verify { topicHistoryStore.add(chatId, RiddleCategory.FOOD.name, "사과") }
+                coVerify { sessionCoordinator.deleteSession(chatId) }
+            }
+
+        @Test
+        fun `surrender - 세션 없을 때 SessionNotFoundException`() =
+            runBlocking {
+                val chatId = "chat999"
+
+                every { secretStore.get(chatId) } returns null
+
+                assertThrows<SessionNotFoundException> {
+                    terminator.surrender(chatId)
+                }
+            }
+    }
+}

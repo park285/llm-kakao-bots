@@ -1,0 +1,66 @@
+config:
+  validation: true
+  warningsAsErrors: false
+
+style:
+  active: true
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  OptionalUnit:
+    active: true
+  ReturnCount:
+    active: true
+    max: 3
+  UnusedPrivateClass:
+    active: true
+  UnusedPrivateFunction:
+    active: true
+  UnusedPrivateProperty:
+    active: true
+    allowedNames: 'ignored|expected|serialVersionUID'
+  UnusedParameter:
+    active: true
+    allowedNames: 'ignored|expected'
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    allowedLines: 80
+  LargeClass:
+    active: true
+    allowedLines: 600
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 15
+    allowedFunctionsPerClass: 15
+    allowedFunctionsPerObject: 15
+    allowedFunctionsPerInterface: 15
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 4
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 15
+  StringLiteralDuplication:
+    active: true
+    allowedDuplications: 2
+    allowedWithLengthLessThan: 5
+
+potential-bugs:
+  active: true
+  EqualsWithHashCodeExist:
+    active: true
+  HasPlatformType:
+    active: true
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Bean', 'Test']

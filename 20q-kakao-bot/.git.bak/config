@@ -1,0 +1,23 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[user]
+	email = pjoonwoo111@gmail.com
+	name = kapu
+[branch "experiment/java25-kotlin2.3-beta2"]
+	vscode-merge-base = origin/main
+[remote "origin"]
+	url = git@github.com:park285/suza.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "feature/spring-boot-4.0-migration"]
+	remote = origin
+	merge = refs/heads/feature/spring-boot-4.0-migration
+[branch "feature/ktor-gemini-client"]
+	vscode-merge-base = origin/feature/spring-boot-4.0-migration
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "feature/mcp-llm-integration"]
+	vscode-merge-base = origin/main

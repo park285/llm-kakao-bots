@@ -1,0 +1,40 @@
+services:
+  twentyq-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - twentyq-gradle-cache:/root/.gradle
+    tmpfs:
+      - /tmp
+    command: ["./gradlew", "bootRun", "--continuous", "--no-daemon"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+
+  turtle-soup-bot:
+    build:
+      context: ../turtle-soup-bot
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ../turtle-soup-bot:/app
+      - turtle-gradle-cache:/root/.gradle
+    tmpfs:
+      - /tmp
+    command: ["./gradlew", "run", "--continuous", "--no-daemon"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+
+volumes:
+  twentyq-gradle-cache:
+  turtle-gradle-cache:

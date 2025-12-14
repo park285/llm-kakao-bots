@@ -1,0 +1,5 @@
+Collecting loguru
+  Downloading loguru-0.7.3-py3-none-any.whl.metadata (22 kB)
+Downloading loguru-0.7.3-py3-none-any.whl (61 kB)
+Installing collected packages: loguru
+Successfully installed loguru-0.7.3

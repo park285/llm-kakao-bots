@@ -1,0 +1,197 @@
+# ============================================
+# LLM Workspace Root .gitignore
+# ============================================
+
+# ============================================
+# Secrets & Credentials (CRITICAL)
+# ============================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+credentials.json
+secrets.yml
+secrets.yaml
+
+# ============================================
+# Python (mcp-llm-server)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Testing/Quality
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# ============================================
+# Kotlin/Java (20q-kakao-bot, turtle-soup-bot)
+# ============================================
+# Build Output
+bin/
+build/
+.gradle/
+.kotlin/
+out/
+target/
+
+# Keep Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Detekt CLI (auto-downloaded)
+.detekt/*.jar
+
+# ============================================
+# IDE
+# ============================================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# ============================================
+# Runtime & Process Files
+# ============================================
+*.pid
+nohup.out
+
+# ============================================
+# Logs
+# ============================================
+*.log
+logs/
+gc.log*
+
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+tmp/
+
+# Compressed archives
+*.tar.gz
+
+# ============================================
+# AI Tooling Artifacts (Local Only)
+# ============================================
+.serena/
+.claude/
+*.ai.md
+*-ai-notes.md
+*.backup
+*.backup-*
+AGENTS.md
+CLAUDE.md
+
+# ============================================
+# Personal/Draft Files
+# ============================================
+NOTES.md
+TODO.md
+SCRATCH.md
+*.draft.md
+.notes/
+notes/
+chekc.md
+
+# ============================================
+# OS Files
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# Test & Coverage
+# ============================================
+.test/
+coverage/
+*.gcov
+*.gcno
+*.gcda
+jacoco/
+*.exec
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.mv.db
+*.trace.db
+dump.rdb
+
+# ============================================
+# Node.js (if using frontend tools)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Explicitly Include (Override)
+# ============================================
+!.env.example
+!README.md
+!LICENSE
+!CHANGELOG.md
+!CONTRIBUTING.md
+!gradlew
+!gradlew.bat
+!docs/

@@ -1,0 +1,12 @@
+package party.qwer.twentyq.bridge.handlers
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+
+@Component
+@ConditionalOnProperty(prefix = "app.mqtt", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+class HelpHandler(
+    private val messageProvider: party.qwer.twentyq.util.GameMessageProvider,
+) {
+    fun handle(): String = messageProvider.get("help.message")
+}

@@ -1,0 +1,1244 @@
+{
+  "food": [
+    {
+      "name": "비빔밥 (Bibimbap)",
+      "details": { "category": "한식", "main_ingredient": "쌀, 나물, 고추장" }
+    },
+    {
+      "name": "불고기 (Bulgogi)",
+      "details": { "category": "한식", "main_ingredient": "소고기" }
+    },
+    {
+      "name": "김치찌개 (Kimchi Stew)",
+      "details": { "category": "한식", "main_ingredient": "김치, 돼지고기" }
+    },
+    {
+      "name": "된장찌개 (Soybean Paste Stew)",
+      "details": { "category": "한식", "main_ingredient": "된장, 두부" }
+    },
+    {
+      "name": "삼겹살 구이 (Grilled Pork Belly)",
+      "details": { "category": "한식", "main_ingredient": "돼지고기" }
+    },
+    {
+      "name": "갈비찜 (Braised Short Ribs)",
+      "details": { "category": "한식", "main_ingredient": "소갈비" }
+    },
+    {
+      "name": "잡채 (Japchae)",
+      "details": { "category": "한식", "main_ingredient": "당면, 채소" }
+    },
+    {
+      "name": "삼계탕 (Ginseng Chicken Soup)",
+      "details": { "category": "한식", "main_ingredient": "닭, 인삼" }
+    },
+    {
+      "name": "설렁탕 (Ox Bone Soup)",
+      "details": { "category": "한식", "main_ingredient": "소뼈, 소고기" }
+    },
+    {
+      "name": "갈비탕 (Short Rib Soup)",
+      "details": { "category": "한식", "main_ingredient": "소갈비" }
+    },
+    {
+      "name": "육개장 (Spicy Beef Soup)",
+      "details": { "category": "한식", "main_ingredient": "소고기, 파" }
+    },
+    {
+      "name": "순두부찌개 (Soft Tofu Stew)",
+      "details": { "category": "한식", "main_ingredient": "순두부, 바지락" }
+    },
+    {
+      "name": "부대찌개 (Sausage Stew)",
+      "details": { "category": "한식", "main_ingredient": "햄, 소시지, 김치" }
+    },
+    {
+      "name": "제육볶음 (Stir-fried Pork)",
+      "details": { "category": "한식", "main_ingredient": "돼지고기, 고추장" }
+    },
+    {
+      "name": "닭갈비 (Spicy Stir-fried Chicken)",
+      "details": { "category": "한식", "main_ingredient": "닭고기, 양배추" }
+    },
+    {
+      "name": "보쌈 (Bossam)",
+      "details": { "category": "한식", "main_ingredient": "돼지고기" }
+    },
+    {
+      "name": "족발 (Pork Trotters)",
+      "details": { "category": "한식", "main_ingredient": "돼지족" }
+    },
+    {
+      "name": "해물파전 (Seafood Pancake)",
+      "details": { "category": "한식", "main_ingredient": "쪽파, 오징어" }
+    },
+    {
+      "name": "감자탕 (Pork Back-bone Stew)",
+      "details": { "category": "한식", "main_ingredient": "돼지등뼈, 우거지" }
+    },
+    {
+      "name": "찜닭 (Braised Spicy Chicken)",
+      "details": { "category": "한식", "main_ingredient": "닭고기, 당면" }
+    },
+    {
+      "name": "냉면 (Naengmyeon)",
+      "details": { "category": "한식", "main_ingredient": "메밀면" }
+    },
+    {
+      "name": "칼국수 (Kalguksu)",
+      "details": { "category": "한식", "main_ingredient": "밀가루면, 바지락" }
+    },
+    {
+      "name": "수제비 (Sujebi)",
+      "details": { "category": "한식", "main_ingredient": "밀가루반죽" }
+    },
+    {
+      "name": "콩국수 (Soy Milk Noodle Soup)",
+      "details": { "category": "한식", "main_ingredient": "콩국물, 소면" }
+    },
+    {
+      "name": "김치볶음밥 (Kimchi Fried Rice)",
+      "details": { "category": "한식", "main_ingredient": "김치, 쌀" }
+    },
+    {
+      "name": "떡국 (Rice Cake Soup)",
+      "details": { "category": "한식", "main_ingredient": "가래떡, 소고기" }
+    },
+    {
+      "name": "미역국 (Seaweed Soup)",
+      "details": { "category": "한식", "main_ingredient": "미역, 소고기" }
+    },
+    {
+      "name": "북엇국 (Dried Pollack Soup)",
+      "details": { "category": "한식", "main_ingredient": "북어" }
+    },
+    {
+      "name": "낙지볶음 (Stir-fried Octopus)",
+      "details": { "category": "한식", "main_ingredient": "낙지" }
+    },
+    {
+      "name": "간장게장 (Soy Sauce Marinated Crab)",
+      "details": { "category": "한식", "main_ingredient": "꽃게" }
+    },
+    {
+      "name": "아구찜 (Spicy Braised Monkfish)",
+      "details": { "category": "한식", "main_ingredient": "아귀, 콩나물" }
+    },
+    {
+      "name": "육회 (Beef Tartare)",
+      "details": { "category": "한식", "main_ingredient": "소고기(우둔살)" }
+    },
+    {
+      "name": "곱창구이 (Grilled Beef Tripe)",
+      "details": { "category": "한식", "main_ingredient": "소곱창" }
+    },
+    {
+      "name": "닭볶음탕 (Spicy Chicken Stew)",
+      "details": { "category": "한식", "main_ingredient": "닭고기, 감자" }
+    },
+    {
+      "name": "계란말이 (Rolled Omelet)",
+      "details": { "category": "한식", "main_ingredient": "계란" }
+    },
+    {
+      "name": "두부김치 (Tofu with Stir-fried Kimchi)",
+      "details": { "category": "한식", "main_ingredient": "두부, 김치" }
+    },
+    {
+      "name": "도토리묵 (Acorn Jelly Salad)",
+      "details": { "category": "한식", "main_ingredient": "도토리묵, 채소" }
+    },
+    {
+      "name": "갈치조림 (Braised Cutlassfish)",
+      "details": { "category": "한식", "main_ingredient": "갈치, 무" }
+    },
+    {
+      "name": "고등어구이 (Grilled Mackerel)",
+      "details": { "category": "한식", "main_ingredient": "고등어" }
+    },
+    {
+      "name": "동태전 (Pollack Pancake)",
+      "details": { "category": "한식", "main_ingredient": "동태포, 계란" }
+    },
+    {
+      "name": "육전 (Meat Pancake)",
+      "details": { "category": "한식", "main_ingredient": "소고기, 계란" }
+    },
+    {
+      "name": "꼬리곰탕 (Oxtail Soup)",
+      "details": { "category": "한식", "main_ingredient": "소꼬리" }
+    },
+    {
+      "name": "도가니탕 (Ox Knee Soup)",
+      "details": { "category": "한식", "main_ingredient": "도가니" }
+    },
+    {
+      "name": "선지해장국 (Ox Blood Soup)",
+      "details": { "category": "한식", "main_ingredient": "선지, 우거지" }
+    },
+    {
+      "name": "콩비지찌개 (Ground Soybean Stew)",
+      "details": { "category": "한식", "main_ingredient": "콩비지, 돼지고기" }
+    },
+    {
+      "name": "청국장 (Cheonggukjang)",
+      "details": { "category": "한식", "main_ingredient": "청국장, 두부" }
+    },
+    {
+      "name": "쌈밥 (Leaf Wraps and Rice)",
+      "details": { "category": "한식", "main_ingredient": "쌈채소, 강된장" }
+    },
+    {
+      "name": "누룽지 (Scorched Rice)",
+      "details": { "category": "한식", "main_ingredient": "쌀" }
+    },
+    {
+      "name": "비빔국수 (Spicy Noodles)",
+      "details": { "category": "한식", "main_ingredient": "소면, 고추장" }
+    },
+    {
+      "name": "잔치국수 (Banquet Noodles)",
+      "details": { "category": "한식", "main_ingredient": "소면, 멸치육수" }
+    },
+    {
+      "name": "오징어볶음 (Stir-fried Squid)",
+      "details": { "category": "한식", "main_ingredient": "오징어, 채소" }
+    },
+    {
+      "name": "장조림 (Soy Braised Beef)",
+      "details": {
+        "category": "한식",
+        "main_ingredient": "소고기/돼지고기, 간장"
+      }
+    },
+    {
+      "name": "더덕구이 (Grilled Deodeok)",
+      "details": { "category": "한식", "main_ingredient": "더덕, 고추장" }
+    },
+    {
+      "name": "황태구이 (Grilled Dried Pollack)",
+      "details": { "category": "한식", "main_ingredient": "황태, 고추장" }
+    },
+    {
+      "name": "약식 (Yaksik)",
+      "details": { "category": "한식", "main_ingredient": "찹쌀, 대추, 밤" }
+    },
+    {
+      "name": "콩나물국밥 (Bean Sprout Soup Rice)",
+      "details": { "category": "한식", "main_ingredient": "콩나물, 밥" }
+    },
+    {
+      "name": "추어탕 (Loach Soup)",
+      "details": { "category": "한식", "main_ingredient": "미꾸라지, 시래기" }
+    },
+    {
+      "name": "떡볶이 (Tteokbokki)",
+      "details": { "category": "분식", "main_ingredient": "떡, 어묵, 고추장" }
+    },
+    {
+      "name": "김밥 (Gimbap)",
+      "details": { "category": "분식", "main_ingredient": "쌀, 김, 단무지" }
+    },
+    {
+      "name": "순대 (Sundae)",
+      "details": { "category": "분식", "main_ingredient": "당면, 돼지선지" }
+    },
+    {
+      "name": "튀김 (Tempura)",
+      "details": { "category": "분식", "main_ingredient": "오징어, 새우, 채소" }
+    },
+    {
+      "name": "라면 (Ramen)",
+      "details": { "category": "분식", "main_ingredient": "밀가루면, 스프" }
+    },
+    {
+      "name": "어묵탕 (Fish Cake Soup)",
+      "details": { "category": "분식", "main_ingredient": "어묵, 무" }
+    },
+    {
+      "name": "쫄면 (Jjolmyeon)",
+      "details": { "category": "분식", "main_ingredient": "쫄면, 콩나물" }
+    },
+    {
+      "name": "라볶이 (Rabokki)",
+      "details": { "category": "분식", "main_ingredient": "라면, 떡, 고추장" }
+    },
+    {
+      "name": "호떡 (Hotok)",
+      "details": { "category": "분식", "main_ingredient": "밀가루, 설탕" }
+    },
+    {
+      "name": "붕어빵 (Bungeoppang)",
+      "details": { "category": "분식", "main_ingredient": "밀가루, 팥" }
+    },
+    {
+      "name": "군고구마 (Roasted Sweet Potato)",
+      "details": { "category": "분식", "main_ingredient": "고구마" }
+    },
+    {
+      "name": "찐빵 (Steamed Bun)",
+      "details": { "category": "분식", "main_ingredient": "밀가루, 팥" }
+    },
+    {
+      "name": "소떡소떡 (Sotteok Sotteok)",
+      "details": { "category": "분식", "main_ingredient": "소시지, 떡" }
+    },
+    {
+      "name": "치킨마요덮밥 (Chicken Mayo Bowl)",
+      "details": { "category": "분식", "main_ingredient": "치킨, 마요네즈" }
+    },
+    {
+      "name": "컵밥 (Cup Rice)",
+      "details": { "category": "분식", "main_ingredient": "밥, 토핑" }
+    },
+    {
+      "name": "핫도그 (Korean Corn Dog)",
+      "details": { "category": "분식", "main_ingredient": "소시지, 밀가루반죽" }
+    },
+    {
+      "name": "짜장면 (Jajangmyeon)",
+      "details": { "category": "중식", "main_ingredient": "춘장, 돼지고기, 면" }
+    },
+    {
+      "name": "짬뽕 (Jjamppong)",
+      "details": {
+        "category": "중식",
+        "main_ingredient": "해산물, 고춧가루, 면"
+      }
+    },
+    {
+      "name": "탕수육 (Sweet and Sour Pork)",
+      "details": { "category": "중식", "main_ingredient": "돼지고기, 전분" }
+    },
+    {
+      "name": "마파두부 (Mapo Tofu)",
+      "details": { "category": "중식", "main_ingredient": "두부, 두반장" }
+    },
+    {
+      "name": "볶음밥 (Fried Rice)",
+      "details": { "category": "중식", "main_ingredient": "쌀, 계란, 파" }
+    },
+    {
+      "name": "깐풍기 (Kkanpunggi)",
+      "details": { "category": "중식", "main_ingredient": "닭고기, 고추" }
+    },
+    {
+      "name": "마라탕 (Malatang)",
+      "details": { "category": "중식", "main_ingredient": "건두부, 중국당면" }
+    },
+    {
+      "name": "양장피 (Yangjangpi)",
+      "details": { "category": "중식", "main_ingredient": "전분피, 겨자소스" }
+    },
+    {
+      "name": "딤섬 (Dim Sum)",
+      "details": {
+        "category": "중식",
+        "main_ingredient": "밀가루피, 새우/고기"
+      }
+    },
+    {
+      "name": "팔보채 (Palbochae)",
+      "details": { "category": "중식", "main_ingredient": "해산물, 버섯" }
+    },
+    {
+      "name": "유산슬 (Yusanseul)",
+      "details": { "category": "중식", "main_ingredient": "해삼, 죽순, 고기" }
+    },
+    {
+      "name": "양꼬치 (Lamb Skewers)",
+      "details": { "category": "중식", "main_ingredient": "양고기, 쯔란" }
+    },
+    {
+      "name": "마라샹궈 (Mala Xiang Guo)",
+      "details": { "category": "중식", "main_ingredient": "각종채소, 마라소스" }
+    },
+    {
+      "name": "멘보샤 (Menbosha)",
+      "details": { "category": "중식", "main_ingredient": "식빵, 새우" }
+    },
+    {
+      "name": "칠리새우 (Chili Shrimp)",
+      "details": { "category": "중식", "main_ingredient": "새우, 칠리소스" }
+    },
+    {
+      "name": "크림새우 (Cream Shrimp)",
+      "details": { "category": "중식", "main_ingredient": "새우, 크림소스" }
+    },
+    {
+      "name": "동파육 (Dongpo Pork)",
+      "details": { "category": "중식", "main_ingredient": "돼지삼겹살, 간장" }
+    },
+    {
+      "name": "군만두 (Fried Dumplings)",
+      "details": { "category": "중식", "main_ingredient": "만두피, 고기" }
+    },
+    {
+      "name": "고추잡채 (Stir-fried Chili Pepper and Pork)",
+      "details": {
+        "category": "중식",
+        "main_ingredient": "피망, 돼지고기, 꽃빵"
+      }
+    },
+    {
+      "name": "울면 (Ulmyeon)",
+      "details": { "category": "중식", "main_ingredient": "밀가루면, 전분국물" }
+    },
+    {
+      "name": "초밥 (Sushi)",
+      "details": { "category": "일식", "main_ingredient": "쌀, 생선" }
+    },
+    {
+      "name": "사시미 (Sashimi)",
+      "details": { "category": "일식", "main_ingredient": "생선" }
+    },
+    {
+      "name": "돈가스 (Pork Cutlet)",
+      "details": { "category": "일식", "main_ingredient": "돼지고기, 빵가루" }
+    },
+    {
+      "name": "우동 (Udon)",
+      "details": {
+        "category": "일식",
+        "main_ingredient": "밀가루면, 가쓰오부시"
+      }
+    },
+    {
+      "name": "메밀소바 (Soba)",
+      "details": { "category": "일식", "main_ingredient": "메밀면, 쯔유" }
+    },
+    {
+      "name": "규동 (Gyudon)",
+      "details": { "category": "일식", "main_ingredient": "소고기, 쌀" }
+    },
+    {
+      "name": "가츠동 (Katsudon)",
+      "details": { "category": "일식", "main_ingredient": "돈가스, 계란, 쌀" }
+    },
+    {
+      "name": "타코야키 (Takoyaki)",
+      "details": { "category": "일식", "main_ingredient": "밀가루, 문어" }
+    },
+    {
+      "name": "오코노미야키 (Okonomiyaki)",
+      "details": { "category": "일식", "main_ingredient": "양배추, 해산물" }
+    },
+    {
+      "name": "라멘 (Japanese Ramen)",
+      "details": { "category": "일식", "main_ingredient": "생면, 돼지육수" }
+    },
+    {
+      "name": "텐동 (Tempura Rice Bowl)",
+      "details": { "category": "일식", "main_ingredient": "튀김, 쌀" }
+    },
+    {
+      "name": "나베 (Nabe)",
+      "details": { "category": "일식", "main_ingredient": "채소, 고기, 육수" }
+    },
+    {
+      "name": "나가사키 짬뽕 (Nagasaki Champon)",
+      "details": { "category": "일식", "main_ingredient": "해산물, 숙주" }
+    },
+    {
+      "name": "야키소바 (Yakisoba)",
+      "details": { "category": "일식", "main_ingredient": "면, 소스" }
+    },
+    {
+      "name": "오니기리 (Onigiri)",
+      "details": { "category": "일식", "main_ingredient": "쌀, 김" }
+    },
+    {
+      "name": "회덮밥 (Raw Fish Bibimbap)",
+      "details": { "category": "일식", "main_ingredient": "회, 초장, 채소" }
+    },
+    {
+      "name": "낫토 (Natto)",
+      "details": { "category": "일식", "main_ingredient": "발효콩" }
+    },
+    {
+      "name": "스키야키 (Sukiyaki)",
+      "details": { "category": "일식", "main_ingredient": "소고기, 간장소스" }
+    },
+    {
+      "name": "장어덮밥 (Unadon)",
+      "details": { "category": "일식", "main_ingredient": "민물장어, 쌀" }
+    },
+    {
+      "name": "오야코동 (Oyakodon)",
+      "details": { "category": "일식", "main_ingredient": "닭고기, 계란" }
+    },
+    {
+      "name": "카레우동 (Curry Udon)",
+      "details": { "category": "일식", "main_ingredient": "카레, 우동면" }
+    },
+    {
+      "name": "스테이크 (Steak)",
+      "details": { "category": "양식", "main_ingredient": "소고기" }
+    },
+    {
+      "name": "파스타 (Pasta)",
+      "details": { "category": "양식", "main_ingredient": "파스타면" }
+    },
+    {
+      "name": "피자 (Pizza)",
+      "details": {
+        "category": "양식",
+        "main_ingredient": "밀가루, 치즈, 토마토"
+      }
+    },
+    {
+      "name": "리조또 (Risotto)",
+      "details": { "category": "양식", "main_ingredient": "쌀, 크림/토마토" }
+    },
+    {
+      "name": "라자냐 (Lasagna)",
+      "details": { "category": "양식", "main_ingredient": "넓은면, 라구소스" }
+    },
+    {
+      "name": "감바스 (Gambas al Ajillo)",
+      "details": {
+        "category": "양식",
+        "main_ingredient": "새우, 올리브유, 마늘"
+      }
+    },
+    {
+      "name": "샐러드 (Salad)",
+      "details": { "category": "양식", "main_ingredient": "양상추, 드레싱" }
+    },
+    {
+      "name": "양송이 스프 (Mushroom Soup)",
+      "details": { "category": "양식", "main_ingredient": "양송이버섯, 크림" }
+    },
+    {
+      "name": "그라탕 (Gratin)",
+      "details": {
+        "category": "양식",
+        "main_ingredient": "치즈, 감자/마카로니"
+      }
+    },
+    {
+      "name": "바비큐 폭립 (BBQ Pork Ribs)",
+      "details": { "category": "양식", "main_ingredient": "돼지등갈비" }
+    },
+    {
+      "name": "뇨끼 (Gnocchi)",
+      "details": { "category": "양식", "main_ingredient": "감자, 밀가루" }
+    },
+    {
+      "name": "에그 베네딕트 (Eggs Benedict)",
+      "details": { "category": "양식", "main_ingredient": "계란, 잉글리시머핀" }
+    },
+    {
+      "name": "오므라이스 (Omurice)",
+      "details": { "category": "양식", "main_ingredient": "계란, 볶음밥" }
+    },
+    {
+      "name": "함박스테이크 (Hamburger Steak)",
+      "details": { "category": "양식", "main_ingredient": "다진고기" }
+    },
+    {
+      "name": "알리오올리오 (Aglio e Olio)",
+      "details": { "category": "양식", "main_ingredient": "마늘, 오일, 파스타" }
+    },
+    {
+      "name": "까르보나라 (Carbonara)",
+      "details": { "category": "양식", "main_ingredient": "크림, 베이컨" }
+    },
+    {
+      "name": "토마토 스파게티 (Tomato Spaghetti)",
+      "details": { "category": "양식", "main_ingredient": "토마토소스" }
+    },
+    {
+      "name": "콘샐러드 (Corn Salad)",
+      "details": { "category": "양식", "main_ingredient": "옥수수" }
+    },
+    {
+      "name": "코울슬로 (Coleslaw)",
+      "details": { "category": "양식", "main_ingredient": "양배추" }
+    },
+    {
+      "name": "페퍼로니 피자 (Pepperoni Pizza)",
+      "details": { "category": "양식", "main_ingredient": "페퍼로니, 치즈" }
+    },
+    {
+      "name": "고르곤졸라 피자 (Gorgonzola Pizza)",
+      "details": { "category": "양식", "main_ingredient": "블루치즈, 꿀" }
+    },
+    {
+      "name": "시저 샐러드 (Caesar Salad)",
+      "details": { "category": "양식", "main_ingredient": "로메인, 크루통" }
+    },
+    {
+      "name": "리코타 치즈 샐러드 (Ricotta Cheese Salad)",
+      "details": { "category": "양식", "main_ingredient": "리코타치즈, 채소" }
+    },
+    {
+      "name": "클램차우더 (Clam Chowder)",
+      "details": { "category": "양식", "main_ingredient": "조개, 크림, 감자" }
+    },
+    {
+      "name": "비프 스튜 (Beef Stew)",
+      "details": { "category": "양식", "main_ingredient": "소고기, 데미그라스" }
+    },
+    {
+      "name": "프렌치 토스트 (French Toast)",
+      "details": { "category": "양식", "main_ingredient": "식빵, 계란물" }
+    },
+    {
+      "name": "팬케이크 (Pancake)",
+      "details": { "category": "양식", "main_ingredient": "밀가루반죽, 시럽" }
+    },
+    {
+      "name": "해시브라운 (Hash Browns)",
+      "details": { "category": "양식", "main_ingredient": "감자" }
+    },
+    {
+      "name": "잠봉뵈르 (Jambon Beurre)",
+      "details": { "category": "양식", "main_ingredient": "바게트, 햄, 버터" }
+    },
+    {
+      "name": "피시 앤 칩스 (Fish and Chips)",
+      "details": { "category": "양식", "main_ingredient": "흰살생선, 감자튀김" }
+    },
+    {
+      "name": "쌀국수 (Pho)",
+      "details": { "category": "아시안", "main_ingredient": "쌀면, 소고기육수" }
+    },
+    {
+      "name": "팟타이 (Pad Thai)",
+      "details": { "category": "아시안", "main_ingredient": "쌀면, 숙주, 땅콩" }
+    },
+    {
+      "name": "나시고랭 (Nasi Goreng)",
+      "details": { "category": "아시안", "main_ingredient": "쌀, 삼발소스" }
+    },
+    {
+      "name": "분짜 (Bun Cha)",
+      "details": { "category": "아시안", "main_ingredient": "쌀면, 돼지고기" }
+    },
+    {
+      "name": "똠양꿍 (Tom Yum Goong)",
+      "details": { "category": "아시안", "main_ingredient": "새우, 레몬그라스" }
+    },
+    {
+      "name": "월남쌈 (Spring Rolls)",
+      "details": {
+        "category": "아시안",
+        "main_ingredient": "라이스페이퍼, 채소"
+      }
+    },
+    {
+      "name": "반미 (Banh Mi)",
+      "details": { "category": "아시안", "main_ingredient": "바게트, 고기" }
+    },
+    {
+      "name": "카레 (Curry)",
+      "details": { "category": "아시안", "main_ingredient": "강황, 채소" }
+    },
+    {
+      "name": "탄두리 치킨 (Tandoori Chicken)",
+      "details": { "category": "아시안", "main_ingredient": "닭고기, 요거트" }
+    },
+    {
+      "name": "미고랭 (Mi Goreng)",
+      "details": { "category": "아시안", "main_ingredient": "에그누들, 간장" }
+    },
+    {
+      "name": "푸팟퐁커리 (Poo Phat Pong Curry)",
+      "details": { "category": "아시안", "main_ingredient": "게, 코코넛밀크" }
+    },
+    {
+      "name": "락사 (Laksa)",
+      "details": { "category": "아시안", "main_ingredient": "코코넛밀크, 면" }
+    },
+    {
+      "name": "케밥 (Kebab)",
+      "details": { "category": "아시안", "main_ingredient": "고기, 또띠아" }
+    },
+    {
+      "name": "후무스 (Hummus)",
+      "details": { "category": "아시안", "main_ingredient": "병아리콩" }
+    },
+    {
+      "name": "햄버거 (Hamburger)",
+      "details": { "category": "패스트푸드", "main_ingredient": "패티, 번" }
+    },
+    {
+      "name": "치킨 (Fried Chicken)",
+      "details": {
+        "category": "패스트푸드",
+        "main_ingredient": "닭고기, 튀김옷"
+      }
+    },
+    {
+      "name": "핫도그 (Hot Dog)",
+      "details": { "category": "패스트푸드", "main_ingredient": "소시지, 빵" }
+    },
+    {
+      "name": "감자튀김 (French Fries)",
+      "details": { "category": "패스트푸드", "main_ingredient": "감자" }
+    },
+    {
+      "name": "샌드위치 (Sandwich)",
+      "details": {
+        "category": "패스트푸드",
+        "main_ingredient": "식빵, 햄, 채소"
+      }
+    },
+    {
+      "name": "토스트 (Toast)",
+      "details": { "category": "패스트푸드", "main_ingredient": "식빵, 계란" }
+    },
+    {
+      "name": "타코 (Taco)",
+      "details": { "category": "패스트푸드", "main_ingredient": "또띠아, 고기" }
+    },
+    {
+      "name": "부리또 (Burrito)",
+      "details": {
+        "category": "패스트푸드",
+        "main_ingredient": "또띠아, 밥, 콩"
+      }
+    },
+    {
+      "name": "퀘사디아 (Quesadilla)",
+      "details": { "category": "패스트푸드", "main_ingredient": "또띠아, 치즈" }
+    },
+    {
+      "name": "나초 (Nachos)",
+      "details": {
+        "category": "패스트푸드",
+        "main_ingredient": "옥수수칩, 치즈"
+      }
+    },
+    {
+      "name": "팝콘 (Popcorn)",
+      "details": { "category": "패스트푸드", "main_ingredient": "옥수수" }
+    },
+    {
+      "name": "어니언링 (Onion Rings)",
+      "details": { "category": "패스트푸드", "main_ingredient": "양파, 튀김옷" }
+    },
+    {
+      "name": "치킨너겟 (Chicken Nuggets)",
+      "details": { "category": "패스트푸드", "main_ingredient": "닭고기" }
+    },
+    {
+      "name": "치즈스틱 (Cheese Sticks)",
+      "details": { "category": "패스트푸드", "main_ingredient": "모짜렐라치즈" }
+    },
+    {
+      "name": "식빵 (White Bread)",
+      "details": { "category": "베이커리/디저트", "main_ingredient": "밀가루" }
+    },
+    {
+      "name": "바게트 (Baguette)",
+      "details": { "category": "베이커리/디저트", "main_ingredient": "밀가루" }
+    },
+    {
+      "name": "크루아상 (Croissant)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "버터, 밀가루"
+      }
+    },
+    {
+      "name": "베이글 (Bagel)",
+      "details": { "category": "베이커리/디저트", "main_ingredient": "밀가루" }
+    },
+    {
+      "name": "스콘 (Scone)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "버터, 밀가루"
+      }
+    },
+    {
+      "name": "단팥빵 (Red Bean Bread)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "팥앙금, 밀가루"
+      }
+    },
+    {
+      "name": "소보로빵 (Streusel Bread)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "밀가루, 땅콩버터"
+      }
+    },
+    {
+      "name": "케이크 (Cake)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "생크림, 시트"
+      }
+    },
+    {
+      "name": "치즈케이크 (Cheesecake)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "크림치즈"
+      }
+    },
+    {
+      "name": "티라미수 (Tiramisu)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "마스카포네, 커피"
+      }
+    },
+    {
+      "name": "마카롱 (Macaron)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "아몬드가루, 설탕"
+      }
+    },
+    {
+      "name": "다쿠아즈 (Dacquoise)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "아몬드가루, 머랭"
+      }
+    },
+    {
+      "name": "마들렌 (Madeleine)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "버터, 레몬"
+      }
+    },
+    {
+      "name": "휘낭시에 (Financier)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "태운버터, 아몬드"
+      }
+    },
+    {
+      "name": "까눌레 (Canele)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "럼, 바닐라"
+      }
+    },
+    {
+      "name": "도넛 (Donut)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "밀가루, 설탕"
+      }
+    },
+    {
+      "name": "와플 (Waffle)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "밀가루반죽"
+      }
+    },
+    {
+      "name": "크로플 (Croffle)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "크루아상생지"
+      }
+    },
+    {
+      "name": "츄러스 (Churros)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "계피설탕"
+      }
+    },
+    {
+      "name": "브라우니 (Brownie)",
+      "details": { "category": "베이커리/디저트", "main_ingredient": "초콜릿" }
+    },
+    {
+      "name": "쿠키 (Cookie)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "초코칩, 밀가루"
+      }
+    },
+    {
+      "name": "팥빙수 (Shaved Ice)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "얼음, 팥"
+      }
+    },
+    {
+      "name": "아이스크림 (Ice Cream)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "우유, 크림"
+      }
+    },
+    {
+      "name": "푸딩 (Pudding)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "우유, 계란"
+      }
+    },
+    {
+      "name": "타르트 (Tart)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "과일, 크림치즈"
+      }
+    },
+    {
+      "name": "약과 (Yakgwa)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "밀가루, 조청"
+      }
+    },
+    {
+      "name": "인절미 (Injeolmi)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "찹쌀, 콩가루"
+      }
+    },
+    {
+      "name": "소금빵 (Salt Bread)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "버터, 소금"
+      }
+    },
+    {
+      "name": "마늘바게트 (Garlic Baguette)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "바게트, 마늘"
+      }
+    },
+    {
+      "name": "에그타르트 (Egg Tart)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "페이스트리, 계란"
+      }
+    },
+    {
+      "name": "카스테라 (Castella)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "계란, 설탕"
+      }
+    },
+    {
+      "name": "몽블랑 (Mont Blanc)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "밤크림, 머랭"
+      }
+    },
+    {
+      "name": "앙버터 (Red Bean Butter Bread)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "팥앙금, 버터"
+      }
+    },
+    {
+      "name": "롤케이크 (Roll Cake)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "스펀지케이크, 크림"
+      }
+    },
+    {
+      "name": "슈크림빵 (Cream Puff)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "커스터드크림"
+      }
+    },
+    {
+      "name": "파니니 (Panini)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "치아바타, 치즈"
+      }
+    },
+    {
+      "name": "크로크무슈 (Croque Monsieur)",
+      "details": {
+        "category": "베이커리/디저트",
+        "main_ingredient": "식빵, 햄, 치즈"
+      }
+    },
+    {
+      "name": "아메리카노 (Americano)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "에스프레소, 물"
+      }
+    },
+    {
+      "name": "카페라떼 (Cafe Latte)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "에스프레소, 우유"
+      }
+    },
+    {
+      "name": "카푸치노 (Cappuccino)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "에스프레소, 우유거품"
+      }
+    },
+    {
+      "name": "바닐라라떼 (Vanilla Latte)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "바닐라시럽, 커피"
+      }
+    },
+    {
+      "name": "녹차 (Green Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "녹찻잎" }
+    },
+    {
+      "name": "얼그레이 (Earl Grey)",
+      "details": { "category": "음료/주류", "main_ingredient": "홍차" }
+    },
+    {
+      "name": "카모마일 티 (Chamomile Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "카모마일" }
+    },
+    {
+      "name": "레몬에이드 (Lemonade)",
+      "details": { "category": "음료/주류", "main_ingredient": "레몬, 탄산수" }
+    },
+    {
+      "name": "오렌지주스 (Orange Juice)",
+      "details": { "category": "음료/주류", "main_ingredient": "오렌지" }
+    },
+    {
+      "name": "딸기 스무디 (Strawberry Smoothie)",
+      "details": { "category": "음료/주류", "main_ingredient": "딸기, 얼음" }
+    },
+    {
+      "name": "버블티 (Bubble Tea)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "밀크티, 타피오카펄"
+      }
+    },
+    {
+      "name": "콜라 (Cola)",
+      "details": { "category": "음료/주류", "main_ingredient": "탄산" }
+    },
+    {
+      "name": "사이다 (Cider)",
+      "details": { "category": "음료/주류", "main_ingredient": "탄산, 라임향" }
+    },
+    {
+      "name": "맥주 (Beer)",
+      "details": { "category": "음료/주류", "main_ingredient": "보리, 홉" }
+    },
+    {
+      "name": "소주 (Soju)",
+      "details": { "category": "음료/주류", "main_ingredient": "곡물주정" }
+    },
+    {
+      "name": "막걸리 (Makgeolli)",
+      "details": { "category": "음료/주류", "main_ingredient": "쌀, 누룩" }
+    },
+    {
+      "name": "와인 (Wine)",
+      "details": { "category": "음료/주류", "main_ingredient": "포도" }
+    },
+    {
+      "name": "위스키 (Whisky)",
+      "details": { "category": "음료/주류", "main_ingredient": "보리/옥수수" }
+    },
+    {
+      "name": "하이볼 (Highball)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "위스키, 탄산수"
+      }
+    },
+    {
+      "name": "칵테일 (Cocktail)",
+      "details": { "category": "음료/주류", "main_ingredient": "증류주, 시럽" }
+    },
+    {
+      "name": "식혜 (Sikhye)",
+      "details": { "category": "음료/주류", "main_ingredient": "엿기름, 쌀" }
+    },
+    {
+      "name": "수정과 (Sujeonggwa)",
+      "details": { "category": "음료/주류", "main_ingredient": "계피, 곶감" }
+    },
+    {
+      "name": "유자차 (Citron Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "유자청" }
+    },
+    {
+      "name": "매실차 (Plum Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "매실청" }
+    },
+    {
+      "name": "에스프레소 (Espresso)",
+      "details": { "category": "음료/주류", "main_ingredient": "커피원두" }
+    },
+    {
+      "name": "콜드브루 (Cold Brew)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "커피원두, 찬물"
+      }
+    },
+    {
+      "name": "아인슈페너 (Einspanner)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "아메리카노, 크림"
+      }
+    },
+    {
+      "name": "아포가토 (Affogato)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "에스프레소, 아이스크림"
+      }
+    },
+    {
+      "name": "밀크티 (Milk Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "홍차, 우유" }
+    },
+    {
+      "name": "자몽에이드 (Grapefruit Ade)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "자몽청, 탄산수"
+      }
+    },
+    {
+      "name": "모히또 (Mojito)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "럼, 라임, 민트"
+      }
+    },
+    {
+      "name": "진토닉 (Gin and Tonic)",
+      "details": { "category": "음료/주류", "main_ingredient": "진, 토닉워터" }
+    },
+    {
+      "name": "샹그리아 (Sangria)",
+      "details": { "category": "음료/주류", "main_ingredient": "와인, 과일" }
+    },
+    {
+      "name": "토피넛라떼 (Toffee Nut Latte)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "토피넛시럽, 우유"
+      }
+    },
+    {
+      "name": "초코라떼 (Chocolate Latte)",
+      "details": { "category": "음료/주류", "main_ingredient": "초콜릿, 우유" }
+    },
+    {
+      "name": "미숫가루 (Grain Powder Drink)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "곡물가루, 물/우유"
+      }
+    },
+    {
+      "name": "고구마라떼 (Sweet Potato Latte)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "고구마페이스트, 우유"
+      }
+    },
+    {
+      "name": "플레인요거트스무디 (Plain Yogurt Smoothie)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "요거트파우더, 얼음"
+      }
+    },
+    {
+      "name": "망고주스 (Mango Juice)",
+      "details": { "category": "음료/주류", "main_ingredient": "망고" }
+    },
+    {
+      "name": "토마토주스 (Tomato Juice)",
+      "details": { "category": "음료/주류", "main_ingredient": "토마토" }
+    },
+    {
+      "name": "키위주스 (Kiwi Juice)",
+      "details": { "category": "음료/주류", "main_ingredient": "키위" }
+    },
+    {
+      "name": "복숭아 아이스티 (Peach Iced Tea)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "홍차, 복숭아향"
+      }
+    },
+    {
+      "name": "페퍼민트 티 (Peppermint Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "페퍼민트" }
+    },
+    {
+      "name": "히비스커스 티 (Hibiscus Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "히비스커스" }
+    },
+    {
+      "name": "쌍화차 (Ssanghwa Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "한약재, 잣" }
+    },
+    {
+      "name": "생강차 (Ginger Tea)",
+      "details": { "category": "음료/주류", "main_ingredient": "생강청" }
+    },
+    {
+      "name": "보드카 (Vodka)",
+      "details": { "category": "음료/주류", "main_ingredient": "곡물" }
+    },
+    {
+      "name": "데킬라 (Tequila)",
+      "details": { "category": "음료/주류", "main_ingredient": "아가베" }
+    },
+    {
+      "name": "샴페인 (Champagne)",
+      "details": { "category": "음료/주류", "main_ingredient": "포도" }
+    },
+    {
+      "name": "뱅쇼 (Vin Chaud)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "와인, 과일, 계피"
+      }
+    },
+    {
+      "name": "깔루아밀크 (Kahlua Milk)",
+      "details": { "category": "음료/주류", "main_ingredient": "깔루아, 우유" }
+    },
+    {
+      "name": "마티니 (Martini)",
+      "details": { "category": "음료/주류", "main_ingredient": "진, 베르무트" }
+    },
+    {
+      "name": "피나콜라다 (Pina Colada)",
+      "details": {
+        "category": "음료/주류",
+        "main_ingredient": "럼, 코코넛, 파인애플"
+      }
+    }
+  ]
+}

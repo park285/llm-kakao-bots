@@ -1,0 +1,75 @@
+package party.qwer.twentyq.redis.tracking
+
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.runBlocking
+import org.redisson.api.RedissonReactiveClient
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.redis.RedisKeys
+import java.time.Duration
+
+@Component
+@ConditionalOnProperty(
+    prefix = "app.redis",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
+class WrongGuessSetStore(
+    private val redisson: RedissonReactiveClient,
+    private val props: AppProperties,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(WrongGuessSetStore::class.java)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun add(
+        roomId: String,
+        guess: String,
+    ) = runBlocking { addAsync(roomId, guess) }
+
+    suspend fun addAsync(
+        roomId: String,
+        guess: String,
+    ) {
+        val list = redisson.getList<String>(key(roomId))
+        list.add(guess).awaitSingleOrNull()
+        list.expire(Duration.ofMinutes(props.redis.sessionTtlMinutes.toLong())).awaitSingleOrNull()
+        log.debug("ADD room={}, guess={}", roomId, guess)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun getAll(roomId: String): List<String> = runBlocking { getAllAsync(roomId) }
+
+    suspend fun getAllAsync(roomId: String): List<String> {
+        val list = redisson.getList<String>(key(roomId))
+        return list.readAll().awaitSingleOrNull() ?: emptyList()
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun delete(roomId: String) = runBlocking { deleteAsync(roomId) }
+
+    suspend fun deleteAsync(roomId: String) {
+        val bucket = redisson.getBucket<String>(key(roomId))
+        bucket.delete().awaitSingleOrNull()
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun setTtl(
+        roomId: String,
+        ttl: Duration,
+    ) = runBlocking { setTtlAsync(roomId, ttl) }
+
+    suspend fun setTtlAsync(
+        roomId: String,
+        ttl: Duration,
+    ) {
+        val list = redisson.getList<String>(key(roomId))
+        list.expire(ttl).awaitSingleOrNull()
+    }
+
+    private fun key(roomId: String) = "${RedisKeys.WRONG_GUESSES}:$roomId"
+}

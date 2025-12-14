@@ -1,0 +1,280 @@
+package party.qwer.twentyq.service
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.common.hash.Hashing
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
+import org.springframework.web.client.RestClient
+import org.springframework.web.client.body
+import java.nio.charset.StandardCharsets
+import kotlin.math.absoluteValue
+
+@Component
+class GeminiCacheManager(
+    @param:Value("\${app.ai.gemini.base-url:https://generativelanguage.googleapis.com}")
+    private val baseUrl: String,
+    private val keyProvider: GeminiApiKeyProvider,
+    @param:Value("\${app.ai.gemini.ttl-seconds:604800}")
+    private val ttlSeconds: Long,
+    private val objectMapper: ObjectMapper,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    private val restClient =
+        RestClient
+            .builder()
+            .baseUrl(baseUrl)
+            .build()
+
+    fun generateCacheKey(
+        operation: String,
+        model: String,
+        systemPrompt: String,
+        apiKey: String? = null,
+    ): String {
+        val modelHash =
+            Hashing
+                .murmur3_128()
+                .hashString(model, StandardCharsets.UTF_8)
+                .asLong()
+                .absoluteValue
+                .toString(16)
+                .padStart(8, '0')
+                .substring(0, 8)
+        val promptHash =
+            Hashing
+                .murmur3_128()
+                .hashString("$model::$systemPrompt", StandardCharsets.UTF_8)
+                .toString()
+                .substring(0, 16)
+        val keyPart = apiKey?.let { "-k${keyProvider.fingerprint(it)}" } ?: ""
+        return "20q-$operation-$modelHash$keyPart-$promptHash"
+    }
+
+    // Helper: request body 생성
+    private fun buildCacheRequestBody(
+        model: String,
+        displayName: String,
+        systemPrompt: String,
+    ): Map<String, Any> =
+        mapOf(
+            "model" to "models/$model",
+            "displayName" to displayName,
+            "systemInstruction" to
+                mapOf(
+                    "parts" to
+                        listOf(
+                            mapOf("text" to systemPrompt),
+                        ),
+                ),
+            "ttl" to "${ttlSeconds}s",
+        )
+
+    // Helper: POST 요청 통합
+    private fun executePost(
+        uri: String,
+        body: Map<String, Any>,
+        apiKey: String? = null,
+    ): String? =
+        if (apiKey != null) {
+            keyProvider.withSpecificKey(apiKey) { k ->
+                restClient
+                    .post()
+                    .uri(uri, k)
+                    .header("Content-Type", "application/json")
+                    .body(body)
+                    .retrieve()
+                    .body<String>()
+            }
+        } else {
+            keyProvider.withKeyRetry { k ->
+                restClient
+                    .post()
+                    .uri(uri, k)
+                    .header("Content-Type", "application/json")
+                    .body(body)
+                    .retrieve()
+                    .body<String>()
+            }
+        }
+
+    // Helper: GET 요청 통합
+    private fun executeGet(
+        uri: String,
+        cacheName: String,
+        apiKey: String? = null,
+    ): String? =
+        if (apiKey != null) {
+            keyProvider.withSpecificKey(apiKey) { k ->
+                restClient
+                    .get()
+                    .uri(uri, cacheName, k)
+                    .retrieve()
+                    .body(String::class.java)
+            }
+        } else {
+            keyProvider.withKeyRetry { k ->
+                restClient
+                    .get()
+                    .uri(uri, cacheName, k)
+                    .retrieve()
+                    .body(String::class.java)
+            }
+        }
+
+    // Overload: create cache using round-robin key selection
+    fun createCache(
+        displayName: String,
+        model: String,
+        systemPrompt: String,
+    ): CachedContent? {
+        return try {
+            val requestBody = buildCacheRequestBody(model, displayName, systemPrompt)
+            log.info("Creating cache: displayName={}, model={}, ttlSeconds={}", displayName, model, ttlSeconds)
+
+            val response = executePost("/v1beta/cachedContents?key={apiKey}", requestBody)
+            if (response == null) return null
+
+            objectMapper.readValue(response, CachedContent::class.java).also {
+                log.info("Cache created successfully: name={}, expireTime={}", it.name, it.expireTime)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to create cache: displayName={}, model={}", displayName, model, e)
+            null
+        }
+    }
+
+    // Overload: create cache using a specific API key (per-key cache isolation)
+    fun createCache(
+        displayName: String,
+        model: String,
+        systemPrompt: String,
+        apiKey: String,
+    ): CachedContent? {
+        return try {
+            val requestBody = buildCacheRequestBody(model, displayName, systemPrompt)
+            log.info(
+                "Creating cache with specific key: displayName={}, model={}, ttlSeconds={}, keyfp={}",
+                displayName,
+                model,
+                ttlSeconds,
+                keyProvider.fingerprint(apiKey),
+            )
+
+            val response = executePost("/v1beta/cachedContents?key={apiKey}", requestBody, apiKey)
+            if (response == null) return null
+
+            objectMapper.readValue(response, CachedContent::class.java).also {
+                log.info("Cache created successfully: name={}, expireTime={}", it.name, it.expireTime)
+            }
+        } catch (e: Exception) {
+            log.error(
+                "Failed to create cache (specific key): displayName={}, model={}, keyfp={}",
+                displayName,
+                model,
+                keyProvider.fingerprint(apiKey),
+                e,
+            )
+            null
+        }
+    }
+
+    // Overload: get cache with round-robin key selection
+    fun getCache(cacheName: String): CachedContent? {
+        return try {
+            val response = executeGet("/v1beta/{cacheName}?key={apiKey}", cacheName)
+            if (response == null) return null
+
+            objectMapper.readValue(response, CachedContent::class.java)
+        } catch (e: Exception) {
+            log.debug("Cache not found or expired: cacheName={}", cacheName)
+            null
+        }
+    }
+
+    // Overload: get cache using a specific API key (per-key cache isolation)
+    fun getCache(
+        cacheName: String,
+        apiKey: String,
+    ): CachedContent? {
+        return try {
+            val response = executeGet("/v1beta/{cacheName}?key={apiKey}", cacheName, apiKey)
+            if (response == null) return null
+
+            objectMapper.readValue(response, CachedContent::class.java)
+        } catch (e: Exception) {
+            log.debug(
+                "Cache not found or expired (specific key): cacheName={}, keyfp={}",
+                cacheName,
+                keyProvider.fingerprint(apiKey),
+            )
+            null
+        }
+    }
+
+    // Overload: delete cache with round-robin key selection
+    fun deleteCache(cacheName: String): Boolean =
+        try {
+            keyProvider.withKeyRetry { k ->
+                restClient
+                    .delete()
+                    .uri("/v1beta/{cacheName}?key={apiKey}", cacheName, k)
+                    .retrieve()
+                    .toBodilessEntity()
+            }
+
+            log.info("Cache deleted: cacheName={}", cacheName)
+            true
+        } catch (e: org.springframework.web.client.HttpClientErrorException.NotFound) {
+            log.info("Cache already deleted or expired: cacheName={}", cacheName)
+            true
+        } catch (e: Exception) {
+            log.error("Failed to delete cache: cacheName={}", cacheName, e)
+            false
+        }
+
+    // Overload: delete cache with a specific API key
+    fun deleteCache(
+        cacheName: String,
+        apiKey: String,
+    ): Boolean =
+        try {
+            keyProvider.withSpecificKey(apiKey) { k ->
+                restClient
+                    .delete()
+                    .uri("/v1beta/{cacheName}?key={apiKey}", cacheName, k)
+                    .retrieve()
+                    .toBodilessEntity()
+            }
+            log.info("Cache deleted (specific key): cacheName={}, keyfp={}", cacheName, keyProvider.fingerprint(apiKey))
+            true
+        } catch (e: org.springframework.web.client.HttpClientErrorException.NotFound) {
+            log.info("Cache already deleted or expired (specific key): cacheName={}, keyfp={}", cacheName, keyProvider.fingerprint(apiKey))
+            true
+        } catch (e: Exception) {
+            log.error("Failed to delete cache (specific key): cacheName={}, keyfp={}", cacheName, keyProvider.fingerprint(apiKey), e)
+            false
+        }
+
+    fun getOrNull(cacheName: String): CachedContent? = getCache(cacheName)
+
+    fun getOrNull(
+        cacheName: String,
+        apiKey: String,
+    ): CachedContent? = getCache(cacheName, apiKey)
+}
+
+data class CachedContent(
+    val name: String,
+    val displayName: String? = null,
+    val model: String,
+    val createTime: String,
+    val updateTime: String,
+    val expireTime: String,
+    val usageMetadata: CacheUsageMetadata? = null,
+)
+
+data class CacheUsageMetadata(
+    val totalTokenCount: Int,
+)

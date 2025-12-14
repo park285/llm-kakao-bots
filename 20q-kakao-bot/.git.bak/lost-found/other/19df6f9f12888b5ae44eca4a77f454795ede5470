@@ -1,0 +1,61 @@
+package party.qwer.twentyq.service.gemini
+
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.ai.ResponseSchema
+
+@Component
+class GeminiRequestBuilder {
+    fun buildRequest(payload: GeminiRequestPayload): Map<String, Any> =
+        buildMap {
+            val cacheId = payload.cacheId
+            if (cacheId != null) put("cachedContent", cacheId)
+
+            val partsText =
+                if (cacheId != null) {
+                    payload.userPrompt
+                } else {
+                    val sys = payload.systemPrompt ?: ""
+                    "$sys\n\n${payload.userPrompt}"
+                }
+
+            put(
+                "contents",
+                listOf(
+                    mapOf(
+                        "parts" to listOf(mapOf("text" to partsText)),
+                    ),
+                ),
+            )
+
+            val opt = payload.options
+            put(
+                "generationConfig",
+                buildMap {
+                    put("temperature", opt.temperature)
+                    put("topP", opt.topP)
+                    if (opt.thinkingBudget > 0) {
+                        put("thinkingConfig", mapOf("thinkingBudget" to opt.thinkingBudget))
+                    }
+                    when (opt.schema) {
+                        is ResponseSchema.Enum -> {
+                            put("responseMimeType", "text/x.enum")
+                            put(
+                                "responseSchema",
+                                mapOf(
+                                    "type" to "STRING",
+                                    "enum" to opt.schema.values,
+                                ),
+                            )
+                        }
+                        is ResponseSchema.JsonSchema -> {
+                            put("responseMimeType", "application/json")
+                            put("responseSchema", toGeminiSchema(opt.schema.schema))
+                        }
+                        else -> { /* no-op */ }
+                    }
+                },
+            )
+        }
+
+    fun toGeminiSchema(src: Map<String, Any>): Map<String, Any> = GeminiSchemaConverter.convert(src)
+}

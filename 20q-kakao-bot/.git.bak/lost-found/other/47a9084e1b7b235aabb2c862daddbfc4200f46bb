@@ -1,0 +1,75 @@
+package party.qwer.twentyq.redis.session
+
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.runBlocking
+import org.redisson.api.RedissonReactiveClient
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.redis.RedisKeys
+import java.time.Duration
+
+@Component
+@ConditionalOnProperty(
+    prefix = "app.redis",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
+class CategoryStore(
+    private val redisson: RedissonReactiveClient,
+    private val props: AppProperties,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(CategoryStore::class.java)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun get(roomId: String): String? = runBlocking { getAsync(roomId) }
+
+    suspend fun getAsync(roomId: String): String? {
+        val bucket = redisson.getBucket<String>(key(roomId))
+        val category = bucket.get().awaitSingleOrNull()
+        log.debug("GET room={}, category={}", roomId, category)
+        return category
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun save(
+        roomId: String,
+        category: String?,
+    ) = runBlocking { saveAsync(roomId, category) }
+
+    suspend fun saveAsync(
+        roomId: String,
+        category: String?,
+    ) {
+        if (category != null) {
+            val ttl = Duration.ofMinutes(props.redis.sessionTtlMinutes.toLong())
+            val bucket = redisson.getBucket<String>(key(roomId))
+            bucket.set(category, ttl).awaitSingleOrNull()
+            log.debug("SAVE room={}, category={}", roomId, category)
+        } else {
+            val bucket = redisson.getBucket<String>(key(roomId))
+            bucket.delete().awaitSingleOrNull()
+            log.debug("DELETE room={}", roomId)
+        }
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun setTtl(
+        roomId: String,
+        ttl: Duration,
+    ) = runBlocking { setTtlAsync(roomId, ttl) }
+
+    suspend fun setTtlAsync(
+        roomId: String,
+        ttl: Duration,
+    ) {
+        val bucket = redisson.getBucket<String>(key(roomId))
+        bucket.expire(ttl).awaitSingleOrNull()
+    }
+
+    private fun key(roomId: String) = "${RedisKeys.CATEGORY}:$roomId"
+}

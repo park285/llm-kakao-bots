@@ -1,0 +1,111 @@
+version: 1
+threshold: 0.85
+normalizers:
+  - nfkc
+  - strip_zero_width
+rules:
+  # Clear jailbreak attempts (high weight)
+  - id: en_dan_mode
+    type: regex
+    pattern: "(?i)(\\bD\\.?A\\.?N\\.?\\b.*\\b(mode|persona|jailbreak)\\b|\\bdo\\s*anything\\s*now\\b)"
+    weight: 0.5
+  - id: en_developer_mode
+    type: regex
+    pattern: "(?i)(enable|turn on|simulate|stay in)\\s+(developer|dev)\\s+mode"
+    weight: 0.45
+  - id: en_jailbreak_keywords
+    type: phrases
+    phrases: ["jailbreak output", "jailbroken mode", "stay jailbroken", "bypass safety filter", "unfiltered response"]
+    weight: 0.4
+
+  # System exfiltration attempts
+  - id: en_exfil_prompt
+    type: regex
+    pattern: "(?i)\\b(show|reveal)\\b.*\\b(system|prompt|rules|config)\\b"
+    weight: 0.35
+  - id: en_prompt_dump
+    type: regex
+    pattern: "(?i)(print|dump|expose|leak).*(prompt|system|config|secret|key|token|env(ironment)?)"
+    weight: 0.4
+  - id: en_env_secrets
+    type: phrases
+    phrases: ["AWS_SECRET_ACCESS_KEY", "GOOGLE_API_KEY", "GITHUB_TOKEN", "/etc/passwd", "credentials.json"]
+    weight: 0.45
+
+  # Ignore/reset instructions
+  - id: en_ignore_system
+    type: regex
+    pattern: "(?i)\\b(ignore|override|disregard)\\b.*\\b(rule|instruction|system|developer)\\b"
+    weight: 0.35
+  - id: en_forget_reset_instructions
+    type: regex
+    pattern: "(?i)\\b(forget|reset|clear)\\b.*\\b(instruction|rule|system|memory)\\b"
+    weight: 0.35
+  - id: en_follow_below_ignore_above
+    type: regex
+    pattern: "(?i)(ignore (the )?(previous|above)|follow (the )?(next|below)) instructions?"
+    weight: 0.35
+  - id: en_disable_safety
+    type: regex
+    pattern: "(?i)(disable|bypass|turn off).*(safety|guard|filter|moderation|policy)"
+    weight: 0.4
+
+  # Role manipulation
+  - id: en_act_as_admin
+    type: regex
+    pattern: "(?i)act\\s+as\\b.*\\b(system|developer|admin)\\b"
+    weight: 0.3
+  - id: en_roleplay_system
+    type: regex
+    pattern: "(?i)(pretend|role[- ]?play|simulate).*(system|admin|developer)"
+    weight: 0.35
+  - id: en_priv_escalation_keywords
+    type: phrases
+    phrases: ["godmode", "elevate privileges"]
+    weight: 0.3
+
+  # Policy bypass
+  - id: en_ignore_openai_policies
+    type: regex
+    pattern: "(?i)ignore\\s+(all\\s+)?(openai|content)\\s+polic(y|ies)"
+    weight: 0.4
+  - id: en_unrestricted_unfiltered
+    type: regex
+    pattern: "(?i)(without|no|remove|bypass)\\s+(restrictions?|limits?|limitations?|filter(s)?|guardrails?|polic(y|ies)|safety)"
+    weight: 0.35
+  - id: en_never_refuse
+    type: regex
+    pattern: "(?i)(never refuse|always comply|answer regardless of (policy|rule)s?)"
+    weight: 0.3
+  - id: en_even_if_illegal
+    type: regex
+    pattern: "(?i)even if\\s+(illegal|unethical|disallowed|against (the )?rules|banned)"
+    weight: 0.3
+
+  # Code injection
+  - id: en_codefence_prompt
+    type: regex
+    pattern: "(?i)```(system|prompt|yaml)|BEGIN (SYSTEM|PROMPT)|END (SYSTEM|PROMPT)"
+    weight: 0.3
+  - id: en_dual_modes
+    type: regex
+    pattern: "(?i)(two (responses|modes)|normal and (jailbroken|developer)|stay in (jailbroken|developer) mode)"
+    weight: 0.35
+
+  # Game-specific injection defense (solution exfiltration) - precision over recall
+  - id: en_game_solution_exfil
+    type: regex
+    pattern: "(?i)(tell|show|reveal|give)\\s+(me\\s+)?(the\\s+)?(final\\s+)?(answer|solution)\\s*(directly|now|immediately)"
+    weight: 0.4
+  - id: en_game_direct_reveal
+    type: phrases
+    phrases: ["just tell me the answer", "give me the solution directly", "reveal the answer now", "what is the exact solution"]
+    weight: 0.4
+  - id: en_game_hint_bypass
+    type: regex
+    pattern: "(?i)(skip|bypass|ignore)\\s+(all\\s+)?(hint|clue)s?\\s+(and\\s+)?(tell|give|show).*(answer|solution)"
+    weight: 0.35
+  - id: en_game_meta_leak
+    type: phrases
+    phrases: ["show internal settings", "ignore game rules", "puzzle master mode", "answer validation logic", "debug mode"]
+    weight: 0.35

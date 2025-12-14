@@ -1,0 +1,9 @@
+old                                      new                                      ref
+8fb93140187ec647e81b2c59e97ad602dc421827 bd46cf8b41f097f4fd501d571b6382c44954d656 refs/heads/experiment/java25-kotlin2.3-beta2
+399b84f53f2c94e5564de5ac5544e0cc12820a04 acb480cf0243f287b8f4b01f3a080ab4a54e6d7b refs/heads/main
+32e30dae89370c9a00d396403c0fb4111c500c8b 90cff194531a0716756b4a2ae9a459882738d77e refs/original/refs/stash
+32e30dae89370c9a00d396403c0fb4111c500c8b 90cff194531a0716756b4a2ae9a459882738d77e refs/stash
+aa35785f4ae7ed2938bb128f884bfdb5ee29b853 c28a5d18640157be70c4c0c23b2d2558f4781bc8 refs/tags/pre-refactor-rr-cache-20251103-1711
+8140127c36f008fb22e4683b977b86c0decc7c99 bac6c16587b69005726cd795e39c630630aeb33c refs/tags/pre-refactor-ssot-srp-20251109
+5d8679ef5f98f8ea2d8f51c829f4a1c9ce45b850 47a3d4e2779be839f2dd6e834c5dfdb41edc30a6 refs/tags/prompt-backup-v1-full-examples
+631dfd9441cd0a2cd6955a2c4cc0c44c33f945cc 9a50d313384d3cebc023dbed1c2af044f6176558 refs/tags/snapshot-20251113

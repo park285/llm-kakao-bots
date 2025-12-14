@@ -1,0 +1,26 @@
+package party.qwer.twentyq.util.hint
+
+interface HintBlindService {
+    suspend fun blindTargetInHints(
+        hints: List<String>,
+        target: String,
+        category: String? = null,
+    ): List<Pair<String, List<String>>>
+
+    fun revealBlindInHints(
+        hints: List<String>,
+        blindedTokensList: List<List<String>>,
+    ): List<String>
+
+    data class RevealOutcome(
+        val updatedHint: String,
+        val revealedTokens: List<String>,
+        val remainingTokens: List<String>,
+    )
+
+    fun revealTokens(
+        hint: String,
+        blindedTokens: List<String>,
+        revealCount: Int,
+    ): RevealOutcome
+}

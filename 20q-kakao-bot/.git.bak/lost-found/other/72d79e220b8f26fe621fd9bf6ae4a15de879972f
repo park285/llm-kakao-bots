@@ -1,0 +1,111 @@
+package party.qwer.twentyq.ai.cache
+
+import jakarta.annotation.PostConstruct
+import org.slf4j.LoggerFactory
+import org.springframework.core.io.DefaultResourceLoader
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.config.PromptResourcePaths
+import party.qwer.twentyq.llm.GuardConfig
+import party.qwer.twentyq.llm.PersonaConfig
+import party.qwer.twentyq.llm.PromptLoader
+import party.qwer.twentyq.llm.PromptTemplate
+import party.qwer.twentyq.service.GeminiCacheManager
+
+@Component
+class SecurityGuardCacheRegistry(
+    private val geminiCacheManager: GeminiCacheManager,
+    private val appProperties: AppProperties,
+    private val promptLoader: PromptLoader = PromptLoader(DefaultResourceLoader()),
+    private val keyProvider: party.qwer.twentyq.service.GeminiApiKeyProvider,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    // keyFingerprint -> cache name
+    @Volatile private var guardCacheByKey: MutableMap<String, String> = java.util.concurrent.ConcurrentHashMap()
+
+    companion object {
+
+    }
+
+    private val securityPersona: PersonaConfig by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.SECURITY_PERSONA, PersonaConfig::class.java)
+    }
+
+    private val guardConfig: GuardConfig by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.GUARD, GuardConfig::class.java)
+    }
+
+    private val metaPrompt: PromptTemplate by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.SECURITY_META, PromptTemplate::class.java)
+    }
+
+    private fun buildSystemPrompt(): String =
+        listOf(
+            guardConfig.system,
+            securityPersona.system,
+            metaPrompt.system,
+            securityPersona.compliance.reminder,
+        ).filter { it.isNotBlank() }.joinToString("\n\n")
+
+    @PostConstruct
+    fun initialize() {
+        if (!appProperties.ai.gemini.cacheEnabled) {
+            log.info("SecurityGuardCacheRegistry DISABLED")
+            return
+        }
+        log.info("SecurityGuardCacheRegistry initialized (lazy per-key caches)")
+    }
+
+    @Suppress("ReturnCount")
+    fun getGuardCacheIdForKey(
+        apiKey: String,
+        model: String,
+    ): String? {
+        if (!appProperties.ai.gemini.cacheEnabled) return null
+        val systemPrompt = buildSystemPrompt()
+        val cacheKey = geminiCacheManager.generateCacheKey("guard", model, systemPrompt, apiKey)
+        val fp = keyProvider.fingerprint(apiKey)
+
+        // 모델별로 캐시 구분: "fp:model" 형식으로 키 생성
+        val cacheMapKey = "$fp:$model"
+        guardCacheByKey[cacheMapKey]?.let { return it }
+
+        val existing = geminiCacheManager.getOrNull("cachedContents/$cacheKey", apiKey)
+        if (existing != null) {
+            val prev = (guardCacheByKey as java.util.concurrent.ConcurrentHashMap<String, String>).putIfAbsent(cacheMapKey, existing.name)
+            if (prev != null) return prev
+            log.info("SecurityGuardCacheRegistry REUSED: model={}, keyfp={}, id={}", model, fp, existing.name)
+            return existing.name
+        }
+
+        val created = geminiCacheManager.createCache(cacheKey, model, systemPrompt, apiKey)
+        if (created != null) {
+            val prev = (guardCacheByKey as java.util.concurrent.ConcurrentHashMap<String, String>).putIfAbsent(cacheMapKey, created.name)
+            if (prev != null) return prev
+            log.info(
+                "SecurityGuardCacheRegistry CREATED: model={}, keyfp={}, id={}, expire={}",
+                model,
+                fp,
+                created.name,
+                created.expireTime,
+            )
+            return created.name
+        }
+
+        log.warn("SecurityGuardCacheRegistry creation FAILED for keyfp={}, model={}", fp, model)
+        return null
+    }
+
+    fun refresh(): Boolean {
+        log.info("SecurityGuardCacheRegistry REFRESH requested (clear per-key maps)")
+        return try {
+            guardCacheByKey.clear()
+            log.info("SecurityGuardCacheRegistry REFRESH done")
+            true
+        } catch (e: Exception) {
+            log.error("SecurityGuardCacheRegistry REFRESH failed", e)
+            false
+        }
+    }
+}

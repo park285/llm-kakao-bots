@@ -1,0 +1,127 @@
+package party.qwer.twentyq.redis.tracking
+
+import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.runBlocking
+import org.redisson.api.RedissonReactiveClient
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.redis.RedisKeys
+
+@Component
+@ConditionalOnProperty(
+    prefix = "app.redis",
+    name = ["enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
+@Suppress("TooManyFunctions")
+class TopicHistoryStore(
+    private val redisson: RedissonReactiveClient,
+    private val props: AppProperties,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(TopicHistoryStore::class.java)
+        private const val TOPIC_HISTORY_TTL_DAYS = 30L
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun getRecent(
+        roomId: String,
+        limit: Int = 20,
+    ): List<String> = runBlocking { getRecentAsync(roomId, limit) }
+
+    suspend fun getRecentAsync(
+        roomId: String,
+        limit: Int = 20,
+    ): List<String> {
+        val list = redisson.getList<String>(key(roomId))
+        val topics = list.range(0, limit - 1).awaitSingleOrNull() ?: emptyList()
+        log.debug("GET room={}, limit={}, found={}", roomId, limit, topics.size)
+        return topics
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun getRecent(
+        roomId: String,
+        category: String,
+        limit: Int = 20,
+    ): List<String> = runBlocking { getRecentAsync(roomId, category, limit) }
+
+    suspend fun getRecentAsync(
+        roomId: String,
+        category: String,
+        limit: Int = 20,
+    ): List<String> {
+        val list = redisson.getList<String>(key(roomId, category))
+        val topics = list.range(0, limit - 1).awaitSingleOrNull() ?: emptyList()
+        log.debug("GET room={}, category={}, limit={}, found={}", roomId, category, limit, topics.size)
+        return topics
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun add(
+        roomId: String,
+        topic: String,
+    ) = runBlocking { addAsync(roomId, topic) }
+
+    suspend fun addAsync(
+        roomId: String,
+        topic: String,
+    ) {
+        val k = key(roomId)
+        val list = redisson.getList<String>(k)
+        list.add(0, topic).awaitSingleOrNull()
+        val limit = props.riddle.game.recentTopicsLimit
+        list.trim(0, limit - 1).awaitSingleOrNull()
+        log.debug("ADD room={}, topic='{}', limit={}", roomId, topic, limit)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun add(
+        roomId: String,
+        category: String,
+        topic: String,
+    ) = runBlocking { addAsync(roomId, category, topic) }
+
+    suspend fun addAsync(
+        roomId: String,
+        category: String,
+        topic: String,
+    ) {
+        val k = key(roomId, category)
+        val list = redisson.getList<String>(k)
+        list.add(0, topic).awaitSingleOrNull()
+        val limit = props.riddle.game.recentTopicsLimit
+        list.trim(0, limit - 1).awaitSingleOrNull()
+        log.debug("ADD room={}, category='{}', topic='{}', limit={}", roomId, category, topic, limit)
+    }
+
+    // Blocking wrapper for non-suspend contexts (CONVENTIONS: 허용됨 - Redis operations)
+    fun clearAll(roomId: String) = runBlocking { clearAllAsync(roomId) }
+
+    suspend fun clearAllAsync(roomId: String) {
+        val pattern = "${RedisKeys.TOPICS}:$roomId*"
+        val keys = redisson.keys
+        val stream = keys.getKeysByPattern(pattern)
+        val keyList = mutableListOf<String>()
+
+        // Collect all keys matching pattern
+        stream.toIterable().forEach { keyList.add(it) }
+
+        if (keyList.isNotEmpty()) {
+            keyList.forEach { key ->
+                redisson.getBucket<Any>(key).delete().awaitSingleOrNull()
+            }
+            log.info("CLEAR_ALL room={}, deletedKeys={}", roomId, keyList.size)
+        }
+    }
+
+    private fun key(roomId: String) = "${RedisKeys.TOPICS}:$roomId"
+
+    private fun key(
+        roomId: String,
+        category: String,
+    ) = "${RedisKeys.TOPICS}:$roomId:$category"
+}

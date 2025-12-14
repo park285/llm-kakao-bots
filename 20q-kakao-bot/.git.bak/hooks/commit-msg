@@ -1,0 +1,12 @@
+#!/bin/bash
+# Remove Claude Code attribution from commit messages
+# This hook runs before the commit is finalized
+
+COMMIT_MSG_FILE="$1"
+
+# Remove Claude Code attribution lines
+sed -i '/🤖 Generated with \[Claude Code\]/d' "$COMMIT_MSG_FILE"
+sed -i '/Co-Authored-By: Claude <noreply@anthropic.com>/d' "$COMMIT_MSG_FILE"
+
+# Remove trailing empty lines
+sed -i -e :a -e '/^\s*$/d;N;ba' "$COMMIT_MSG_FILE"

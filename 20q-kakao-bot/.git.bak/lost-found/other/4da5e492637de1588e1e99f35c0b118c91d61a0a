@@ -1,0 +1,100 @@
+package party.qwer.twentyq.service
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+/**
+ * KOMORAN 기반 NormalizeService 통합 테스트
+ */
+class KomoranNormalizeIntegrationTest {
+    private lateinit var komoranService: KomoranService
+    private lateinit var normalizeService: NormalizeService
+    private lateinit var spellChecker: SpellChecker
+
+    @BeforeEach
+    fun setUp() {
+        // SpellChecker mock: 실제 교정 동작 시뮬레이션
+        spellChecker =
+            mockk<SpellChecker> {
+                coEvery { correct("먹엇어요") } returns "먹었어요"
+                coEvery { correct("하겟습니다") } returns "하겠습니다"
+                coEvery { correct("괜찬아요") } returns "괜찮아요"
+                coEvery { correct("생물인가요ㅕ") } returns "생물인가요?"
+                coEvery { correct("살아잇나요") } returns "살아있나요"
+                coEvery { correct("전자기기인가요?") } returns "전자기기인가요?"
+                coEvery { correct(any()) } answers { firstArg() } // 기본: 그대로 반환
+            }
+
+        komoranService = KomoranService(spellChecker)
+        komoranService.init()
+
+        val aiProvider = mockk<party.qwer.twentyq.ai.AIProvider>(relaxed = true)
+        val promptManager = mockk<party.qwer.twentyq.llm.RiddlePromptManager>(relaxed = true)
+        val riddleConfigProvider = mockk<party.qwer.twentyq.config.RiddleConfigProvider>(relaxed = true)
+
+        normalizeService =
+            NormalizeService(
+                komoranService,
+                aiProvider,
+                promptManager,
+                riddleConfigProvider,
+                mockk<party.qwer.twentyq.service.config.NormalizeCacheConfig>(relaxed = true) {
+                    every { enabled } returns false
+                },
+                jacksonObjectMapper(),
+            )
+    }
+
+    @Test
+    fun `KOMORAN normalization demo - show how typo correction works`() =
+        runBlocking {
+            val testCases =
+                listOf(
+                    "먹엇어요" to "먹었어요",
+                    "하겟습니다" to "하겠습니다",
+                    "괜찬아요" to "괜찮아요",
+                    "생물인가요ㅕ" to "생물인가요?",
+                    "살아잇나요" to "살아있나요",
+                )
+
+            println("\n=== KOMORAN + SpellChecker 오타 교정 테스트 ===")
+            testCases.forEach { (input, expected) ->
+                println("\n[INPUT] $input")
+
+                // 1. KOMORAN 형태소 분석 (SpellChecker 통과 후)
+                val tokens = komoranService.analyze(input)
+                println("  Tokens:")
+                tokens.forEach { token ->
+                    println("    - form='${token.form}', tag=${token.tag}, pos=${token.position}, len=${token.length}")
+                }
+
+                // 2. NormalizeService로 정규화
+                val result = normalizeService.normalize(input)
+                println("  Normalized: ${result.normalized}")
+                println("  Expected: $expected")
+
+                if (result.normalized == expected) {
+                    println("  [SUCCESS] 교정됨!")
+                } else if (result.normalized == input) {
+                    println("  [SKIP] 교정 안됨 (원본 그대로)")
+                } else {
+                    println("  [PARTIAL] 부분 교정: ${result.normalized}")
+                }
+            }
+        }
+
+    @Test
+    fun `normalize should keep correct text unchanged`() =
+        runBlocking {
+            val input = "전자기기인가요?"
+            val result = normalizeService.normalize(input)
+
+            assertThat(result.normalized).isEqualTo(input)
+        }
+}

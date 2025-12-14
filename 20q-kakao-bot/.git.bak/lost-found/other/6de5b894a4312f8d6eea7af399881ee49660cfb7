@@ -1,0 +1,251 @@
+package party.qwer.twentyq.redis.session
+
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.data.redis.core.ValueOperations
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.model.RiddleSecret
+import java.time.Duration
+
+@DisplayName("SessionStores 테스트")
+class SessionStoresTest {
+    private lateinit var redis: StringRedisTemplate
+    private lateinit var valueOps: ValueOperations<String, String>
+    private lateinit var props: AppProperties
+    private val json = jacksonObjectMapper()
+
+    @BeforeEach
+    fun setup() {
+        redis = mockk(relaxed = true)
+        valueOps = mockk(relaxed = true)
+        every { redis.opsForValue() } returns valueOps
+
+        props = mockk(relaxed = true)
+        every { props.redis.sessionTtlMinutes } returns 30L
+    }
+
+    @Nested
+    @DisplayName("CategoryStore")
+    inner class CategoryStoreTest {
+        private lateinit var store: CategoryStore
+
+        @BeforeEach
+        fun setup() {
+            store = CategoryStore(redis, props)
+        }
+
+        @Test
+        fun `get - 카테고리 조회 성공`() {
+            // given
+            val roomId = "room123"
+            val category = "동물"
+            every { valueOps.get("20q:category:$roomId") } returns category
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isEqualTo(category)
+            verify { valueOps.get("20q:category:$roomId") }
+        }
+
+        @Test
+        fun `get - 카테고리 없음`() {
+            // given
+            val roomId = "room123"
+            every { valueOps.get("20q:category:$roomId") } returns null
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isNull()
+        }
+
+        @Test
+        fun `save - 카테고리 저장 및 TTL 설정`() {
+            // given
+            val roomId = "room123"
+            val category = "음식"
+
+            // when
+            store.save(roomId, category)
+
+            // then
+            verify { valueOps.set("20q:category:$roomId", category, Duration.ofMinutes(30L)) }
+        }
+
+        @Test
+        fun `setTtl - TTL 갱신`() {
+            // given
+            val roomId = "room123"
+            val ttl = Duration.ofMinutes(10)
+
+            // when
+            store.setTtl(roomId, ttl)
+
+            // then
+            verify { redis.expire("20q:category:$roomId", ttl) }
+        }
+    }
+
+    @Nested
+    @DisplayName("SessionStore")
+    inner class SessionStoreTest {
+        private lateinit var store: SessionStore
+
+        @BeforeEach
+        fun setup() {
+            store = SessionStore(redis, props)
+        }
+
+        @Test
+        fun `get - 세션 데이터 조회 성공`() {
+            // given
+            val roomId = "room123"
+            val sessionData = """{"chatId":"room123","userId":"user1"}"""
+            every { valueOps.get("20q:riddle:session:$roomId") } returns sessionData
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isEqualTo(sessionData)
+            verify { valueOps.get("20q:riddle:session:$roomId") }
+        }
+
+        @Test
+        fun `get - 세션 데이터 없음`() {
+            // given
+            val roomId = "room123"
+            every { valueOps.get("20q:riddle:session:$roomId") } returns null
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isNull()
+        }
+
+        @Test
+        fun `save - 세션 데이터 저장 및 TTL 설정`() {
+            // given
+            val roomId = "room123"
+            val data = """{"chatId":"room123","userId":"user1"}"""
+
+            // when
+            store.save(roomId, data)
+
+            // then
+            verify { valueOps.set("20q:riddle:session:$roomId", data, Duration.ofMinutes(30L)) }
+        }
+
+        @Test
+        fun `delete - 세션 데이터 삭제`() {
+            // given
+            val roomId = "room123"
+
+            // when
+            store.delete(roomId)
+
+            // then
+            verify { redis.delete("20q:riddle:session:$roomId") }
+        }
+
+        @Test
+        fun `setTtl - TTL 갱신`() {
+            // given
+            val roomId = "room123"
+            val ttl = Duration.ofMinutes(15)
+
+            // when
+            store.setTtl(roomId, ttl)
+
+            // then
+            verify { redis.expire("20q:riddle:session:$roomId", ttl) }
+        }
+    }
+
+    @Nested
+    @DisplayName("SecretStore")
+    inner class SecretStoreTest {
+        private lateinit var sessionStore: SessionStore
+        private lateinit var store: SecretStore
+
+        @BeforeEach
+        fun setup() {
+            sessionStore = mockk(relaxed = true)
+            store = SecretStore(sessionStore)
+        }
+
+        @Test
+        fun `get - RiddleSecret 조회 성공`() {
+            // given
+            val roomId = "room123"
+            val secret =
+                RiddleSecret(
+                    target = "사자",
+                    category = "동물",
+                    intro = "백수의 왕이라 불리는 동물입니다.",
+                    description = "갈기를 가진 육식 동물",
+                    difficulty = "EASY",
+                )
+            val secretJson = json.writeValueAsString(secret)
+            every { sessionStore.get(roomId) } returns secretJson
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isNotNull
+            assertThat(result?.target).isEqualTo("사자")
+            assertThat(result?.category).isEqualTo("동물")
+            assertThat(result?.intro).isEqualTo("백수의 왕이라 불리는 동물입니다.")
+            verify { sessionStore.get(roomId) }
+        }
+
+        @Test
+        fun `get - 데이터 없음`() {
+            // given
+            val roomId = "room123"
+            every { sessionStore.get(roomId) } returns null
+
+            // when
+            val result = store.get(roomId)
+
+            // then
+            assertThat(result).isNull()
+        }
+
+        @Test
+        fun `save - RiddleSecret 저장`() {
+            // given
+            val roomId = "room123"
+            val secret =
+                RiddleSecret(
+                    target = "김치",
+                    category = "음식",
+                    intro = "한국의 대표 발효 음식입니다.",
+                )
+
+            // when
+            store.save(roomId, secret)
+
+            // then
+            verify {
+                sessionStore.save(
+                    eq(roomId),
+                    match { it.contains("김치") && it.contains("음식") && it.contains("한국의 대표 발효 음식입니다.") },
+                )
+            }
+        }
+    }
+}

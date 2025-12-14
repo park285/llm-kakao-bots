@@ -1,0 +1,40 @@
+package party.qwer.twentyq.config
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import party.qwer.twentyq.ai.AIProvider
+import party.qwer.twentyq.llm.RiddlePromptManager
+import party.qwer.twentyq.service.KomoranService
+import party.qwer.twentyq.util.hint.HintBlindRewriter
+import party.qwer.twentyq.util.hint.HintBlindSelector
+import party.qwer.twentyq.util.hint.HintBlindService
+import party.qwer.twentyq.util.hint.HintBlindServiceImpl
+
+@Configuration
+class WebConfig {
+    @Bean
+    fun mdcHeadersFilterRegistration(filter: MdcHeadersFilter): FilterRegistrationBean<MdcHeadersFilter> {
+        val registration = FilterRegistrationBean(filter)
+        registration.order = 0
+        return registration
+    }
+
+    @Bean
+    fun hintBlindSelector(
+        kiwiService: KomoranService,
+        aiProvider: AIProvider,
+        promptManager: RiddlePromptManager,
+        riddleConfigProvider: RiddleConfigProvider,
+    ): HintBlindSelector = HintBlindSelector(kiwiService, aiProvider, promptManager, riddleConfigProvider)
+
+    @Bean
+    fun hintBlindRewriter(): HintBlindRewriter = HintBlindRewriter()
+
+    @Bean
+    fun hintBlindService(
+        selector: HintBlindSelector,
+        rewriter: HintBlindRewriter,
+        kiwiService: KomoranService,
+    ): HintBlindService = HintBlindServiceImpl(selector, rewriter, kiwiService)
+}

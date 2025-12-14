@@ -1,0 +1,32 @@
+services:
+  mcp-llm-server:
+    build: .
+    ports:
+      - "40527:40527"
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./uv.lock:/app/uv.lock
+      - ./logs:/app/logs
+    tmpfs:
+      - /tmp
+    environment:
+      - PYTHONPATH=/app/src
+      - REDIS_URL=redis://redis:6379
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=40527
+      - HTTP_RELOAD=true
+      - HTTP2_ENABLED=true
+      - LOG_DIR=/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"

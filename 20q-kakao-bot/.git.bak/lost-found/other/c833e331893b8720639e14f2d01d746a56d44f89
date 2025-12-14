@@ -1,0 +1,227 @@
+package party.qwer.twentyq.service.riddle
+
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import party.qwer.twentyq.ai.AIProvider
+import party.qwer.twentyq.ai.ResponseSchema
+import party.qwer.twentyq.llm.RiddlePromptManager
+import party.qwer.twentyq.redis.CacheCoordinator
+import party.qwer.twentyq.service.riddle.model.TopicEntry
+import java.time.Duration
+
+@DisplayName("TopicDifficultyClassifier")
+class TopicDifficultyClassifierTest {
+    private lateinit var aiProvider: AIProvider
+    private lateinit var promptManager: RiddlePromptManager
+    private lateinit var cacheCoordinator: CacheCoordinator
+    private lateinit var classifier: TopicDifficultyClassifier
+
+    @BeforeEach
+    fun setUp() {
+        aiProvider = mockk(relaxed = true)
+        promptManager = mockk(relaxed = true)
+        cacheCoordinator = mockk(relaxed = true)
+
+        classifier =
+            TopicDifficultyClassifier(
+                aiProvider,
+                promptManager,
+                cacheCoordinator,
+                mockk(relaxed = true),
+            )
+    }
+
+    @Nested
+    @DisplayName("classify")
+    inner class ClassifyTest {
+        @Test
+        fun `classify - 캐시 히트 시 AI 호출 없이 캐시 값 반환`() =
+            runBlocking {
+                val topic = TopicEntry(name = "사과", category = "음식", description = "빨간 과일")
+                val cacheKey = "topic:difficulty:음식:사과"
+
+                every { cacheCoordinator.get(cacheKey) } returns "3"
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(3)
+                coVerify(exactly = 0) { aiProvider.generate(any(), any(), any(), any(), any(), any()) }
+            }
+
+        @Test
+        fun `classify - 캐시 미스 시 AI 호출 및 캐시 저장`() =
+            runBlocking {
+                val topic = TopicEntry(name = "고양이", category = "동물", description = "귀여운 반려동물")
+                val cacheKey = "topic:difficulty:동물:고양이"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt("topic-difficulty") } returns "system prompt"
+                every { promptManager.getUserPrompt("topic-difficulty") } returns
+                    "주제: {name}, 카테고리: {category}, 설명: {description}"
+                every { promptManager.buildCombinedSystemPrompt("system prompt") } returns "combined system"
+
+                coEvery {
+                    aiProvider.generate(
+                        operation = "topic-difficulty",
+                        systemPrompt = "combined system",
+                        userPrompt = "주제: 고양이, 카테고리: 동물, 설명: 귀여운 반려동물",
+                        temperature = 0.3,
+                        topP = 1.0,
+                        schema = any<ResponseSchema.JsonSchema>(),
+                    )
+                } returns """{"level": 2, "reason": "Common pet", "confidence": "high"}"""
+
+                every { cacheCoordinator.set(cacheKey, "2", Duration.ofDays(90)) } returns Unit
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(2)
+                verify { cacheCoordinator.set(cacheKey, "2", Duration.ofDays(90)) }
+            }
+
+        @Test
+        fun `classify - JSON 마크다운 블록 파싱`() =
+            runBlocking {
+                val topic = TopicEntry(name = "자전거", category = "물건", description = "두 바퀴 탈것")
+                val cacheKey = "topic:difficulty:물건:자전거"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt("topic-difficulty") } returns "sys"
+                every { promptManager.getUserPrompt("topic-difficulty") } returns "{name} {category} {description}"
+                every { promptManager.buildCombinedSystemPrompt("sys") } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } returns """```json
+{
+  "level": 1,
+  "reason": "Very common",
+  "confidence": "high"
+}```"""
+
+                every { cacheCoordinator.set(any(), any(), any()) } returns Unit
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(1)
+            }
+
+        @Test
+        fun `classify - AI 호출 실패 시 기본값 2 반환`() =
+            runBlocking {
+                val topic = TopicEntry(name = "테스트", category = "기타", description = "테스트 주제")
+                val cacheKey = "topic:difficulty:기타:테스트"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt(any()) } returns "sys"
+                every { promptManager.getUserPrompt(any()) } returns "usr"
+                every { promptManager.buildCombinedSystemPrompt(any()) } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } throws RuntimeException("AI 서비스 장애")
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(2)
+            }
+
+        @Test
+        fun `classify - JSON 파싱 실패 시 기본값 2 반환`() =
+            runBlocking {
+                val topic = TopicEntry(name = "테스트", category = "기타", description = "파싱 실패")
+                val cacheKey = "topic:difficulty:기타:테스트"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt(any()) } returns "sys"
+                every { promptManager.getUserPrompt(any()) } returns "usr"
+                every { promptManager.buildCombinedSystemPrompt(any()) } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } returns "invalid json"
+
+                every { cacheCoordinator.set(any(), any(), any()) } returns Unit
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(2)
+            }
+
+        @Test
+        fun `classify - level 필드 없을 때 기본값 2`() =
+            runBlocking {
+                val topic = TopicEntry(name = "테스트", category = "기타", description = "level 없음")
+                val cacheKey = "topic:difficulty:기타:테스트"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt(any()) } returns "sys"
+                every { promptManager.getUserPrompt(any()) } returns "usr"
+                every { promptManager.buildCombinedSystemPrompt(any()) } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } returns """{"reason": "test", "confidence": "low"}"""
+
+                every { cacheCoordinator.set(any(), any(), any()) } returns Unit
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(2)
+            }
+
+        @Test
+        fun `classify - Redis 캐시 읽기 실패 시 null 반환하고 AI 호출`() =
+            runBlocking {
+                val topic = TopicEntry(name = "테스트", category = "기타", description = "Redis 읽기 실패")
+
+                every { cacheCoordinator.get(any()) } returns null
+                every { promptManager.getSystemPrompt(any()) } returns "sys"
+                every { promptManager.getUserPrompt(any()) } returns "usr"
+                every { promptManager.buildCombinedSystemPrompt(any()) } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } returns """{"level": 3, "reason": "test", "confidence": "medium"}"""
+
+                every { cacheCoordinator.set(any(), any(), any()) } returns Unit
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(3)
+            }
+
+        @Test
+        fun `classify - Redis 캐시 쓰기 실패해도 결과 반환`() =
+            runBlocking {
+                val topic = TopicEntry(name = "테스트", category = "기타", description = "Redis 쓰기 실패")
+                val cacheKey = "topic:difficulty:기타:테스트"
+
+                every { cacheCoordinator.get(cacheKey) } returns null
+                every { promptManager.getSystemPrompt(any()) } returns "sys"
+                every { promptManager.getUserPrompt(any()) } returns "usr"
+                every { promptManager.buildCombinedSystemPrompt(any()) } returns "sys"
+
+                coEvery {
+                    aiProvider.generate(any(), any(), any(), any(), any(), any())
+                } returns """{"level": 4, "reason": "very hard", "confidence": "high"}"""
+
+                every { cacheCoordinator.set(any(), any(), any()) } throws RuntimeException("Redis write failed")
+
+                val result = classifier.classify(topic)
+
+                assertThat(result).isEqualTo(4)
+            }
+
+        // forEach 안에서 coEvery 호출이 복잡하여 제거
+    }
+}

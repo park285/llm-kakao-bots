@@ -1,0 +1,317 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
+    container_name: twentyq-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-twentyq}
+      POSTGRES_USER: ${DB_USER:-twentyq_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./backups:/backups
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  valkey-cache:
+    image: valkey/valkey-bundle:9-trixie
+    container_name: valkey-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey-cache-data:/data
+    command: >
+      valkey-server
+      --appendonly no
+      --save ""
+      --maxmemory 384mb
+      --maxmemory-policy allkeys-lfu
+      --loglevel notice
+    tmpfs:
+      - /tmp
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  valkey-mq:
+    image: valkey/valkey:9-trixie
+    container_name: valkey-mq
+    ports:
+      - "1833:1833"
+    volumes:
+      - valkey-mq-data:/data
+      - ./logs/valkey-mq:/var/log/valkey-mq
+    tmpfs:
+      - /tmp
+    command: >
+      valkey-server
+      --port 1833
+      --appendonly yes
+      --appendfsync everysec
+      --no-appendfsync-on-rewrite yes
+      --maxmemory 192mb
+      --maxmemory-policy noeviction
+      --loglevel notice
+      --logfile /var/log/valkey-mq/valkey-mq.log
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-p", "1833", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  redis-stack:
+    image: redis/redis-stack:latest
+    container_name: mcp-redis
+    ports:
+      - "46379:6379"
+    volumes:
+      - mcp-redis-data:/data
+    environment:
+      - REDIS_ARGS=--appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    tmpfs:
+      - /tmp
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  mcp-llm-server:
+    build:
+      context: ../mcp-llm-server
+    container_name: mcp-llm-server
+    restart: always
+    env_file:
+      - ../mcp-llm-server/.env
+    environment:
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 40527
+      HTTP_RELOAD: ${MCP_LLM_HTTP_RELOAD:-true}
+      HTTP2_ENABLED: "true"
+      PYTHONPATH: ${MCP_LLM_PYTHONPATH:-/app/src}
+      LOG_DIR: /app/logs
+      GEMINI_MODEL: gemini-2.5-flash-preview-09-2025
+      BOT_HEALTH_URLS: http://turtle-soup-bot:8000/health http://twentyq-bot:30003/actuator/health
+      BOT_RESTART_CONTAINERS: turtle-soup-bot twentyq-bot
+      REDIS_URL: redis://redis-stack:6379
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: twentyq
+      DB_USER: twentyq_app
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../mcp-llm-server/logs:/app/logs
+      - ../mcp-llm-server/src:/app/src
+      - ../mcp-llm-server/pyproject.toml:/app/pyproject.toml
+      - ../mcp-llm-server/uv.lock:/app/uv.lock
+    tmpfs:
+      - /tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-stack:
+        condition: service_healthy
+    ports:
+      - "40527:40527"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  twentyq-bot:
+    build:
+      context: .
+    container_name: twentyq-bot
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        --enable-native-access=ALL-UNNAMED
+        --add-opens=java.base/java.util=ALL-UNNAMED
+        --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
+        --add-opens=java.base/java.lang=ALL-UNNAMED
+        -Xmx1g
+        -Xms1g
+        -XX:+AlwaysPreTouch
+        -XX:MetaspaceSize=256m
+        -XX:MaxMetaspaceSize=768m
+        -XX:+UseShenandoahGC
+        -XX:ShenandoahGCMode=generational
+        -XX:ShenandoahGCHeuristics=adaptive
+        -XX:+DisableExplicitGC
+        -XX:+UseCompactObjectHeaders
+        -XX:+UseStringDeduplication
+        -XX:ReservedCodeCacheSize=512m
+        -XX:InitialCodeCacheSize=256m
+        -XX:CICompilerCount=4
+        -Dfile.encoding=UTF-8
+      LLM_REST_BASE_URL: http://mcp-llm-server:40527
+      CACHE_HOST: valkey-cache
+      CACHE_PORT: 6379
+      MQ_HOST: valkey-mq
+      MQ_PORT: 1833
+      DB_HOST: postgres
+      DB_PORT: 5432
+      LLM_REST_HEALTH_RESTART_COMMAND: ""
+      LLM_REST_HEALTH_RESTART_CONTAINERS: mcp-llm-server
+      LLM_REST_HEALTH_DOCKER_SOCKET: /var/run/docker.sock
+      LLM_REST_HEALTH_RESTART_LOCK_KEY: shared:watchdog:restart:mcp-llm-server
+      LLM_REST_HEALTH_RESTART_LOCK_TTL_SECONDS: "120"
+    volumes:
+      - /run/mcp-llm:/run/mcp-llm
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./logs:/app/logs
+    tmpfs:
+      - /tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey-cache:
+        condition: service_healthy
+      valkey-mq:
+        condition: service_healthy
+      mcp-llm-server:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        mode: "non-blocking"
+        max-buffer-size: "4m"
+    networks:
+      - llm-bot-net
+
+  turtle-soup-bot:
+    build:
+      context: ../turtle-soup-bot
+    container_name: turtle-soup-bot
+    restart: always
+    env_file:
+      - ../turtle-soup-bot/.env
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        --enable-native-access=ALL-UNNAMED
+        --add-opens=java.base/java.util=ALL-UNNAMED
+        --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED
+        --add-opens=java.base/java.lang=ALL-UNNAMED
+        -Xmx1g
+        -Xms1g
+        -XX:+AlwaysPreTouch
+        -XX:MetaspaceSize=256m
+        -XX:MaxMetaspaceSize=768m
+        -XX:+UseShenandoahGC
+        -XX:ShenandoahGCMode=generational
+        -XX:ShenandoahGCHeuristics=adaptive
+        -XX:+DisableExplicitGC
+        -XX:+UseCompactObjectHeaders
+        -XX:+UseStringDeduplication
+        -XX:ReservedCodeCacheSize=512m
+        -XX:InitialCodeCacheSize=256m
+        -XX:CICompilerCount=4
+        -Dfile.encoding=UTF-8
+      LLM_REST_BASE_URL: http://mcp-llm-server:40527
+      REDIS_HOST: valkey-cache
+      REDIS_PORT: 6379
+      VALKEY_MQ_HOST: valkey-mq
+      VALKEY_MQ_PORT: 1833
+      LOG_DIR: /app/logs
+      ACCESS_ENABLED: "false"
+      LLM_REST_HEALTH_RESTART_LOCK_KEY: shared:watchdog:restart:mcp-llm-server
+      LLM_REST_HEALTH_RESTART_LOCK_TTL_SECONDS: "120"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../turtle-soup-bot/logs:/app/logs
+    tmpfs:
+      - /tmp
+    depends_on:
+      valkey-cache:
+        condition: service_healthy
+      valkey-mq:
+        condition: service_healthy
+      mcp-llm-server:
+        condition: service_started
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - llm-bot-net
+
+volumes:
+  pg-data:
+  valkey-cache-data:
+  valkey-mq-data:
+  mcp-redis-data:
+  # mcp-llm-run: (now using host bind mount /run/mcp-llm)
+
+networks:
+  llm-bot-net:
+    driver: bridge

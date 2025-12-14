@@ -1,0 +1,162 @@
+package party.qwer.twentyq.bridge.handlers
+
+import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.redis.RiddleSessionRepository
+import party.qwer.twentyq.service.RiddleService
+import party.qwer.twentyq.service.exception.SessionNotFoundException
+
+@Component
+@ConditionalOnProperty(prefix = "app.mqtt", name = ["enabled"], havingValue = "true", matchIfMissing = true)
+class SurrenderHandler(
+    private val riddleService: RiddleService,
+    private val sessionRepo: RiddleSessionRepository,
+    private val appProperties: AppProperties,
+    private val voteStore: party.qwer.twentyq.redis.voting.SurrenderVoteStore,
+    private val playerSetStore: party.qwer.twentyq.redis.tracking.PlayerSetStore,
+    private val messageProvider: party.qwer.twentyq.util.GameMessageProvider,
+) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    private fun requiredApprovals(playerCount: Int): Int {
+        if (playerCount <= 1) return 1
+        return (playerCount / 2) + 1
+    }
+
+    suspend fun handleConsensus(
+        chatId: String,
+        userId: String,
+    ): String {
+        log.info("HANDLE_SURRENDER_CONSENSUS chatId={}, userId={}", chatId, userId)
+        return try {
+            requireSession(chatId)
+
+            val players = playerSetStore.getAll(chatId)
+            if (players.size < 2) {
+                log.info("CONSENSUS_FALLBACK_IMMEDIATE chatId={}, players={}", chatId, players.size)
+                return riddleService.surrender(chatId)
+            }
+
+            if (!voteStore.isActive(chatId)) {
+                val vote =
+                    party.qwer.twentyq.model.SurrenderVote(
+                        initiator = userId,
+                        eligiblePlayers = players,
+                        approvals = setOf(userId),
+                    )
+                voteStore.save(chatId, vote, ttlSeconds = 120)
+                val approvals = vote.approvals.size
+                val needed = requiredApprovals(players.size)
+
+                if (approvals >= needed) {
+                    log.info("CONSENSUS_REACHED_IMMEDIATE chatId={}, approvals={}, needed={}", chatId, approvals, needed)
+                    val result = riddleService.surrender(chatId)
+                    voteStore.clear(chatId)
+                    return result
+                }
+
+                messageProvider.get(
+                    "vote.start",
+                    "required" to needed,
+                    "current" to approvals,
+                    "prefix" to appProperties.commands.prefix,
+                )
+            } else {
+                messageProvider.get("vote.already_active")
+            }
+        } catch (ex: SessionNotFoundException) {
+            messageProvider.get("error.no_session_short")
+        } catch (ex: Exception) {
+            log.error("Failed to start surrender consensus", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    suspend fun handleAgree(
+        chatId: String,
+        userId: String,
+    ): String {
+        log.info("HANDLE_SURRENDER_AGREE chatId={}, userId={}", chatId, userId)
+        return try {
+            requireSession(chatId)
+
+            if (!voteStore.isActive(chatId)) {
+                return "진행 중인 포기 투표가 없습니다. '${appProperties.commands.prefix} 하남자'로 시작할 수 있습니다."
+            }
+
+            val voteData = voteStore.get(chatId)
+            val players = voteData?.eligiblePlayers ?: emptySet()
+            if (!players.contains(userId)) {
+                return messageProvider.get("vote.cannot_vote")
+            }
+
+            val updatedVote = voteStore.approve(chatId, userId, ttlSeconds = 120) ?: return messageProvider.get("error.generic_error")
+            val approvals = updatedVote.approvals.size
+            val needed = requiredApprovals(players.size)
+            val remain = (needed - approvals).coerceAtLeast(0)
+
+            if (approvals >= needed) {
+                log.info("CONSENSUS_REACHED chatId={}, approvals={}, needed={}", chatId, approvals, needed)
+                val result = riddleService.surrender(chatId)
+                voteStore.clear(chatId)
+                return result
+            }
+
+            messageProvider.get("vote.agree_progress", "current" to approvals, "required" to needed, "remain" to remain)
+        } catch (ex: SessionNotFoundException) {
+            messageProvider.get("error.no_session_short")
+        } catch (ex: Exception) {
+            log.error("Failed to process surrender agreement", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    suspend fun handleReject(
+        chatId: String,
+        userId: String,
+    ): String {
+        log.info("HANDLE_SURRENDER_REJECT chatId={}, userId={}", chatId, userId)
+        return try {
+            requireSession(chatId)
+
+            if (!voteStore.isActive(chatId)) {
+                return messageProvider.get("vote.not_found", "prefix" to appProperties.commands.prefix)
+            }
+
+            val voteData = voteStore.get(chatId)
+            val players = voteData?.eligiblePlayers ?: emptySet()
+            if (!players.contains(userId)) {
+                return messageProvider.get("vote.cannot_vote")
+            }
+
+            // reject is not implemented - vote expires after timeout
+            return messageProvider.get("vote.reject_not_supported")
+        } catch (_: SessionNotFoundException) {
+            messageProvider.get("error.no_session_short")
+        } catch (ex: Exception) {
+            log.error("Failed to process surrender rejection", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    suspend fun handle(chatId: String): String {
+        log.info("HANDLE_SURRENDER chatId={}", chatId)
+        return try {
+            requireSession(chatId)
+            riddleService.surrender(chatId)
+        } catch (_: SessionNotFoundException) {
+            messageProvider.get("error.no_session_short")
+        } catch (ex: Exception) {
+            log.error("Failed to surrender", ex)
+            messageProvider.get("error.generic_error")
+        }
+    }
+
+    private fun requireSession(chatId: String) {
+        if (!riddleService.hasSession(chatId)) {
+            throw SessionNotFoundException()
+        }
+    }
+}

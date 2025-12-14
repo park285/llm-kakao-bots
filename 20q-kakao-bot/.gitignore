@@ -1,0 +1,209 @@
+# ============================================
+# Internal AI Tooling Artifacts
+# ============================================
+.serena/
+*.ai.md
+*-ai-notes.md
+
+
+# ============================================
+# Secrets & Credentials
+# ============================================
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+credentials.json
+secrets.yml
+
+# ============================================
+# Build Output
+# ============================================
+bin/
+build/
+.gradle/
+.kotlin/
+out/
+target/
+
+# Gradle Wrapper (Keep)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ============================================
+# IDE
+# ============================================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# NetBeans
+nbproject/
+nb-configuration.xml
+
+# ============================================
+# Runtime & Process Files
+# ============================================
+*.pid
+20q-kakao-bot.pid
+iris-20q.pid
+
+nohup.out
+
+# ============================================
+# Logs
+# ============================================
+*.log
+logs/
+20q-kakao-bot.log
+iris-20q.log
+
+# GC logs
+gc.log*
+
+# Compressed log archives
+*.tar.gz
+
+# ============================================
+# Temporary Files
+# ============================================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ============================================
+# Personal/Draft Files
+# ============================================
+NOTES.md
+TODO.md
+SCRATCH.md
+*.draft.md
+.notes/
+notes/
+
+# Documentation (internal only)
+docs/
+
+# Legacy scripts (renamed to bot-*.sh)
+iris-start.sh
+iris-stop.sh
+iris-status.sh
+iris-restart.sh
+
+# Deployment scripts (if any)
+deploy.sh
+build-and-deploy.sh
+
+# ============================================
+# OS Files
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# Test & Coverage
+# ============================================
+.test/
+coverage/
+*.gcov
+*.gcno
+*.gcda
+jacoco/
+*.exec
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.mv.db
+*.trace.db
+dump.rdb
+
+# ============================================
+# Node.js (if using frontend tools)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ============================================
+# Spring Boot
+# ============================================
+.spring-boot-devtools.properties
+actuator/
+
+# ============================================
+# VCS
+# ============================================
+*.orig
+*.rej
+.svn/
+
+# ============================================
+# Explicitly Include (Override above rules)
+# ============================================
+!.env.example
+!README.md
+!LICENSE
+!CHANGELOG.md
+!CONTRIBUTING.md
+!gradlew
+!gradlew.bat
+scripts/venv/
+
+# Detekt CLI (빌드 시 자동 다운로드)
+.detekt/*.jar
+
+
+# Test scripts with API keys
+*_test.sh
+*_key*.sh
+check_*.sh
+comprehensive_*.sh
+test_new_*.sh
+.claude/settings.local.json
+BOOT-INF/
+
+# AI collaboration artifacts (local only)
+.claude/
+*.backup
+*.backup-*
+AGENTS.md
+CLAUDE.md
+chekc.md
+
+# Build artifacts and temp files
+com/
+commonMain/
+kotlinx/
+*.png

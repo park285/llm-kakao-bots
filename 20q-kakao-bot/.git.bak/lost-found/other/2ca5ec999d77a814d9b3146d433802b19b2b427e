@@ -1,0 +1,125 @@
+package party.qwer.twentyq.service
+
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+
+/**
+ * KomoranService 단위 테스트
+ */
+class KomoranServiceTest {
+    private lateinit var komoranService: KomoranService
+    private lateinit var spellChecker: SpellChecker
+
+    @BeforeEach
+    fun setUp() {
+        // SpellChecker mock: 입력을 그대로 반환 (교정 없음)
+        spellChecker =
+            mockk<SpellChecker> {
+                coEvery { correct(any()) } answers { firstArg() }
+            }
+
+        komoranService = KomoranService(spellChecker)
+        komoranService.init()
+    }
+
+    @Test
+    fun `analyze should tokenize Korean text`() =
+        runBlocking {
+            val tokens = komoranService.analyze("한국어 형태소 분석")
+
+            assertThat(tokens).isNotEmpty
+            assertThat(tokens).hasSize(3)
+
+            assertThat(tokens[0].form).isEqualTo("한국어")
+            assertThat(tokens[0].tag).isIn("NNP", "NNG") // KOMORAN과 Kiwi 품사 차이
+
+            assertThat(tokens[1].form).isEqualTo("형태소")
+            assertThat(tokens[1].tag).isIn("NNP", "NNG") // KOMORAN과 Kiwi 품사 차이
+
+            assertThat(tokens[2].form).isEqualTo("분석")
+            assertThat(tokens[2].tag).isIn("NNP", "NNG") // KOMORAN과 Kiwi 품사 차이
+        }
+
+    @Test
+    fun `extractNouns should extract only nouns`() =
+        runBlocking {
+            val nouns = komoranService.extractNouns("스마트폰으로 게임을 한다")
+
+            // KOMORAN STABLE은 "스마트폰"을 "스마트" + "폰"으로 분리할 수 있음
+            assertThat(nouns).contains("게임")
+            assertThat(nouns).anyMatch { it.contains("스마트") || it == "스마트폰" }
+        }
+
+    @Test
+    fun `extractVerbs should extract only verbs`() =
+        runBlocking {
+            val tokens = komoranService.analyze("친구가 집에 간다")
+            println("Tokens: ${tokens.joinToString { "${it.form}/${it.tag}" }}")
+
+            val verbs = komoranService.extractVerbs("친구가 집에 간다")
+            println("Extracted verbs: $verbs")
+
+            assertThat(verbs).isNotEmpty
+            assertThat(verbs).contains("가")
+        }
+
+    @Test
+    fun `analyze should call spell checker before analyzing`() =
+        runBlocking {
+            // SpellChecker mock이 "생물인가요?" 반환하도록 설정
+            coEvery { spellChecker.correct("생물인가요ㅕ") } returns "생물인가요?"
+
+            val tokens = komoranService.analyze("생물인가요ㅕ")
+
+            assertThat(tokens).isNotEmpty
+            // 교정된 텍스트로 분석되었는지 확인
+            val forms = tokens.map { it.form }
+            assertThat(forms).doesNotContain("ㅕ")
+        }
+
+    @Test
+    fun `analyze should handle empty text`() =
+        runBlocking {
+            val tokens = komoranService.analyze("")
+
+            assertThat(tokens).isEmpty()
+        }
+
+    @Test
+    fun `analyze should handle spacing errors`() =
+        runBlocking {
+            val tokens1 = komoranService.analyze("먹을수있어요")
+            val tokens2 = komoranService.analyze("먹을 수 있어요")
+
+            assertThat(tokens1).isNotEmpty
+            assertThat(tokens2).isNotEmpty
+
+            val forms1 = tokens1.map { it.form }
+            val forms2 = tokens2.map { it.form }
+
+            assertThat(forms1).contains("먹")
+            assertThat(forms2).contains("먹")
+        }
+
+    @Test
+    fun `calculateAnomalyScore should work with spell checked text`() =
+        runBlocking {
+            val score = komoranService.calculateAnomalyScore("정상적인 텍스트입니다")
+
+            assertThat(score).isLessThan(0.5)
+        }
+
+    @Test
+    fun `analyzeHeuristics should detect meta patterns`() =
+        runBlocking {
+            val heuristics = komoranService.analyzeHeuristics("5글자 이상인가요?")
+
+            assertThat(heuristics.numericQuantifier).isTrue
+            assertThat(heuristics.unitNoun).isTrue
+            assertThat(heuristics.suspiciousMetaPattern).isTrue
+        }
+}

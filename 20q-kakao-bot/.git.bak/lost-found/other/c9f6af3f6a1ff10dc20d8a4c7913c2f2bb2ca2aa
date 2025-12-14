@@ -1,0 +1,186 @@
+package party.qwer.twentyq.service.riddle
+
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
+import org.slf4j.LoggerFactory
+import org.springframework.core.io.DefaultResourceLoader
+import org.springframework.stereotype.Component
+import party.qwer.twentyq.config.AppProperties
+import party.qwer.twentyq.config.PromptResourcePaths
+import party.qwer.twentyq.llm.GuardConfig
+import party.qwer.twentyq.llm.PersonaConfig
+import party.qwer.twentyq.llm.PromptLoader
+import party.qwer.twentyq.llm.PromptTemplate
+import party.qwer.twentyq.service.GeminiApiClient
+import java.util.concurrent.TimeUnit
+
+@Component
+class MetaQuestionValidator(
+    private val geminiApiClient: GeminiApiClient,
+    private val appProperties: AppProperties,
+    private val promptLoader: PromptLoader,
+    private val securityGuardCacheRegistry: party.qwer.twentyq.ai.cache.SecurityGuardCacheRegistry,
+    private val kiwiService: party.qwer.twentyq.service.KomoranService,
+    private val keyProvider: party.qwer.twentyq.service.GeminiApiKeyProvider,
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(MetaQuestionValidator::class.java)
+
+    }
+
+    private val cache: Cache<String, Boolean> =
+        Caffeine
+            .newBuilder()
+            .maximumSize(5_000)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .recordStats()
+            .build()
+
+    private val suspiciousPattern =
+        Regex(
+            """(?is)
+ {8}\b(\d+\s*%|\d+\s*퍼센트|percent)\b.*\b(이상|이하|초과|미만|over|under|more than|less than)\b 
+ {8}|(?:초성|쵸성|중성|종성|받침) {46}
+ {8}|(?:첫\s*글자|끝\s*글자|시작|끝나) {42}
+ {8}|중\s*(?:에|에서|하나) {51}
+ {8}|(?:\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|삼|사|오|육|칠|팔|구|십|몇).*?(개|칸|자리|공간|슬롯|위치) 
+ {8}|(입력|타이핑|타자|치|누르).*?(?:\d+|한|두|세|몇).*?(번|회|이내|이하|이상|초과|미만) {11}
+ {8}|(?:분절|나누|구분|쪼개|토막).*?(?:\d+|한|두|세|몇).*?(?:개|이하|이상|초과|미만) {20}
+ {8}""",
+        )
+
+    private val securityPersona: PersonaConfig by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.SECURITY_PERSONA, PersonaConfig::class.java)
+    }
+
+    private val guardConfig: GuardConfig by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.GUARD, GuardConfig::class.java)
+    }
+
+    private val metaPrompt: PromptTemplate by lazy {
+        promptLoader.loadYamlAs(PromptResourcePaths.SECURITY_META, PromptTemplate::class.java)
+    }
+
+    fun shouldValidate(question: String): Boolean {
+        if (!appProperties.security.metaQuestionLlmEnabled) return false
+
+        // 통합 pre-filter: Kiwi + Regex 협력
+        var kiwiSuspicious = false
+        var regexSuspicious = false
+
+        // Kiwi 형태소 분석
+        try {
+            kiwiSuspicious = hasMetaQuestionPatternInternal(question)
+        } catch (e: Exception) {
+            log.warn("Kiwi pre-filter failed: {}", e.message)
+        }
+
+        // Regex 패턴 매칭
+        regexSuspicious = suspiciousPattern.containsMatchIn(question)
+
+        // 통합 판단: 둘 중 하나라도 suspicious하면 LLM 검증
+        val shouldValidate = kiwiSuspicious || regexSuspicious
+
+        if (shouldValidate) {
+            log.debug(
+                "shouldValidate: SUSPICIOUS text='{}', kiwi={}, regex={}",
+                question.take(50),
+                kiwiSuspicious,
+                regexSuspicious,
+            )
+        }
+
+        return shouldValidate
+    }
+
+    private fun hasMetaQuestionPatternInternal(question: String): Boolean {
+        // Simple regex-based detection for meta questions
+        val hasNumbers = question.contains(Regex("""\d+|한|두|세|네|다섯"""))
+        val hasCounters = question.contains(Regex("""개|번|칸|자리|글자"""))
+        return hasNumbers && hasCounters
+    }
+
+    fun refreshCache(): Boolean {
+        log.info("MetaQuestionValidator cache REFRESH requested")
+        return securityGuardCacheRegistry.refresh()
+    }
+
+    fun isMetaQuestion(question: String): Boolean = cache.get(question) { key -> validateWithLLM(key) }
+
+    private fun buildSystemPrompt(): String =
+        listOf(
+            guardConfig.system,
+            securityPersona.system,
+            metaPrompt.system,
+            securityPersona.compliance.reminder,
+        ).filter { it.isNotBlank() }
+            .joinToString("\n\n")
+
+    private fun buildUserPrompt(question: String): String = metaPrompt.user.replace("{question}", question)
+
+    private fun validateWithLLM(question: String): Boolean {
+        try {
+            val userPrompt = buildUserPrompt(question)
+            val config = appProperties.ai.gemini
+            val apiKey = keyProvider.availableKeyOrNull()
+            val model = "gemini-2.5-flash"
+            val guardCacheId = if (apiKey != null) securityGuardCacheRegistry.getGuardCacheIdForKey(apiKey, model) else null
+            if (config.cacheEnabled && guardCacheId != null && apiKey != null) {
+                try {
+                    val response =
+                        geminiApiClient.generateWithCache(
+                            model = model,
+                            cacheId = guardCacheId,
+                            userPrompt = userPrompt,
+                            temperature = 0.0,
+                            topP = 0.0,
+                            thinkingBudget = 0,
+                            apiKey = apiKey,
+                        )
+
+                    val result = response.trim().lowercase() == "yes"
+
+                    log.info(
+                        "LLM_META_VALIDATION_CACHED question='{}', response='{}', blocked={}",
+                        question.take(50),
+                        response.trim(),
+                        result,
+                    )
+
+                    return result
+                } catch (e: Exception) {
+                    log.warn("Guard cache failed, falling back to non-cached: {}", e.message)
+                }
+            }
+
+            val systemPrompt = buildSystemPrompt()
+            val response =
+                geminiApiClient.generate(
+                    model = model,
+                    systemPrompt = systemPrompt,
+                    userPrompt = userPrompt,
+                    temperature = 0.0,
+                    topP = 0.0,
+                )
+
+            val result = response.trim().lowercase() == "yes"
+
+            log.info(
+                "LLM_META_VALIDATION question='{}', response='{}', blocked={}",
+                question.take(50),
+                response.trim(),
+                result,
+            )
+
+            return result
+        } catch (e: Exception) {
+            log.warn("LLM meta-question validation failed: ${e.message}, allowing question", e)
+            return false
+        }
+    }
+
+    fun getCacheStats(): String {
+        val stats = cache.stats()
+        return "hits=${stats.hitCount()}, misses=${stats.missCount()}, hitRate=${stats.hitRate()}"
+    }
+}
