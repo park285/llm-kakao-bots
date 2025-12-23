@@ -112,6 +112,7 @@ gc.log*
 *.swo
 *~
 tmp/
+backup/
 
 # Compressed archives
 *.tar.gz

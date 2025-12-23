@@ -1,0 +1,18 @@
+root = "."
+tmp_dir = "/air"
+
+[build]
+  cmd = "go build -trimpath -o /air/twentyq ./cmd/twentyq"
+  bin = "/air/twentyq"
+  delay = 500
+  exclude_dir = [".git", "bin", "docs", "tmp", "vendor"]
+  exclude_regex = ["_test\\.go$", "^coverage_.*\\.out$"]
+  include_ext = ["go", "yaml", "yml"]
+  poll = true
+  poll_interval = 500
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

@@ -1,0 +1,13 @@
+.git
+.idea
+.vscode
+.serena
+.mypy_cache
+.ruff_cache
+bin
+logs
+tmp
+coverage.out
+coverage.html
+*.log
+.env

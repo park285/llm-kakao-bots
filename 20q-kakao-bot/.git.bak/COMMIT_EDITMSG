@@ -1,9 +1,0 @@
-feat: add token usage tracking and cleanup deprecated LLM code
-
-- Add UsageTracker service for token usage monitoring
-- Add UsageHandler for admin usage command (/사용량, /usage)
-- Add TokenUsageEntity and repository for DB persistence
-- Add RedisHealthIndicator for health checks
-- Remove deprecated LLM code (GuardConfig, PersonaConfig, PromptLoader, etc.)
-- Remove unused AI utilities and security prompts
-- Update CommandParser with admin usage command

@@ -1,0 +1,12 @@
+.git
+.idea
+.vscode
+.serena
+admin-ui/node_modules
+admin-ui/dist
+node_modules
+dist
+logs
+tmp
+*.log
+llm-watchdog
