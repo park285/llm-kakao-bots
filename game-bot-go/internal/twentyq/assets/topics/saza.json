@@ -1,0 +1,2371 @@
+{
+  "idiom_proverb": [
+    {
+      "name": "가는 날이 장날",
+      "details": {
+        "meaning": "뜻하지 않은 일을 공교롭게 당함을 비유적으로 이르는 말",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 우연(Coincidence)"
+      }
+    },
+    {
+      "name": "등잔 밑이 어둡다",
+      "details": {
+        "meaning": "가까이 있는 사물을 오히려 잘 모름",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 관찰(Observation)"
+      }
+    },
+    {
+      "name": "각주구검 (刻舟求劍)",
+      "details": {
+        "meaning": "융통성 없이 현실에 맞지 않는 낡은 생각을 고집하는 어리석음",
+        "origin": "여씨춘추",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 어리석음(Foolishness)"
+      }
+    },
+    {
+      "name": "감탄고토 (甘呑苦吐)",
+      "details": {
+        "meaning": "달면 삼키고 쓰면 뱉는다. 사리에 옳고 그름을 따지지 않고 자기 비위에 맞으면 좋아하고 안 맞으면 싫어함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 이기심(Selfishness)"
+      }
+    },
+    {
+      "name": "개과천선 (改過遷善)",
+      "details": {
+        "meaning": "지난날의 잘못을 고치고 착하게 됨",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 변화(Change)"
+      }
+    },
+    {
+      "name": "결초보은 (結草報恩)",
+      "details": {
+        "meaning": "죽어서도 은혜를 잊지 않고 갚음",
+        "origin": "춘추좌씨전",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 은혜(Gratitude)"
+      }
+    },
+    {
+      "name": "과유불급 (過猶不及)",
+      "details": {
+        "meaning": "정도를 지나침은 미치지 못한 것과 같다",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 중용(Moderation)"
+      }
+    },
+    {
+      "name": "티끌 모아 태산",
+      "details": {
+        "meaning": "아무리 작은 것이라도 모이고 모이면 나중에 큰 덩어리가 됨",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 노력(Effort)"
+      }
+    },
+    {
+      "name": "고진감래 (苦盡甘來)",
+      "details": {
+        "meaning": "쓴 것이 다하면 단 것이 온다. 고생 끝에 낙이 온다",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 희망(Hope)"
+      }
+    },
+    {
+      "name": "금의환향 (錦衣還鄕)",
+      "details": {
+        "meaning": "비단옷을 입고 고향에 돌아온다. 출세하여 고향에 돌아옴",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 성공(Success)"
+      }
+    },
+    {
+      "name": "누워서 떡 먹기",
+      "details": {
+        "meaning": "하기가 매우 쉬운 것을 비유적으로 이르는 말",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 쉬움(Easiness)"
+      }
+    },
+    {
+      "name": "다다익선 (多多益善)",
+      "details": {
+        "meaning": "많으면 많을수록 더욱 좋음",
+        "origin": "사기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 수량(Quantity)"
+      }
+    },
+    {
+      "name": "동문서답 (東問西答)",
+      "details": {
+        "meaning": "동쪽을 묻는데 서쪽을 대답한다. 묻는 말에 대하여 아주 딴판인 대답",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대화(Conversation)"
+      }
+    },
+    {
+      "name": "대기만성 (大器晩成)",
+      "details": {
+        "meaning": "큰 그릇은 늦게 이루어진다. 크게 될 인물은 오랜 공적을 쌓아 늦게 이루어짐",
+        "origin": "노자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 인내(Patience)"
+      }
+    },
+    {
+      "name": "배보다 배꼽이 더 크다",
+      "details": {
+        "meaning": "기본이 되는 것보다 곁딸린 것이 더 많거나 큼",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 주객전도(Priority)"
+      }
+    },
+    {
+      "name": "마이동풍 (馬耳東風)",
+      "details": {
+        "meaning": "동풍이 말 귀를 스쳐간다. 남의 말을 귀담아듣지 않고 흘려버림",
+        "origin": "이백 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 태도(Attitude)"
+      }
+    },
+    {
+      "name": "막상막하 (莫上莫下)",
+      "details": {
+        "meaning": "더하고 덜함이 없이 능력이나 기세가 비슷함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경쟁(Competition)"
+      }
+    },
+    {
+      "name": "발 없는 말이 천 리 간다",
+      "details": {
+        "meaning": "말은 비록 발이 없지만 순식간에 멀리까지 퍼진다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 소문(Rumor)"
+      }
+    },
+    {
+      "name": "백문이 불여일견 (百聞不如一見)",
+      "details": {
+        "meaning": "백 번 듣는 것이 한 번 보는 것만 못하다",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경험(Experience)"
+      }
+    },
+    {
+      "name": "사면초가 (四面楚歌)",
+      "details": {
+        "meaning": "사방에서 들리는 초나라의 노래. 적에게 둘러싸여 고립된 상태",
+        "origin": "사기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위기(Crisis)"
+      }
+    },
+    {
+      "name": "새옹지마 (塞翁之馬)",
+      "details": {
+        "meaning": "변방 노인의 말. 인생의 길흉화복은 변화가 많아 예측하기 어렵다",
+        "origin": "회남자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운명(Fate)"
+      }
+    },
+    {
+      "name": "소 잃고 외양간 고친다",
+      "details": {
+        "meaning": "일이 이미 잘못된 뒤에 손을 써도 소용이 없다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 후회(Regret)"
+      }
+    },
+    {
+      "name": "십시일반 (十匙一飯)",
+      "details": {
+        "meaning": "열 숟가락이면 밥 한 그릇이 된다. 여러 사람이 힘을 합치면 한 사람을 돕기 쉽다",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 협동(Cooperation)"
+      }
+    },
+    {
+      "name": "아전인수 (我田引水)",
+      "details": {
+        "meaning": "제 논에 물 대기. 자기에게만 이롭게 되도록 생각하거나 행동함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 이기심(Selfishness)"
+      }
+    },
+    {
+      "name": "약방에 감초",
+      "details": {
+        "meaning": "어떤 일에나 빠짐없이 끼어드는 사람이나 물건",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 필수(Essential)"
+      }
+    },
+    {
+      "name": "어부지리 (漁夫之利)",
+      "details": {
+        "meaning": "도요새와 조개가 싸우는 틈을 타서 어부가 둘 다 잡음. 제3자가 이득을 봄",
+        "origin": "전국책",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 이득(Benefit)"
+      }
+    },
+    {
+      "name": "오비이락 (烏飛梨落)",
+      "details": {
+        "meaning": "까마귀 날자 배 떨어진다. 아무 관계 없는 일이 공교롭게 동시에 일어나 의심을 받음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 오해(Misunderstanding)"
+      }
+    },
+    {
+      "name": "우물 안 개구리",
+      "details": {
+        "meaning": "넓은 세상을 알지 못하고 저만 잘난 줄 아는 사람",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 식견(Insight)"
+      }
+    },
+    {
+      "name": "유비무환 (有備無患)",
+      "details": {
+        "meaning": "미리 준비가 되어 있으면 걱정할 것이 없다",
+        "origin": "서경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 준비(Preparation)"
+      }
+    },
+    {
+      "name": "이심전심 (以心傳心)",
+      "details": {
+        "meaning": "마음에서 마음으로 전한다. 말하지 않아도 마음이 통함",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 소통(Communication)"
+      }
+    },
+    {
+      "name": "일석이조 (一石二鳥)",
+      "details": {
+        "meaning": "돌 한 개를 던져 새 두 마리를 잡는다. 한 가지 일로 두 가지 이득을 얻음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 효율(Efficiency)"
+      }
+    },
+    {
+      "name": "지렁이도 밟으면 꿈틀한다",
+      "details": {
+        "meaning": "아무리 순하고 보잘것없는 사람이라도 너무 업신여기면 가만히 있지 않는다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 반항(Resistance)"
+      }
+    },
+    {
+      "name": "작심삼일 (作心三日)",
+      "details": {
+        "meaning": "단단히 먹은 마음이 사흘을 가지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 의지(Will)"
+      }
+    },
+    {
+      "name": "전화위복 (轉禍爲福)",
+      "details": {
+        "meaning": "화가 바뀌어 오히려 복이 된다",
+        "origin": "전국책",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운세(Fortune)"
+      }
+    },
+    {
+      "name": "천 리 길도 한 걸음부터",
+      "details": {
+        "meaning": "무슨 일이든 시작이 중요하다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 시작(Start)"
+      }
+    },
+    {
+      "name": "청출어람 (靑出於藍)",
+      "details": {
+        "meaning": "푸른색은 쪽에서 나왔으나 쪽보다 더 푸르다. 제자가 스승보다 나음",
+        "origin": "순자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 성장(Growth)"
+      }
+    },
+    {
+      "name": "토사구팽 (兎死狗烹)",
+      "details": {
+        "meaning": "토끼가 죽으면 사냥개를 삶는다. 필요할 때는 쓰고 필요 없을 때는 야박하게 버림",
+        "origin": "사기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 배신(Betrayal)"
+      }
+    },
+    {
+      "name": "하늘이 무너져도 솟아날 구멍이 있다",
+      "details": {
+        "meaning": "아무리 어려운 경우에 처하더라도 살아 나갈 방도가 있다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 희망(Hope)"
+      }
+    },
+    {
+      "name": "함흥차사 (咸興差使)",
+      "details": {
+        "meaning": "심부름을 가서 오지 않거나 소식이 감감무소식임",
+        "origin": "역사 유래",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 소식(News)"
+      }
+    },
+    {
+      "name": "호가호위 (狐假虎威)",
+      "details": {
+        "meaning": "여우가 호랑이의 위세를 빌리다. 남의 권세를 빌려 위세를 부림",
+        "origin": "전국책",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 허세(Bluff)"
+      }
+    },
+    {
+      "name": "형설지공 (螢雪之功)",
+      "details": {
+        "meaning": "반딧불과 눈빛으로 이룬 공. 가난과 역경을 딛고 공부하여 성공함",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 노력(Effort)"
+      }
+    },
+    {
+      "name": "꿩 대신 닭",
+      "details": {
+        "meaning": "자기가 쓰려는 것이 없을 때, 그와 비슷한 것으로 대신 씀",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 대안(Alternative)"
+      }
+    },
+    {
+      "name": "그림의 떡",
+      "details": {
+        "meaning": "아무리 마음에 들어도 이용하거나 차지할 수 없는 것",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 욕망(Desire)"
+      }
+    },
+    {
+      "name": "죽 쒀서 개 줬다",
+      "details": {
+        "meaning": "애써 한 일을 남에게 뺏기거나 헛수고가 됨",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 허무(Futility)"
+      }
+    },
+    {
+      "name": "동병상련 (同病相憐)",
+      "details": {
+        "meaning": "같은 병을 앓는 사람끼리 서로 가엾게 여김. 처지가 비슷한 사람끼리 동정함",
+        "origin": "오월춘추",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 공감(Empathy)"
+      }
+    },
+    {
+      "name": "권선징악 (勸善懲惡)",
+      "details": {
+        "meaning": "착한 일을 권하고 악한 일을 징벌함",
+        "origin": "춘추좌씨전",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 도덕(Moral)"
+      }
+    },
+    {
+      "name": "군계일학 (群鷄一鶴)",
+      "details": {
+        "meaning": "닭 무리 속에 있는 한 마리의 학. 평범한 사람들 중에 뛰어난 한 사람",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 인재(Talent)"
+      }
+    },
+    {
+      "name": "구사일생 (九死一生)",
+      "details": {
+        "meaning": "아홉 번 죽을 뻔하다가 한 번 살아남. 여러 차례 죽을 고비를 넘기고 겨우 살아남",
+        "origin": "굴원",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 생존(Survival)"
+      }
+    },
+    {
+      "name": "밑 빠진 독에 물 붓기",
+      "details": {
+        "meaning": "아무리 힘을 들여 하여도 보람 없이 헛된 일이 됨",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 낭비(Waste)"
+      }
+    },
+    {
+      "name": "싼 게 비지떡",
+      "details": {
+        "meaning": "값이 싼 물건은 품질도 그만큼 나쁘게 마련이다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 품질(Quality)"
+      }
+    },
+    {
+      "name": "감언이설 (甘言利說)",
+      "details": {
+        "meaning": "귀가 솔깃하도록 남의 비위를 맞추거나 이로운 조건을 내세워 꾐",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 유혹(Temptation)"
+      }
+    },
+    {
+      "name": "개천에서 용 난다",
+      "details": {
+        "meaning": "변변하지 못한 집안에서 훌륭한 인물이 나옴",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 출세(Success)"
+      }
+    },
+    {
+      "name": "거두절미 (去頭截尾)",
+      "details": {
+        "meaning": "머리와 꼬리를 잘라 버린다. 요점만 말함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 요약(Summary)"
+      }
+    },
+    {
+      "name": "견물생심 (見物生心)",
+      "details": {
+        "meaning": "물건을 보면 욕심이 생긴다",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 욕심(Greed)"
+      }
+    },
+    {
+      "name": "고래 싸움에 새우 등 터진다",
+      "details": {
+        "meaning": "강한 자들끼리 싸우는 통에 아무 관계 없는 약한 자가 해를 입음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 피해(Damage)"
+      }
+    },
+    {
+      "name": "골육상쟁 (骨肉相爭)",
+      "details": {
+        "meaning": "뼈와 살이 서로 다툰다. 가까운 혈족끼리 싸움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 분쟁(Conflict)"
+      }
+    },
+    {
+      "name": "구관이 명관",
+      "details": {
+        "meaning": "전임 관리가 훌륭한 관리다. 무슨 일이든 경험 많은 사람이 낫다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 경험(Experience)"
+      }
+    },
+    {
+      "name": "구밀복검 (口蜜腹劍)",
+      "details": {
+        "meaning": "입에는 꿀을 바르고 뱃속에는 칼을 품는다. 겉으로는 친절하나 속으로는 해칠 생각을 함",
+        "origin": "십팔사략",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위선(Hypocrisy)"
+      }
+    },
+    {
+      "name": "굿이나 보고 떡이나 먹지",
+      "details": {
+        "meaning": "남의 일에 쓸데없이 간섭하지 말고 되어가는 형편을 보고 있다가 이익이나 얻어라",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 방관(Observation)"
+      }
+    },
+    {
+      "name": "금강산도 식후경",
+      "details": {
+        "meaning": "아무리 좋은 일이라도 배가 불러야 흥이 난다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 우선순위(Priority)"
+      }
+    },
+    {
+      "name": "권토중래 (捲土重來)",
+      "details": {
+        "meaning": "흙먼지를 일으키며 다시 온다. 실패한 사람이 세력을 회복하여 다시 쳐들어옴",
+        "origin": "두목 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 재기(Resurgence)"
+      }
+    },
+    {
+      "name": "근묵자흑 (近墨者黑)",
+      "details": {
+        "meaning": "먹을 가까이하는 사람은 검어진다. 나쁜 사람과 어울리면 나쁜 버릇이 들기 쉽다",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 환경(Environment)"
+      }
+    },
+    {
+      "name": "금상첨화 (錦上添花)",
+      "details": {
+        "meaning": "비단 위에 꽃을 더한다. 좋은 일에 또 좋은 일이 더해짐",
+        "origin": "왕안석 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 행운(Fortune)"
+      }
+    },
+    {
+      "name": "기우 (杞憂)",
+      "details": {
+        "meaning": "기나라 사람의 걱정. 쓸데없는 걱정",
+        "origin": "열자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 걱정(Worry)"
+      }
+    },
+    {
+      "name": "남의 떡이 더 커 보인다",
+      "details": {
+        "meaning": "남의 것이 제 것보다 좋아 보임",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 비교(Comparison)"
+      }
+    },
+    {
+      "name": "내 코가 석 자",
+      "details": {
+        "meaning": "내 사정이 급해서 남을 돌볼 여유가 없다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 상황(Situation)"
+      }
+    },
+    {
+      "name": "노심초사 (勞心焦思)",
+      "details": {
+        "meaning": "몹시 마음을 쓰며 애를 태움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 걱정(Anxiety)"
+      }
+    },
+    {
+      "name": "누워서 침 뱉기",
+      "details": {
+        "meaning": "남을 해치려다 도리어 자기가 해를 입음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 자업자득(Karma)"
+      }
+    },
+    {
+      "name": "다 된 밥에 재 뿌리기",
+      "details": {
+        "meaning": "잘 되어 가던 일을 망쳐 놓음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 훼방(Sabotage)"
+      }
+    },
+    {
+      "name": "단도직입 (單刀直入)",
+      "details": {
+        "meaning": "한 자루의 칼을 들고 곧바로 쳐들어감. 요점만 바로 말함",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 화법(Speech)"
+      }
+    },
+    {
+      "name": "달면 삼키고 쓰면 뱉는다",
+      "details": {
+        "meaning": "자기의 이익만 꾀하고 의리는 돌보지 않음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 이기심(Selfishness)"
+      }
+    },
+    {
+      "name": "닭 쫓던 개 지붕 쳐다보듯",
+      "details": {
+        "meaning": "애쓰던 일이 실패로 돌아가거나 남보다 뒤떨어져 어찌할 수 없음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 낙심(Despair)"
+      }
+    },
+    {
+      "name": "도랑 치고 가재 잡고",
+      "details": {
+        "meaning": "일의 순서가 바뀌었으나 한 가지 일로 두 가지 이익을 봄",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 이득(Benefit)"
+      }
+    },
+    {
+      "name": "도둑이 제 발 저린다",
+      "details": {
+        "meaning": "죄 지은 자가 그것이 드러날까 두려워 안절부절못함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 양심(Conscience)"
+      }
+    },
+    {
+      "name": "독불장군 (獨不將軍)",
+      "details": {
+        "meaning": "혼자서는 장군을 못 한다. 남과 협조하지 않고 혼자 처리하는 사람",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 고립(Isolation)"
+      }
+    },
+    {
+      "name": "돌다리도 두들겨 보고 건너라",
+      "details": {
+        "meaning": "잘 아는 일이라도 세심하게 주의를 하라",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 조심(Caution)"
+      }
+    },
+    {
+      "name": "동족상잔 (同族相殘)",
+      "details": {
+        "meaning": "같은 겨레끼리 서로 싸우고 죽임",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 비극(Tragedy)"
+      }
+    },
+    {
+      "name": "등화관제 (燈火管制)",
+      "details": {
+        "meaning": "적의 공습 따위를 피하기 위하여 불을 끄거나 가리게 하는 일 (참고: 등화가친과 구별)",
+        "origin": "군사 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 안보(Security)"
+      }
+    },
+    {
+      "name": "등화가친 (燈火可親)",
+      "details": {
+        "meaning": "등불을 가까이할 만하다. 가을밤은 서늘하여 등불을 밝히고 글 읽기에 좋음",
+        "origin": "한유 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 독서(Reading)"
+      }
+    },
+    {
+      "name": "마른 하늘에 날벼락",
+      "details": {
+        "meaning": "뜻밖에 입는 재난",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 불행(Misfortune)"
+      }
+    },
+    {
+      "name": "망양보뢰 (亡羊補牢)",
+      "details": {
+        "meaning": "양 잃고 우리를 고친다. 이미 실패한 뒤에 뉘우쳐도 소용없음",
+        "origin": "전국책",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 후회(Regret)"
+      }
+    },
+    {
+      "name": "명불허전 (名不虛傳)",
+      "details": {
+        "meaning": "이름은 헛되이 전해지지 않는다. 명성이 널리 알려진 데는 그럴 만한 까닭이 있음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 명성(Reputation)"
+      }
+    },
+    {
+      "name": "모순 (矛盾)",
+      "details": {
+        "meaning": "창과 방패. 말이나 행동의 앞뒤가 서로 맞지 않음",
+        "origin": "한비자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 논리(Logic)"
+      }
+    },
+    {
+      "name": "무릉도원 (武陵桃源)",
+      "details": {
+        "meaning": "세상과 따로 떨어진 별천지",
+        "origin": "도연명",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 이상향(Utopia)"
+      }
+    },
+    {
+      "name": "미운 놈 떡 하나 더 준다",
+      "details": {
+        "meaning": "미운 사람일수록 더 잘 대우해주어 감정을 상하지 않게 함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 처세(Social Skills)"
+      }
+    },
+    {
+      "name": "바늘 도둑이 소 도둑 된다",
+      "details": {
+        "meaning": "작은 나쁜 짓도 버릇이 되면 나중에 큰 죄를 저지르게 된다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 습관(Habit)"
+      }
+    },
+    {
+      "name": "반신반의 (半信半疑)",
+      "details": {
+        "meaning": "반은 믿고 반은 의심함. 믿으면서도 한편으로는 의심함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 의심(Doubt)"
+      }
+    },
+    {
+      "name": "배 밭에서 갓 끈 고쳐 매지 마라",
+      "details": {
+        "meaning": "남에게 의심 살 만한 짓은 아예 하지 마라",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 오해(Misunderstanding)"
+      }
+    },
+    {
+      "name": "백지장도 맞들면 낫다",
+      "details": {
+        "meaning": "쉬운 일이라도 협력하면 훨씬 쉽다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 협동(Cooperation)"
+      }
+    },
+    {
+      "name": "부화뇌동 (附和雷同)",
+      "details": {
+        "meaning": "우레 소리에 맞춰 함께한다. 줏대 없이 남의 의견에 따라 움직임",
+        "origin": "예기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 주관(Opinion)"
+      }
+    },
+    {
+      "name": "비 온 뒤에 땅이 굳어진다",
+      "details": {
+        "meaning": "시련을 겪은 뒤에 더 강해짐",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 단련(Strengthening)"
+      }
+    },
+    {
+      "name": "사상누각 (砂上樓閣)",
+      "details": {
+        "meaning": "모래 위에 세운 누각. 기초가 튼튼하지 못해 오래가지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기초(Foundation)"
+      }
+    },
+    {
+      "name": "사필귀정 (事必歸正)",
+      "details": {
+        "meaning": "모든 일은 반드시 바른길로 돌아감",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 정의(Justice)"
+      }
+    },
+    {
+      "name": "산 넘어 산",
+      "details": {
+        "meaning": "갈수록 더욱 어렵고 곤란한 일이 생김",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 난관(Difficulty)"
+      }
+    },
+    {
+      "name": "살신성인 (殺身成仁)",
+      "details": {
+        "meaning": "자신의 몸을 희생하여 인을 이룸",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 희생(Sacrifice)"
+      }
+    },
+    {
+      "name": "상전벽해 (桑田碧海)",
+      "details": {
+        "meaning": "뽕나무밭이 푸른 바다가 됨. 세상일이 몰라보게 변함",
+        "origin": "신선전",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 변화(Change)"
+      }
+    },
+    {
+      "name": "서당 개 삼 년이면 풍월을 읊는다",
+      "details": {
+        "meaning": "무식한 사람이라도 유식한 사람과 오래 어울리면 지식을 얻게 됨",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 환경(Environment)"
+      }
+    },
+    {
+      "name": "선견지명 (先見之明)",
+      "details": {
+        "meaning": "앞을 내다보는 안목",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 지혜(Wisdom)"
+      }
+    },
+    {
+      "name": "설상가상 (雪上加霜)",
+      "details": {
+        "meaning": "눈 위에 서리가 덮인다. 불행한 일이 겹침",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 불행(Misfortune)"
+      }
+    },
+    {
+      "name": "세 살 버릇 여든까지 간다",
+      "details": {
+        "meaning": "어릴 때 몸에 밴 버릇은 늙어서도 고치기 힘들다",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 습관(Habit)"
+      }
+    },
+  {
+      "name": "수어지교 (水魚之交)",
+      "details": {
+        "meaning": "물과 물고기의 사귐. 임금과 신하 또는 부부 사이처럼 매우 친밀한 관계",
+        "origin": "삼국지",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관계(Relationship)"
+      }
+    },
+    {
+      "name": "수수방관 (袖手傍觀)",
+      "details": {
+        "meaning": "팔짱을 끼고 곁에서 보기만 함. 간섭하거나 돕지 않고 그대로 버려둠",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 태도(Attitude)"
+      }
+    },
+    {
+      "name": "순망치한 (脣亡齒寒)",
+      "details": {
+        "meaning": "입술이 없으면 이가 시리다. 서로 밀접한 관계에 있어서 하나가 망하면 다른 하나도 위험함",
+        "origin": "춘추좌씨전",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관계(Relationship)"
+      }
+    },
+    {
+      "name": "시시비비 (是是非非)",
+      "details": {
+        "meaning": "옳은 것은 옳다 하고 그른 것은 그르다 함",
+        "origin": "순자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 정의(Justice)"
+      }
+    },
+    {
+      "name": "안빈낙도 (安貧樂道)",
+      "details": {
+        "meaning": "가난한 생활을 하면서도 편안한 마음으로 도를 즐김",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 삶(Life)"
+      }
+    },
+    {
+      "name": "안하무인 (眼下無人)",
+      "details": {
+        "meaning": "눈 아래에 사람이 없다. 방자하고 교만하여 다른 사람을 업신여김",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 교만(Arrogance)"
+      }
+    },
+    {
+      "name": "약육강식 (弱肉强食)",
+      "details": {
+        "meaning": "약한 자의 고기를 강한 자가 먹는다. 강한 자가 약한 자를 희생시켜 번영함",
+        "origin": "한유 글",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경쟁(Competition)"
+      }
+    },
+    {
+      "name": "양두구육 (羊頭狗肉)",
+      "details": {
+        "meaning": "양의 머리를 걸어 놓고 개고기를 판다. 겉은 훌륭하나 속은 변변치 않음",
+        "origin": "안자춘추",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속임수(Deception)"
+      }
+    },
+    {
+      "name": "어불성설 (語不成說)",
+      "details": {
+        "meaning": "말이 이치에 맞지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 논리(Logic)"
+      }
+    },
+    {
+      "name": "언중유골 (言中有骨)",
+      "details": {
+        "meaning": "말 속에 뼈가 있다. 예사로운 말 속에 심상치 않은 뜻이 있음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대화(Conversation)"
+      }
+    },
+    {
+      "name": "오리무중 (五里霧中)",
+      "details": {
+        "meaning": "오 리나 되는 짙은 안개 속. 무슨 일에 대하여 알 길이 없어 막막함",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 혼란(Confusion)"
+      }
+    },
+    {
+      "name": "오월동주 (吳越同舟)",
+      "details": {
+        "meaning": "오나라 사람과 월나라 사람이 한배를 탔다. 적대적인 관계의 사람들이 같은 처지에 놓임",
+        "origin": "손자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 협력(Cooperation)"
+      }
+    },
+    {
+      "name": "오합지졸 (烏合之卒)",
+      "details": {
+        "meaning": "까마귀가 모인 것 같은 무리. 규율이 없고 무질서한 병졸이나 군중",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 조직(Organization)"
+      }
+    },
+    {
+      "name": "온고지신 (溫故知新)",
+      "details": {
+        "meaning": "옛것을 익히고 그것을 미루어 새것을 앎",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 지혜(Wisdom)"
+      }
+    },
+    {
+      "name": "와신상담 (臥薪嘗膽)",
+      "details": {
+        "meaning": "섶에 눕고 쓸개를 씹는다. 원수를 갚으려고 온갖 괴로움을 참고 견딤",
+        "origin": "십팔사략",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 복수(Revenge)"
+      }
+    },
+    {
+      "name": "요지부동 (搖之不動)",
+      "details": {
+        "meaning": "흔들어도 꼼짝하지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 고집(Stubbornness)"
+      }
+    },
+    {
+      "name": "우공이산 (愚公移山)",
+      "details": {
+        "meaning": "우공이 산을 옮긴다. 어리석어 보이는 일도 끊임없이 노력하면 마침내 이룸",
+        "origin": "열자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 끈기(Persistence)"
+      }
+    },
+    {
+      "name": "우이독경 (牛耳讀經)",
+      "details": {
+        "meaning": "쇠귀에 경 읽기. 아무리 가르치고 일러 주어도 알아듣지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 소통(Communication)"
+      }
+    },
+    {
+      "name": "우후죽순 (雨後竹筍)",
+      "details": {
+        "meaning": "비 온 뒤에 솟는 대나무 순. 어떤 일이 한때에 많이 생겨남",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 현상(Phenomenon)"
+      }
+    },
+    {
+      "name": "유구무언 (有口無言)",
+      "details": {
+        "meaning": "입은 있으나 할 말이 없다. 변명할 말이 없음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 침묵(Silence)"
+      }
+    },
+    {
+      "name": "유유상종 (類類相從)",
+      "details": {
+        "meaning": "같은 무리끼리 서로 사귐",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 친구(Friend)"
+      }
+    },
+    {
+      "name": "유명무실 (有名無實)",
+      "details": {
+        "meaning": "이름만 있고 실속은 없음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 실속(Substance)"
+      }
+    },
+    {
+      "name": "읍참마속 (泣斬馬謖)",
+      "details": {
+        "meaning": "울면서 마속의 목을 벤다. 공정한 법 집행을 위해 사사로운 정을 버림",
+        "origin": "삼국지",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 규율(Discipline)"
+      }
+    },
+    {
+      "name": "이실직고 (以實直告)",
+      "details": {
+        "meaning": "사실대로 고함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 정직(Honesty)"
+      }
+    },
+    {
+      "name": "이열치열 (以熱治熱)",
+      "details": {
+        "meaning": "열은 열로써 다스림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 방법(Method)"
+      }
+    },
+    {
+      "name": "이전투구 (泥田鬪狗)",
+      "details": {
+        "meaning": "진흙탕에서 싸우는 개. 명분이 서지 않는 더러운 싸움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 싸움(Fight)"
+      }
+    },
+    {
+      "name": "인과응보 (因果應報)",
+      "details": {
+        "meaning": "원인과 결과에 따라 그에 합당한 갚음을 받음",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운명(Karma)"
+      }
+    },
+    {
+      "name": "일망타진 (一網打盡)",
+      "details": {
+        "meaning": "그물을 한 번 쳐서 고기를 다 잡는다. 어떤 무리를 한꺼번에 모조리 잡음",
+        "origin": "송사",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 성과(Achievement)"
+      }
+    },
+    {
+      "name": "일사천리 (一瀉千里)",
+      "details": {
+        "meaning": "강물이 쏟아져 단번에 천 리를 간다. 일이 거침없이 빨리 진행됨",
+        "origin": "복혜전서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속도(Speed)"
+      }
+    },
+    {
+      "name": "일장춘몽 (一場春夢)",
+      "details": {
+        "meaning": "한바탕의 봄꿈. 인생의 부귀영화가 덧없음",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 인생(Life)"
+      }
+    },
+    {
+      "name": "일취월장 (日就月將)",
+      "details": {
+        "meaning": "나날이 다달이 발전하고 성장함",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 발전(Development)"
+      }
+    },
+    {
+      "name": "일편단심 (一片丹心)",
+      "details": {
+        "meaning": "한 조각의 붉은 마음. 변치 않는 참된 마음",
+        "origin": "포은집",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 충성(Loyalty)"
+      }
+    },
+    {
+      "name": "임전무퇴 (臨戰無退)",
+      "details": {
+        "meaning": "싸움에 임하여 물러남이 없음",
+        "origin": "화랑세기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 용기(Courage)"
+      }
+    },
+    {
+      "name": "임기응변 (臨機應變)",
+      "details": {
+        "meaning": "그때그때 처한 사태에 맞추어 즉각 그 자리에서 결정하거나 처리함",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대처(Response)"
+      }
+    },
+    {
+      "name": "자가당착 (自家撞着)",
+      "details": {
+        "meaning": "같은 사람의 말이나 행동이 앞뒤가 맞지 아니함",
+        "origin": "선림유취",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 모순(Contradiction)"
+      }
+    },
+    {
+      "name": "자업자득 (自業自得)",
+      "details": {
+        "meaning": "자기가 저지른 일의 과보를 자기가 받음",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 책임(Responsibility)"
+      }
+    },
+    {
+      "name": "자초지종 (自初至終)",
+      "details": {
+        "meaning": "처음부터 끝까지의 과정",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경과(Process)"
+      }
+    },
+    {
+      "name": "자화자찬 (自畵自讚)",
+      "details": {
+        "meaning": "자기가 그린 그림을 자기가 칭찬한다. 자기가 한 일을 스스로 자랑함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 자랑(Boast)"
+      }
+    },
+    {
+      "name": "장삼이사 (張三李四)",
+      "details": {
+        "meaning": "장씨의 셋째 아들과 이씨의 넷째 아들. 이름이나 신분이 특별하지 않은 평범한 사람들",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대중(Public)"
+      }
+    },
+    {
+      "name": "전대미문 (前代未聞)",
+      "details": {
+        "meaning": "지난 시대에는 들어 본 적이 없다. 매우 놀라운 새로운 일",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 사건(Event)"
+      }
+    },
+    {
+      "name": "전전긍긍 (戰戰兢兢)",
+      "details": {
+        "meaning": "몹시 두려워서 벌벌 떨며 조심함",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 공포(Fear)"
+      }
+    },
+    {
+      "name": "절차탁마 (切磋琢磨)",
+      "details": {
+        "meaning": "옥이나 돌 따위를 갈고 닦는다. 학문이나 인격을 갈고 닦음",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 수양(Discipline)"
+      }
+    },
+    {
+      "name": "점입가경 (漸入佳境)",
+      "details": {
+        "meaning": "들어갈수록 경치가 아름다움. 일이 점점 재미있게 됨",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 상황(Situation)"
+      }
+    },
+    {
+      "name": "조강지처 (糟糠之妻)",
+      "details": {
+        "meaning": "술지게미와 쌀겨로 끼니를 이을 때의 아내. 가난할 때 고생을 함께한 아내",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 부부(Couple)"
+      }
+    },
+    {
+      "name": "조변석개 (朝變夕改)",
+      "details": {
+        "meaning": "아침에 고치고 저녁에 또 고친다. 일관성 없이 자주 뜯어고침",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 변덕(Caprice)"
+      }
+    },
+    {
+      "name": "조삼모사 (朝三暮四)",
+      "details": {
+        "meaning": "아침에 세 개, 저녁에 네 개. 간사한 꾀로 남을 속여 희롱함",
+        "origin": "열자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속임수(Trick)"
+      }
+    },
+    {
+      "name": "좌불안석 (坐不安席)",
+      "details": {
+        "meaning": "앉아도 자리가 편안하지 않다. 마음이 불안하여 가만히 있지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 불안(Anxiety)"
+      }
+    },
+    {
+      "name": "좌정관천 (坐井觀天)",
+      "details": {
+        "meaning": "우물 속에 앉아 하늘을 본다. 견문이 좁음 (우물 안 개구리)",
+        "origin": "한유 글",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 식견(Insight)"
+      }
+    },
+    {
+      "name": "주경야독 (晝耕夜讀)",
+      "details": {
+        "meaning": "낮에는 농사짓고 밤에는 글을 읽음. 어려운 여건 속에서도 꿋꿋이 공부함",
+        "origin": "위서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 노력(Effort)"
+      }
+    },
+    {
+      "name": "주객전도 (主客顚倒)",
+      "details": {
+        "meaning": "주인과 손님의 위치가 뒤바뀜. 사물의 경중이나 선후가 뒤바뀜",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 순서(Order)"
+      }
+    },
+    {
+      "name": "주마간산 (走馬看山)",
+      "details": {
+        "meaning": "말을 타고 달리며 산을 본다. 자세히 살피지 않고 대충 보고 지나감",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관찰(Observation)"
+      }
+    },
+    {
+      "name": "죽마고우 (竹馬故友)",
+      "details": {
+        "meaning": "대나무 말을 타고 놀던 옛 친구. 어릴 때부터 같이 자란 친구",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 우정(Friendship)"
+      }
+    },
+    {
+      "name": "중구난방 (衆口難防)",
+      "details": {
+        "meaning": "여러 사람의 입은 막기 어렵다. 여러 사람이 제각기 떠들어 대어 종잡을 수 없음",
+        "origin": "십팔사략",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 여론(Opinion)"
+      }
+    },
+    {
+      "name": "지기지우 (知己之友)",
+      "details": {
+        "meaning": "자기를 알아주는 친구",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 친구(Friend)"
+      }
+    },
+    {
+      "name": "지록위마 (指鹿爲馬)",
+      "details": {
+        "meaning": "사슴을 가리켜 말이라 한다. 윗사람을 농락하여 권세를 마음대로 함",
+        "origin": "사기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 권력(Power)"
+      }
+    },
+    {
+      "name": "지지부진 (遲遲不進)",
+      "details": {
+        "meaning": "더디고 더뎌서 잘 나아가지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 진행(Progress)"
+      }
+    },
+    {
+      "name": "지피지기 (知彼知己)",
+      "details": {
+        "meaning": "상대를 알고 나를 앎",
+        "origin": "손자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 전략(Strategy)"
+      }
+    },
+    {
+      "name": "진수성찬 (珍羞盛饌)",
+      "details": {
+        "meaning": "맛이 좋고 푸짐하게 잘 차린 음식",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 음식(Food)"
+      }
+    },
+    {
+      "name": "진퇴양난 (進退兩難)",
+      "details": {
+        "meaning": "나아갈 수도 물러설 수도 없는 궁지에 빠짐",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 곤경(Dilemma)"
+      }
+    },
+    {
+      "name": "창졸지간 (倉卒之間)",
+      "details": {
+        "meaning": "미처 어찌할 수도 없는 사이. 갑작스러운 동안",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 시간(Time)"
+      }
+    },
+    {
+      "name": "천고마비 (天高馬肥)",
+      "details": {
+        "meaning": "하늘은 높고 말은 살찐다. 가을이 활동하기 좋은 계절임을 이르는 말",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 계절(Season)"
+      }
+    },
+    {
+      "name": "천만다행 (千萬多幸)",
+      "details": {
+        "meaning": "아주 다행스러움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 행운(Luck)"
+      }
+    },
+    {
+      "name": "천신만고 (千辛萬苦)",
+      "details": {
+        "meaning": "온갖 매운 것과 쓴 것. 온갖 고생을 다함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 고난(Hardship)"
+      }
+    },
+    {
+      "name": "천양지차 (天壤之差)",
+      "details": {
+        "meaning": "하늘과 땅 사이의 차이. 엄청난 차이",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 차이(Difference)"
+      }
+    },
+    {
+      "name": "천우신조 (天佑神助)",
+      "details": {
+        "meaning": "하늘이 돕고 귀신이 돕는다. 도저히 믿기지 않을 정도로 운이 좋음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운명(Destiny)"
+      }
+    },
+    {
+      "name": "천재일우 (千載一遇)",
+      "details": {
+        "meaning": "천 년에 한 번 만난다. 좀처럼 얻기 어려운 좋은 기회",
+        "origin": "동방삭",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기회(Chance)"
+      }
+    },
+    {
+      "name": "천편일률 (千篇一律)",
+      "details": {
+        "meaning": "천 편의 시가 모두 하나의 곡조다. 여럿이 개성 없이 모두 엇비슷함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 개성(Individuality)"
+      }
+    },
+    {
+      "name": "청산유수 (靑山流水)",
+      "details": {
+        "meaning": "푸른 산에 흐르는 물. 거침없이 말을 잘함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 언변(Eloquence)"
+      }
+    },
+    {
+      "name": "청천벽력 (靑天霹靂)",
+      "details": {
+        "meaning": "맑은 하늘에 날벼락. 뜻밖의 큰 변이나 사건",
+        "origin": "육유 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 충격(Shock)"
+      }
+    },
+    {
+      "name": "초록동색 (草綠同色)",
+      "details": {
+        "meaning": "풀색과 녹색은 같은 색이다. 처지가 같은 사람끼리 어울림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 동류(Similarity)"
+      }
+    },
+    {
+      "name": "촌철살인 (寸鐵殺人)",
+      "details": {
+        "meaning": "한 치의 쇠붙이로 사람을 죽인다. 짧은 말로 어떤 일의 핵심을 찔러 감동을 줌",
+        "origin": "학림옥로",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 명언(Quote)"
+      }
+    },
+    {
+      "name": "추풍낙엽 (秋風落葉)",
+      "details": {
+        "meaning": "가을 바람에 떨어지는 잎. 세력이 갑자기 기울거나 흩어짐",
+        "origin": "도광",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 쇠락(Decline)"
+      }
+    },
+    {
+      "name": "칠전팔기 (七顚八起)",
+      "details": {
+        "meaning": "일곱 번 넘어지고 여덟 번 일어난다. 실패해도 굴하지 않고 계속 도전함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 도전(Challenge)"
+      }
+    },
+    {
+      "name": "타산지석 (他山之石)",
+      "details": {
+        "meaning": "다른 산의 돌. 남의 하찮은 언행이라도 나의 수양에 도움이 될 수 있음",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 교훈(Lesson)"
+      }
+    },
+    {
+      "name": "태연자약 (泰然自若)",
+      "details": {
+        "meaning": "마음에 동요가 없이 천연스럽다",
+        "origin": "금사",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 평정(Calmness)"
+      }
+    },
+    {
+      "name": "파죽지세 (破竹之勢)",
+      "details": {
+        "meaning": "대나무를 쪼개는 기세. 거침없이 쳐들어가는 기세",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기세(Momentum)"
+      }
+    },
+    {
+      "name": "평지풍파 (平地風波)",
+      "details": {
+        "meaning": "평온한 땅에 바람과 물결이 인다. 공연한 일을 만들어 분란을 일으킴",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 분란(Trouble)"
+      }
+    },
+    {
+      "name": "표리부동 (表裏不同)",
+      "details": {
+        "meaning": "겉과 속이 같지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위선(Hypocrisy)"
+      }
+    },
+    {
+      "name": "풍전등화 (風前燈火)",
+      "details": {
+        "meaning": "바람 앞의 등불. 매우 위태로운 처지",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위기(Danger)"
+      }
+    },
+    {
+      "name": "필사즉생 (必死則生)",
+      "details": {
+        "meaning": "죽기로 싸우면 반드시 산다",
+        "origin": "오자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 결의(Determination)"
+      }
+    },
+    {
+      "name": "학수고대 (鶴首苦待)",
+      "details": {
+        "meaning": "학의 목처럼 목을 길게 빼고 간절히 기다림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기다림(Waiting)"
+      }
+    },
+    {
+      "name": "허심탄회 (虛心坦懷)",
+      "details": {
+        "meaning": "마음을 비우고 생각을 터놓음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 솔직(Frankness)"
+      }
+    },
+    {
+      "name": "허장성세 (虛張聲勢)",
+      "details": {
+        "meaning": "실속은 없으면서 큰소리치며 허세를 부림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 허세(Bluff)"
+      }
+    },
+    {
+      "name": "현모양처 (賢母良妻)",
+      "details": {
+        "meaning": "어진 어머니이면서 착한 아내",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 여성(Women)"
+      }
+    },
+    {
+      "name": "호사다마 (好事多魔)",
+      "details": {
+        "meaning": "좋은 일에는 흔히 방해되는 일이 많음",
+        "origin": "조설근",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 장애(Obstacle)"
+      }
+    },
+    {
+      "name": "호연지기 (浩然之氣)",
+      "details": {
+        "meaning": "넓고 큰 기운. 공명정대하여 조금도 부끄러움이 없는 용기",
+        "origin": "맹자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기개(Spirit)"
+      }
+    },
+    {
+      "name": "혼비백산 (魂飛魄散)",
+      "details": {
+        "meaning": "혼과 넋이 흩어짐. 몹시 놀라 어찌할 바를 모름",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 놀람(Surprise)"
+      }
+    },
+    {
+      "name": "화룡점정 (畵龍點睛)",
+      "details": {
+        "meaning": "용을 그리고 눈동자를 찍는다. 어떤 일의 가장 중요한 부분을 완성함",
+        "origin": "수형기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 완성(Completion)"
+      }
+    },
+    {
+      "name": "꿩 먹고 알 먹기",
+      "details": {
+        "meaning": "한 가지 일로 두 가지 이익을 봄",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 이득(Benefit)"
+      }
+    },
+    {
+      "name": "낫 놓고 기역 자도 모른다",
+      "details": {
+        "meaning": "아주 무식함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 무식(Ignorance)"
+      }
+    },
+    {
+      "name": "똥 묻은 개가 겨 묻은 개 나무란다",
+      "details": {
+        "meaning": "자신의 흉은 모르고 남의 흉만 봄",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 비판(Criticism)"
+      }
+    },
+    {
+      "name": "벼룩의 간을 내어 먹는다",
+      "details": {
+        "meaning": "극히 적은 이익을 탐내어 부당한 수단을 씀",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 착취(Exploitation)"
+      }
+    },
+    {
+      "name": "뱁새가 황새 따라가다 가랑이 찢어진다",
+      "details": {
+        "meaning": "힘에 부치는 일을 억지로 하면 해를 입음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 분수(Limit)"
+      }
+    },
+    {
+      "name": "사공이 많으면 배가 산으로 간다",
+      "details": {
+        "meaning": "주관하는 사람이 많으면 일이 제대로 되기 어려움",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 간섭(Interference)"
+      }
+    },
+    {
+      "name": "숭어가 뛰니까 망둥이도 뛴다",
+      "details": {
+        "meaning": "남이 하니까 분별없이 덩달아 나섬",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 모방(Imitation)"
+      }
+    },
+    {
+      "name": "아는 길도 물어가라",
+      "details": {
+        "meaning": "쉬운 일이라도 신중을 기하라",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 신중(Prudence)"
+      }
+    },
+    {
+      "name": "얌전한 고양이 부뚜막에 먼저 올라간다",
+      "details": {
+        "meaning": "겉으로는 얌전한 체하면서 속으로는 딴짓을 함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 내숭(Pretense)"
+      }
+    },
+    {
+      "name": "열 번 찍어 안 넘어가는 나무 없다",
+      "details": {
+        "meaning": "아무리 어려운 일이라도 계속 노력하면 이루어짐",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 노력(Effort)"
+      }
+    },{
+      "name": "수어지교 (水魚之交)",
+      "details": {
+        "meaning": "물과 물고기의 사귐. 임금과 신하 또는 부부 사이처럼 매우 친밀한 관계",
+        "origin": "삼국지",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관계(Relationship)"
+      }
+    },
+    {
+      "name": "수수방관 (袖手傍觀)",
+      "details": {
+        "meaning": "팔짱을 끼고 곁에서 보기만 함. 간섭하거나 돕지 않고 그대로 버려둠",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 태도(Attitude)"
+      }
+    },
+    {
+      "name": "순망치한 (脣亡齒寒)",
+      "details": {
+        "meaning": "입술이 없으면 이가 시리다. 서로 밀접한 관계에 있어서 하나가 망하면 다른 하나도 위험함",
+        "origin": "춘추좌씨전",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관계(Relationship)"
+      }
+    },
+    {
+      "name": "시시비비 (是是非非)",
+      "details": {
+        "meaning": "옳은 것은 옳다 하고 그른 것은 그르다 함",
+        "origin": "순자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 정의(Justice)"
+      }
+    },
+    {
+      "name": "안빈낙도 (安貧樂道)",
+      "details": {
+        "meaning": "가난한 생활을 하면서도 편안한 마음으로 도를 즐김",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 삶(Life)"
+      }
+    },
+    {
+      "name": "안하무인 (眼下無人)",
+      "details": {
+        "meaning": "눈 아래에 사람이 없다. 방자하고 교만하여 다른 사람을 업신여김",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 교만(Arrogance)"
+      }
+    },
+    {
+      "name": "약육강식 (弱肉强食)",
+      "details": {
+        "meaning": "약한 자의 고기를 강한 자가 먹는다. 강한 자가 약한 자를 희생시켜 번영함",
+        "origin": "한유 글",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경쟁(Competition)"
+      }
+    },
+    {
+      "name": "양두구육 (羊頭狗肉)",
+      "details": {
+        "meaning": "양의 머리를 걸어 놓고 개고기를 판다. 겉은 훌륭하나 속은 변변치 않음",
+        "origin": "안자춘추",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속임수(Deception)"
+      }
+    },
+    {
+      "name": "어불성설 (語不成說)",
+      "details": {
+        "meaning": "말이 이치에 맞지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 논리(Logic)"
+      }
+    },
+    {
+      "name": "언중유골 (言中有骨)",
+      "details": {
+        "meaning": "말 속에 뼈가 있다. 예사로운 말 속에 심상치 않은 뜻이 있음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대화(Conversation)"
+      }
+    },
+    {
+      "name": "오리무중 (五里霧中)",
+      "details": {
+        "meaning": "오 리나 되는 짙은 안개 속. 무슨 일에 대하여 알 길이 없어 막막함",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 혼란(Confusion)"
+      }
+    },
+    {
+      "name": "오월동주 (吳越同舟)",
+      "details": {
+        "meaning": "오나라 사람과 월나라 사람이 한배를 탔다. 적대적인 관계의 사람들이 같은 처지에 놓임",
+        "origin": "손자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 협력(Cooperation)"
+      }
+    },
+    {
+      "name": "오합지졸 (烏合之卒)",
+      "details": {
+        "meaning": "까마귀가 모인 것 같은 무리. 규율이 없고 무질서한 병졸이나 군중",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 조직(Organization)"
+      }
+    },
+    {
+      "name": "온고지신 (溫故知新)",
+      "details": {
+        "meaning": "옛것을 익히고 그것을 미루어 새것을 앎",
+        "origin": "논어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 지혜(Wisdom)"
+      }
+    },
+    {
+      "name": "와신상담 (臥薪嘗膽)",
+      "details": {
+        "meaning": "섶에 눕고 쓸개를 씹는다. 원수를 갚으려고 온갖 괴로움을 참고 견딤",
+        "origin": "십팔사략",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 복수(Revenge)"
+      }
+    },
+    {
+      "name": "요지부동 (搖之不動)",
+      "details": {
+        "meaning": "흔들어도 꼼짝하지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 고집(Stubbornness)"
+      }
+    },
+    {
+      "name": "우공이산 (愚公移山)",
+      "details": {
+        "meaning": "우공이 산을 옮긴다. 어리석어 보이는 일도 끊임없이 노력하면 마침내 이룸",
+        "origin": "열자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 끈기(Persistence)"
+      }
+    },
+    {
+      "name": "우이독경 (牛耳讀經)",
+      "details": {
+        "meaning": "쇠귀에 경 읽기. 아무리 가르치고 일러 주어도 알아듣지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 소통(Communication)"
+      }
+    },
+    {
+      "name": "우후죽순 (雨後竹筍)",
+      "details": {
+        "meaning": "비 온 뒤에 솟는 대나무 순. 어떤 일이 한때에 많이 생겨남",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 현상(Phenomenon)"
+      }
+    },
+    {
+      "name": "유구무언 (有口無言)",
+      "details": {
+        "meaning": "입은 있으나 할 말이 없다. 변명할 말이 없음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 침묵(Silence)"
+      }
+    },
+    {
+      "name": "유유상종 (類類相從)",
+      "details": {
+        "meaning": "같은 무리끼리 서로 사귐",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 친구(Friend)"
+      }
+    },
+    {
+      "name": "유명무실 (有名無實)",
+      "details": {
+        "meaning": "이름만 있고 실속은 없음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 실속(Substance)"
+      }
+    },
+    {
+      "name": "읍참마속 (泣斬馬謖)",
+      "details": {
+        "meaning": "울면서 마속의 목을 벤다. 공정한 법 집행을 위해 사사로운 정을 버림",
+        "origin": "삼국지",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 규율(Discipline)"
+      }
+    },
+    {
+      "name": "이실직고 (以實直告)",
+      "details": {
+        "meaning": "사실대로 고함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 정직(Honesty)"
+      }
+    },
+    {
+      "name": "이열치열 (以熱治熱)",
+      "details": {
+        "meaning": "열은 열로써 다스림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 방법(Method)"
+      }
+    },
+    {
+      "name": "이전투구 (泥田鬪狗)",
+      "details": {
+        "meaning": "진흙탕에서 싸우는 개. 명분이 서지 않는 더러운 싸움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 싸움(Fight)"
+      }
+    },
+    {
+      "name": "인과응보 (因果應報)",
+      "details": {
+        "meaning": "원인과 결과에 따라 그에 합당한 갚음을 받음",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운명(Karma)"
+      }
+    },
+    {
+      "name": "일망타진 (一網打盡)",
+      "details": {
+        "meaning": "그물을 한 번 쳐서 고기를 다 잡는다. 어떤 무리를 한꺼번에 모조리 잡음",
+        "origin": "송사",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 성과(Achievement)"
+      }
+    },
+    {
+      "name": "일사천리 (一瀉千里)",
+      "details": {
+        "meaning": "강물이 쏟아져 단번에 천 리를 간다. 일이 거침없이 빨리 진행됨",
+        "origin": "복혜전서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속도(Speed)"
+      }
+    },
+    {
+      "name": "일장춘몽 (一場春夢)",
+      "details": {
+        "meaning": "한바탕의 봄꿈. 인생의 부귀영화가 덧없음",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 인생(Life)"
+      }
+    },
+    {
+      "name": "일취월장 (日就月將)",
+      "details": {
+        "meaning": "나날이 다달이 발전하고 성장함",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 발전(Development)"
+      }
+    },
+    {
+      "name": "일편단심 (一片丹心)",
+      "details": {
+        "meaning": "한 조각의 붉은 마음. 변치 않는 참된 마음",
+        "origin": "포은집",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 충성(Loyalty)"
+      }
+    },
+    {
+      "name": "임전무퇴 (臨戰無退)",
+      "details": {
+        "meaning": "싸움에 임하여 물러남이 없음",
+        "origin": "화랑세기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 용기(Courage)"
+      }
+    },
+    {
+      "name": "임기응변 (臨機應變)",
+      "details": {
+        "meaning": "그때그때 처한 사태에 맞추어 즉각 그 자리에서 결정하거나 처리함",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대처(Response)"
+      }
+    },
+    {
+      "name": "자가당착 (自家撞着)",
+      "details": {
+        "meaning": "같은 사람의 말이나 행동이 앞뒤가 맞지 아니함",
+        "origin": "선림유취",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 모순(Contradiction)"
+      }
+    },
+    {
+      "name": "자업자득 (自業自得)",
+      "details": {
+        "meaning": "자기가 저지른 일의 과보를 자기가 받음",
+        "origin": "불교 용어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 책임(Responsibility)"
+      }
+    },
+    {
+      "name": "자초지종 (自初至終)",
+      "details": {
+        "meaning": "처음부터 끝까지의 과정",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 경과(Process)"
+      }
+    },
+    {
+      "name": "자화자찬 (自畵自讚)",
+      "details": {
+        "meaning": "자기가 그린 그림을 자기가 칭찬한다. 자기가 한 일을 스스로 자랑함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 자랑(Boast)"
+      }
+    },
+    {
+      "name": "장삼이사 (張三李四)",
+      "details": {
+        "meaning": "장씨의 셋째 아들과 이씨의 넷째 아들. 이름이나 신분이 특별하지 않은 평범한 사람들",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 대중(Public)"
+      }
+    },
+    {
+      "name": "전대미문 (前代未聞)",
+      "details": {
+        "meaning": "지난 시대에는 들어 본 적이 없다. 매우 놀라운 새로운 일",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 사건(Event)"
+      }
+    },
+    {
+      "name": "전전긍긍 (戰戰兢兢)",
+      "details": {
+        "meaning": "몹시 두려워서 벌벌 떨며 조심함",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 공포(Fear)"
+      }
+    },
+    {
+      "name": "절차탁마 (切磋琢磨)",
+      "details": {
+        "meaning": "옥이나 돌 따위를 갈고 닦는다. 학문이나 인격을 갈고 닦음",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 수양(Discipline)"
+      }
+    },
+    {
+      "name": "점입가경 (漸入佳境)",
+      "details": {
+        "meaning": "들어갈수록 경치가 아름다움. 일이 점점 재미있게 됨",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 상황(Situation)"
+      }
+    },
+    {
+      "name": "조강지처 (糟糠之妻)",
+      "details": {
+        "meaning": "술지게미와 쌀겨로 끼니를 이을 때의 아내. 가난할 때 고생을 함께한 아내",
+        "origin": "후한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 부부(Couple)"
+      }
+    },
+    {
+      "name": "조변석개 (朝變夕改)",
+      "details": {
+        "meaning": "아침에 고치고 저녁에 또 고친다. 일관성 없이 자주 뜯어고침",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 변덕(Caprice)"
+      }
+    },
+    {
+      "name": "조삼모사 (朝三暮四)",
+      "details": {
+        "meaning": "아침에 세 개, 저녁에 네 개. 간사한 꾀로 남을 속여 희롱함",
+        "origin": "열자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 속임수(Trick)"
+      }
+    },
+    {
+      "name": "좌불안석 (坐不安席)",
+      "details": {
+        "meaning": "앉아도 자리가 편안하지 않다. 마음이 불안하여 가만히 있지 못함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 불안(Anxiety)"
+      }
+    },
+    {
+      "name": "좌정관천 (坐井觀天)",
+      "details": {
+        "meaning": "우물 속에 앉아 하늘을 본다. 견문이 좁음 (우물 안 개구리)",
+        "origin": "한유 글",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 식견(Insight)"
+      }
+    },
+    {
+      "name": "주경야독 (晝耕夜讀)",
+      "details": {
+        "meaning": "낮에는 농사짓고 밤에는 글을 읽음. 어려운 여건 속에서도 꿋꿋이 공부함",
+        "origin": "위서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 노력(Effort)"
+      }
+    },
+    {
+      "name": "주객전도 (主客顚倒)",
+      "details": {
+        "meaning": "주인과 손님의 위치가 뒤바뀜. 사물의 경중이나 선후가 뒤바뀜",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 순서(Order)"
+      }
+    },
+    {
+      "name": "주마간산 (走馬看山)",
+      "details": {
+        "meaning": "말을 타고 달리며 산을 본다. 자세히 살피지 않고 대충 보고 지나감",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 관찰(Observation)"
+      }
+    },
+    {
+      "name": "죽마고우 (竹馬故友)",
+      "details": {
+        "meaning": "대나무 말을 타고 놀던 옛 친구. 어릴 때부터 같이 자란 친구",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 우정(Friendship)"
+      }
+    },
+    {
+      "name": "중구난방 (衆口難防)",
+      "details": {
+        "meaning": "여러 사람의 입은 막기 어렵다. 여러 사람이 제각기 떠들어 대어 종잡을 수 없음",
+        "origin": "십팔사략",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 여론(Opinion)"
+      }
+    },
+    {
+      "name": "지기지우 (知己之友)",
+      "details": {
+        "meaning": "자기를 알아주는 친구",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 친구(Friend)"
+      }
+    },
+    {
+      "name": "지록위마 (指鹿爲馬)",
+      "details": {
+        "meaning": "사슴을 가리켜 말이라 한다. 윗사람을 농락하여 권세를 마음대로 함",
+        "origin": "사기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 권력(Power)"
+      }
+    },
+    {
+      "name": "지지부진 (遲遲不進)",
+      "details": {
+        "meaning": "더디고 더뎌서 잘 나아가지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 진행(Progress)"
+      }
+    },
+    {
+      "name": "지피지기 (知彼知己)",
+      "details": {
+        "meaning": "상대를 알고 나를 앎",
+        "origin": "손자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 전략(Strategy)"
+      }
+    },
+    {
+      "name": "진수성찬 (珍羞盛饌)",
+      "details": {
+        "meaning": "맛이 좋고 푸짐하게 잘 차린 음식",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 음식(Food)"
+      }
+    },
+    {
+      "name": "진퇴양난 (進退兩難)",
+      "details": {
+        "meaning": "나아갈 수도 물러설 수도 없는 궁지에 빠짐",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 곤경(Dilemma)"
+      }
+    },
+    {
+      "name": "창졸지간 (倉卒之間)",
+      "details": {
+        "meaning": "미처 어찌할 수도 없는 사이. 갑작스러운 동안",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 시간(Time)"
+      }
+    },
+    {
+      "name": "천고마비 (天高馬肥)",
+      "details": {
+        "meaning": "하늘은 높고 말은 살찐다. 가을이 활동하기 좋은 계절임을 이르는 말",
+        "origin": "한서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 계절(Season)"
+      }
+    },
+    {
+      "name": "천만다행 (千萬多幸)",
+      "details": {
+        "meaning": "아주 다행스러움",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 행운(Luck)"
+      }
+    },
+    {
+      "name": "천신만고 (千辛萬苦)",
+      "details": {
+        "meaning": "온갖 매운 것과 쓴 것. 온갖 고생을 다함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 고난(Hardship)"
+      }
+    },
+    {
+      "name": "천양지차 (天壤之差)",
+      "details": {
+        "meaning": "하늘과 땅 사이의 차이. 엄청난 차이",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 차이(Difference)"
+      }
+    },
+    {
+      "name": "천우신조 (天佑神助)",
+      "details": {
+        "meaning": "하늘이 돕고 귀신이 돕는다. 도저히 믿기지 않을 정도로 운이 좋음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 운명(Destiny)"
+      }
+    },
+    {
+      "name": "천재일우 (千載一遇)",
+      "details": {
+        "meaning": "천 년에 한 번 만난다. 좀처럼 얻기 어려운 좋은 기회",
+        "origin": "동방삭",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기회(Chance)"
+      }
+    },
+    {
+      "name": "천편일률 (千篇一律)",
+      "details": {
+        "meaning": "천 편의 시가 모두 하나의 곡조다. 여럿이 개성 없이 모두 엇비슷함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 개성(Individuality)"
+      }
+    },
+    {
+      "name": "청산유수 (靑山流水)",
+      "details": {
+        "meaning": "푸른 산에 흐르는 물. 거침없이 말을 잘함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 언변(Eloquence)"
+      }
+    },
+    {
+      "name": "청천벽력 (靑天霹靂)",
+      "details": {
+        "meaning": "맑은 하늘에 날벼락. 뜻밖의 큰 변이나 사건",
+        "origin": "육유 시",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 충격(Shock)"
+      }
+    },
+    {
+      "name": "초록동색 (草綠同色)",
+      "details": {
+        "meaning": "풀색과 녹색은 같은 색이다. 처지가 같은 사람끼리 어울림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 동류(Similarity)"
+      }
+    },
+    {
+      "name": "촌철살인 (寸鐵殺人)",
+      "details": {
+        "meaning": "한 치의 쇠붙이로 사람을 죽인다. 짧은 말로 어떤 일의 핵심을 찔러 감동을 줌",
+        "origin": "학림옥로",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 명언(Quote)"
+      }
+    },
+    {
+      "name": "추풍낙엽 (秋風落葉)",
+      "details": {
+        "meaning": "가을 바람에 떨어지는 잎. 세력이 갑자기 기울거나 흩어짐",
+        "origin": "도광",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 쇠락(Decline)"
+      }
+    },
+    {
+      "name": "칠전팔기 (七顚八起)",
+      "details": {
+        "meaning": "일곱 번 넘어지고 여덟 번 일어난다. 실패해도 굴하지 않고 계속 도전함",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 도전(Challenge)"
+      }
+    },
+    {
+      "name": "타산지석 (他山之石)",
+      "details": {
+        "meaning": "다른 산의 돌. 남의 하찮은 언행이라도 나의 수양에 도움이 될 수 있음",
+        "origin": "시경",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 교훈(Lesson)"
+      }
+    },
+    {
+      "name": "태연자약 (泰然自若)",
+      "details": {
+        "meaning": "마음에 동요가 없이 천연스럽다",
+        "origin": "금사",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 평정(Calmness)"
+      }
+    },
+    {
+      "name": "파죽지세 (破竹之勢)",
+      "details": {
+        "meaning": "대나무를 쪼개는 기세. 거침없이 쳐들어가는 기세",
+        "origin": "진서",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기세(Momentum)"
+      }
+    },
+    {
+      "name": "평지풍파 (平地風波)",
+      "details": {
+        "meaning": "평온한 땅에 바람과 물결이 인다. 공연한 일을 만들어 분란을 일으킴",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 분란(Trouble)"
+      }
+    },
+    {
+      "name": "표리부동 (表裏不同)",
+      "details": {
+        "meaning": "겉과 속이 같지 않음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위선(Hypocrisy)"
+      }
+    },
+    {
+      "name": "풍전등화 (風前燈火)",
+      "details": {
+        "meaning": "바람 앞의 등불. 매우 위태로운 처지",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 위기(Danger)"
+      }
+    },
+    {
+      "name": "필사즉생 (必死則生)",
+      "details": {
+        "meaning": "죽기로 싸우면 반드시 산다",
+        "origin": "오자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 결의(Determination)"
+      }
+    },
+    {
+      "name": "학수고대 (鶴首苦待)",
+      "details": {
+        "meaning": "학의 목처럼 목을 길게 빼고 간절히 기다림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기다림(Waiting)"
+      }
+    },
+    {
+      "name": "허심탄회 (虛心坦懷)",
+      "details": {
+        "meaning": "마음을 비우고 생각을 터놓음",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 솔직(Frankness)"
+      }
+    },
+    {
+      "name": "허장성세 (虛張聲勢)",
+      "details": {
+        "meaning": "실속은 없으면서 큰소리치며 허세를 부림",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 허세(Bluff)"
+      }
+    },
+    {
+      "name": "현모양처 (賢母良妻)",
+      "details": {
+        "meaning": "어진 어머니이면서 착한 아내",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 여성(Women)"
+      }
+    },
+    {
+      "name": "호사다마 (好事多魔)",
+      "details": {
+        "meaning": "좋은 일에는 흔히 방해되는 일이 많음",
+        "origin": "조설근",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 장애(Obstacle)"
+      }
+    },
+    {
+      "name": "호연지기 (浩然之氣)",
+      "details": {
+        "meaning": "넓고 큰 기운. 공명정대하여 조금도 부끄러움이 없는 용기",
+        "origin": "맹자",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 기개(Spirit)"
+      }
+    },
+    {
+      "name": "혼비백산 (魂飛魄散)",
+      "details": {
+        "meaning": "혼과 넋이 흩어짐. 몹시 놀라 어찌할 바를 모름",
+        "origin": "사자성어",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 놀람(Surprise)"
+      }
+    },
+    {
+      "name": "화룡점정 (畵龍點睛)",
+      "details": {
+        "meaning": "용을 그리고 눈동자를 찍는다. 어떤 일의 가장 중요한 부분을 완성함",
+        "origin": "수형기",
+        "classification": "어휘(Vocabulary) > 사자성어(Idiom) > 완성(Completion)"
+      }
+    },
+    {
+      "name": "꿩 먹고 알 먹기",
+      "details": {
+        "meaning": "한 가지 일로 두 가지 이익을 봄",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 이득(Benefit)"
+      }
+    },
+    {
+      "name": "낫 놓고 기역 자도 모른다",
+      "details": {
+        "meaning": "아주 무식함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 무식(Ignorance)"
+      }
+    },
+    {
+      "name": "똥 묻은 개가 겨 묻은 개 나무란다",
+      "details": {
+        "meaning": "자신의 흉은 모르고 남의 흉만 봄",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 비판(Criticism)"
+      }
+    },
+    {
+      "name": "벼룩의 간을 내어 먹는다",
+      "details": {
+        "meaning": "극히 적은 이익을 탐내어 부당한 수단을 씀",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 착취(Exploitation)"
+      }
+    },
+    {
+      "name": "뱁새가 황새 따라가다 가랑이 찢어진다",
+      "details": {
+        "meaning": "힘에 부치는 일을 억지로 하면 해를 입음",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 분수(Limit)"
+      }
+    },
+    {
+      "name": "사공이 많으면 배가 산으로 간다",
+      "details": {
+        "meaning": "주관하는 사람이 많으면 일이 제대로 되기 어려움",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 간섭(Interference)"
+      }
+    },
+    {
+      "name": "숭어가 뛰니까 망둥이도 뛴다",
+      "details": {
+        "meaning": "남이 하니까 분별없이 덩달아 나섬",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 모방(Imitation)"
+      }
+    },
+    {
+      "name": "아는 길도 물어가라",
+      "details": {
+        "meaning": "쉬운 일이라도 신중을 기하라",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 신중(Prudence)"
+      }
+    },
+    {
+      "name": "얌전한 고양이 부뚜막에 먼저 올라간다",
+      "details": {
+        "meaning": "겉으로는 얌전한 체하면서 속으로는 딴짓을 함",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 내숭(Pretense)"
+      }
+    },
+    {
+      "name": "열 번 찍어 안 넘어가는 나무 없다",
+      "details": {
+        "meaning": "아무리 어려운 일이라도 계속 노력하면 이루어짐",
+        "origin": "한국 속담",
+        "classification": "문장(Sentence) > 속담(Proverb) > 노력(Effort)"
+      }
+    }
+]
+}

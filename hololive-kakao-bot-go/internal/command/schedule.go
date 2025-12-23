@@ -1,0 +1,113 @@
+package command
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
+	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
+	"github.com/kapu/hololive-kakao-bot-go/internal/util"
+)
+
+// ScheduleCommand 는 타입이다.
+type ScheduleCommand struct {
+	BaseCommand
+}
+
+// NewScheduleCommand 는 동작을 수행한다.
+func NewScheduleCommand(deps *Dependencies) *ScheduleCommand {
+	return &ScheduleCommand{BaseCommand: NewBaseCommand(deps)}
+}
+
+// Name 는 동작을 수행한다.
+func (c *ScheduleCommand) Name() string {
+	return "schedule"
+}
+
+// Description 는 동작을 수행한다.
+func (c *ScheduleCommand) Description() string {
+	return "특정 멤버 일정 조회"
+}
+
+// Execute 는 동작을 수행한다.
+func (c *ScheduleCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
+	if err := c.ensureDeps(); err != nil {
+		return err
+	}
+
+	rawCommandToken, _ := params["_raw_command"].(string)
+	delete(params, "_raw_command")
+
+	memberName, hasMember := params["member"].(string)
+	if !hasMember || memberName == "" {
+		if shouldSuppressSchedulePrompt(cmdCtx, rawCommandToken) {
+			return nil
+		}
+		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrScheduleNeedMemberName)
+	}
+	days := 7
+	if d, ok := params["days"]; ok {
+		switch v := d.(type) {
+		case float64:
+			days = int(v)
+		case int:
+			days = v
+		}
+	}
+
+	if days < 1 {
+		days = 7
+	}
+	if days > 30 {
+		days = 30
+	}
+
+	channel, err := FindActiveMemberOrError(ctx, c.Deps(), cmdCtx.Room, memberName)
+	if err != nil {
+		return err
+	}
+
+	hours := days * 24
+	streams, err := c.Deps().Holodex.GetChannelSchedule(ctx, channel.ID, hours, true)
+	if err != nil {
+		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrScheduleQueryFailed)
+	}
+
+	message := c.Deps().Formatter.ChannelSchedule(channel, streams, days)
+	return c.Deps().SendMessage(ctx, cmdCtx.Room, message)
+}
+
+func (c *ScheduleCommand) ensureDeps() error {
+	if err := c.EnsureBaseDeps(); err != nil {
+		return err
+	}
+
+	if c.Deps().Matcher == nil || c.Deps().Holodex == nil || c.Deps().Formatter == nil {
+		return fmt.Errorf("schedule command services not configured")
+	}
+
+	return nil
+}
+
+func shouldSuppressSchedulePrompt(cmdCtx *domain.CommandContext, rawToken string) bool {
+	if normalized := util.Normalize(rawToken); normalized == "멤버" || normalized == "member" {
+		return true
+	}
+
+	if cmdCtx == nil {
+		return false
+	}
+
+	message := util.TrimSpace(cmdCtx.Message)
+	if message == "" {
+		return false
+	}
+
+	// remove common command prefixes
+	message = strings.TrimLeft(message, "!/\\.")
+	message = util.TrimSpace(message)
+
+	normalizedMessage := util.Normalize(message)
+	return normalizedMessage == "멤버" || normalizedMessage == "member"
+}

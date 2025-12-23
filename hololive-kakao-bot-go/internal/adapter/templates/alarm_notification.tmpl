@@ -1,0 +1,13 @@
+{{template "emoji_alarm" .}} {{.ChannelName}} 방송 알림
+
+{{- if le .MinutesUntil 0 -}}
+{{template "emoji_time" .}} 곧 시작합니다!
+{{- end}}
+
+{{- if .ScheduleMessage -}}
+{{template "emoji_schedule" .}} {{.ScheduleMessage}}
+{{- end}}
+
+{{template "emoji_broadcast" .}} {{.Title}}
+
+{{template "emoji_link" .}} {{.URL}}

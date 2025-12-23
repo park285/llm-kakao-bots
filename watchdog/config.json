@@ -1,0 +1,16 @@
+{
+    "containers": [
+        "mcp-llm-server",
+        "turtle-soup-bot",
+        "twentyq-bot",
+        "hololive-kakao-bot-go"
+    ],
+    "enabled": true,
+    "intervalSeconds": 30,
+    "maxFailures": 1,
+    "cooldownSeconds": 120,
+    "restartTimeoutSec": 30,
+    "useEvents": true,
+    "statusReportSeconds": 0,
+    "verboseLogging": false
+}

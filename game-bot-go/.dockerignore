@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+.serena
+.mypy_cache
+.ruff_cache
+bin
+tmp
+coverage_*.out
+
