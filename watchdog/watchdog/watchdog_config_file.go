@@ -1,0 +1,129 @@
+package watchdog
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+)
+
+type fileConfig struct {
+	Enabled             *bool     `json:"enabled"`
+	Containers          *[]string `json:"containers"`
+	IntervalSeconds     *int      `json:"intervalSeconds"`
+	MaxFailures         *int      `json:"maxFailures"`
+	GraceSeconds        *int      `json:"graceSeconds"`
+	CooldownSeconds     *int      `json:"cooldownSeconds"`
+	RestartTimeoutSec   *int      `json:"restartTimeoutSec"`
+	DockerSocket        *string   `json:"dockerSocket"`
+	UseEvents           *bool     `json:"useEvents"`
+	EventMinIntervalSec *int      `json:"eventMinIntervalSec"`
+	StatusReportSeconds *int      `json:"statusReportSeconds"`
+	VerboseLogging      *bool     `json:"verboseLogging"`
+}
+
+// LoadConfigWithSource 는 동작을 수행한다.
+func LoadConfigWithSource(logger *slog.Logger) (Config, string, string, error) {
+	cfg := loadConfigFromEnv()
+
+	path := strings.TrimSpace(os.Getenv("WATCHDOG_CONFIG_PATH"))
+	if path == "" {
+		return cfg, "env", "", nil
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, "", path, fmt.Errorf("config file read failed: %w", err)
+	}
+
+	var fc fileConfig
+	if err := json.Unmarshal(raw, &fc); err != nil {
+		return Config{}, "", path, fmt.Errorf("config file json parse failed: %w", err)
+	}
+
+	merged, err := mergeFileConfig(cfg, fc)
+	if err != nil {
+		return Config{}, "", path, err
+	}
+
+	logger.Info("watchdog_config_loaded", "source", "file", "path", path)
+	return merged, "file", path, nil
+}
+
+func mergeFileConfig(base Config, fc fileConfig) (Config, error) {
+	out := base
+
+	if fc.Enabled != nil {
+		out.Enabled = *fc.Enabled
+	}
+	if fc.Containers != nil {
+		normalized := normalizeContainers(*fc.Containers)
+		out.Containers = normalized
+	}
+	if fc.IntervalSeconds != nil {
+		out.IntervalSeconds = maxInt(*fc.IntervalSeconds, 1)
+	}
+	if fc.MaxFailures != nil {
+		out.MaxFailures = maxInt(*fc.MaxFailures, 1)
+	}
+	if fc.GraceSeconds != nil {
+		out.GraceSeconds = maxInt(*fc.GraceSeconds, 0)
+	}
+	if fc.CooldownSeconds != nil {
+		out.CooldownSeconds = maxInt(*fc.CooldownSeconds, 0)
+	}
+	if fc.RestartTimeoutSec != nil {
+		out.RestartTimeoutSec = maxInt(*fc.RestartTimeoutSec, 5)
+	}
+	if fc.DockerSocket != nil {
+		socket := strings.TrimSpace(*fc.DockerSocket)
+		if socket == "" {
+			return Config{}, errors.New("dockerSocket is empty")
+		}
+		out.DockerSocket = socket
+	}
+	if fc.UseEvents != nil {
+		out.UseEvents = *fc.UseEvents
+	}
+	if fc.EventMinIntervalSec != nil {
+		out.EventMinIntervalSec = maxInt(*fc.EventMinIntervalSec, 0)
+	}
+	if fc.StatusReportSeconds != nil {
+		out.StatusReportSeconds = maxInt(*fc.StatusReportSeconds, 0)
+	}
+	if fc.VerboseLogging != nil {
+		out.VerboseLogging = *fc.VerboseLogging
+	}
+
+	return out, nil
+}
+
+func normalizeContainers(input []string) []string {
+	if len(input) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(input))
+	out := make([]string, 0, len(input))
+	for _, raw := range input {
+		name := CanonicalContainerName(raw)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	return out
+}
+
+func maxInt(value int, minValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	return value
+}

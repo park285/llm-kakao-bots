@@ -1,0 +1,40 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hololive-kakao-bot-go
+    env_file:
+      - .env
+    environment:
+      GOGC: "60"
+      MQ_HOST: valkey-mq
+      MQ_PORT: 1833
+      CACHE_HOST: holo-valkey
+      CACHE_PORT: 6379
+      POSTGRES_HOST: holo-postgres
+      POSTGRES_PORT: 5432
+      LOG_FILE: logs/bot.log
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "30001:30001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider -T 5 http://localhost:30001/health || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - llm-bot-net
+
+networks:
+  llm-bot-net:
+    external: true
+    name: 20q-kakao-bot_llm-bot-net

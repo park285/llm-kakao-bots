@@ -1,0 +1,39 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+// Serve 는 동작을 수행한다.
+func Serve(ctx context.Context, server *http.Server, shutdownTimeout time.Duration) error {
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		if err == nil || errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("http server listen failed: %w", err)
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			return fmt.Errorf("http server shutdown failed: %w", err)
+		}
+
+		err := <-errCh
+		if err == nil || errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("http server stopped with error: %w", err)
+	}
+}
