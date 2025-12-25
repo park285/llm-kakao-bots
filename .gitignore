@@ -113,6 +113,7 @@ gc.log*
 *~
 tmp/
 backup/
+backups/
 
 # Compressed archives
 *.tar.gz
@@ -168,6 +169,7 @@ coverage/
 *.gcda
 jacoco/
 *.exec
+coverage.out
 
 # ============================================
 # Database
