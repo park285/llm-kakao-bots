@@ -22,11 +22,11 @@ func executeFormatterTemplate(name string, data any) (string, error) {
 		funcMap := template.FuncMap{
 			"add": func(a, b int) int { return a + b },
 			// 템플릿에서 맵을 생성할 수 있게 해주는 헬퍼 함수
-			"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			"dict": func(values ...any) (map[string]any, error) {
 				if len(values)%2 != 0 {
 					return nil, fmt.Errorf("dict requires even number of arguments")
 				}
-				dict := make(map[string]interface{}, len(values)/2)
+				dict := make(map[string]any, len(values)/2)
 				for i := 0; i < len(values); i += 2 {
 					key, ok := values[i].(string)
 					if !ok {

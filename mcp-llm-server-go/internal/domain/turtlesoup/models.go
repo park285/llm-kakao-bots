@@ -157,3 +157,62 @@ func PuzzleSchema() map[string]any {
 func RewriteSchema() map[string]any {
 	return rewriteSchema
 }
+
+// AnswerOutput 은 답변 출력 스키마다.
+type AnswerOutput struct {
+	Answer    string `json:"answer"`
+	Important bool   `json:"important"`
+}
+
+// answerSchema 는 답변 스키마다 (enum 제약).
+var answerSchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"answer": map[string]any{
+			"type": "string",
+			"enum": []string{
+				string(AnswerYes),
+				string(AnswerNo),
+				string(AnswerIrrelevant),
+				string(AnswerSomewhatRelated),
+				string(AnswerWrongPremise),
+				string(AnswerCannotAnswer),
+			},
+		},
+		"important": map[string]any{
+			"type": "boolean",
+		},
+	},
+	"required": []string{"answer", "important"},
+}
+
+// AnswerSchema 는 답변 JSON 스키마를 반환한다.
+func AnswerSchema() map[string]any {
+	return answerSchema
+}
+
+// ValidateOutput 은 검증 출력 스키마다.
+type ValidateOutput struct {
+	Result string `json:"result"`
+}
+
+// validateSchema 는 검증 스키마다 (enum 제약).
+var validateSchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"result": map[string]any{
+			"type": "string",
+			"enum": []string{
+				string(ValidationYes),
+				string(ValidationNo),
+				string(ValidationClose),
+			},
+		},
+	},
+	"required": []string{"result"},
+}
+
+// ValidateSchema 는 검증 JSON 스키마를 반환한다.
+func ValidateSchema() map[string]any {
+	return validateSchema
+}

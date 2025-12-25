@@ -249,7 +249,7 @@ func (c *StreamConsumer) ackWithRetry(ctx context.Context, cfg StreamConsumerCon
 }
 
 func isBusyGroupErr(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "BUSYGROUP")
+	return valkeyx.IsBusyGroup(err)
 }
 
 func isNoGroupOrNoStreamErr(err error) bool {

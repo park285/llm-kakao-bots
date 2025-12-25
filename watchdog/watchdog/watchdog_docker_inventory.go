@@ -1,9 +1,10 @@
 package watchdog
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/moby/moby/client"
@@ -81,8 +82,8 @@ func (w *Watchdog) ListDockerContainers(ctx context.Context) ([]DockerContainerS
 		})
 	}
 
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].Name < out[j].Name
+	slices.SortStableFunc(out, func(a, b DockerContainerStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	return out, nil

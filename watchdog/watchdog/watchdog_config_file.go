@@ -63,19 +63,19 @@ func mergeFileConfig(base Config, fc fileConfig) (Config, error) {
 		out.Containers = normalized
 	}
 	if fc.IntervalSeconds != nil {
-		out.IntervalSeconds = maxInt(*fc.IntervalSeconds, 1)
+		out.IntervalSeconds = max(*fc.IntervalSeconds, 1)
 	}
 	if fc.MaxFailures != nil {
-		out.MaxFailures = maxInt(*fc.MaxFailures, 1)
+		out.MaxFailures = max(*fc.MaxFailures, 1)
 	}
 	if fc.GraceSeconds != nil {
-		out.GraceSeconds = maxInt(*fc.GraceSeconds, 0)
+		out.GraceSeconds = max(*fc.GraceSeconds, 0)
 	}
 	if fc.CooldownSeconds != nil {
-		out.CooldownSeconds = maxInt(*fc.CooldownSeconds, 0)
+		out.CooldownSeconds = max(*fc.CooldownSeconds, 0)
 	}
 	if fc.RestartTimeoutSec != nil {
-		out.RestartTimeoutSec = maxInt(*fc.RestartTimeoutSec, 5)
+		out.RestartTimeoutSec = max(*fc.RestartTimeoutSec, 5)
 	}
 	if fc.DockerSocket != nil {
 		socket := strings.TrimSpace(*fc.DockerSocket)
@@ -88,10 +88,10 @@ func mergeFileConfig(base Config, fc fileConfig) (Config, error) {
 		out.UseEvents = *fc.UseEvents
 	}
 	if fc.EventMinIntervalSec != nil {
-		out.EventMinIntervalSec = maxInt(*fc.EventMinIntervalSec, 0)
+		out.EventMinIntervalSec = max(*fc.EventMinIntervalSec, 0)
 	}
 	if fc.StatusReportSeconds != nil {
-		out.StatusReportSeconds = maxInt(*fc.StatusReportSeconds, 0)
+		out.StatusReportSeconds = max(*fc.StatusReportSeconds, 0)
 	}
 	if fc.VerboseLogging != nil {
 		out.VerboseLogging = *fc.VerboseLogging
@@ -119,11 +119,4 @@ func normalizeContainers(input []string) []string {
 		out = append(out, name)
 	}
 	return out
-}
-
-func maxInt(value int, minValue int) int {
-	if value < minValue {
-		return minValue
-	}
-	return value
 }

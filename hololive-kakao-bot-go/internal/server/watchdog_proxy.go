@@ -103,7 +103,7 @@ func (h *WatchdogProxyHandler) RestartContainer(c *gin.Context) {
 		slog.String("reason", req.Reason),
 	)
 
-	h.activity.Log("container_restart", "Container restart: "+name, map[string]interface{}{
+	h.activity.Log("container_restart", "Container restart: "+name, map[string]any{
 		"container": name,
 		"reason":    req.Reason,
 		"force":     req.Force,

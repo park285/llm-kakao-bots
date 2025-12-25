@@ -51,9 +51,3 @@ func TestIsPowerOfTwo(t *testing.T) {
 		t.Fatalf("unexpected power of two")
 	}
 }
-
-func TestMaxInt(t *testing.T) {
-	if maxInt(1, 2) != 2 {
-		t.Fatalf("unexpected max")
-	}
-}

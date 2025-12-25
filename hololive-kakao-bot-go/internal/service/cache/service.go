@@ -148,7 +148,7 @@ func (c *Service) Set(ctx context.Context, key string, value any, ttl time.Durat
 }
 
 // MSet 배치 저장 (파이프라이닝 활용)
-func (c *Service) MSet(ctx context.Context, pairs map[string]interface{}, ttl time.Duration) error {
+func (c *Service) MSet(ctx context.Context, pairs map[string]any, ttl time.Duration) error {
 	if len(pairs) == 0 {
 		return nil
 	}
@@ -309,7 +309,7 @@ func (c *Service) HSet(ctx context.Context, key, field, value string) error {
 }
 
 // HMSet: Hash 자료구조에 여러 필드와 값을 한 번에 설정한다.
-func (c *Service) HMSet(ctx context.Context, key string, fields map[string]interface{}) error {
+func (c *Service) HMSet(ctx context.Context, key string, fields map[string]any) error {
 	if len(fields) == 0 {
 		return nil
 	}

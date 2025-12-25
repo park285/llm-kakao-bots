@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -134,7 +134,7 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 
 	sortedIDs := make([]string, len(channelIDs))
 	copy(sortedIDs, channelIDs)
-	sort.Strings(sortedIDs)
+	slices.Sort(sortedIDs)
 	cacheKey := fmt.Sprintf("youtube:upcoming:%s", strings.Join(sortedIDs, ","))
 	if cached, found := ys.cache.GetStreams(ctx, cacheKey); found {
 		ys.logger.Debug("YouTube cache hit (backup avoided)",

@@ -2,6 +2,7 @@ package activity
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -12,10 +13,10 @@ import (
 
 // LogEntry: 활동 로그의 한 항목을 나타내는 구조체
 type LogEntry struct {
-	Timestamp time.Time              `json:"timestamp"`
-	Type      string                 `json:"type"` // e.g., "command", "auth", "system"
-	Summary   string                 `json:"summary"`
-	Details   map[string]interface{} `json:"details,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
+	Type      string         `json:"type"` // e.g., "command", "auth", "system"
+	Summary   string         `json:"summary"`
+	Details   map[string]any `json:"details,omitempty"`
 }
 
 // Logger: 파일 기반의 간단한 활동 로그 기록기
@@ -34,7 +35,7 @@ func NewActivityLogger(filePath string, logger *slog.Logger) *Logger {
 }
 
 // Log: 새로운 활동 로그를 파일에 추가한다. (Thread-safe)
-func (l *Logger) Log(entryType, summary string, details map[string]interface{}) {
+func (l *Logger) Log(entryType, summary string, details map[string]any) {
 	entry := LogEntry{
 		Timestamp: time.Now(),
 		Type:      entryType,
@@ -64,7 +65,7 @@ func (l *Logger) GetRecentLogs(limit int) ([]LogEntry, error) {
 
 	f, err := os.Open(l.filePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return []LogEntry{}, nil
 		}
 		return nil, fmt.Errorf("failed to open activity log: %w", err)
