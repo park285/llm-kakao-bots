@@ -3,7 +3,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25.5-00ADD8?logo=go)](https://go.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?logo=postgresql)](https://www.postgresql.org/)
 [![Valkey](https://img.shields.io/badge/Valkey-9.0-DC382D?logo=redis)](https://valkey.io/)
-[![License](https://img.shields.io/badge/License-Private-gray)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스입니다.
 
@@ -167,7 +167,7 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| `GEMINI_MODEL` | 기본 모델 | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | 기본 모델 | `gemini-3.0-flash` |
 | `GEMINI_TEMPERATURE` | Temperature | `1.0` |
 | `GEMINI_TIMEOUT_SECONDS` | 타임아웃 | `60` |
 | `GEMINI_MAX_RETRIES` | 최대 재시도 | `3` |
@@ -353,14 +353,6 @@ curl http://localhost:40527/health/models
 docker exec valkey-cache valkey-cli ping
 docker exec valkey-mq valkey-cli -p 1833 ping
 ```
-
-## 레거시 참고
-
-| 디렉터리 | 상태 | 비고 |
-|----------|------|------|
-| `mcp-llm-server/` | 개발용 | Python FastAPI |
-| `20q-kakao-bot/` | 마이그레이션 완료 | → `game-bot-go` |
-| `turtle-soup-bot/` | 마이그레이션 완료 | → `game-bot-go` |
 
 ---
 
