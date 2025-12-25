@@ -14,14 +14,14 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httpserver"
 )
 
-// BackgroundTask 는 타입이다.
+// BackgroundTask: 서버와 함께 실행될 백그라운드 작업 정의
 type BackgroundTask struct {
 	Name        string
 	ErrorLogKey string
 	Run         func(ctx context.Context) error
 }
 
-// RunHTTPServer 는 동작을 수행한다.
+// RunHTTPServer: HTTP 서버와 백그라운드 작업들을 실행하고 OS 시그널을 처리하여 우아하게 종료한다.
 func RunHTTPServer(
 	ctx context.Context,
 	logger *slog.Logger,

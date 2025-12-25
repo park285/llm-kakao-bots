@@ -6,25 +6,25 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// ServerConfig 는 타입이다.
+// ServerConfig: HTTP 서버 설정 (포트 등) alias
 type ServerConfig = commonconfig.ServerConfig
 
-// ServerTuningConfig 는 타입이다.
+// ServerTuningConfig: 서버 튜닝 설정 (Timeouts, Limits 등) alias
 type ServerTuningConfig = commonconfig.ServerTuningConfig
 
-// CommandsConfig 는 타입이다.
+// CommandsConfig: 명령어 접두사 등 명령어 처리 관련 설정 alias
 type CommandsConfig = commonconfig.CommandsConfig
 
-// LlmRestConfig 는 타입이다.
+// LlmRestConfig: LLM REST API 연동 설정 alias
 type LlmRestConfig = commonconfig.LlmRestConfig
 
-// RedisConfig 는 타입이다.
+// RedisConfig: Redis 연결 설정 (캐시용) alias
 type RedisConfig = commonconfig.RedisConfig
 
-// ValkeyMQConfig 는 타입이다.
+// ValkeyMQConfig: Valkey 기반 메시지 큐 설정 alias
 type ValkeyMQConfig = commonconfig.ValkeyMQConfig
 
-// PostgresConfig 는 타입이다.
+// PostgresConfig: PostgreSQL 데이터베이스 설정
 type PostgresConfig struct {
 	Host     string
 	Port     int
@@ -34,18 +34,18 @@ type PostgresConfig struct {
 	SSLMode  string
 }
 
-// AccessConfig 는 타입이다.
+// AccessConfig: 접근 제어 설정 (화이트리스트/블랙리스트) alias
 type AccessConfig = commonconfig.AccessConfig
 
-// LogConfig 는 타입이다.
+// LogConfig: 로깅 설정 (레벨, 포맷 등) alias
 type LogConfig = commonconfig.LogConfig
 
-// AdminConfig 는 타입이다.
+// AdminConfig: 관리자 권한 설정
 type AdminConfig struct {
 	UserIDs []string
 }
 
-// Config 는 타입이다.
+// Config: 전체 애플리케이션 설정 구조체
 type Config struct {
 	Server       ServerConfig
 	ServerTuning ServerTuningConfig
@@ -59,7 +59,7 @@ type Config struct {
 	Log          LogConfig
 }
 
-// LoadFromEnv 는 동작을 수행한다.
+// LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드한다.
 func LoadFromEnv() (*Config, error) {
 	server, err := readServerConfig()
 	if err != nil {

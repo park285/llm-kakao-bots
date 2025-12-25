@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
 func TestHolodexAPIClientRotatesAllKeys(t *testing.T) {
-	logger := zap.NewNop()
+	logger := slog.Default()
 	client := &APIClient{
 		httpClient: &http.Client{},
 		apiKeys: []string{
@@ -36,7 +36,7 @@ func TestHolodexAPIClientRotatesAllKeys(t *testing.T) {
 }
 
 func TestHolodexAPIClientDoRequestNoKeys(t *testing.T) {
-	logger := zap.NewNop()
+	logger := slog.Default()
 	client := &APIClient{
 		httpClient: &http.Client{},
 		apiKeys:    nil,

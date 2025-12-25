@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
@@ -41,7 +42,7 @@ type AdminHandler struct {
 	securityCfg   *SecurityConfig
 	adminUser     string
 	adminPassHash string
-	logger        *zap.Logger
+	logger        *slog.Logger
 	startTime     time.Time
 }
 
@@ -61,7 +62,7 @@ func NewAdminHandler(
 	rateLimiter *LoginRateLimiter,
 	securityCfg *SecurityConfig,
 	adminUser, adminPassHash string,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *AdminHandler {
 	return &AdminHandler{
 		repo:          repo,
@@ -98,14 +99,14 @@ func (h *AdminHandler) handleAliasOperation(
 ) {
 	memberID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		h.logger.Warn("Invalid member ID", zap.String("id", c.Param("id")), zap.Error(err))
+		h.logger.Warn("Invalid member ID", slog.String("id", c.Param("id")), slog.Any("error", err))
 		c.JSON(400, gin.H{"error": "Invalid member ID"})
 		return
 	}
 
 	var req aliasRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid request body", zap.Error(err))
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -115,23 +116,23 @@ func (h *AdminHandler) handleAliasOperation(
 
 	if err := repoFunc(ctx, memberID, req.Type, req.Alias); err != nil {
 		h.logger.Error("Failed to "+operationName+" alias",
-			zap.Int("member_id", memberID),
-			zap.String("type", req.Type),
-			zap.String("alias", req.Alias),
-			zap.Error(err),
+			slog.Int("member_id", memberID),
+			slog.String("type", req.Type),
+			slog.String("alias", req.Alias),
+			slog.Any("error", err),
 		)
 		c.JSON(500, gin.H{"error": "Failed to " + operationName + " alias"})
 		return
 	}
 
 	if err := h.memberCache.InvalidateAliasCache(ctx, req.Alias); err != nil {
-		h.logger.Warn("Failed to invalidate alias cache", zap.Error(err))
+		h.logger.Warn("Failed to invalidate alias cache", slog.Any("error", err))
 	}
 
 	h.logger.Info("Alias "+operationName,
-		zap.Int("member_id", memberID),
-		zap.String("type", req.Type),
-		zap.String("alias", req.Alias),
+		slog.Int("member_id", memberID),
+		slog.String("type", req.Type),
+		slog.String("alias", req.Alias),
 	)
 
 	h.activity.Log("member_alias_"+operationName, fmt.Sprintf("Member alias %s: %s (ID: %d)", operationName, req.Alias, memberID), map[string]interface{}{
@@ -159,11 +160,12 @@ func (h *AdminHandler) RemoveAlias(c *gin.Context) {
 }
 
 // SetGraduation 는 졸업 상태를 갱신한다.
+//
 //nolint:dupl // Similar patterns for different update operations
 func (h *AdminHandler) SetGraduation(c *gin.Context) {
 	memberID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		h.logger.Warn("Invalid member ID", zap.String("id", c.Param("id")), zap.Error(err))
+		h.logger.Warn("Invalid member ID", slog.String("id", c.Param("id")), slog.Any("error", err))
 		c.JSON(400, gin.H{"error": "Invalid member ID"})
 		return
 	}
@@ -172,7 +174,7 @@ func (h *AdminHandler) SetGraduation(c *gin.Context) {
 		IsGraduated bool `json:"isGraduated"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid request body", zap.Error(err))
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -182,21 +184,21 @@ func (h *AdminHandler) SetGraduation(c *gin.Context) {
 
 	if err := h.repo.SetGraduation(ctx, memberID, req.IsGraduated); err != nil {
 		h.logger.Error("Failed to set graduation status",
-			zap.Int("member_id", memberID),
-			zap.Bool("is_graduated", req.IsGraduated),
-			zap.Error(err),
+			slog.Int("member_id", memberID),
+			slog.Bool("is_graduated", req.IsGraduated),
+			slog.Any("error", err),
 		)
 		c.JSON(500, gin.H{"error": "Failed to set graduation status"})
 		return
 	}
 
 	if err := h.memberCache.Refresh(ctx); err != nil {
-		h.logger.Warn("Failed to refresh cache after graduation update", zap.Error(err))
+		h.logger.Warn("Failed to refresh cache after graduation update", slog.Any("error", err))
 	}
 
 	h.logger.Info("Graduation status updated",
-		zap.Int("member_id", memberID),
-		zap.Bool("is_graduated", req.IsGraduated),
+		slog.Int("member_id", memberID),
+		slog.Bool("is_graduated", req.IsGraduated),
 	)
 
 	statusStr := "graduated"
@@ -215,11 +217,12 @@ func (h *AdminHandler) SetGraduation(c *gin.Context) {
 }
 
 // UpdateChannelID 는 채널 ID를 갱신한다.
+//
 //nolint:dupl // Similar patterns for different update operations
 func (h *AdminHandler) UpdateChannelID(c *gin.Context) {
 	memberID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		h.logger.Warn("Invalid member ID", zap.String("id", c.Param("id")), zap.Error(err))
+		h.logger.Warn("Invalid member ID", slog.String("id", c.Param("id")), slog.Any("error", err))
 		c.JSON(400, gin.H{"error": "Invalid member ID"})
 		return
 	}
@@ -228,7 +231,7 @@ func (h *AdminHandler) UpdateChannelID(c *gin.Context) {
 		ChannelID string `json:"channelId" binding:"required,min=1"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid request body", zap.Error(err))
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -238,21 +241,21 @@ func (h *AdminHandler) UpdateChannelID(c *gin.Context) {
 
 	if err := h.repo.UpdateChannelID(ctx, memberID, req.ChannelID); err != nil {
 		h.logger.Error("Failed to update channel ID",
-			zap.Int("member_id", memberID),
-			zap.String("channel_id", req.ChannelID),
-			zap.Error(err),
+			slog.Int("member_id", memberID),
+			slog.String("channel_id", req.ChannelID),
+			slog.Any("error", err),
 		)
 		c.JSON(500, gin.H{"error": "Failed to update channel ID"})
 		return
 	}
 
 	if err := h.memberCache.Refresh(ctx); err != nil {
-		h.logger.Warn("Failed to refresh cache after channel ID update", zap.Error(err))
+		h.logger.Warn("Failed to refresh cache after channel ID update", slog.Any("error", err))
 	}
 
 	h.logger.Info("Channel ID updated",
-		zap.Int("member_id", memberID),
-		zap.String("channel_id", req.ChannelID),
+		slog.Int("member_id", memberID),
+		slog.String("channel_id", req.ChannelID),
 	)
 
 	h.activity.Log("member_channel_update", fmt.Sprintf("Member channel ID updated to %s (ID: %d)", req.ChannelID, memberID), map[string]interface{}{
@@ -274,8 +277,8 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	allowed, remaining := h.rateLimiter.IsAllowed(ip)
 	if !allowed {
 		h.logger.Warn("Login rate limited",
-			zap.String("ip", ip),
-			zap.Duration("remaining", remaining),
+			slog.String("ip", ip),
+			slog.Duration("remaining", remaining),
 		)
 		c.Header("Retry-After", strconv.Itoa(int(remaining.Seconds())))
 		c.JSON(429, gin.H{
@@ -291,7 +294,7 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid login request", zap.Error(err))
+		h.logger.Warn("Invalid login request", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
@@ -317,8 +320,8 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	SetSecureCookie(c, sessionCookieName, signedSessionID, 86400, h.securityCfg.ForceHTTPS)
 
 	h.logger.Info("Admin logged in",
-		zap.String("username", req.Username),
-		zap.String("ip", ip),
+		slog.String("username", req.Username),
+		slog.String("ip", ip),
 	)
 
 	h.activity.Log("auth_login", "Admin login successful", map[string]interface{}{
@@ -337,10 +340,10 @@ func (h *AdminHandler) handleLoginFailure(c *gin.Context, ip, username, reason s
 	failCount := h.rateLimiter.RecordFailure(ip)
 
 	h.logger.Warn("Failed login attempt",
-		zap.String("username", username),
-		zap.String("ip", ip),
-		zap.String("reason", reason),
-		zap.Int("fail_count", failCount),
+		slog.String("username", username),
+		slog.String("ip", ip),
+		slog.String("reason", reason),
+		slog.Int("fail_count", failCount),
 	)
 
 	// 점진적 지연: 실패 횟수에 따라 대기
@@ -382,7 +385,7 @@ func (h *AdminHandler) GetMembers(c *gin.Context) {
 
 	members, err := h.repo.GetAllMembers(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get members", zap.Error(err))
+		h.logger.Error("Failed to get members", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get members"})
 		return
 	}
@@ -401,7 +404,7 @@ func (h *AdminHandler) GetAlarms(c *gin.Context) {
 	// Get all alarm registry keys
 	alarmKeys, err := h.alarm.GetAllAlarmKeys(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get alarm keys", zap.Error(err))
+		h.logger.Error("Failed to get alarm keys", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get alarms"})
 		return
 	}
@@ -430,7 +433,7 @@ func (h *AdminHandler) DeleteAlarm(c *gin.Context) {
 
 	removed, err := h.alarm.RemoveAlarm(ctx, req.RoomID, req.UserID, req.ChannelID)
 	if err != nil {
-		h.logger.Error("Failed to delete alarm", zap.Error(err))
+		h.logger.Error("Failed to delete alarm", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to delete alarm"})
 		return
 	}
@@ -480,7 +483,7 @@ func (h *AdminHandler) AddRoom(c *gin.Context) {
 	ctx := c.Request.Context()
 	added, err := h.acl.AddRoom(ctx, req.Room)
 	if err != nil {
-		h.logger.Error("Failed to add room", zap.String("room", req.Room), zap.Error(err))
+		h.logger.Error("Failed to add room", slog.String("room", req.Room), slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to add room"})
 		return
 	}
@@ -517,7 +520,7 @@ func (h *AdminHandler) RemoveRoom(c *gin.Context) {
 	ctx := c.Request.Context()
 	_, err := h.acl.RemoveRoom(ctx, req.Room)
 	if err != nil {
-		h.logger.Error("Failed to remove room", zap.String("room", req.Room), zap.Error(err))
+		h.logger.Error("Failed to remove room", slog.String("room", req.Room), slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to remove room"})
 		return
 	}
@@ -548,12 +551,12 @@ func (h *AdminHandler) SetACL(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.acl.SetEnabled(ctx, req.Enabled); err != nil {
-		h.logger.Error("Failed to set ACL", zap.Bool("enabled", req.Enabled), zap.Error(err))
+		h.logger.Error("Failed to set ACL", slog.Bool("enabled", req.Enabled), slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to set ACL"})
 		return
 	}
 
-	h.logger.Info("Room ACL updated", zap.Bool("enabled", req.Enabled))
+	h.logger.Info("Room ACL updated", slog.Bool("enabled", req.Enabled))
 
 	h.activity.Log("acl_update", fmt.Sprintf("Room ACL state changed to %v", req.Enabled), map[string]interface{}{"enabled": req.Enabled})
 	c.JSON(200, gin.H{
@@ -613,7 +616,7 @@ func (h *AdminHandler) SetRoomName(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid request body", zap.Error(err))
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -623,14 +626,14 @@ func (h *AdminHandler) SetRoomName(c *gin.Context) {
 
 	// Save to Valkey via AlarmService
 	if err := h.alarm.SetRoomName(ctx, req.RoomID, req.RoomName); err != nil {
-		h.logger.Error("Failed to set room name", zap.Error(err))
+		h.logger.Error("Failed to set room name", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to set room name"})
 		return
 	}
 
 	h.logger.Info("Room name set",
-		zap.String("room_id", req.RoomID),
-		zap.String("room_name", req.RoomName),
+		slog.String("room_id", req.RoomID),
+		slog.String("room_name", req.RoomName),
 	)
 
 	h.activity.Log("name_update", fmt.Sprintf("Room name set: %s -> %s", req.RoomID, req.RoomName), map[string]interface{}{
@@ -652,7 +655,7 @@ func (h *AdminHandler) SetUserName(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("Invalid request body", zap.Error(err))
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -662,14 +665,14 @@ func (h *AdminHandler) SetUserName(c *gin.Context) {
 
 	// Save to Valkey via AlarmService
 	if err := h.alarm.SetUserName(ctx, req.UserID, req.UserName); err != nil {
-		h.logger.Error("Failed to set user name", zap.Error(err))
+		h.logger.Error("Failed to set user name", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to set user name"})
 		return
 	}
 
 	h.logger.Info("User name set",
-		zap.String("user_id", req.UserID),
-		zap.String("user_name", req.UserName),
+		slog.String("user_id", req.UserID),
+		slog.String("user_name", req.UserName),
 	)
 
 	c.JSON(200, gin.H{
@@ -683,7 +686,7 @@ func (h *AdminHandler) GetLiveStreams(c *gin.Context) {
 	ctx := c.Request.Context()
 	streams, err := h.holodex.GetLiveStreams(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get live streams", zap.Error(err))
+		h.logger.Error("Failed to get live streams", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get live streams"})
 		return
 	}
@@ -695,7 +698,7 @@ func (h *AdminHandler) GetUpcomingStreams(c *gin.Context) {
 	ctx := c.Request.Context()
 	streams, err := h.holodex.GetUpcomingStreams(ctx, 24)
 	if err != nil {
-		h.logger.Error("Failed to get upcoming streams", zap.Error(err))
+		h.logger.Error("Failed to get upcoming streams", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get upcoming streams"})
 		return
 	}
@@ -717,7 +720,7 @@ func (h *AdminHandler) GetChannelStats(c *gin.Context) {
 	if h.valkeyCache != nil {
 		var cachedStats map[string]*youtube.ChannelStats
 		if err := h.valkeyCache.Get(ctx, channelStatsCacheKey, &cachedStats); err == nil && cachedStats != nil {
-			h.logger.Debug("Channel stats cache hit", zap.Int("count", len(cachedStats)))
+			h.logger.Debug("Channel stats cache hit", slog.Int("count", len(cachedStats)))
 			c.JSON(200, gin.H{"status": "ok", "stats": cachedStats})
 			return
 		}
@@ -725,7 +728,7 @@ func (h *AdminHandler) GetChannelStats(c *gin.Context) {
 
 	members, err := h.repo.GetAllMembers(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get members", zap.Error(err))
+		h.logger.Error("Failed to get members", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get members"})
 		return
 	}
@@ -739,7 +742,7 @@ func (h *AdminHandler) GetChannelStats(c *gin.Context) {
 
 	stats, err := h.youtube.GetChannelStatistics(ctx, channelIDs)
 	if err != nil {
-		h.logger.Error("Failed to get channel stats", zap.Error(err))
+		h.logger.Error("Failed to get channel stats", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get channel stats"})
 		return
 	}
@@ -747,7 +750,7 @@ func (h *AdminHandler) GetChannelStats(c *gin.Context) {
 	// 캐시 저장
 	if h.valkeyCache != nil && stats != nil {
 		if err := h.valkeyCache.Set(ctx, channelStatsCacheKey, stats, channelStatsCacheTTL); err != nil {
-			h.logger.Warn("Failed to cache channel stats", zap.Error(err))
+			h.logger.Warn("Failed to cache channel stats", slog.Any("error", err))
 		}
 	}
 
@@ -764,13 +767,13 @@ func (h *AdminHandler) AddMember(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	if err := h.repo.CreateMember(ctx, &req); err != nil {
-		h.logger.Error("Failed to add member", zap.Error(err))
+		h.logger.Error("Failed to add member", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to add member"})
 		return
 	}
 
 	if err := h.memberCache.Refresh(ctx); err != nil {
-		h.logger.Warn("Failed to refresh member cache", zap.Error(err))
+		h.logger.Warn("Failed to refresh member cache", slog.Any("error", err))
 	}
 
 	h.activity.Log("member_add", "Member added: "+req.Name, map[string]interface{}{"name": req.Name})
@@ -782,7 +785,7 @@ func (h *AdminHandler) AddMember(c *gin.Context) {
 func (h *AdminHandler) GetLogs(c *gin.Context) {
 	logs, err := h.activity.GetRecentLogs(100)
 	if err != nil {
-		h.logger.Error("Failed to get logs", zap.Error(err))
+		h.logger.Error("Failed to get logs", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to get logs"})
 		return
 	}
@@ -804,7 +807,7 @@ func (h *AdminHandler) UpdateSettings(c *gin.Context) {
 	}
 
 	if err := h.settings.Update(req); err != nil {
-		h.logger.Error("Failed to update settings", zap.Error(err))
+		h.logger.Error("Failed to update settings", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to update settings"})
 		return
 	}

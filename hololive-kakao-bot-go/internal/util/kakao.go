@@ -4,12 +4,12 @@ import "strings"
 
 // 카카오 메시지 관련 상수 목록.
 const (
-	// KakaoSeeMorePadding 는 상수다.
+	// KakaoSeeMorePadding: 카카오톡 '전체 보기' 기능을 위한 패딩 길이
 	KakaoSeeMorePadding = 500
 	KakaoZeroWidthSpace = "\u200b"
 )
 
-// ApplyKakaoSeeMorePadding 는 동작을 수행한다.
+// ApplyKakaoSeeMorePadding: 텍스트에 투명 공백(Zero Width Space)을 추가하여 카카오톡에서 '전체 보기'로 접히도록 만든다.
 func ApplyKakaoSeeMorePadding(text, instruction string) string {
 	if TrimSpace(text) == "" {
 		return text

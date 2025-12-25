@@ -14,17 +14,17 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// EnqueueResult 는 공통 타입 re-export다.
+// EnqueueResult: pending 패키지의 EnqueueResult 재정의
 type EnqueueResult = pending.EnqueueResult
 
-// DequeueStatus 는 공통 타입 re-export다.
+// DequeueStatus: pending 패키지의 DequeueStatus 재정의
 type DequeueStatus = pending.DequeueStatus
 
-// EnqueueSuccess 는 대기 메시지 처리 상수 목록이다.
+// EnqueueSuccess: 대기 메시지 등록 성공 상태 상수
 const (
 	EnqueueSuccess   = pending.EnqueueSuccess
 	EnqueueQueueFull = pending.EnqueueQueueFull
@@ -35,7 +35,7 @@ const (
 	DequeueSuccess   = pending.DequeueSuccess
 )
 
-// DequeueResult 는 타입이다.
+// DequeueResult: 대기열에서 메시지를 꺼낸 결과를 담는 구조체
 type DequeueResult struct {
 	Status  DequeueStatus
 	Message *qmodel.PendingMessage
@@ -50,14 +50,14 @@ type pendingMessagePayload struct {
 	BatchQuestions []string `json:"batchQuestions,omitempty"`
 }
 
-// PendingMessageStore 는 타입이다.
+// PendingMessageStore: 스무고개 게임 대기 메시지를 Redis에 저장하는 저장소 (common/pending 래퍼)
 type PendingMessageStore struct {
 	client valkey.Client
 	logger *slog.Logger
 	store  *pending.Store
 }
 
-// NewPendingMessageStore 는 동작을 수행한다.
+// NewPendingMessageStore: 새로운 PendingMessageStore 인스턴스를 생성한다.
 func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingMessageStore {
 	config := pending.Config{
 		KeyPrefix:            qconfig.RedisKeyPendingPrefix,
@@ -74,7 +74,7 @@ func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingM
 	}
 }
 
-// Enqueue 는 동작을 수행한다.
+// Enqueue: 메시지를 JSON으로 변환하여 대기열에 추가하고 결과를 반환한다.
 func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, message qmodel.PendingMessage) (EnqueueResult, error) {
 	payload := pendingMessagePayload{
 		Content:        message.Content,
@@ -90,12 +90,12 @@ func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, messag
 
 	result, err := s.store.Enqueue(ctx, chatID, message.UserID, message.Timestamp, string(jsonValue))
 	if err != nil {
-		return EnqueueQueueFull, qerrors.RedisError{Operation: "pending_enqueue", Err: err}
+		return EnqueueQueueFull, cerrors.RedisError{Operation: "pending_enqueue", Err: err}
 	}
 	return result, nil
 }
 
-// EnqueueReplacingDuplicate 는 동작을 수행한다.
+// EnqueueReplacingDuplicate: 중복 메시지가 있을 경우 기존 메시지를 삭제하고 최신 메시지로 대체하여 대기열에 추가한다.
 func (s *PendingMessageStore) EnqueueReplacingDuplicate(ctx context.Context, chatID string, message qmodel.PendingMessage) (EnqueueResult, error) {
 	payload := pendingMessagePayload{
 		Content:        message.Content,
@@ -111,16 +111,16 @@ func (s *PendingMessageStore) EnqueueReplacingDuplicate(ctx context.Context, cha
 
 	result, err := s.store.EnqueueReplacingDuplicate(ctx, chatID, message.UserID, message.Timestamp, string(jsonValue))
 	if err != nil {
-		return EnqueueQueueFull, qerrors.RedisError{Operation: "pending_enqueue", Err: err}
+		return EnqueueQueueFull, cerrors.RedisError{Operation: "pending_enqueue", Err: err}
 	}
 	return result, nil
 }
 
-// Dequeue 는 동작을 수행한다.
+// Dequeue: 대기열에서 가장 오래된 메시지를 꺼내어 반환한다. (FIFO)
 func (s *PendingMessageStore) Dequeue(ctx context.Context, chatID string) (DequeueResult, error) {
 	result, err := s.store.Dequeue(ctx, chatID)
 	if err != nil {
-		return DequeueResult{}, qerrors.RedisError{Operation: "pending_dequeue", Err: err}
+		return DequeueResult{}, cerrors.RedisError{Operation: "pending_dequeue", Err: err}
 	}
 
 	switch result.Status {
@@ -148,16 +148,16 @@ func (s *PendingMessageStore) Dequeue(ctx context.Context, chatID string) (Deque
 	}
 }
 
-// Size 는 동작을 수행한다.
+// Size: 현재 대기열에 쌓여있는 메시지의 개수를 반환한다.
 func (s *PendingMessageStore) Size(ctx context.Context, chatID string) (int, error) {
 	n, err := s.store.Size(ctx, chatID)
 	if err != nil {
-		return 0, qerrors.RedisError{Operation: "pending_size", Err: err}
+		return 0, cerrors.RedisError{Operation: "pending_size", Err: err}
 	}
 	return n, nil
 }
 
-// HasPending 는 동작을 수행한다.
+// HasPending: 대기 중인 메시지가 하나라도 있는지 확인한다.
 func (s *PendingMessageStore) HasPending(ctx context.Context, chatID string) (bool, error) {
 	has, err := s.store.HasPending(ctx, chatID)
 	if err != nil {
@@ -166,11 +166,11 @@ func (s *PendingMessageStore) HasPending(ctx context.Context, chatID string) (bo
 	return has, nil
 }
 
-// GetQueueDetails 는 동작을 수행한다.
+// GetQueueDetails: 대기열의 메시지 목록 요약 정보를 문자열로 반환한다. (디버깅용)
 func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string) (string, error) {
 	entries, err := s.store.GetRawEntries(ctx, chatID)
 	if err != nil {
-		return "", qerrors.RedisError{Operation: "pending_queue_details", Err: err}
+		return "", cerrors.RedisError{Operation: "pending_queue_details", Err: err}
 	}
 	if len(entries) == 0 {
 		return "", nil
@@ -202,26 +202,26 @@ func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string
 	return strings.Join(lines, "\n"), nil
 }
 
-// Clear 는 동작을 수행한다.
+// Clear: 대기열의 모든 메시지를 삭제한다.
 func (s *PendingMessageStore) Clear(ctx context.Context, chatID string) error {
 	if err := s.store.Clear(ctx, chatID); err != nil {
-		return qerrors.RedisError{Operation: "pending_clear", Err: err}
+		return cerrors.RedisError{Operation: "pending_clear", Err: err}
 	}
 	return nil
 }
 
-// SetChainSkipFlag 체인 질문 스킵 플래그 설정.
+// SetChainSkipFlag: 특정 사용자에 대해 체인 질문 스킵 플래그를 설정한다. (체인 질문 중단 시 사용)
 func (s *PendingMessageStore) SetChainSkipFlag(ctx context.Context, chatID string, userID string) error {
 	key := chainSkipFlagKey(chatID, userID)
 	cmd := s.client.B().Set().Key(key).Value("1").Ex(time.Duration(qconfig.RedisQueueTTLSeconds) * time.Second).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "set_chain_skip_flag", Err: err}
+		return cerrors.RedisError{Operation: "set_chain_skip_flag", Err: err}
 	}
 	s.logger.Debug("chain_skip_flag_set", "chat_id", chatID, "user_id", userID)
 	return nil
 }
 
-// CheckAndClearChainSkipFlag 체인 질문 스킵 플래그 확인 및 삭제.
+// CheckAndClearChainSkipFlag: 스킵 플래그를 확인하고 만약 설정되어 있다면 true를 반환하며 플래그를 삭제한다. (GetDel)
 func (s *PendingMessageStore) CheckAndClearChainSkipFlag(ctx context.Context, chatID string, userID string) (bool, error) {
 	key := chainSkipFlagKey(chatID, userID)
 	cmd := s.client.B().Getdel().Key(key).Build()
@@ -230,7 +230,7 @@ func (s *PendingMessageStore) CheckAndClearChainSkipFlag(ctx context.Context, ch
 		if valkeyx.IsNil(err) {
 			return false, nil
 		}
-		return false, qerrors.RedisError{Operation: "check_chain_skip_flag", Err: err}
+		return false, cerrors.RedisError{Operation: "check_chain_skip_flag", Err: err}
 	}
 	s.logger.Debug("chain_skip_flag_cleared", "chat_id", chatID, "user_id", userID)
 	return res == "1", nil

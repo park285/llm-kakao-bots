@@ -6,22 +6,24 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// StreamStatus 는 타입이다.
+// StreamStatus: 방송 상태(진행 중, 예정, 종료)를 나타내는 열거형
 type StreamStatus string
 
 // StreamStatus 상수 목록.
 const (
-	// StreamStatusLive 는 상수다.
-	StreamStatusLive     StreamStatus = "live"
+	// StreamStatusLive: 방송 진행 중
+	StreamStatusLive StreamStatus = "live"
+	// StreamStatusUpcoming: 방송 예정
 	StreamStatusUpcoming StreamStatus = "upcoming"
-	StreamStatusPast     StreamStatus = "past"
+	// StreamStatusPast: 방송 종료됨
+	StreamStatusPast StreamStatus = "past"
 )
 
 func (s StreamStatus) String() string {
 	return string(s)
 }
 
-// IsValid 는 동작을 수행한다.
+// IsValid: 방송 상태 값이 유효한지 검증한다.
 func (s StreamStatus) IsValid() bool {
 	switch s {
 	case StreamStatusLive, StreamStatusUpcoming, StreamStatusPast:
@@ -31,7 +33,7 @@ func (s StreamStatus) IsValid() bool {
 	}
 }
 
-// Stream 는 타입이다.
+// Stream: Holodex 등에서 수집한 방송(스트림) 상세 정보
 type Stream struct {
 	ID             string       `json:"id"`
 	Title          string       `json:"title"`
@@ -47,7 +49,7 @@ type Stream struct {
 	Channel        *Channel     `json:"channel,omitempty"`
 }
 
-// IsLive 는 동작을 수행한다.
+// IsLive: 방송이 현재 진행 중('live')인지 확인한다.
 func (s *Stream) IsLive() bool {
 	if s == nil {
 		return false
@@ -55,7 +57,7 @@ func (s *Stream) IsLive() bool {
 	return s.Status == StreamStatusLive
 }
 
-// IsUpcoming 는 동작을 수행한다.
+// IsUpcoming: 방송이 예정('upcoming') 상태인지 확인한다.
 func (s *Stream) IsUpcoming() bool {
 	if s == nil {
 		return false
@@ -63,7 +65,7 @@ func (s *Stream) IsUpcoming() bool {
 	return s.Status == StreamStatusUpcoming
 }
 
-// IsPast 는 동작을 수행한다.
+// IsPast: 방송이 종료('past')되었는지 확인한다.
 func (s *Stream) IsPast() bool {
 	if s == nil {
 		return false
@@ -71,7 +73,7 @@ func (s *Stream) IsPast() bool {
 	return s.Status == StreamStatusPast
 }
 
-// GetYouTubeURL 는 동작을 수행한다.
+// GetYouTubeURL: 방송 시청을 위한 YouTube URL을 반환한다. (Link 필드가 없으면 ID로 생성)
 func (s *Stream) GetYouTubeURL() string {
 	if s == nil {
 		return ""
@@ -82,7 +84,8 @@ func (s *Stream) GetYouTubeURL() string {
 	return "https://youtube.com/watch?v=" + s.ID
 }
 
-// TimeUntilStart 는 동작을 수행한다.
+// TimeUntilStart: 예정된 방송 시작 시각까지 남은 시간을 Duration으로 반환한다.
+// 이미 시작 시간이 지났거나 예정 시간이 없으면 nil을 반환한다.
 func (s *Stream) TimeUntilStart() *time.Duration {
 	if s.StartScheduled == nil {
 		return nil
@@ -97,7 +100,7 @@ func (s *Stream) TimeUntilStart() *time.Duration {
 	return &duration
 }
 
-// MinutesUntilStart 는 동작을 수행한다.
+// MinutesUntilStart: 방송 시작까지 남은 시간을 '분' 단위(올림)로 계산하여 반환한다.
 func (s *Stream) MinutesUntilStart() int {
 	return util.MinutesUntilCeil(s.StartScheduled, time.Now())
 }

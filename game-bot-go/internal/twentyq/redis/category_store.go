@@ -10,16 +10,16 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
-// CategoryStore 는 타입이다.
+// CategoryStore: 현재 게임의 카테고리 정보를 관리하는 저장소
 type CategoryStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewCategoryStore 는 동작을 수행한다.
+// NewCategoryStore: 새로운 CategoryStore 인스턴스를 생성한다.
 func NewCategoryStore(client valkey.Client, logger *slog.Logger) *CategoryStore {
 	return &CategoryStore{
 		client: client,
@@ -27,14 +27,14 @@ func NewCategoryStore(client valkey.Client, logger *slog.Logger) *CategoryStore 
 	}
 }
 
-// Save 는 동작을 수행한다.
+// Save: 현재 게임의 카테고리를 저장한다.
 func (s *CategoryStore) Save(ctx context.Context, chatID string, category *string) error {
 	key := categoryKey(chatID)
 
 	if category == nil || strings.TrimSpace(*category) == "" {
 		cmd := s.client.B().Del().Key(key).Build()
 		if err := s.client.Do(ctx, cmd).Error(); err != nil {
-			return qerrors.RedisError{Operation: "category_delete", Err: err}
+			return cerrors.RedisError{Operation: "category_delete", Err: err}
 		}
 		return nil
 	}
@@ -42,13 +42,13 @@ func (s *CategoryStore) Save(ctx context.Context, chatID string, category *strin
 	value := strings.TrimSpace(*category)
 	cmd := s.client.B().Set().Key(key).Value(value).Ex(time.Duration(qconfig.RedisSessionTTLSeconds) * time.Second).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "category_save", Err: err}
+		return cerrors.RedisError{Operation: "category_save", Err: err}
 	}
 	s.logger.Debug("category_saved", "chat_id", chatID, "category", value)
 	return nil
 }
 
-// Get 는 동작을 수행한다.
+// Get: 현재 설정된 카테고리를 조회한다.
 func (s *CategoryStore) Get(ctx context.Context, chatID string) (*string, error) {
 	key := categoryKey(chatID)
 
@@ -58,7 +58,7 @@ func (s *CategoryStore) Get(ctx context.Context, chatID string) (*string, error)
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, qerrors.RedisError{Operation: "category_get", Err: err}
+		return nil, cerrors.RedisError{Operation: "category_get", Err: err}
 	}
 
 	value = strings.TrimSpace(value)

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
@@ -64,7 +65,7 @@ func (s *RiddleService) handleRegularQuestionWithFlags(
 	if resp.Scale != nil {
 		if parsed, ok := qmodel.ParseFiveScaleKo(*resp.Scale); ok {
 			if *parsed == qmodel.FiveScaleInvalid {
-				return "", qmodel.FiveScaleAlwaysNo, qerrors.InvalidQuestionError{Message: "invalid question"}
+				return "", qmodel.FiveScaleAlwaysNo, cerrors.InvalidQuestionError{Message: "invalid question"}
 			}
 			scale = *parsed
 			answerToken = qmodel.FiveScaleToken(*parsed)

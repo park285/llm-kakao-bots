@@ -8,19 +8,20 @@ import (
 	"strings"
 	"time"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 	qredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/redis"
 	qsecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/security"
 )
 
-// GameMessageService 는 타입이다.
+// GameMessageService: 스무고개/바다거북스프 게임의 메시지 흐름을 총괄하는 오케스트레이터
+// 명령어 파싱, 락 관리, 비즈니스 로직 실행, 대기열 처리 및 응답 전송을 조정한다.
 type GameMessageService struct {
 	commandHandler         *GameCommandHandler
 	playerRegistrar        PlayerRegistrar
@@ -38,7 +39,7 @@ type GameMessageService struct {
 	logger                 *slog.Logger
 }
 
-// PlayerRegistrar 는 타입이다.
+// PlayerRegistrar: 게임 참여자(플레이어) 정보 등록 및 세션 존재 여부를 확인하는 인터페이스
 type PlayerRegistrar interface {
 	RegisterPlayerAsync(ctx context.Context, chatID string, userID string, sender *string)
 	HasSession(ctx context.Context, chatID string) (bool, error)
@@ -48,7 +49,7 @@ type hintAvailabilityChecker interface {
 	CanGenerateHint(ctx context.Context, chatID string) (bool, error)
 }
 
-// NewGameMessageService 는 동작을 수행한다.
+// NewGameMessageService: 모든 종속성을 주입받아 GameMessageService 인스턴스를 생성한다.
 func NewGameMessageService(
 	commandHandler *GameCommandHandler,
 	playerRegistrar PlayerRegistrar,
@@ -82,7 +83,8 @@ func NewGameMessageService(
 	}
 }
 
-// HandleMessage 는 동작을 수행한다.
+// HandleMessage: Kafka/Streams 등으로부터 수신된 인바운드 메시지를 처리한다.
+// 명령어를 파싱하고, 권한 및 세션을 확인한 뒤, 적절한 처리 과정(즉시 실행 또는 큐잉)으로 라우팅한다.
 func (s *GameMessageService) HandleMessage(ctx context.Context, message mqmsg.InboundMessage) {
 	cmd := s.commandParser.Parse(message.Content)
 	if cmd == nil {
@@ -146,7 +148,7 @@ func (s *GameMessageService) handleCommand(ctx context.Context, message mqmsg.In
 		return nil
 	})
 	if lockErr != nil {
-		var lockFailure qerrors.LockError
+		var lockFailure cerrors.LockError
 		if errors.As(lockErr, &lockFailure) {
 			s.logger.Warn("message_rejected_locked", "chat_id", message.ChatID, "user_id", message.UserID, "mode_write", command.RequiresWriteLock())
 			s.enqueueMessage(ctx, message)
@@ -164,6 +166,7 @@ func (s *GameMessageService) handleCommand(ctx context.Context, message mqmsg.In
 	s.processQueuedMessages(ctx, chatID)
 }
 
+// enqueueMessage: 현재 요청을 처리할 수 없는 상황(락 획득 실패, 처리 중 등)일 때 Redis 대기열에 메시지를 추가한다.
 func (s *GameMessageService) enqueueMessage(ctx context.Context, message mqmsg.InboundMessage) {
 	s.logger.Debug("message_enqueued", "chat_id", message.ChatID, "user_id", message.UserID)
 	_ = s.queueProcessor.EnqueueAndNotify(ctx, message.ChatID, message.UserID, message.Content, message.ThreadID, message.Sender, func(out mqmsg.OutboundMessage) error {
@@ -325,7 +328,8 @@ func (s *GameMessageService) sendFinalResponses(ctx context.Context, message mqm
 	return nil
 }
 
-// HandleQueuedCommand 는 동작을 수행한다.
+// HandleQueuedCommand: 대기열(Pending Queue)에서 꺼낸 명령어를 처리한다.
+// 락을 이미 획득했거나 처리 가능한 상태라고 가정하고 실행한다.
 func (s *GameMessageService) HandleQueuedCommand(
 	ctx context.Context,
 	message mqmsg.InboundMessage,
@@ -381,7 +385,7 @@ func emitChunkedResponses(chatID string, threadID *string, responses []string, e
 	return nil
 }
 
-// HandleQueuedChainBatch 는 동작을 수행한다.
+// HandleQueuedChainBatch: 대기열에서 꺼낸 연쇄 질문(Chain Question) 배치 그룹을 처리한다.
 func (s *GameMessageService) HandleQueuedChainBatch(
 	ctx context.Context,
 	chatID string,
@@ -392,7 +396,7 @@ func (s *GameMessageService) HandleQueuedChainBatch(
 }
 
 func (s *GameMessageService) handleDirectFailure(ctx context.Context, message mqmsg.InboundMessage, err error) {
-	var lockErr qerrors.LockError
+	var lockErr cerrors.LockError
 	if errors.As(err, &lockErr) {
 		_ = s.messageSender.SendLockError(ctx, message)
 		return
@@ -407,7 +411,7 @@ func (s *GameMessageService) handleQueuedFailure(
 	err error,
 	emit func(mqmsg.OutboundMessage) error,
 ) error {
-	var lockErr qerrors.LockError
+	var lockErr cerrors.LockError
 	if errors.As(err, &lockErr) {
 		text := s.msgProvider.Get(qmessages.LockRequestInProgress)
 		return emit(mqmsg.NewError(message.ChatID, text, message.ThreadID))

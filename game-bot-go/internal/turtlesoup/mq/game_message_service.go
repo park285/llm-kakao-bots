@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"time"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
 	tsmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/messages"
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 	tssecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/security"
@@ -153,7 +153,7 @@ func (s *GameMessageService) handleDirectFailure(ctx context.Context, message mq
 		return
 	}
 
-	var lockErr *tserrors.LockError
+	var lockErr *cerrors.LockError
 	if errors.As(err, &lockErr) {
 		_ = s.messageSender.SendLockError(ctx, message, lockErr.HolderName)
 		return

@@ -9,16 +9,17 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// ConfigLoader 는 타입이다.
+// ConfigLoader: 설정을 로드하는 함수 타입
 type ConfigLoader[C any] func() (*C, error)
 
-// LogConfigGetter 는 타입이다.
+// LogConfigGetter: 설정에서 로깅 설정을 추출하는 함수 타입
 type LogConfigGetter[C any] func(*C) commonconfig.LogConfig
 
-// AppInitializer 는 타입이다.
+// AppInitializer: 애플리케이션 초기화 함수 타입 (ServerApp과 정리 함수 반환)
 type AppInitializer[C any] func(context.Context, *C, *slog.Logger) (*ServerApp, func(), error)
 
-// RunBotEntrypoint 는 동작을 수행한다.
+// RunBotEntrypoint: 봇 애플리케이션의 공통 시작점.
+// .env 로드, 설정 로드, 로거 설정, 앱 초기화 및 실행을 담당한다.
 func RunBotEntrypoint[C any](
 	ctx context.Context,
 	logger *slog.Logger,

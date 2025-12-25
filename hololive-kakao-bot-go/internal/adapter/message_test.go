@@ -57,4 +57,3 @@ func TestParseMessage_InvalidAlarmCommand(t *testing.T) {
 		t.Fatalf("expected action invalid, got %v", result.Params["action"])
 	}
 }
-

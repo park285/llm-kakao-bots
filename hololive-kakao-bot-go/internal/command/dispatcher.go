@@ -6,7 +6,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 )
 
-// NormalizeFunc 는 타입이다.
+// NormalizeFunc: 명령어 타입과 파라미터를 기반으로 실행할 명령어 키와 최종 파라미터를 결정하는 함수 타입
 type NormalizeFunc func(domain.CommandType, map[string]any) (string, map[string]any)
 
 type sequentialDispatcher struct {
@@ -14,7 +14,7 @@ type sequentialDispatcher struct {
 	normalize NormalizeFunc
 }
 
-// NewSequentialDispatcher 는 동작을 수행한다.
+// NewSequentialDispatcher: 이벤트를 순차적으로 처리하는 기본 Dispatcher 구현체를 생성한다.
 func NewSequentialDispatcher(registry *Registry, normalize NormalizeFunc) Dispatcher {
 	return &sequentialDispatcher{registry: registry, normalize: normalize}
 }

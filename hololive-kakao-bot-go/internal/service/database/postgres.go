@@ -6,22 +6,23 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq" // PostgreSQL 드라이버 등록
-	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
 
+	"log/slog"
+
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
 
-// PostgresService 는 타입이다.
+// PostgresService: PostgreSQL 데이터베이스 연결 및 GORM 인스턴스를 관리하는 서비스
 type PostgresService struct {
 	db     *sql.DB
 	gormDB *gorm.DB
-	logger *zap.Logger
+	logger *slog.Logger
 }
 
-// PostgresConfig 는 타입이다.
+// PostgresConfig: PostgreSQL 접속 정보(Host, Port, User, Password, Database)를 담는 설정 구조체
 type PostgresConfig struct {
 	Host     string
 	Port     int
@@ -30,8 +31,9 @@ type PostgresConfig struct {
 	Database string
 }
 
-// NewPostgresService 는 동작을 수행한다.
-func NewPostgresService(cfg PostgresConfig, logger *zap.Logger) (*PostgresService, error) {
+// NewPostgresService: 주어진 설정을 사용하여 PostgreSQL 연결을 수립하고 서비스를 초기화한다.
+// 연결 풀 설정 및 초기 헬스 체크(Ping)를 수행하며, GORM 인스턴스도 함께 초기화한다.
+func NewPostgresService(cfg PostgresConfig, logger *slog.Logger) (*PostgresService, error) {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database)
 
@@ -54,9 +56,9 @@ func NewPostgresService(cfg PostgresConfig, logger *zap.Logger) (*PostgresServic
 	}
 
 	logger.Info("PostgreSQL connected",
-		zap.String("host", cfg.Host),
-		zap.Int("port", cfg.Port),
-		zap.String("database", cfg.Database),
+		slog.String("host", cfg.Host),
+		slog.Int("port", cfg.Port),
+		slog.String("database", cfg.Database),
 	)
 
 	// Initialize GORM with existing connection
@@ -77,17 +79,17 @@ func NewPostgresService(cfg PostgresConfig, logger *zap.Logger) (*PostgresServic
 	}, nil
 }
 
-// GetDB 는 동작을 수행한다.
+// GetDB: 기본 sql.DB 인스턴스를 반환한다. (GORM이 아닌 raw SQL 사용 시 활용)
 func (ps *PostgresService) GetDB() *sql.DB {
 	return ps.db
 }
 
-// GetGormDB 는 동작을 수행한다.
+// GetGormDB: GORM DB 인스턴스를 반환한다. (ORM 기반 DB 조작 시 활용)
 func (ps *PostgresService) GetGormDB() *gorm.DB {
 	return ps.gormDB
 }
 
-// Close 는 동작을 수행한다.
+// Close: 데이터베이스 연결을 안전하게 종료한다.
 func (ps *PostgresService) Close() error {
 	if ps.db != nil {
 		if err := ps.db.Close(); err != nil {
@@ -97,7 +99,7 @@ func (ps *PostgresService) Close() error {
 	return nil
 }
 
-// Ping 는 동작을 수행한다.
+// Ping: 데이터베이스 연결 상태를 확인한다. (헬스 체크용)
 func (ps *PostgresService) Ping(ctx context.Context) error {
 	if err := ps.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("postgres ping failed: %w", err)

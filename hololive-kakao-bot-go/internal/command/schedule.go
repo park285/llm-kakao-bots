@@ -10,27 +10,27 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// ScheduleCommand 는 타입이다.
+// ScheduleCommand: 특정 멤버의 향후 방송 일정을 조회하여 보여주는 명령어
 type ScheduleCommand struct {
 	BaseCommand
 }
 
-// NewScheduleCommand 는 동작을 수행한다.
+// NewScheduleCommand: NewScheduleCommand 인스턴스를 생성한다.
 func NewScheduleCommand(deps *Dependencies) *ScheduleCommand {
 	return &ScheduleCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name 는 동작을 수행한다.
+// Name: 명령어의 고유 식별자('schedule')를 반환한다.
 func (c *ScheduleCommand) Name() string {
 	return "schedule"
 }
 
-// Description 는 동작을 수행한다.
+// Description: 명령어에 대한 사용자용 설명('특정 멤버 일정 조회')을 반환한다.
 func (c *ScheduleCommand) Description() string {
 	return "특정 멤버 일정 조회"
 }
 
-// Execute 는 동작을 수행한다.
+// Execute: 특정 멤버의 방송 일정을 조회하고, 결과를 포맷팅하여 채팅방에 전송한다.
 func (c *ScheduleCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {
 		return err

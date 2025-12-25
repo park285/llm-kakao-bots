@@ -11,11 +11,12 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/pending"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
-// PendingMessageStore 는 타입이다.
+// PendingMessageStore: 바다거북스프 게임의 대기 메시지(처리 전 명령어)를 Redis 큐에 저장하는 래퍼(Wrapper) 저장소
+// 공통 모듈(common/pending)을 사용하여 실제 저장 로직을 위임한다.
 type PendingMessageStore struct {
 	store *pending.Store
 }
@@ -26,7 +27,7 @@ type pendingMessagePayload struct {
 	Sender   *string `json:"sender,omitempty"`
 }
 
-// NewPendingMessageStore 는 동작을 수행한다.
+// NewPendingMessageStore: 새로운 PendingMessageStore 인스턴스를 생성한다.
 func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingMessageStore {
 	config := pending.DefaultConfig("pending:turtlesoup")
 	return &PendingMessageStore{
@@ -36,7 +37,7 @@ func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingM
 
 // ... EnqueueResult ...
 
-// Size 는 대기 메시지 수를 반환한다.
+// Size: 현재 대기열에 쌓여 있는 메시지의 개수를 반환한다.
 func (s *PendingMessageStore) Size(ctx context.Context, chatID string) (int, error) {
 	size, err := s.store.Size(ctx, chatID)
 	if err != nil {
@@ -48,14 +49,14 @@ func (s *PendingMessageStore) Size(ctx context.Context, chatID string) (int, err
 // EnqueueResult uses generic result type
 type EnqueueResult = pending.EnqueueResult
 
-// EnqueueSuccess 는 대기 메시지 enqueue 결과 상수 목록이다.
+// EnqueueSuccess: 대기열 등록 성공
 const (
 	EnqueueSuccess   = pending.EnqueueSuccess
 	EnqueueQueueFull = pending.EnqueueQueueFull
 	EnqueueDuplicate = pending.EnqueueDuplicate
 )
 
-// Enqueue 는 동작을 수행한다.
+// Enqueue: 메시지 내용을 JSON으로 직렬화하고, 공통 Store를 통해 Redis 대기열에 추가한다.
 func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, message tsmodel.PendingMessage) (EnqueueResult, error) {
 	payload := pendingMessagePayload{
 		Content:  message.Content,
@@ -75,20 +76,20 @@ func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, messag
 	return result, nil
 }
 
-// DequeueResult 는 타입이다.
+// DequeueResult: 대기열 조회 결과
 type DequeueResult struct {
 	Status  pending.DequeueStatus
 	Message *tsmodel.PendingMessage
 }
 
-// DequeueSuccess 는 대기 메시지 dequeue 결과 상수 목록이다.
+// DequeueSuccess: 대기열 조회 성공
 const (
 	DequeueSuccess   = pending.DequeueSuccess
 	DequeueEmpty     = pending.DequeueEmpty
 	DequeueExhausted = pending.DequeueExhausted
 )
 
-// Dequeue 는 동작을 수행한다.
+// Dequeue: 대기열에서 가장 오래된 메시지를 꺼내고(FIFO), Game PendingMessage 구조체로 변환하여 반환한다.
 func (s *PendingMessageStore) Dequeue(ctx context.Context, chatID string) (DequeueResult, error) {
 	result, err := s.store.Dequeue(ctx, chatID)
 	if err != nil {
@@ -118,7 +119,7 @@ func (s *PendingMessageStore) Dequeue(ctx context.Context, chatID string) (Deque
 	}
 }
 
-// HasPending 는 동작을 수행한다.
+// HasPending: 대기 중인 메시지가 있는지 확인한다.
 func (s *PendingMessageStore) HasPending(ctx context.Context, chatID string) (bool, error) {
 	has, err := s.store.HasPending(ctx, chatID)
 	if err != nil {
@@ -127,11 +128,11 @@ func (s *PendingMessageStore) HasPending(ctx context.Context, chatID string) (bo
 	return has, nil
 }
 
-// GetQueueDetails 는 동작을 수행한다.
+// GetQueueDetails: 대기열에 있는 모든 메시지의 요약 정보(순번, 사용자, 내용 등)를 문자열로 포맷팅하여 반환한다.
 func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string) (string, error) {
 	entries, err := s.store.GetRawEntries(ctx, chatID)
 	if err != nil {
-		return "", tserrors.RedisError{Operation: "pending_queue_details", Err: err}
+		return "", cerrors.RedisError{Operation: "pending_queue_details", Err: err}
 	}
 	if len(entries) == 0 {
 		return "", nil
@@ -157,10 +158,10 @@ func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string
 	return strings.Join(lines, "\n"), nil
 }
 
-// Clear 는 동작을 수행한다.
+// Clear: 대기열의 모든 메시지를 삭제한다.
 func (s *PendingMessageStore) Clear(ctx context.Context, chatID string) error {
 	if err := s.store.Clear(ctx, chatID); err != nil {
-		return tserrors.RedisError{Operation: "pending_clear", Err: err}
+		return cerrors.RedisError{Operation: "pending_clear", Err: err}
 	}
 	return nil
 }

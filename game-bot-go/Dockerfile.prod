@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
 ARG GO_VERSION=1.25.5
+ARG ALPINE_VERSION=3.23
 
-FROM golang:${GO_VERSION}-alpine3.23 AS builder
+FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 WORKDIR /app
 
@@ -11,40 +12,36 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 COPY . .
 
-# TwentyQ + TurtleSoup 봇 빌드 (단일 레이어로 병합)
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOEXPERIMENT=greenteagc \
-    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /app/bin/twentyq ./cmd/twentyq && \
-    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /app/bin/turtlesoup ./cmd/turtlesoup
+    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /dist/bin/twentyq ./cmd/twentyq && \
+    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /dist/bin/turtlesoup ./cmd/turtlesoup && \
+    mkdir -p /dist/logs /dist/internal/twentyq /dist/internal/turtlesoup && \
+    cp -r internal/twentyq/assets /dist/internal/twentyq/ && \
+    cp -r internal/turtlesoup/assets /dist/internal/turtlesoup/
 
-FROM alpine:3.23
+FROM alpine:${ALPINE_VERSION}
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone
 
-RUN addgroup -g 1000 appuser \
-    && adduser -D -u 1000 -G appuser appuser
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
 
 WORKDIR /app
 
-COPY --from=builder --chown=appuser:appuser /app/bin/twentyq ./bin/twentyq
-COPY --from=builder --chown=appuser:appuser /app/bin/turtlesoup ./bin/turtlesoup
-COPY --from=builder --chown=appuser:appuser /app/internal/twentyq/assets ./internal/twentyq/assets
-COPY --from=builder --chown=appuser:appuser /app/internal/turtlesoup/assets ./internal/turtlesoup/assets
+COPY --from=builder --link --chown=appuser:appuser /dist ./
 
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app
-
-# GC 최적화
-ENV GOGC=60
+ENV GOGC=200 \
+    GOMEMLIMIT=450MiB \
+    GIN_MODE=release
 
 EXPOSE 8081 8082
 
-# 헬스체크 (30초 간격, 시작 대기 5초)
-# 주의: 실제 포트는 실행되는 봇에 따라 다름 (twentyq: 8081, turtlesoup: 8082)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:8081/health || wget -q --spider http://localhost:8082/health || exit 1
+    CMD wget -q --spider http://127.0.0.1:8081/health || wget -q --spider http://127.0.0.1:8082/health || exit 1
 
 USER appuser
 
-# 기본값은 twentyq, docker run 시 --entrypoint로 변경 가능
 CMD ["./bin/twentyq"]
-

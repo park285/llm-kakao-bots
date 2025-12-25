@@ -8,7 +8,8 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/matcher"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
-	"go.uber.org/zap"
+
+	"log/slog"
 )
 
 func TestAlarmCommand_InvalidAction(t *testing.T) {
@@ -25,7 +26,7 @@ func TestAlarmCommand_InvalidAction(t *testing.T) {
 			sentError = message
 			return nil
 		},
-		Logger: zap.NewNop(),
+		Logger: slog.Default(),
 	}
 
 	cmd := NewAlarmCommand(deps)

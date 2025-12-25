@@ -68,32 +68,32 @@ func Register(
 }
 
 type (
-	// RiddleCreateRequest 는 문제 생성 요청 DTO다.
+	// RiddleCreateRequest: 스무고개 게임 생성 요청 DTO
 	RiddleCreateRequest struct {
 		Category *string `json:"category,omitempty"`
 	}
 
-	// RiddleCreateResponse 는 문제 생성 응답 DTO다.
+	// RiddleCreateResponse: 게임 생성 결과 응답 DTO
 	RiddleCreateResponse struct {
 		Message string `json:"message"`
 	}
 
-	// RiddleHintsRequest 는 힌트 요청 DTO다.
+	// RiddleHintsRequest: 힌트 요청 DTO
 	RiddleHintsRequest struct {
 		Count int `json:"count"`
 	}
 
-	// RiddleHintsResponse 는 힌트 응답 DTO다.
+	// RiddleHintsResponse: 힌트 생성 결과 응답 DTO
 	RiddleHintsResponse struct {
 		Hints []string `json:"hints"`
 	}
 
-	// RiddleAnswerRequest 는 정답 요청 DTO다.
+	// RiddleAnswerRequest: 사용자의 질문/정답 제출 요청 DTO
 	RiddleAnswerRequest struct {
 		Question string `json:"question"`
 	}
 
-	// RiddleAnswerResponse 는 정답 응답 DTO다.
+	// RiddleAnswerResponse: 질문에 대한 AI의 답변(Correct, Incorrect 등) 응답 DTO
 	RiddleAnswerResponse struct {
 		Scale string `json:"scale"`
 	}
@@ -302,7 +302,7 @@ func handleUserStats(
 	respondJSON(w, http.StatusOK, response)
 }
 
-// UserStatsResponse 사용자 통계 응답 DTO.
+// UserStatsResponse: 특정 사용자의 전체 스무고개 게임 통계 응답 DTO
 type UserStatsResponse struct {
 	UserID              string             `json:"userId"`
 	TotalGamesStarted   int                `json:"totalGamesStarted"`
@@ -314,7 +314,7 @@ type UserStatsResponse struct {
 	BestScore           *BestScoreResponse `json:"bestScore,omitempty"`
 }
 
-// BestScoreResponse 최고 기록 응답 DTO.
+// BestScoreResponse: 사용자의 최고 기록(최소 질문 성공 등) 정보 응답 DTO
 type BestScoreResponse struct {
 	QuestionCount   int        `json:"questionCount"`
 	WrongGuessCount int        `json:"wrongGuessCount"`

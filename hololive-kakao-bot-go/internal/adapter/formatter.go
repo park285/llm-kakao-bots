@@ -11,13 +11,13 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// AlarmListEntry 는 타입이다.
+// AlarmListEntry: 알림 목록 조회를 위한 개별 항목 (멤버 이름 및 다음 방송 정보 포함)
 type AlarmListEntry struct {
 	MemberName string
 	NextStream *domain.NextStreamInfo
 }
 
-// ResponseFormatter 는 타입이다.
+// ResponseFormatter: 봇의 응답 메시지를 생성하는 포맷터 (카카오톡 UI 템플릿 적용)
 type ResponseFormatter struct {
 	prefix string
 }
@@ -97,13 +97,13 @@ type channelScheduleTemplateData struct {
 	Streams     []scheduleEntryView
 }
 
-// MemberDirectoryGroup 는 타입이다.
+// MemberDirectoryGroup: 멤버 목록 표시를 위한 그룹 (예: 'JP 3기생', 'EN Promise')
 type MemberDirectoryGroup struct {
 	GroupName string
 	Members   []MemberDirectoryEntry
 }
 
-// MemberDirectoryEntry 는 타입이다.
+// MemberDirectoryEntry: 멤버 목록의 개별 항목 (주 이름 및 보조 이름 포함)
 type MemberDirectoryEntry struct {
 	PrimaryName   string
 	SecondaryName string
@@ -180,7 +180,7 @@ type helpTemplateData struct {
 	Prefix string
 }
 
-// NewResponseFormatter 는 동작을 수행한다.
+// NewResponseFormatter: 새로운 ResponseFormatter 인스턴스를 생성한다.
 func NewResponseFormatter(prefix string) *ResponseFormatter {
 	if util.TrimSpace(prefix) == "" {
 		prefix = "!"
@@ -188,7 +188,7 @@ func NewResponseFormatter(prefix string) *ResponseFormatter {
 	return &ResponseFormatter{prefix: prefix}
 }
 
-// Prefix 는 동작을 수행한다.
+// Prefix: 현재 설정된 명령어 접두사를 반환한다.
 func (f *ResponseFormatter) Prefix() string {
 	if f == nil {
 		return "!"
@@ -199,7 +199,7 @@ func (f *ResponseFormatter) Prefix() string {
 	return "!"
 }
 
-// FormatLiveStreams 는 동작을 수행한다.
+// FormatLiveStreams: 라이브 스트림 목록을 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) FormatLiveStreams(streams []*domain.Stream) string {
 	data := liveStreamsTemplateData{Emoji: DefaultEmoji, Count: len(streams)}
 	if len(streams) > 0 {
@@ -228,7 +228,7 @@ func (f *ResponseFormatter) FormatLiveStreams(streams []*domain.Stream) string {
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// UpcomingStreams 는 동작을 수행한다.
+// UpcomingStreams: 예정된 방송 목록을 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) UpcomingStreams(streams []*domain.Stream, hours int) string {
 	data := upcomingStreamsTemplateData{Emoji: DefaultEmoji, Count: len(streams), Hours: hours}
 	if len(streams) > 0 {
@@ -258,7 +258,7 @@ func (f *ResponseFormatter) UpcomingStreams(streams []*domain.Stream, hours int)
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// ChannelSchedule 는 동작을 수행한다.
+// ChannelSchedule: 특정 채널의 방송 일정을 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) ChannelSchedule(channel *domain.Channel, streams []*domain.Stream, days int) string {
 	data := channelScheduleTemplateData{Emoji: DefaultEmoji, Days: days, Count: len(streams)}
 	if channel != nil {
@@ -297,7 +297,7 @@ func (f *ResponseFormatter) ChannelSchedule(channel *domain.Channel, streams []*
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// FormatAlarmAdded 는 동작을 수행한다.
+// FormatAlarmAdded: 알림 추가 성공 메시지를 생성한다. (다음 정규 방송 정보 포함)
 func (f *ResponseFormatter) FormatAlarmAdded(memberName string, added bool, nextStreamInfo *domain.NextStreamInfo) string {
 	data := alarmAddedTemplateData{
 		Emoji:      DefaultEmoji,
@@ -315,7 +315,7 @@ func (f *ResponseFormatter) FormatAlarmAdded(memberName string, added bool, next
 	return rendered
 }
 
-// FormatAlarmRemoved 는 동작을 수행한다.
+// FormatAlarmRemoved: 알림 삭제 성공 메시지를 생성한다.
 func (f *ResponseFormatter) FormatAlarmRemoved(memberName string, removed bool) string {
 	data := alarmRemovedTemplateData{
 		Emoji:      DefaultEmoji,
@@ -394,7 +394,7 @@ func formatUpcomingTimeDetail(timeLeft time.Duration) string {
 	}
 }
 
-// FormatAlarmList 는 동작을 수행한다.
+// FormatAlarmList: 사용자의 현재 알림 목록을 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) FormatAlarmList(alarms []AlarmListEntry) string {
 	processed := make([]alarmListEntryView, len(alarms))
 	for idx, alarm := range alarms {
@@ -426,7 +426,7 @@ func (f *ResponseFormatter) FormatAlarmList(alarms []AlarmListEntry) string {
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// FormatAlarmCleared 는 동작을 수행한다.
+// FormatAlarmCleared: 알림 전체 삭제 완료 메시지를 생성한다.
 func (f *ResponseFormatter) FormatAlarmCleared(count int) string {
 	data := alarmClearedTemplateData{Emoji: DefaultEmoji, Count: count}
 	rendered, err := executeFormatterTemplate("alarm_cleared.tmpl", data)
@@ -437,12 +437,12 @@ func (f *ResponseFormatter) FormatAlarmCleared(count int) string {
 	return rendered
 }
 
-// InvalidAlarmUsage 는 동작을 수행한다.
+// InvalidAlarmUsage: 알림 명령어의 잘못된 사용법에 대한 안내 메시지를 반환한다.
 func (f *ResponseFormatter) InvalidAlarmUsage() string {
 	return ErrInvalidAlarmUsage
 }
 
-// AlarmNotification 는 동작을 수행한다.
+// AlarmNotification: 단일 방송 알림 메시지를 생성한다.
 func (f *ResponseFormatter) AlarmNotification(notification *domain.AlarmNotification) string {
 	if notification == nil || notification.Stream == nil {
 		return ""
@@ -471,7 +471,7 @@ func (f *ResponseFormatter) AlarmNotification(notification *domain.AlarmNotifica
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// AlarmNotificationGroup 는 동작을 수행한다.
+// AlarmNotificationGroup: 여러 방송의 알림을 하나로 묶어 그룹 메시지를 생성한다. (알림 폭탄 방지)
 func (f *ResponseFormatter) AlarmNotificationGroup(minutesUntil int, notifications []*domain.AlarmNotification) string {
 	if len(notifications) == 0 {
 		return ""
@@ -543,7 +543,7 @@ func (f *ResponseFormatter) AlarmNotificationGroup(minutesUntil int, notificatio
 	return util.ApplyKakaoSeeMorePadding(content, instruction)
 }
 
-// MemberDirectory 는 동작을 수행한다.
+// MemberDirectory: 전체 멤버 디렉토리 목록을 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) MemberDirectory(groups []MemberDirectoryGroup, total int) string {
 	viewGroups := prepareMemberDirectoryGroups(groups)
 
@@ -616,7 +616,7 @@ func prepareMemberDirectoryGroups(groups []MemberDirectoryGroup) []memberDirecto
 	return views
 }
 
-// FormatHelp 는 동작을 수행한다.
+// FormatHelp: 도움말 메시지를 생성한다.
 func (f *ResponseFormatter) FormatHelp() string {
 	data := helpTemplateData{Emoji: DefaultEmoji, Prefix: f.prefix}
 	rendered, err := executeFormatterTemplate("help.tmpl", data)
@@ -631,12 +631,12 @@ func (f *ResponseFormatter) FormatHelp() string {
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// FormatError 는 동작을 수행한다.
+// FormatError: 에러 메시지를 사용자 친화적인 포맷으로 변환한다.
 func (f *ResponseFormatter) FormatError(message string) string {
 	return ErrorMessage(message)
 }
 
-// MemberNotFound 는 동작을 수행한다.
+// MemberNotFound: 멤버를 찾을 수 없을 때의 에러 메시지를 생성한다.
 func (f *ResponseFormatter) MemberNotFound(memberName string) string {
 	return f.FormatError(fmt.Sprintf("'%s' 멤버를 찾을 수 없습니다.", memberName))
 }
@@ -783,7 +783,7 @@ func formatProfileOfficialURL(raw *domain.TalentProfile) string {
 	return fmt.Sprintf("\n%s 공식 프로필: %s", DefaultEmoji.Web, util.TrimSpace(raw.OfficialURL))
 }
 
-// FormatTalentProfile 는 동작을 수행한다.
+// FormatTalentProfile: 탤런트 프로필 정보를 포맷팅하여 메시지 문자열을 생성한다.
 func (f *ResponseFormatter) FormatTalentProfile(raw *domain.TalentProfile, translated *domain.Translated) string {
 	if raw == nil {
 		return ErrorMessage(ErrDisplayProfileDataFailed)

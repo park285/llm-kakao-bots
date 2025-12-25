@@ -3,11 +3,13 @@ package pending
 // EnqueueResult Lua 스크립트 enqueue 결과.
 type EnqueueResult int
 
-// EnqueueResult 상수 목록.
+// EnqueueResult: 메시지 등록 결과를 나타내는 상태 상수
 const (
-	// EnqueueSuccess 는 상수다.
+	// EnqueueSuccess: 메시지가 성공적으로 대기열에 등록됨
 	EnqueueSuccess EnqueueResult = iota
+	// EnqueueQueueFull: 대기열이 가득 차서 등록 실패
 	EnqueueQueueFull
+	// EnqueueDuplicate: 이미 해당 사용자의 대기 메시지가 존재함 (중복)
 	EnqueueDuplicate
 )
 
@@ -27,12 +29,13 @@ func (r EnqueueResult) String() string {
 // DequeueStatus Lua 스크립트 dequeue 결과 상태.
 type DequeueStatus int
 
+// DequeueStatus: 메시지 추출 결과를 나타내는 상태 상수
 const (
-	// DequeueEmpty 큐가 비어있음.
+	// DequeueEmpty: 대기열이 비어있음
 	DequeueEmpty DequeueStatus = iota
-	// DequeueExhausted 루프 제한 도달 (뒤에 데이터 있을 수 있음).
+	// DequeueExhausted: 처리 가능한 메시지를 찾지 못하고 탐색 종료 (스킵된 메시지만 있을 경우 등)
 	DequeueExhausted
-	// DequeueSuccess 유효한 메시지 반환.
+	// DequeueSuccess: 유효한 메시지를 성공적으로 추출함
 	DequeueSuccess
 )
 
@@ -49,12 +52,11 @@ func (s DequeueStatus) String() string {
 	}
 }
 
-// Message 큐에 저장되는 메시지 인터페이스.
-// UserID와 Timestamp는 Lua 스크립트에서 중복 체크/stale 검사에 필수.
+// Message: 큐에 저장될 수 있는 메시지 객체의 공통 인터페이스
 type Message interface {
-	// GetUserID 중복 체크용 사용자 ID.
+	// GetUserID: 중복 체크를 위한 사용자 식별자를 반환한다.
 	GetUserID() string
-	// GetTimestamp stale 체크용 타임스탬프 (Unix ms).
+	// GetTimestamp: 오래된 메시지 처리를 위한 타임스탬프(Unix ms)를 반환한다.
 	GetTimestamp() int64
 }
 

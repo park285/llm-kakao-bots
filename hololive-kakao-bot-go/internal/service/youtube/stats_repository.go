@@ -6,27 +6,27 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
 )
 
-// StatsRepository 는 타입이다.
+// StatsRepository: YouTube 채널 통계 데이터(구독자 수 등)를 관리하는 저장소 (TimescaleDB)
 type StatsRepository struct {
 	db     *sql.DB
-	logger *zap.Logger
+	logger *slog.Logger
 }
 
-// NewYouTubeStatsRepository 는 동작을 수행한다.
-func NewYouTubeStatsRepository(postgres *database.PostgresService, logger *zap.Logger) *StatsRepository {
+// NewYouTubeStatsRepository: 새로운 StatsRepository 인스턴스를 생성한다.
+func NewYouTubeStatsRepository(postgres *database.PostgresService, logger *slog.Logger) *StatsRepository {
 	return &StatsRepository{
 		db:     postgres.GetDB(),
 		logger: logger,
 	}
 }
 
-// SaveStats 는 동작을 수행한다.
+// SaveStats: 채널 통계 데이터를 저장한다.
 func (r *StatsRepository) SaveStats(ctx context.Context, stats *domain.TimestampedStats) error {
 	query := `
 		INSERT INTO youtube_stats_history (time, channel_id, member_name, subscribers, videos, views)
@@ -51,14 +51,14 @@ func (r *StatsRepository) SaveStats(ctx context.Context, stats *domain.Timestamp
 	}
 
 	r.logger.Debug("Stats saved to TimescaleDB",
-		zap.String("channel", stats.ChannelID),
-		zap.Uint64("subscribers", stats.SubscriberCount),
+		slog.String("channel", stats.ChannelID),
+		slog.Any("subscribers", stats.SubscriberCount),
 	)
 
 	return nil
 }
 
-// GetLatestStats 는 동작을 수행한다.
+// GetLatestStats: 각 채널의 최신 통계 데이터를 조회한다.
 func (r *StatsRepository) GetLatestStats(ctx context.Context, channelID string) (*domain.TimestampedStats, error) {
 	query := `
 		SELECT time, channel_id, member_name, subscribers, videos, views
@@ -94,7 +94,7 @@ func (r *StatsRepository) GetLatestStats(ctx context.Context, channelID string) 
 	return &stats, nil
 }
 
-// RecordChange 는 동작을 수행한다.
+// RecordChange: 구독자 수 등의 변화를 기록한다.
 func (r *StatsRepository) RecordChange(ctx context.Context, change *domain.StatsChange) error {
 	query := `
 		INSERT INTO youtube_stats_changes
@@ -133,15 +133,15 @@ func (r *StatsRepository) RecordChange(ctx context.Context, change *domain.Stats
 	}
 
 	r.logger.Info("Change recorded",
-		zap.String("member", change.MemberName),
-		zap.Int64("sub_change", change.SubscriberChange),
-		zap.Int64("vid_change", change.VideoChange),
+		slog.String("member", change.MemberName),
+		slog.Int64("sub_change", change.SubscriberChange),
+		slog.Int64("vid_change", change.VideoChange),
 	)
 
 	return nil
 }
 
-// SaveMilestone 는 동작을 수행한다.
+// RecordMilestone: 구독자 수 달성 등 마일스톤 이벤트를 기록한다.
 func (r *StatsRepository) SaveMilestone(ctx context.Context, milestone *domain.Milestone) error {
 	query := `
 		INSERT INTO youtube_milestones (channel_id, member_name, type, value, achieved_at, notified)
@@ -162,15 +162,15 @@ func (r *StatsRepository) SaveMilestone(ctx context.Context, milestone *domain.M
 	}
 
 	r.logger.Info("Milestone saved",
-		zap.String("member", milestone.MemberName),
-		zap.String("type", string(milestone.Type)),
-		zap.Uint64("value", milestone.Value),
+		slog.String("member", milestone.MemberName),
+		slog.String("type", string(milestone.Type)),
+		slog.Any("value", milestone.Value),
 	)
 
 	return nil
 }
 
-// GetUnnotifiedChanges 는 동작을 수행한다.
+// GetUnnotifiedChanges: 아직 알림이 발송되지 않은 통계 변화 내역을 최신순으로 조회한다.
 func (r *StatsRepository) GetUnnotifiedChanges(ctx context.Context, limit int) ([]*domain.StatsChange, error) {
 	query := `
 		SELECT channel_id, member_name, subscriber_change, video_change, view_change, detected_at
@@ -197,7 +197,7 @@ func (r *StatsRepository) GetUnnotifiedChanges(ctx context.Context, limit int) (
 			&change.ViewChange,
 			&change.DetectedAt,
 		); err != nil {
-			r.logger.Warn("Failed to scan change row", zap.Error(err))
+			r.logger.Warn("Failed to scan change row", slog.Any("error", err))
 			continue
 		}
 		changes = append(changes, &change)
@@ -210,7 +210,7 @@ func (r *StatsRepository) GetUnnotifiedChanges(ctx context.Context, limit int) (
 	return changes, nil
 }
 
-// MarkChangeNotified 는 동작을 수행한다.
+// MarkChangeNotified: 특정 통계 변화 내역을 알림 발송 완료 상태로 처리한다.
 func (r *StatsRepository) MarkChangeNotified(ctx context.Context, channelID string, detectedAt time.Time) error {
 	query := `
 		UPDATE youtube_stats_changes
@@ -226,7 +226,7 @@ func (r *StatsRepository) MarkChangeNotified(ctx context.Context, channelID stri
 	return nil
 }
 
-// GetTopGainers 는 동작을 수행한다.
+// GetTopGainers: 특정 시점 이후 구독자 증가량이 가장 높은 채널 상위 목록을 조회한다.
 func (r *StatsRepository) GetTopGainers(ctx context.Context, since time.Time, limit int) ([]domain.RankEntry, error) {
 	query := `
 		WITH latest AS (
@@ -267,7 +267,7 @@ func (r *StatsRepository) GetTopGainers(ctx context.Context, since time.Time, li
 		var entry domain.RankEntry
 		var currentSubs int64
 		if err := rows.Scan(&entry.ChannelID, &entry.MemberName, &entry.Value, &currentSubs); err != nil {
-			r.logger.Warn("Failed to scan rank entry", zap.Error(err))
+			r.logger.Warn("Failed to scan rank entry", slog.Any("error", err))
 			continue
 		}
 		if currentSubs > 0 {

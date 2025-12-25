@@ -3,9 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
@@ -42,7 +41,7 @@ func ProvidePostgresConfig(cfg *config.Config) config.PostgresConfig {
 }
 
 // ProvideCacheResources - 캐시 리소스 생성 (정리 함수 포함)
-func ProvideCacheResources(cfg config.ValkeyConfig, logger *zap.Logger) (*bootstrap.CacheResources, func(), error) {
+func ProvideCacheResources(cfg config.ValkeyConfig, logger *slog.Logger) (*bootstrap.CacheResources, func(), error) {
 	resources, err := bootstrap.NewCacheResources(cfg, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("캐시 리소스 생성 실패: %w", err)
@@ -56,7 +55,7 @@ func ProvideCacheService(resources *bootstrap.CacheResources) *cache.Service {
 }
 
 // ProvideDatabaseResources - 데이터베이스 리소스 생성 (정리 함수 포함)
-func ProvideDatabaseResources(cfg config.PostgresConfig, logger *zap.Logger) (*bootstrap.DatabaseResources, func(), error) {
+func ProvideDatabaseResources(cfg config.PostgresConfig, logger *slog.Logger) (*bootstrap.DatabaseResources, func(), error) {
 	resources, err := bootstrap.NewDatabaseResources(cfg, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("데이터베이스 리소스 생성 실패: %w", err)
@@ -86,7 +85,7 @@ func ProvideValkeyMQConfig(cfg *config.Config) mq.ValkeyMQConfig {
 }
 
 // ProvideIrisClient - Iris MQ 클라이언트 생성
-func ProvideIrisClient(mqCfg mq.ValkeyMQConfig, logger *zap.Logger) iris.Client {
+func ProvideIrisClient(mqCfg mq.ValkeyMQConfig, logger *slog.Logger) iris.Client {
 	return mq.NewValkeyMQClient(mqCfg, logger)
 }
 
@@ -95,7 +94,7 @@ func ProvideIrisClient(mqCfg mq.ValkeyMQConfig, logger *zap.Logger) iris.Client 
 // ----------------------------------------------------------------------------
 
 // ProvideMemberRepository - 멤버 저장소 생성
-func ProvideMemberRepository(postgres *database.PostgresService, logger *zap.Logger) *member.Repository {
+func ProvideMemberRepository(postgres *database.PostgresService, logger *slog.Logger) *member.Repository {
 	return member.NewMemberRepository(postgres, logger)
 }
 
@@ -103,7 +102,7 @@ func buildMemberCache(
 	ctx context.Context,
 	repo *member.Repository,
 	cacheSvc *cache.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*member.Cache, error) {
 	memberCache, err := member.NewMemberCache(ctx, repo, cacheSvc, logger, member.CacheConfig{
 		WarmUp:    true,
@@ -120,7 +119,7 @@ func ProvideMemberCache(
 	ctx context.Context,
 	repo *member.Repository,
 	cacheSvc *cache.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*member.Cache, error) {
 	memberCache, err := buildMemberCache(ctx, repo, cacheSvc, logger)
 	if err != nil {
@@ -136,7 +135,7 @@ func ProvideMemberCache(
 	// NOTE: 기존에는 wire_gen.go에 로직이 섞여 있었으나, 생성 코드 순수성을 위해 provider로 이동
 	members, err := repo.GetAllMembers(ctx)
 	if err != nil {
-		logger.Warn("Failed to load members for member database init", zap.Error(err))
+		logger.Warn("Failed to load members for member database init", slog.Any("error", err))
 		members = []*domain.Member{}
 	}
 
@@ -158,7 +157,7 @@ func ProvideMemberCache(
 func ProvideMemberCacheWithoutValkey(
 	ctx context.Context,
 	repo *member.Repository,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*member.Cache, error) {
 	return buildMemberCache(ctx, repo, nil, logger)
 }
@@ -186,7 +185,7 @@ func ProvideHolodexAPIKeys(cfg *config.Config) []string {
 func ProvideScraperService(
 	cacheSvc *cache.Service,
 	members *member.ServiceAdapter,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *holodex.ScraperService {
 	return holodex.NewScraperService(cacheSvc, members, logger)
 }
@@ -196,7 +195,7 @@ func ProvideHolodexService(
 	apiKeys []string,
 	cacheSvc *cache.Service,
 	scraper *holodex.ScraperService,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*holodex.Service, error) {
 	svc, err := holodex.NewHolodexService(apiKeys, cacheSvc, scraper, logger)
 	if err != nil {
@@ -214,7 +213,7 @@ func ProvideProfileService(
 	ctx context.Context,
 	cacheSvc *cache.Service,
 	members *member.ServiceAdapter,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*member.ProfileService, error) {
 	svc, err := member.NewProfileService(cacheSvc, members, logger)
 	if err != nil {
@@ -230,7 +229,7 @@ func ProvideMemberMatcher(
 	membersData domain.MemberDataProvider,
 	cacheSvc *cache.Service,
 	holodex *holodex.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *matcher.MemberMatcher {
 	// selector는 nil (Gemini AI 채널 선택 미사용)
 	return matcher.NewMemberMatcher(ctx, membersData, cacheSvc, holodex, nil, logger)
@@ -245,7 +244,7 @@ func ProvideAlarmService(
 	cfg *config.Config,
 	cacheSvc *cache.Service,
 	holodex *holodex.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *notification.AlarmService {
 	return notification.NewAlarmService(cacheSvc, holodex, logger, cfg.Notification.AdvanceMinutes)
 }
@@ -257,7 +256,7 @@ func ProvideAlarmService(
 // ProvideYouTubeStatsRepository - YouTube 통계 저장소 생성
 func ProvideYouTubeStatsRepository(
 	postgres *database.PostgresService,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *youtube.StatsRepository {
 	return youtube.NewYouTubeStatsRepository(postgres, logger)
 }
@@ -276,7 +275,7 @@ func ProvideYouTubeStack(
 	cacheSvc *cache.Service,
 	members *member.ServiceAdapter,
 	statsRepo *youtube.StatsRepository,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *YouTubeStack {
 	if !cfg.YouTube.EnableQuotaBuilding || cfg.YouTube.APIKey == "" {
 		logger.Info("YouTube 쿼터 빌딩 비활성화; 통계 저장소만 사용 가능")
@@ -285,14 +284,14 @@ func ProvideYouTubeStack(
 
 	svc, err := youtube.NewYouTubeService(ctx, cfg.YouTube.APIKey, cacheSvc, logger)
 	if err != nil {
-		logger.Warn("YouTube 서비스 초기화 실패 (선택적 기능)", zap.Error(err))
+		logger.Warn("YouTube 서비스 초기화 실패 (선택적 기능)", slog.Any("error", err))
 		return &YouTubeStack{StatsRepo: statsRepo}
 	}
 
-	scheduler := youtube.NewYouTubeScheduler(svc, cacheSvc, statsRepo, members, logger)
+	scheduler := youtube.NewScheduler(svc, cacheSvc, statsRepo, members, logger)
 	logger.Info("YouTube 쿼터 빌딩 활성화",
-		zap.String("mode", "API Key"),
-		zap.Int("daily_target", 9192))
+		slog.String("mode", "API Key"),
+		slog.Int("daily_target", 9192))
 
 	return &YouTubeStack{
 		Service:   svc,
@@ -306,20 +305,18 @@ func ProvideYouTubeStack(
 // ----------------------------------------------------------------------------
 
 // ProvideActivityLogger - 활동 로거 생성
-func ProvideActivityLogger(cfg *config.Config, logger *zap.Logger) *activity.Logger {
-	// Logging.File 경로에서 디렉토리 추출 (예: "logs/bot.log" -> "logs")
-	logDir := "logs"
-	if cfg.Logging.File != "" {
-		if idx := strings.LastIndex(cfg.Logging.File, "/"); idx > 0 {
-			logDir = cfg.Logging.File[:idx]
-		}
+func ProvideActivityLogger(cfg *config.Config, logger *slog.Logger) *activity.Logger {
+	// Logging.Dir에서 활동 로그 경로 생성
+	logDir := cfg.Logging.Dir
+	if logDir == "" {
+		logDir = "logs"
 	}
 	activityLogPath := logDir + "/activity.log"
 	return activity.NewActivityLogger(activityLogPath, logger)
 }
 
 // ProvideSettingsService - 설정 서비스 생성
-func ProvideSettingsService(logger *zap.Logger) *settings.Service {
+func ProvideSettingsService(logger *slog.Logger) *settings.Service {
 	return settings.NewSettingsService("settings.json", logger)
 }
 
@@ -328,7 +325,7 @@ func ProvideACLService(
 	cfg *config.Config,
 	postgres *database.PostgresService,
 	cacheSvc *cache.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*acl.Service, error) {
 	svc, err := acl.NewACLService(
 		postgres,
@@ -369,7 +366,7 @@ func ProvideMessageStack(cfg *config.Config) *MessageStack {
 // ProvideBotDependencies - 모든 의존성을 bot.Dependencies로 조립
 func ProvideBotDependencies(
 	cfg *config.Config,
-	logger *zap.Logger,
+	logger *slog.Logger,
 	irisClient iris.Client,
 	msgStack *MessageStack,
 	cacheSvc *cache.Service,

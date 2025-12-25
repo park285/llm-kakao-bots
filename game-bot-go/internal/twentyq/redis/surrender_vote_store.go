@@ -12,17 +12,17 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// SurrenderVoteStore 는 타입이다.
+// SurrenderVoteStore: 게임 항복(Surrender) 투표의 진행 상황과 상태를 Redis에 저장하고 관리하는 저장소
 type SurrenderVoteStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewSurrenderVoteStore 는 동작을 수행한다.
+// NewSurrenderVoteStore: 새로운 SurrenderVoteStore 인스턴스를 생성한다.
 func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *SurrenderVoteStore {
 	return &SurrenderVoteStore{
 		client: client,
@@ -30,7 +30,7 @@ func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *Surrender
 	}
 }
 
-// Get 는 동작을 수행한다.
+// Get: 현재 진행 중인 투표 상태(찬성자 목록, 만료 시간 등)를 조회한다.
 func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*qmodel.SurrenderVote, error) {
 	key := voteKey(chatID)
 
@@ -40,17 +40,17 @@ func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*qmodel.Su
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, qerrors.RedisError{Operation: "vote_get", Err: err}
+		return nil, cerrors.RedisError{Operation: "vote_get", Err: err}
 	}
 
 	var vote qmodel.SurrenderVote
 	if err := json.Unmarshal(raw, &vote); err != nil {
-		return nil, qerrors.RedisError{Operation: "vote_unmarshal", Err: err}
+		return nil, cerrors.RedisError{Operation: "vote_unmarshal", Err: err}
 	}
 	return &vote, nil
 }
 
-// Save 는 동작을 수행한다.
+// Save: 변경된 투표 상태를 Redis에 저장(덮어쓰기)하고 TTL을 설정한다.
 func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote qmodel.SurrenderVote) error {
 	key := voteKey(chatID)
 
@@ -61,33 +61,34 @@ func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote qmode
 
 	cmd := s.client.B().Set().Key(key).Value(string(payload)).Ex(time.Duration(qconfig.RedisVoteTTLSeconds) * time.Second).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "vote_save", Err: err}
+		return cerrors.RedisError{Operation: "vote_save", Err: err}
 	}
 	return nil
 }
 
-// Clear 는 동작을 수행한다.
+// Clear: 투표가 종료되거나 취소되었을 때 데이터를 삭제한다.
 func (s *SurrenderVoteStore) Clear(ctx context.Context, chatID string) error {
 	key := voteKey(chatID)
 	cmd := s.client.B().Del().Key(key).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "vote_clear", Err: err}
+		return cerrors.RedisError{Operation: "vote_clear", Err: err}
 	}
 	return nil
 }
 
-// Exists 는 동작을 수행한다.
+// Exists: 현재 활성화된(진행 중인) 투표가 있는지 키 존재 여부로 확인한다.
 func (s *SurrenderVoteStore) Exists(ctx context.Context, chatID string) (bool, error) {
 	key := voteKey(chatID)
 	cmd := s.client.B().Exists().Key(key).Build()
 	n, err := s.client.Do(ctx, cmd).AsInt64()
 	if err != nil {
-		return false, qerrors.RedisError{Operation: "vote_exists", Err: err}
+		return false, cerrors.RedisError{Operation: "vote_exists", Err: err}
 	}
 	return n > 0, nil
 }
 
-// Approve 는 동작을 수행한다.
+// Approve: 특정 사용자의 '찬성' 의사를 투표 상태에 반영한다.
+// 투표 상태를 조회(Get)하고, 찬성 처리(Approve) 후, 다시 저장(Save)하는 과정을 수행한다.
 func (s *SurrenderVoteStore) Approve(ctx context.Context, chatID string, userID string) (*qmodel.SurrenderVote, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

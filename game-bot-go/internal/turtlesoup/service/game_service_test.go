@@ -15,10 +15,10 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 	tssecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/security"
@@ -38,11 +38,14 @@ type testEnv struct {
 	ts           *httptest.Server
 	sessionStore *tsredis.SessionStore
 	mocks        mockResponses
+	t            *testing.T
+	prefix       string
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
 	client := testhelper.NewTestValkeyClient(t)
 	testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPrefix+":")
+	testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPuzzleGlobal)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	sessionStore := tsredis.NewSessionStore(client, logger)
@@ -51,7 +54,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	sessionManager := NewGameSessionManager(sessionStore, lockManager)
 
-	env := &testEnv{client: client, sessionStore: sessionStore}
+	prefix := testhelper.UniqueTestPrefix(t)
+	env := &testEnv{client: client, sessionStore: sessionStore, t: t, prefix: prefix}
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		path := r.URL.Path
@@ -143,8 +147,12 @@ func setupTestEnv(t *testing.T) *testEnv {
 	return env
 }
 
+func (e *testEnv) chatID(suffix string) string {
+	return e.prefix + suffix
+}
+
 func (e *testEnv) teardown() {
-	testhelper.CleanupTestKeys(nil, e.client, tsconfig.RedisKeyPrefix+":")
+	testhelper.CleanupTestKeys(e.t, e.client, tsconfig.RedisKeyPrefix+":")
 	e.client.Close()
 	e.ts.Close()
 }
@@ -156,7 +164,7 @@ func TestGameService_StartGame(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess1"
 	userID := "user1"
-	chatID := "chat1"
+	chatID := env.chatID("chat1")
 
 	state, err := env.svc.StartGame(ctx, sessionID, userID, chatID, nil, nil, nil)
 	if err != nil {
@@ -186,7 +194,7 @@ func TestGameService_AskQuestion(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess2"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat2", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat2"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -218,7 +226,7 @@ func TestGameService_SubmitSolution_Correct(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess3"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat3", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat3"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -253,7 +261,7 @@ func TestGameService_SubmitSolution_Incorrect(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess4"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat4", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat4"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -284,7 +292,7 @@ func TestGameService_RequestHint(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess5"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat5", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat5"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -314,7 +322,7 @@ func TestGameService_RegisterPlayer(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess6"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat6", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat6"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -353,7 +361,7 @@ func TestGameService_Surrender(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess7"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat7", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat7"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -380,7 +388,7 @@ func TestGameService_IsMalicious(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess8"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat8", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat8"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -391,7 +399,7 @@ func TestGameService_IsMalicious(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for malicious question")
 	}
-	var injectionErr tserrors.InputInjectionError
+	var injectionErr cerrors.InputInjectionError
 	if !strings.Contains(err.Error(), "malicious") && !errors.As(err, &injectionErr) {
 	}
 
@@ -408,7 +416,7 @@ func TestGameService_SubmitAnswer(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess_ans"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat_ans", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat_ans"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}
@@ -435,7 +443,7 @@ func TestGameService_EndGame(t *testing.T) {
 	ctx := context.Background()
 	sessionID := testhelper.UniqueTestPrefix(t) + "sess_end"
 
-	_, err := env.svc.StartGame(ctx, sessionID, "user1", "chat_end", nil, nil, nil)
+	_, err := env.svc.StartGame(ctx, sessionID, "user1", env.chatID("chat_end"), nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StartGame failed: %v", err)
 	}

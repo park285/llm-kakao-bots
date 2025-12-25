@@ -235,6 +235,12 @@ func (r *Repository) getDB(ctx context.Context) (*gorm.DB, error) {
 
 	sqlDB.SetMaxIdleConns(r.cfg.Database.MinPool)
 	sqlDB.SetMaxOpenConns(r.cfg.Database.MaxPool)
+	if r.cfg.Database.ConnMaxLifetimeMinutes > 0 {
+		sqlDB.SetConnMaxLifetime(time.Duration(r.cfg.Database.ConnMaxLifetimeMinutes) * time.Minute)
+	}
+	if r.cfg.Database.ConnMaxIdleTimeMinutes > 0 {
+		sqlDB.SetConnMaxIdleTime(time.Duration(r.cfg.Database.ConnMaxIdleTimeMinutes) * time.Minute)
+	}
 
 	if r.logger != nil {
 		r.logger.Info("usage_db_connected", "host", hostUsed, "name", r.cfg.Database.Name)

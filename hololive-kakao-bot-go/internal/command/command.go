@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -15,25 +15,25 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// Command 는 타입이다.
+// Command: 봇 명령어를 처리하는 인터페이스 정의 (이름, 설명, 실행 로직)
 type Command interface {
 	Name() string
 	Description() string
 	Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error
 }
 
-// Event 는 타입이다.
+// Event: 명령어 실행 이벤트 정보 (타입 및 파라미터 포함)
 type Event struct {
 	Type   domain.CommandType
 	Params map[string]any
 }
 
-// Dispatcher 는 타입이다.
+// Dispatcher: 명령어 이벤트를 발행하여 적절한 처리기로 전달하는 인터페이스
 type Dispatcher interface {
 	Publish(ctx context.Context, cmdCtx *domain.CommandContext, events ...Event) (int, error)
 }
 
-// Dependencies 는 타입이다.
+// Dependencies: 명령어 실행에 필요한 외부 서비스(Holodex, 캐시 등) 및 유틸리티 의존성 모음
 type Dependencies struct {
 	Holodex          *holodex.Service
 	Cache            *cache.Service
@@ -47,5 +47,5 @@ type Dependencies struct {
 	SendImage        func(ctx context.Context, room, imageBase64 string) error
 	SendError        func(ctx context.Context, room, message string) error
 	Dispatcher       Dispatcher
-	Logger           *zap.Logger
+	Logger           *slog.Logger
 }

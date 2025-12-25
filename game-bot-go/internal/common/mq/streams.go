@@ -14,7 +14,7 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
-// StreamConsumerConfig 는 타입이다.
+// StreamConsumerConfig: 스트림 소비자 설정 구조체
 type StreamConsumerConfig struct {
 	Stream string
 	Group  string
@@ -32,20 +32,20 @@ type StreamConsumerConfig struct {
 	GroupStartFrom string
 }
 
-// XMessage 는 valkey-go용 메시지 타입이다.
+// XMessage: Redis 스트림에서 읽어온 메시지 구조체
 type XMessage struct {
 	ID     string
 	Values map[string]string
 }
 
-// StreamConsumer 는 타입이다.
+// StreamConsumer: Redis Consumer Group을 사용하여 스트림 메시지를 처리하는 소비자
 type StreamConsumer struct {
 	client valkey.Client
 	logger *slog.Logger
 	cfg    StreamConsumerConfig
 }
 
-// NewStreamConsumer 는 동작을 수행한다.
+// NewStreamConsumer: 새로운 StreamConsumer 인스턴스를 생성한다.
 func NewStreamConsumer(client valkey.Client, logger *slog.Logger, cfg StreamConsumerConfig) *StreamConsumer {
 	return &StreamConsumer{
 		client: client,
@@ -54,7 +54,7 @@ func NewStreamConsumer(client valkey.Client, logger *slog.Logger, cfg StreamCons
 	}
 }
 
-// Run 는 동작을 수행한다.
+// Run: 메시지 소비 루프를 실행한다. (블로킹 방식)
 func (c *StreamConsumer) Run(ctx context.Context, handler func(ctx context.Context, msg XMessage) error) error {
 	cfg, err := c.normalizedConfig()
 	if err != nil {

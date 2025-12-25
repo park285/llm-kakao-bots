@@ -1,21 +1,17 @@
 package app
 
 import (
-	"fmt"
 	"net/http"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
 
 // ProvideFetchProfilesLogger - fetch_profiles 전용 로거
-func ProvideFetchProfilesLogger() (*zap.Logger, func(), error) {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		return nil, nil, fmt.Errorf("fetch profiles logger 초기화 실패: %w", err)
-	}
-	cleanup := func() { _ = logger.Sync() }
+func ProvideFetchProfilesLogger() (*slog.Logger, func(), error) {
+	logger := slog.Default()
+	cleanup := func() {} // slog는 Sync 필요 없음
 	return logger, cleanup, nil
 }
 

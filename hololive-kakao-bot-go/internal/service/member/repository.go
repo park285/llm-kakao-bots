@@ -6,7 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
+
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
@@ -27,20 +28,20 @@ type Model struct {
 	Aliases      datatypes.JSON `gorm:"column:aliases;type:jsonb"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: GORM 모델이 매핑될 데이터베이스 테이블 이름을 반환한다. ("members")
 func (Model) TableName() string {
 	return "members"
 }
 
-// Repository 는 타입이다.
+// Repository: 멤버 정보에 대한 데이터베이스 접근을 담당하는 저장소
 type Repository struct {
 	db     *sql.DB
 	gormDB *gorm.DB
-	logger *zap.Logger
+	logger *slog.Logger
 }
 
-// NewMemberRepository 는 동작을 수행한다.
-func NewMemberRepository(postgres *database.PostgresService, logger *zap.Logger) *Repository {
+// NewMemberRepository: 새로운 MemberRepository 인스턴스를 생성한다.
+func NewMemberRepository(postgres *database.PostgresService, logger *slog.Logger) *Repository {
 	return &Repository{
 		db:     postgres.GetDB(),
 		gormDB: postgres.GetGormDB(),
@@ -48,7 +49,7 @@ func NewMemberRepository(postgres *database.PostgresService, logger *zap.Logger)
 	}
 }
 
-// FindByChannelID retrieves member by YouTube channel ID
+// FindByChannelID: 채널 ID로 멤버를 조회한다.
 func (r *Repository) FindByChannelID(ctx context.Context, channelID string) (*domain.Member, error) {
 	query := `
 		SELECT id, slug, channel_id, english_name, japanese_name, korean_name,
@@ -85,7 +86,7 @@ func (r *Repository) FindByChannelID(ctx context.Context, channelID string) (*do
 	return r.scanMember(id, slug, channelIDVal, englishName, japaneseName, koreanName, status, isGraduated, aliasesJSON)
 }
 
-// FindByName retrieves member by English name
+// FindByName: 이름으로 멤버를 조회한다.
 func (r *Repository) FindByName(ctx context.Context, name string) (*domain.Member, error) {
 	query := `
 		SELECT id, slug, channel_id, english_name, japanese_name, korean_name,
@@ -122,7 +123,7 @@ func (r *Repository) FindByName(ctx context.Context, name string) (*domain.Membe
 	return r.scanMember(id, slug, channelID, englishName, japaneseName, koreanName, status, isGraduated, aliasesJSON)
 }
 
-// FindByAlias searches member by any alias (Korean or Japanese)
+// FindByAlias: 별칭으로 멤버를 검색한다.
 func (r *Repository) FindByAlias(ctx context.Context, alias string) (*domain.Member, error) {
 	query := `
 		SELECT m.id, m.slug, m.channel_id, m.english_name, m.japanese_name, m.korean_name,
@@ -182,7 +183,7 @@ func (r *Repository) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	for rows.Next() {
 		var channelID string
 		if err := rows.Scan(&channelID); err != nil {
-			r.logger.Warn("Failed to scan channel ID", zap.Error(err))
+			r.logger.Warn("Failed to scan channel ID", slog.Any("error", err))
 			continue
 		}
 		channelIDs = append(channelIDs, channelID)
@@ -195,7 +196,7 @@ func (r *Repository) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	return channelIDs, nil
 }
 
-// GetAllMembers returns all members (for initial cache warming)
+// GetAllMembers: 모든 멤버 목록을 조회한다.
 func (r *Repository) GetAllMembers(ctx context.Context) ([]*domain.Member, error) {
 	query := `
 		SELECT id, slug, channel_id, english_name, japanese_name, korean_name,
@@ -226,13 +227,13 @@ func (r *Repository) GetAllMembers(ctx context.Context) ([]*domain.Member, error
 
 		if err := rows.Scan(&id, &slug, &channelID, &englishName, &japaneseName, &koreanName,
 			&status, &isGraduated, &aliasesJSON); err != nil {
-			r.logger.Warn("Failed to scan member row", zap.Error(err))
+			r.logger.Warn("Failed to scan member row", slog.Any("error", err))
 			continue
 		}
 
 		member, err := r.scanMember(id, slug, channelID, englishName, japaneseName, koreanName, status, isGraduated, aliasesJSON)
 		if err != nil {
-			r.logger.Warn("Failed to parse member", zap.String("name", englishName), zap.Error(err))
+			r.logger.Warn("Failed to parse member", slog.String("name", englishName), slog.Any("error", err))
 			continue
 		}
 
@@ -283,7 +284,7 @@ func (r *Repository) scanMember(
 	return member, nil
 }
 
-// AddAlias adds an alias to a member's alias list using GORM
+// AddAlias: 멤버에게 별칭을 추가한다.
 func (r *Repository) AddAlias(ctx context.Context, memberID int, aliasType string, alias string) error {
 	if aliasType != "ko" && aliasType != "ja" {
 		return fmt.Errorf("invalid alias type: %s (must be 'ko' or 'ja')", aliasType)
@@ -330,7 +331,7 @@ func (r *Repository) AddAlias(ctx context.Context, memberID int, aliasType strin
 	return nil
 }
 
-// RemoveAlias removes an alias from a member's alias list using GORM
+// RemoveAlias: 멤버의 별칭을 삭제한다.
 func (r *Repository) RemoveAlias(ctx context.Context, memberID int, aliasType string, alias string) error {
 	if aliasType != "ko" && aliasType != "ja" {
 		return fmt.Errorf("invalid alias type: %s (must be 'ko' or 'ja')", aliasType)
@@ -377,7 +378,7 @@ func (r *Repository) RemoveAlias(ctx context.Context, memberID int, aliasType st
 	return nil
 }
 
-// SetGraduation updates the graduation status of a member using GORM
+// SetGraduation: 멤버의 졸업 여부를 설정한다.
 func (r *Repository) SetGraduation(ctx context.Context, memberID int, isGraduated bool) error {
 	var member Model
 	if err := r.gormDB.WithContext(ctx).First(&member, memberID).Error; err != nil {
@@ -405,7 +406,7 @@ func (r *Repository) UpdateChannelID(ctx context.Context, memberID int, channelI
 	return nil
 }
 
-// CreateMember creates a new member in the database
+// CreateMember: 새로운 멤버를 데이터베이스에 생성한다.
 func (r *Repository) CreateMember(ctx context.Context, member *domain.Member) error {
 	aliasesJSON, err := json.Marshal(member.Aliases)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
@@ -15,7 +15,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// MatchCacheEntry 는 타입이다.
+// MatchCacheEntry: 멤버 매칭 결과를 캐싱하기 위한 구조체 (채널 정보 + 타임스탬프)
 type MatchCacheEntry struct {
 	Channel   *domain.Channel
 	Timestamp time.Time
@@ -27,33 +27,34 @@ type matchCandidate struct {
 	source     string
 }
 
-// ChannelSelector 는 타입이다.
+// ChannelSelector: 모호한 검색어에 대해 모호성 해소를 돕는 채널 선택 인터페이스
 type ChannelSelector interface {
 	SelectBestChannel(ctx context.Context, query string, candidates []*domain.Channel) (*domain.Channel, error)
 }
 
-// MemberMatcher 는 타입이다.
+// MemberMatcher: 사용자 검색어(이름, 별명 등)를 기반으로 Hololive 멤버(채널)를 식별하고 매칭하는 서비스
+// 다양한 매칭 전략(정확 일치, 부분 일치, 별명 검색 등)을 순차적으로 시도한다.
 type MemberMatcher struct {
 	membersData           domain.MemberDataProvider
 	fallbackData          domain.MemberDataProvider
 	cache                 *cache.Service
 	holodex               *holodex.Service
 	selector              ChannelSelector
-	logger                *zap.Logger
+	logger                *slog.Logger
 	matchCache            map[string]*MatchCacheEntry
 	matchCacheMu          sync.RWMutex
 	matchCacheTTL         time.Duration
 	matchCacheLastCleanup time.Time
 }
 
-// NewMemberMatcher 는 동작을 수행한다.
+// NewMemberMatcher: 새로운 MemberMatcher 인스턴스를 생성한다.
 func NewMemberMatcher(
 	ctx context.Context,
 	membersData domain.MemberDataProvider,
 	cache *cache.Service,
 	holodex *holodex.Service,
 	selector ChannelSelector,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *MemberMatcher {
 	if ctx == nil {
 		ctx = context.Background()
@@ -61,7 +62,7 @@ func NewMemberMatcher(
 
 	var fallbackProvider domain.MemberDataProvider
 	if fallbackData, err := domain.LoadMembersData(); err != nil {
-		logger.Warn("Failed to load fallback member data", zap.Error(err))
+		logger.Warn("Failed to load fallback member data", slog.Any("error", err))
 	} else {
 		fallbackProvider = fallbackData.WithContext(ctx)
 	}
@@ -81,7 +82,7 @@ func NewMemberMatcher(
 	provider := membersData.WithContext(ctx)
 
 	logger.Info("MemberMatcher initialized",
-		zap.Int("members", len(provider.GetAllMembers())),
+		slog.Int("members", len(provider.GetAllMembers())),
 	)
 
 	return mm
@@ -248,17 +249,17 @@ func (mm *MemberMatcher) hydrateChannel(ctx context.Context, candidate *matchCan
 	channel, err := mm.holodex.GetChannel(ctx, candidate.channelID)
 	if err != nil {
 		mm.logger.Warn("Failed to fetch channel from Holodex",
-			zap.String("channel_id", candidate.channelID),
-			zap.String("source", candidate.source),
-			zap.Error(err),
+			slog.String("channel_id", candidate.channelID),
+			slog.String("source", candidate.source),
+			slog.Any("error", err),
 		)
 		return fallback, nil
 	}
 
 	if channel == nil {
 		mm.logger.Warn("Holodex returned empty channel",
-			zap.String("channel_id", candidate.channelID),
-			zap.String("source", candidate.source),
+			slog.String("channel_id", candidate.channelID),
+			slog.String("source", candidate.source),
 		)
 		return fallback, nil
 	}
@@ -282,8 +283,8 @@ func (mm *MemberMatcher) finalizeCandidate(ctx context.Context, candidate *match
 
 	if candidate.channelID == "" {
 		mm.logger.Warn("Match candidate missing channel ID",
-			zap.String("member", candidate.memberName),
-			zap.String("source", candidate.source),
+			slog.String("member", candidate.memberName),
+			slog.String("source", candidate.source),
 		)
 		return nil, nil
 	}
@@ -295,9 +296,9 @@ func (mm *MemberMatcher) finalizeCandidate(ctx context.Context, candidate *match
 
 	if channel != nil {
 		mm.logger.Debug("Match candidate resolved",
-			zap.String("channel_id", candidate.channelID),
-			zap.String("member", candidate.memberName),
-			zap.String("source", candidate.source),
+			slog.String("channel_id", candidate.channelID),
+			slog.String("member", candidate.memberName),
+			slog.String("source", candidate.source),
 		)
 	}
 
@@ -334,13 +335,14 @@ func toStringPtr(value string) *string {
 func (mm *MemberMatcher) loadDynamicMembers(ctx context.Context) map[string]string {
 	members, err := mm.cache.GetAllMembers(ctx)
 	if err != nil {
-		mm.logger.Warn("Failed to load dynamic members", zap.Error(err))
+		mm.logger.Warn("Failed to load dynamic members", slog.Any("error", err))
 		return map[string]string{}
 	}
 	return members
 }
 
-// FindBestMatch 는 동작을 수행한다.
+// FindBestMatch: 주어진 쿼리 문자열과 가장 잘 일치하는 멤버/채널을 찾는다.
+// 캐시된 결과가 있으면 반환하고, 없으면 여러 매칭 전략을 시도한다.
 func (mm *MemberMatcher) FindBestMatch(ctx context.Context, query string) (*domain.Channel, error) {
 	normalizedQuery := util.Normalize(query)
 	cacheKey := fmt.Sprintf("match:%s", normalizedQuery)
@@ -411,16 +413,16 @@ func (mm *MemberMatcher) findBestMatchImpl(ctx context.Context, query string) (*
 	}
 
 	// 내부 데이터에서 매칭 실패 - nil 반환하여 상위에서 "멤버를 찾을 수 없습니다" 오류 표시
-	mm.logger.Debug("No match found in internal data", zap.String("query", query))
+	mm.logger.Debug("No match found in internal data", slog.String("query", query))
 	return nil, nil
 }
 
-// GetAllMembers 는 동작을 수행한다.
+// GetAllMembers: 등록된 모든 멤버 정보를 반환한다.
 func (mm *MemberMatcher) GetAllMembers() []*domain.Member {
 	return mm.membersData.WithContext(context.Background()).GetAllMembers()
 }
 
-// GetMemberByChannelID 는 동작을 수행한다.
+// GetMemberByChannelID: 채널 ID를 사용하여 멤버 정보를 조회한다.
 func (mm *MemberMatcher) GetMemberByChannelID(ctx context.Context, channelID string) *domain.Member {
 	if ctx == nil {
 		ctx = context.Background()

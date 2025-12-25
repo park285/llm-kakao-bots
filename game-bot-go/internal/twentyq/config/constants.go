@@ -1,11 +1,30 @@
 package config
 
-// LlmNamespace 는 상수다.
+import (
+	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
+)
+
+// 공통 상수 re-export
+const (
+	KakaoMessageMaxLength     = commonconfig.KakaoMessageMaxLength
+	AITimeoutSeconds          = commonconfig.AITimeoutSeconds
+	MQBatchSize               = commonconfig.MQBatchSize
+	MQReadTimeoutMS           = commonconfig.MQReadTimeoutMS
+	MQStreamMaxLen            = commonconfig.MQStreamMaxLen
+	QueueMaxDequeueIterations = commonconfig.QueueMaxDequeueIterations
+	RedisVoteTTLSeconds       = commonconfig.RedisVoteTTLSeconds
+	RedisQueueTTLSeconds      = commonconfig.RedisQueueTTLSeconds
+	RedisMaxQueueSize         = commonconfig.RedisMaxQueueSize
+	RedisStaleThresholdMS     = commonconfig.RedisStaleThresholdMS
+	DefaultOutboundStreamKey  = commonconfig.DefaultOutboundStreamKey
+)
+
+// LlmNamespace: LLM 네임스페이스 상수
 const (
 	LlmNamespace = "twentyq"
 )
 
-// MaxHintsTotal 는 상수다.
+// MaxHintsTotal: 게임당 최대 힌트 횟수
 const (
 	MaxHintsTotal = 1
 )
@@ -31,40 +50,20 @@ const (
 const (
 	RedisSessionTTLSeconds    = 12 * 60 * 60
 	RedisLockTTLSeconds       = 300
-	RedisVoteTTLSeconds       = 120
 	RedisProcessingTTLSeconds = 200
-	RedisQueueTTLSeconds      = 300
-	RedisMaxQueueSize         = 5
-	RedisStaleThresholdMS     = 3600_000
 )
 
-// AITimeoutSeconds 는 상수다.
+// MQMaxQueueIterations 는 twentyq 전용 상수이다.
 const (
-	AITimeoutSeconds = 60
+	MQMaxQueueIterations = 100
 )
 
-// KakaoMessageMaxLength 는 상수다.
+// DefaultInboundStreamKey 는 twentyq 인바운드 스트림 키이다.
 const (
-	KakaoMessageMaxLength = 500
-)
-
-// MQBatchSize 는 MQ 처리 상수 목록이다.
-const (
-	MQBatchSize               = 5
-	MQReadTimeoutMS           = 5000
-	MQMaxQueueIterations      = 100
-	MQStreamMaxLen            = 1000
-	QueueMaxDequeueIterations = 50
-)
-
-// DefaultInboundStreamKey 는 기본 스트림 키 상수 목록이다.
-const (
-	DefaultInboundStreamKey  = "kakao:20q"
-	DefaultOutboundStreamKey = "kakao:bot:reply"
+	DefaultInboundStreamKey = "kakao:20q"
 )
 
 // AllCategories 게임에서 사용하는 모든 카테고리 목록.
-// topic_selector.go와 session_store.go에서 공유.
 var AllCategories = []string{
 	"organism",
 	"food",

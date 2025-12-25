@@ -9,17 +9,17 @@ import (
 	"github.com/valkey-io/valkey-go"
 
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// HistoryStore 는 타입이다.
+// HistoryStore: 게임 진행 중 발생한 질문과 답변의 이력을 시간 순서대로 Redis List에 저장하고 관리하는 저장소
 type HistoryStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewHistoryStore 는 동작을 수행한다.
+// NewHistoryStore: 새로운 HistoryStore 인스턴스를 생성한다.
 func NewHistoryStore(client valkey.Client, logger *slog.Logger) *HistoryStore {
 	return &HistoryStore{
 		client: client,
@@ -27,14 +27,14 @@ func NewHistoryStore(client valkey.Client, logger *slog.Logger) *HistoryStore {
 	}
 }
 
-// Get 는 동작을 수행한다.
+// Get: Redis List(Lrange)를 사용하여 저장된 모든 질문/답변 이력을 시간 순으로 조회한다.
 func (s *HistoryStore) Get(ctx context.Context, chatID string) ([]qmodel.QuestionHistory, error) {
 	key := historyKey(chatID)
 
 	cmd := s.client.B().Lrange().Key(key).Start(0).Stop(-1).Build()
 	rawItems, err := s.client.Do(ctx, cmd).AsStrSlice()
 	if err != nil {
-		return nil, qerrors.RedisError{Operation: "history_get", Err: err}
+		return nil, cerrors.RedisError{Operation: "history_get", Err: err}
 	}
 
 	history := make([]qmodel.QuestionHistory, 0, len(rawItems))
@@ -49,7 +49,8 @@ func (s *HistoryStore) Get(ctx context.Context, chatID string) ([]qmodel.Questio
 	return history, nil
 }
 
-// Add 는 동작을 수행한다.
+// Add: 새로운 질문/답변 이력을 Redis List의 끝(RPUSH)에 추가하고 TTL을 갱신한다.
+// 원자성을 위해 파이프라인(DoMulti)을 사용한다.
 func (s *HistoryStore) Add(ctx context.Context, chatID string, item qmodel.QuestionHistory) error {
 	key := historyKey(chatID)
 
@@ -65,19 +66,19 @@ func (s *HistoryStore) Add(ctx context.Context, chatID string, item qmodel.Quest
 	results := s.client.DoMulti(ctx, rpushCmd, expireCmd)
 	for _, r := range results {
 		if err := r.Error(); err != nil {
-			return qerrors.RedisError{Operation: "history_add", Err: err}
+			return cerrors.RedisError{Operation: "history_add", Err: err}
 		}
 	}
 	return nil
 }
 
-// Clear 는 동작을 수행한다.
+// Clear: 게임 종료나 초기화 시 해당 채팅방의 모든 이력 정보를 삭제한다.
 func (s *HistoryStore) Clear(ctx context.Context, chatID string) error {
 	key := historyKey(chatID)
 
 	cmd := s.client.B().Del().Key(key).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "history_clear", Err: err}
+		return cerrors.RedisError{Operation: "history_clear", Err: err}
 	}
 	return nil
 }

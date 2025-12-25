@@ -13,7 +13,7 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// Start 는 동작을 수행한다.
+// Start: 새로운 스무고개 게임을 시작한다. (이전 세션 있으면 재개)
 func (s *RiddleService) Start(ctx context.Context, chatID string, userID string, categories []string) (string, error) {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {

@@ -15,10 +15,11 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	tsassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/assets"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
-// LockManager 는 타입이다.
+// LockManager: Redis와 Lua 스크립트를 사용하여 분산 락(Distributed Lock)을 구현한 관리자
+// Reentrancy(재진입)를 지원하며, Context 스코프 기반의 자동 락 관리를 제공한다.
 type LockManager struct {
 	client valkey.Client
 	logger *slog.Logger
@@ -28,7 +29,7 @@ type LockManager struct {
 	redisCallTimeout time.Duration
 }
 
-// NewLockManager 는 동작을 수행한다.
+// NewLockManager: 새로운 LockManager 인스턴스를 생성한다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	return &LockManager{
 		client:           client,
@@ -60,7 +61,8 @@ func (m *LockManager) clearScriptCache() {
 	m.releaseSHA = ""
 }
 
-// TryAcquireSharedLock 는 동작을 수행한다.
+// TryAcquireSharedLock: 여러 사용자가 동시에 접근 가능한 '공유 락(Shared Lock)' 획득을 시도한다. (주로 읽기 작업용)
+// 이미 락이 존재하더라도 획득 성공으로 간주하거나, 별도의 키를 사용하여 동시성을 제어한다.
 func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, ttlSeconds int64) (bool, error) {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {
@@ -76,12 +78,12 @@ func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, 
 		if strings.Contains(err.Error(), "nil") {
 			return false, nil
 		}
-		return false, tserrors.RedisError{Operation: "shared_lock_acquire", Err: err}
+		return false, cerrors.RedisError{Operation: "shared_lock_acquire", Err: err}
 	}
 	return true, nil
 }
 
-// ReleaseSharedLock 는 동작을 수행한다.
+// ReleaseSharedLock: 공유 락을 해제한다. (DEL)
 func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) error {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {
@@ -89,12 +91,13 @@ func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) err
 	}
 	cmd := m.client.B().Del().Key(lockKey).Build()
 	if err := m.client.Do(ctx, cmd).Error(); err != nil {
-		return tserrors.RedisError{Operation: "shared_lock_release", Err: err}
+		return cerrors.RedisError{Operation: "shared_lock_release", Err: err}
 	}
 	return nil
 }
 
-// WithLock 는 동작을 수행한다.
+// WithLock: 배타적 락(Write Lock)을 획득한 상태에서 주어진 함수(block)를 실행한다.
+// 락 획득 실패 시 에러를 반환하며, 실행 완료 후 자동으로 락을 해제한다. 재진입(Reentry)을 지원한다.
 func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName *string, block func(ctx context.Context) error) error {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
@@ -137,7 +140,7 @@ func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName
 		if holderErr != nil {
 			m.logger.Warn("lock_holder_read_failed", "err", holderErr, "session_id", sessionID)
 		}
-		return tserrors.LockError{
+		return cerrors.LockError{
 			SessionID:   sessionID,
 			HolderName:  currentHolder,
 			Description: "failed to acquire lock",
@@ -171,6 +174,8 @@ const (
 	lockRetryDelayMultiply = 2
 )
 
+// acquire: Redis의 SET NX 명령과 고유 토큰을 사용하여 락 획득을 시도한다.
+// 실패 시 지수 백오프(Exponential Backoff) 전략으로 재시도한다.
 func (m *LockManager) acquire(ctx context.Context, sessionID string, token string, holderValue string, ttl time.Duration) (bool, error) {
 	key := lockKey(sessionID)
 	holderKey := lockHolderKey(sessionID)
@@ -201,7 +206,7 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 			if ctx.Err() != nil {
 				return false, nil
 			}
-			return false, tserrors.RedisError{Operation: "lock_acquire", Err: err}
+			return false, cerrors.RedisError{Operation: "lock_acquire", Err: err}
 		}
 
 		// Lock acquired
@@ -211,7 +216,7 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 	holderCmd := m.client.B().Set().Key(holderKey).Value(holderValue).Ex(ttl).Build()
 	if err := m.client.Do(ctx, holderCmd).Error(); err != nil {
 		_ = m.release(context.Background(), sessionID, token)
-		return false, tserrors.RedisError{Operation: "lock_set_holder", Err: err}
+		return false, cerrors.RedisError{Operation: "lock_set_holder", Err: err}
 	}
 
 	return true, nil
@@ -232,7 +237,7 @@ func (m *LockManager) release(ctx context.Context, sessionID string, token strin
 			m.clearScriptCache()
 			return m.release(ctx, sessionID, token)
 		}
-		return tserrors.RedisError{Operation: "lock_release", Err: err}
+		return cerrors.RedisError{Operation: "lock_release", Err: err}
 	}
 	return nil
 }
@@ -245,7 +250,7 @@ func (m *LockManager) getHolder(ctx context.Context, sessionID string) (*string,
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, tserrors.RedisError{Operation: "lock_get_holder", Err: err}
+		return nil, cerrors.RedisError{Operation: "lock_get_holder", Err: err}
 	}
 
 	_, name := parseHolderValue(value)

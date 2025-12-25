@@ -1,11 +1,15 @@
+// Package errors: 바다거북스프(Turtle Soup) 게임에 특화된 에러 타입들을 정의한다.
+// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용한다.
 package errors
 
 import (
 	"errors"
 	"fmt"
+
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
-// SessionNotFoundError 는 타입이다.
+// SessionNotFoundError: 세션을 찾을 수 없을 때 발생하는 에러
 type SessionNotFoundError struct {
 	SessionID string
 }
@@ -14,21 +18,7 @@ func (e SessionNotFoundError) Error() string {
 	return fmt.Sprintf("session not found: %s", e.SessionID)
 }
 
-// InvalidQuestionError 는 타입이다.
-type InvalidQuestionError struct {
-	Message string
-}
-
-func (e InvalidQuestionError) Error() string { return e.Message }
-
-// InvalidAnswerError 는 타입이다.
-type InvalidAnswerError struct {
-	Message string
-}
-
-func (e InvalidAnswerError) Error() string { return e.Message }
-
-// GameAlreadyStartedError 는 타입이다.
+// GameAlreadyStartedError: 이미 진행 중인 게임이 있을 때 발생하는 에러
 type GameAlreadyStartedError struct {
 	SessionID string
 }
@@ -37,14 +27,14 @@ func (e GameAlreadyStartedError) Error() string {
 	return fmt.Sprintf("game already started: %s", e.SessionID)
 }
 
-// GameNotStartedError 는 타입이다.
+// GameNotStartedError: 진행 중인 게임이 없을 때 발생하는 에러
 type GameNotStartedError struct {
 	SessionID string
 }
 
 func (e GameNotStartedError) Error() string { return fmt.Sprintf("game not started: %s", e.SessionID) }
 
-// GameAlreadySolvedError 는 타입이다.
+// GameAlreadySolvedError: 이미 해결된 게임에 대해 작업을 시도할 때 발생하는 에러
 type GameAlreadySolvedError struct {
 	SessionID string
 }
@@ -53,7 +43,7 @@ func (e GameAlreadySolvedError) Error() string {
 	return fmt.Sprintf("game already solved: %s", e.SessionID)
 }
 
-// MaxHintsReachedError 는 타입이다.
+// MaxHintsReachedError: 힌트 사용 제한을 초과했을 때 발생하는 에러
 type MaxHintsReachedError struct {
 	MaxHints int
 }
@@ -62,7 +52,7 @@ func (e MaxHintsReachedError) Error() string {
 	return fmt.Sprintf("maximum hints reached: %d", e.MaxHints)
 }
 
-// PuzzleGenerationError 는 타입이다.
+// PuzzleGenerationError: 퍼즐 자동 생성 중 발생한 에러
 type PuzzleGenerationError struct {
 	Err error
 }
@@ -76,106 +66,31 @@ func (e PuzzleGenerationError) Error() string {
 
 func (e PuzzleGenerationError) Unwrap() error { return e.Err }
 
-// RedisError 는 타입이다.
-type RedisError struct {
-	Operation string
-	Err       error
-}
-
-func (e RedisError) Error() string {
-	if e.Err == nil {
-		return fmt.Sprintf("redis error operation=%s", e.Operation)
-	}
-	return fmt.Sprintf("redis error operation=%s: %v", e.Operation, e.Err)
-}
-
-func (e RedisError) Unwrap() error { return e.Err }
-
-// LockError 는 타입이다.
-type LockError struct {
-	SessionID   string
-	HolderName  *string
-	Description string
-}
-
-func (e LockError) Error() string {
-	msg := e.Description
-	if msg == "" {
-		msg = "failed to acquire lock"
-	}
-	if e.SessionID != "" {
-		msg = fmt.Sprintf("%s session=%s", msg, e.SessionID)
-	}
-	if e.HolderName != nil && *e.HolderName != "" {
-		msg = fmt.Sprintf("%s holder=%s", msg, *e.HolderName)
-	}
-	return msg
-}
-
-// AccessDeniedError 는 타입이다.
-type AccessDeniedError struct{ Reason string }
-
-func (e AccessDeniedError) Error() string { return fmt.Sprintf("access denied: %s", e.Reason) }
-
-// UserBlockedError 는 타입이다.
-type UserBlockedError struct{ UserID string }
-
-func (e UserBlockedError) Error() string { return fmt.Sprintf("user blocked: %s", e.UserID) }
-
-// ChatBlockedError 는 타입이다.
-type ChatBlockedError struct{ ChatID string }
-
-func (e ChatBlockedError) Error() string { return fmt.Sprintf("chat blocked: %s", e.ChatID) }
-
-// InputInjectionError 는 타입이다.
-type InputInjectionError struct {
-	Message string
-}
-
-func (e InputInjectionError) Error() string { return e.Message }
-
-// MalformedInputError 는 타입이다.
-type MalformedInputError struct {
-	Message string
-}
-
-func (e MalformedInputError) Error() string { return e.Message }
-
-// IsExpectedUserBehavior 는 동작을 수행한다.
+// IsExpectedUserBehavior: 에러가 사용자의 정상적인(예상된) 패턴 내의 실수인지 확인한다.
+// (로그 레벨을 낮추거나 사용자에게 친절한 메시지를 보내는 용도)
 func IsExpectedUserBehavior(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	var (
-		_ SessionNotFoundError
-		_ GameNotStartedError
-		_ GameAlreadyStartedError
-		_ GameAlreadySolvedError
-		_ MaxHintsReachedError
-		_ InvalidQuestionError
-		_ InvalidAnswerError
-		_ MalformedInputError
-	)
-
-	switch {
-	case errors.As(err, new(SessionNotFoundError)):
+	// 공통 에러 체크
+	if cerrors.IsExpectedUserBehavior(err) {
 		return true
-	case errors.As(err, new(GameNotStartedError)):
-		return true
-	case errors.As(err, new(GameAlreadyStartedError)):
-		return true
-	case errors.As(err, new(GameAlreadySolvedError)):
-		return true
-	case errors.As(err, new(MaxHintsReachedError)):
-		return true
-	case errors.As(err, new(InvalidQuestionError)):
-		return true
-	case errors.As(err, new(InvalidAnswerError)):
-		return true
-	case errors.As(err, new(MalformedInputError)):
-		return true
-	default:
-		return false
 	}
+
+	// 도메인 특화 에러 체크
+	expectedTypes := []any{
+		new(SessionNotFoundError),
+		new(GameNotStartedError),
+		new(GameAlreadyStartedError),
+		new(GameAlreadySolvedError),
+		new(MaxHintsReachedError),
+	}
+
+	for _, target := range expectedTypes {
+		if errors.As(err, target) {
+			return true
+		}
+	}
+	return false
 }

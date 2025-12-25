@@ -19,11 +19,18 @@ import (
 )
 
 func TestPrepareNewGame(t *testing.T) {
+	rootT := t
 	client := testhelper.NewTestValkeyClient(t)
 	defer client.Close()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	prefix := testhelper.UniqueTestPrefix(t)
 	defer testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPrefix+":")
+
+	resetDedup := func() {
+		testhelper.CleanupTestKeys(rootT, client, tsconfig.RedisKeyPuzzleGlobal)
+		testhelper.CleanupTestKeys(rootT, client, tsconfig.RedisKeyPrefix+":puzzle:")
+	}
+	resetDedup()
 
 	sessionStore := tsredis.NewSessionStore(client, logger)
 	lockManager := tsredis.NewLockManager(client, logger)
@@ -72,8 +79,10 @@ func TestPrepareNewGame(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
+		resetDedup()
 		sessionID := prefix + "session_1"
-		res, err := setupService.PrepareNewGame(ctx, sessionID, "user_1", "chat_1", nil, nil, nil)
+		chatID := prefix + "chat_1"
+		res, err := setupService.PrepareNewGame(ctx, sessionID, "user_1", chatID, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("PrepareNewGame failed: %v", err)
 		}
@@ -86,18 +95,19 @@ func TestPrepareNewGame(t *testing.T) {
 	})
 
 	t.Run("AlreadyExists_NotSolved", func(t *testing.T) {
+		resetDedup()
 		sessionID := prefix + "session_existing"
-		setupService.PrepareNewGame(ctx, sessionID, "user_1", "chat_2", nil, nil, nil)
+		chatID := prefix + "chat_2"
+		setupService.PrepareNewGame(ctx, sessionID, "user_1", chatID, nil, nil, nil)
 
-		_, err := setupService.PrepareNewGame(ctx, sessionID, "user_1", "chat_2", nil, nil, nil)
+		_, err := setupService.PrepareNewGame(ctx, sessionID, "user_1", chatID, nil, nil, nil)
 		if err == nil {
 			t.Error("expected error for existing active session")
 		}
 	})
 
 	t.Run("AlreadyExists_Solved", func(t *testing.T) {
-		// 서브테스트 전에 dedup 키 정리 (global 키)
-		testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPrefix+":puzzle:")
+		resetDedup()
 
 		sessionID := prefix + "session_solved"
 		chatID := prefix + "chat_solved"
@@ -128,7 +138,8 @@ func TestPrepareNewGame(t *testing.T) {
 		clientErr, _ := llmrest.New(llmrest.Config{BaseURL: serverErr.URL})
 		svcErr := NewGameSetupService(clientErr, NewPuzzleService(clientErr, puzzleCfg, dedupStore, logger), sessionManager, logger)
 
-		_, err := svcErr.PrepareNewGame(ctx, prefix+"session_err", "user_1", "chat_err", nil, nil, nil)
+		chatID := prefix + "chat_err"
+		_, err := svcErr.PrepareNewGame(ctx, prefix+"session_err", "user_1", chatID, nil, nil, nil)
 		if err == nil {
 			t.Error("expected error due to puzzle generation failure")
 		}

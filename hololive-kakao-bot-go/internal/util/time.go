@@ -15,22 +15,22 @@ func init() {
 	}
 }
 
-// ToKST 는 동작을 수행한다.
+// ToKST: 주어진 시간을 한국 표준시(KST)로 변환한다.
 func ToKST(t time.Time) time.Time {
 	return t.In(kstLocation)
 }
 
-// FormatKST 는 동작을 수행한다.
+// FormatKST: 주어진 시간을 KST 기준으로 지정된 포맷 문자열로 변환한다.
 func FormatKST(t time.Time, layout string) string {
 	return t.In(kstLocation).Format(layout)
 }
 
-// NowKST 는 동작을 수행한다.
+// NowKST: 현재 시간을 KST 기준으로 반환한다.
 func NowKST() time.Time {
 	return time.Now().In(kstLocation)
 }
 
-// MinutesUntilCeil 는 동작을 수행한다.
+// MinutesUntilCeil: 기준 시간(reference)으로부터 목표 시간(target)까지 남은 분(minute)을 올림하여 계산한다.
 func MinutesUntilCeil(target *time.Time, reference time.Time) int {
 	if target == nil {
 		return -1

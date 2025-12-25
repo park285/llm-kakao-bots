@@ -1,7 +1,6 @@
 package config
 
 import (
-	"cmp"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -163,6 +162,8 @@ type DatabaseConfig struct {
 	Password                             string
 	MinPool                              int
 	MaxPool                              int
+	ConnMaxLifetimeMinutes               int
+	ConnMaxIdleTimeMinutes               int
 	UsageBatchEnabled                    bool
 	UsageBatchFlushIntervalSeconds       int
 	UsageBatchMaxPendingRequests         int
@@ -339,6 +340,8 @@ func buildConfig() *Config {
 			Password:                             getEnvString("DB_PASSWORD", ""),
 			MinPool:                              getEnvInt("DB_MIN_POOL", 1),
 			MaxPool:                              getEnvInt("DB_MAX_POOL", 5),
+			ConnMaxLifetimeMinutes:               getEnvNonNegativeInt("DB_CONN_MAX_LIFETIME_MINUTES", 60),
+			ConnMaxIdleTimeMinutes:               getEnvNonNegativeInt("DB_CONN_MAX_IDLE_TIME_MINUTES", 10),
 			UsageBatchEnabled:                    getEnvBool("DB_USAGE_BATCH_ENABLED", false),
 			UsageBatchFlushIntervalSeconds:       max(1, getEnvNonNegativeInt("DB_USAGE_BATCH_FLUSH_INTERVAL_SECONDS", 1)),
 			UsageBatchMaxPendingRequests:         max(1, getEnvNonNegativeInt("DB_USAGE_BATCH_MAX_PENDING_REQUESTS", 50)),
@@ -443,6 +446,3 @@ func fileExists(path string) bool {
 }
 
 // cmp.Or 는 첫 번째 non-zero 값을 반환한다. (Go 1.22+)
-func orValue[T comparable](values ...T) T {
-	return cmp.Or(values...)
-}

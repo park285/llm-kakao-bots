@@ -30,6 +30,8 @@ type testEnv struct {
 	ts           *httptest.Server
 	db           *gorm.DB
 	mockResponse string
+	t            *testing.T
+	prefix       string
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -66,7 +68,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 	topicSelector := NewTopicSelector(logger)
 
 	// 5. LLM Client (Mock Server)
-	env := &testEnv{client: client, db: db, mockResponse: "{}"} // Default empty JSON
+	prefix := testhelper.UniqueTestPrefix(t)
+	env := &testEnv{client: client, db: db, mockResponse: "{}", t: t, prefix: prefix} // Default empty JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return mocked response
 		w.Header().Set("Content-Type", "application/json")
@@ -146,8 +149,12 @@ answer:
 	return env
 }
 
+func (e *testEnv) chatID(suffix string) string {
+	return e.prefix + suffix
+}
+
 func (e *testEnv) teardown() {
-	testhelper.CleanupTestKeys(nil, e.client, "20q:")
+	testhelper.CleanupTestKeys(e.t, e.client, "20q:")
 	e.client.Close()
 	e.ts.Close()
 }
@@ -157,7 +164,7 @@ func TestRiddleService_Start(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_start"
+	chatID := env.chatID("room_start")
 	userID := "user1"
 
 	// Mock LLM Response for Topic Selection (if used via LLM, but TopicSelector is local)
@@ -186,7 +193,7 @@ func TestRiddleService_Answer_Correct(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_correct"
+	chatID := env.chatID("room_correct")
 	userID := "user1"
 	sender := "UserOne"
 
@@ -256,7 +263,7 @@ func TestRiddleService_RegularQuestion(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_q"
+	chatID := env.chatID("room_q")
 	userID := "user1"
 	sender := "UserOne"
 
@@ -297,7 +304,7 @@ func TestRiddleService_Answer_Incorrect(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_incorrect"
+	chatID := env.chatID("room_incorrect")
 	userID := "user1"
 	sender := "UserOne"
 
@@ -331,7 +338,7 @@ func TestRiddleService_LLMFailure(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_fail"
+	chatID := env.chatID("room_fail")
 	userID := "user1"
 	sender := "UserOne"
 
@@ -349,7 +356,7 @@ func TestRiddleService_SurrenderVote(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_vote_ok"
+	chatID := env.chatID("room_vote_ok")
 	user1 := "user1"
 	user2 := "user2"
 	user3 := "user3"
@@ -398,7 +405,7 @@ func TestRiddleService_SurrenderVote_Reject(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_vote_rej"
+	chatID := env.chatID("room_vote_rej")
 	user1 := "user1"
 	user2 := "user2"
 
@@ -430,7 +437,7 @@ func TestRiddleService_Status(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_status"
+	chatID := env.chatID("room_status")
 	userID := "user1"
 
 	// 1. Setup Game
@@ -481,7 +488,7 @@ func TestRiddleService_GenerateHint(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_hint"
+	chatID := env.chatID("room_hint")
 	userID := "user1"
 
 	env.svc.Start(ctx, chatID, userID, nil)
@@ -525,7 +532,7 @@ func TestRiddleService_Start_Resume(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_resume"
+	chatID := env.chatID("room_resume")
 	userID := "user1"
 
 	// 1. Start Initial Game
@@ -554,7 +561,7 @@ func TestRiddleService_HandleRegularQuestion_Direct(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_direct_q"
+	chatID := env.chatID("room_direct_q")
 	userID := "user1"
 
 	env.svc.Start(ctx, chatID, userID, nil)
@@ -584,7 +591,7 @@ func TestRiddleService_HandleGuess_Scenarios(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_guess_metrics"
+	chatID := env.chatID("room_guess_metrics")
 	userID := "user1"
 	sender := "UserOne"
 
@@ -607,7 +614,7 @@ func TestRiddleService_HandleGuess_Scenarios(t *testing.T) {
 	// 3. Verify success via "ACCEPT" from LLM (even if string doesn't match target exactly)
 	env.mockResponse = `{"result": "ACCEPT", "explanation": "Acceptable synonym"}`
 	// Restart game or use new room
-	chatID2 := "room_guess_accept"
+	chatID2 := env.chatID("room_guess_accept")
 	env.svc.Start(ctx, chatID2, userID, nil)
 
 	resp, err = env.svc.Answer(ctx, chatID2, userID, &sender, "정답 Synonym")
@@ -625,7 +632,7 @@ func TestRiddleService_Surrender_EdgeCases(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_vote_edge"
+	chatID := env.chatID("room_vote_edge")
 	user1 := "user1"
 
 	// 1 player flow
@@ -645,7 +652,7 @@ func TestRiddleService_Surrender_EdgeCases(t *testing.T) {
 	}
 
 	// Already In Progress
-	chatID2 := "room_vote_dup"
+	chatID2 := env.chatID("room_vote_dup")
 	env.svc.Start(ctx, chatID2, user1, nil)
 	env.svc.playerStore.Add(ctx, chatID2, user1, "User1")
 	env.svc.playerStore.Add(ctx, chatID2, "user2", "User2")
@@ -667,7 +674,7 @@ func TestRiddleService_Surrender_EdgeCases(t *testing.T) {
 	}
 
 	// Vote Not Found (Agree without start)
-	chatID3 := "room_vote_none"
+	chatID3 := env.chatID("room_vote_none")
 	env.svc.Start(ctx, chatID3, user1, nil)
 	resp, err = env.svc.HandleSurrenderAgree(ctx, chatID3, user1)
 	if !strings.Contains(resp, "Vote Not Found") {
@@ -679,7 +686,7 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_malicious"
+	chatID := env.chatID("room_malicious")
 	user1 := "user1"
 
 	env.svc.Start(ctx, chatID, user1, nil)
@@ -740,7 +747,7 @@ func TestRiddleService_Success_Complex(t *testing.T) {
 	env := setupTestEnv(t)
 	defer env.teardown()
 	ctx := context.Background()
-	chatID := "room_success_complex"
+	chatID := env.chatID("room_success_complex")
 	userID := "user1"
 	sender := "Winner"
 

@@ -12,14 +12,14 @@ import (
 	qassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/assets"
 )
 
-// TopicEntry 는 타입이다.
+// TopicEntry: 토픽 상세 정보 구조체
 type TopicEntry struct {
 	Name     string
 	Details  map[string]any
 	Category string
 }
 
-// TopicSelector 는 타입이다.
+// TopicSelector: 카테고리별 토픽을 로드하고 선택하는 관리자
 type TopicSelector struct {
 	topics map[string][]TopicEntry
 	rng    *rand.Rand
@@ -44,7 +44,7 @@ var categoryFileMapping = map[string]string{
 	"idiom_proverb": "saza.json",
 }
 
-// NewTopicSelector 는 동작을 수행한다.
+// NewTopicSelector: 새로운 TopicSelector 인스턴스를 생성한다.
 func NewTopicSelector(logger *slog.Logger) *TopicSelector {
 	// rand/v2는 자동으로 안전한 시드를 사용하므로 명시적 시드 불필요
 	selector := &TopicSelector{
@@ -111,7 +111,7 @@ func (s *TopicSelector) loadCategoryFromFS(category string, filename string) ([]
 	return entries, nil
 }
 
-// SelectTopic 는 동작을 수행한다.
+// SelectTopic: 조건에 맞는 토픽을 랜덤하게 선택한다.
 func (s *TopicSelector) SelectTopic(category string, bannedTopics []string, excludedCategories []string) (TopicEntry, error) {
 	excludedSet := makeCategorySet(excludedCategories)
 	selectedCategory := strings.ToLower(strings.TrimSpace(category))
@@ -142,7 +142,7 @@ func (s *TopicSelector) SelectTopic(category string, bannedTopics []string, excl
 	return selected, nil
 }
 
-// Categories 는 동작을 수행한다.
+// Categories: 사용 가능한 모든 카테고리 목록을 반환한다.
 func (s *TopicSelector) Categories() []string {
 	out := make([]string, 0, len(s.topics))
 	for cat := range s.topics {

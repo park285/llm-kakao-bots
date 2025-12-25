@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
-// LogEntry 는 타입이다.
+// LogEntry: 활동 로그의 한 항목을 나타내는 구조체
 type LogEntry struct {
 	Timestamp time.Time              `json:"timestamp"`
 	Type      string                 `json:"type"` // e.g., "command", "auth", "system"
@@ -18,22 +18,22 @@ type LogEntry struct {
 	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
-// Logger 는 타입이다.
+// Logger: 파일 기반의 간단한 활동 로그 기록기
 type Logger struct {
 	filePath string
-	logger   *zap.Logger
+	logger   *slog.Logger
 	mu       sync.RWMutex
 }
 
-// NewActivityLogger 는 동작을 수행한다.
-func NewActivityLogger(filePath string, logger *zap.Logger) *Logger {
+// NewActivityLogger: 새로운 활동 로그 기록기를 생성한다.
+func NewActivityLogger(filePath string, logger *slog.Logger) *Logger {
 	return &Logger{
 		filePath: filePath,
 		logger:   logger,
 	}
 }
 
-// Log 는 동작을 수행한다.
+// Log: 새로운 활동 로그를 파일에 추가한다. (Thread-safe)
 func (l *Logger) Log(entryType, summary string, details map[string]interface{}) {
 	entry := LogEntry{
 		Timestamp: time.Now(),
@@ -47,17 +47,17 @@ func (l *Logger) Log(entryType, summary string, details map[string]interface{}) 
 
 	f, err := os.OpenFile(l.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		l.logger.Error("Failed to open activity log file", zap.Error(err))
+		l.logger.Error("Failed to open activity log file", slog.Any("error", err))
 		return
 	}
 	defer f.Close()
 
 	if err := json.NewEncoder(f).Encode(entry); err != nil {
-		l.logger.Error("Failed to write activity log", zap.Error(err))
+		l.logger.Error("Failed to write activity log", slog.Any("error", err))
 	}
 }
 
-// GetRecentLogs 는 동작을 수행한다.
+// GetRecentLogs: 최근 활동 로그를 조회한다.
 func (l *Logger) GetRecentLogs(limit int) ([]LogEntry, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

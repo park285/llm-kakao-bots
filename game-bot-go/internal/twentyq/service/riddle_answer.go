@@ -9,7 +9,7 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// Answer 는 동작을 수행한다.
+// Answer: 사용자의 질문에 대한 답변을 처리하고 결과를 문자열로 반환한다 (간편 호출용).
 func (s *RiddleService) Answer(ctx context.Context, chatID string, userID string, sender *string, question string) (string, error) {
 	outcome, err := s.AnswerWithOutcome(ctx, chatID, userID, sender, question, false)
 	if err != nil {
@@ -18,14 +18,14 @@ func (s *RiddleService) Answer(ctx context.Context, chatID string, userID string
 	return outcome.Message, nil
 }
 
-// AnswerOutcome 는 타입이다.
+// AnswerOutcome: 질문 처리에 대한 상세 결과 (메시지, 긍정/부정 척도 등)
 type AnswerOutcome struct {
 	Message         string
 	Scale           qmodel.FiveScaleKo
 	IsAnswerAttempt bool
 }
 
-// AnswerWithOutcome 는 동작을 수행한다.
+// AnswerWithOutcome: 질문 처리 결과와 함께 답변 타입(정답 시도 여부 등)을 반환한다.
 func (s *RiddleService) AnswerWithOutcome(
 	ctx context.Context,
 	chatID string,

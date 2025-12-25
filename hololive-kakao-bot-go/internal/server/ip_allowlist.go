@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// NewIPAllowList 는 동작을 수행한다.
+// NewIPAllowList: 허용된 IP 대역(CIDR) 목록을 파싱하여 IPNet 슬라이스를 생성한다.
 func NewIPAllowList(allowed []string) ([]*net.IPNet, error) {
 	nets := make([]*net.IPNet, 0, len(allowed))
 	for _, raw := range allowed {
@@ -35,8 +36,8 @@ func NewIPAllowList(allowed []string) ([]*net.IPNet, error) {
 	return nets, nil
 }
 
-// AdminIPAllowMiddleware 는 동작을 수행한다.
-func AdminIPAllowMiddleware(allowed []*net.IPNet, logger *zap.Logger) gin.HandlerFunc {
+// AdminIPAllowMiddleware: 관리자 페이지 접근 시 클라이언트 IP가 허용 목록에 있는지 검사하는 미들웨어
+func AdminIPAllowMiddleware(allowed []*net.IPNet, logger *slog.Logger) gin.HandlerFunc {
 	if len(allowed) == 0 {
 		return func(c *gin.Context) {
 			c.Next()
@@ -56,7 +57,7 @@ func AdminIPAllowMiddleware(allowed []*net.IPNet, logger *zap.Logger) gin.Handle
 				return
 			}
 		}
-		logger.Warn("Admin IP blocked", zap.String("ip", clientIP.String()))
+		logger.Warn("Admin IP blocked", slog.String("ip", clientIP.String()))
 		c.JSON(403, gin.H{"error": "forbidden"})
 		c.Abort()
 	}

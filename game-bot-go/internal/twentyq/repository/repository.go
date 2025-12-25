@@ -14,17 +14,17 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// Repository 는 타입이다.
+// Repository: DB 접근을 위한 GORM 기반 리포지토리
 type Repository struct {
 	db *gorm.DB
 }
 
-// New 는 동작을 수행한다.
+// New: 새로운 Repository 인스턴스를 생성한다.
 func New(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// AutoMigrate 는 동작을 수행한다.
+// AutoMigrate: 자동으로 DB 테이블 스키마를 마이그레이션한다.
 func (r *Repository) AutoMigrate(ctx context.Context) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -40,12 +40,12 @@ func (r *Repository) AutoMigrate(ctx context.Context) error {
 	return nil
 }
 
-// CompositeUserStatsID 는 동작을 수행한다.
+// CompositeUserStatsID: 사용자 통계 ID (ChatID:UserID) 생성 함수
 func CompositeUserStatsID(chatID string, userID string) string {
 	return strings.TrimSpace(chatID) + ":" + strings.TrimSpace(userID)
 }
 
-// GenerateFallbackSessionID 는 동작을 수행한다.
+// GenerateFallbackSessionID: 세션 ID가 없을 경우 대체 ID 생성 함수
 func GenerateFallbackSessionID(chatID string) string {
 	chatID = strings.TrimSpace(chatID)
 
@@ -56,7 +56,7 @@ func GenerateFallbackSessionID(chatID string) string {
 	return chatID + ":" + hex.EncodeToString(b[:])
 }
 
-// UpsertNickname 는 동작을 수행한다.
+// UpsertNickname: 사용자 닉네임 정보를 삽입하거나 업데이트한다.
 func (r *Repository) UpsertNickname(
 	ctx context.Context,
 	chatID string,
@@ -155,7 +155,7 @@ func (r *Repository) BatchUpsertNicknames(
 	return nil
 }
 
-// RecordGameStart 는 동작을 수행한다.
+// RecordGameStart: 게임 시작 정보를 기록한다 (사용자 통계 초기화 등).
 func (r *Repository) RecordGameStart(ctx context.Context, chatID string, userID string, now time.Time) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -193,7 +193,7 @@ func (r *Repository) RecordGameStart(ctx context.Context, chatID string, userID 
 	return nil
 }
 
-// GameResult 는 타입이다.
+// GameResult: 게임 결과 상수
 type GameResult string
 
 // GameResultCorrect 는 게임 결과 상수 목록이다.
@@ -202,7 +202,7 @@ const (
 	GameResultSurrender GameResult = "SURRENDER"
 )
 
-// GameCompletionParams 는 타입이다.
+// GameCompletionParams: 게임 완료 기록 파라미터 구조체
 type GameCompletionParams struct {
 	ChatID                 string
 	UserID                 string
@@ -321,7 +321,7 @@ func updateOverallBestScore(tx *gorm.DB, userStatsID string, p GameCompletionPar
 	return nil
 }
 
-// RecordGameCompletion 는 동작을 수행한다.
+// RecordGameCompletion: 게임 완료 정보를 기록하고 관련 통계를 업데이트한다.
 func (r *Repository) RecordGameCompletion(ctx context.Context, p GameCompletionParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -526,7 +526,7 @@ func updateCategoryStatsJSONGeneric(tx *gorm.DB, userStatsID, categoryKey string
 	return nil
 }
 
-// GameSessionParams 는 타입이다.
+// GameSessionParams: 게임 세션 기록 파라미터 구조체
 type GameSessionParams struct {
 	SessionID        string
 	ChatID           string
@@ -539,7 +539,7 @@ type GameSessionParams struct {
 	Now              time.Time
 }
 
-// RecordGameSession 는 동작을 수행한다.
+// RecordGameSession: 게임 세션 메타데이터를 기록한다.
 func (r *Repository) RecordGameSession(ctx context.Context, p GameSessionParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -579,7 +579,7 @@ func (r *Repository) RecordGameSession(ctx context.Context, p GameSessionParams)
 	return nil
 }
 
-// GameLogParams 는 타입이다.
+// GameLogParams: 게임 로그 파라미터 구조체
 type GameLogParams struct {
 	ChatID          string
 	UserID          string
@@ -594,7 +594,7 @@ type GameLogParams struct {
 	Now             time.Time
 }
 
-// RecordGameLog 는 동작을 수행한다.
+// RecordGameLog: 플레이어별 게임 활동 로그를 기록한다.
 func (r *Repository) RecordGameLog(ctx context.Context, p GameLogParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
