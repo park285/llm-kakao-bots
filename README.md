@@ -1,71 +1,367 @@
-# llm 워크스페이스 안내
+# LLM 워크스페이스
 
-## 개요
-- 이 루트는 LLM 공통 인프라와 두 봇 프로젝트를 모아 둔 상위 워크스페이스입니다.
-- 운영 기준 공통 LLM 서버는 `mcp-llm-server-go/`(Go)이며, `mcp-llm-server/`(Python)는 레거시/개발용으로 유지합니다.
-- LLM 추론·가드·NLP 로직은 전부 `mcp-llm-server-go`가 담당하고, 봇들은 HTTP REST API를 통해 이 서버에 의존합니다. 봇 디렉터리에는 LLM 프롬프트/로직을 직접 두지 않습니다.
+[![Go Version](https://img.shields.io/badge/Go-1.25.5-00ADD8?logo=go)](https://go.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?logo=postgresql)](https://www.postgresql.org/)
+[![Valkey](https://img.shields.io/badge/Valkey-9.0-DC382D?logo=redis)](https://valkey.io/)
+[![License](https://img.shields.io/badge/License-Private-gray)]()
 
-## 프로젝트 맵
-- `mcp-llm-server-go/` : Go(Gin + h2c) LLM REST 서버 (google.golang.org/genai, guard, session, usage). 품질도구: gofmt/goimports/gci/golangci-lint.
-- `mcp-llm-server/` : Python 3.13 FastAPI + Hypercorn(h2c) REST 서버 (LangChain Google GenAI ≥3.2.0, mcp ≥1.22.0, kiwipiepy ≥0.22.1, pyahocorasick). 레거시/개발용. 품질도구: ruff/black/mypy/pytest.
-- `20q-kakao-bot/` : Kotlin 2.3.0-RC3 + Spring Boot 4.0.0 (WebFlux/Redis/R2DBC). Coroutines BOM 1.10.2, Redisson 3.52.0, detekt. LLM 호출은 mcp-llm-server REST API를 사용하며, 로컬 LLM 로직 없음.
-- `turtle-soup-bot/` : Kotlin 2.3.0-RC3 + Ktor 3.3.2, Koin 4.0.0, coroutines 1.9.0, kotlinx.serialization 1.7.3, LangChain4j(0.36.x) + Google Gemini, Redis/Valkey. 품질도구: ktlint 1.0.1, detekt 1.23.4. LLM 호 출은 mcp-llm-server REST API를 경유하며, 로컬에 LLM 로직/프롬프트를 두지 않음.
-- `.serena/` : Serena 도구 설정.
+LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스입니다.
 
-## 규칙 파일 진입점
-- 공통 체인: `/home/kapu/.claude/CLAUDE.md` → `/home/kapu/gemini/CLAUDE.md` → 각 프로젝트 AGENT/CONVENTIONS.
-- `mcp-llm-server/AGENT.MD`, `mcp-llm-server/CONVENTIONS.md`, `mcp-llm-server/CLAUDE.md`
-- `20q-kakao-bot/CONVENTIONS.md` (별도 AGENT 없음)
-- `turtle-soup-bot/AGENT.MD`, `turtle-soup-bot/CONVENTIONS.md`, `turtle-soup-bot/CLAUDE.md`
+## 기술 스택
 
-## 빠른 명령 요약
-- 공통 전제: 각 프로젝트 디렉터리로 이동 후 실행.
-- `mcp-llm-server-go` (Go):
-  - 품질: `make lint`, `make fmt`
-  - 테스트: `make test` (또는 `go test ./...`)
-  - 빌드: `make build` (출력: `bin/server`)
-  - 실행: `./bin/server` 또는 `go run ./cmd/server`
-  - 스모크(LLM 미호출): `bash scripts/smoke_test.sh`
-  - LLM 실동작: `bash scripts/llm_live_test.sh /home/kapu/gemini/llm/.env`
-- `mcp-llm-server` (Python):
-  - 설치: `python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`
-  - 품질: `ruff check src/ --fix && ruff format src/ && black src/ && mypy src/ && pytest`
-  - 실행: `mcp-llm-server` 또는 `python -m mcp_llm_server.http_server`
-- `20q-kakao-bot` (Kotlin):
-  - 품질: `./gradlew detekt`
-  - 테스트: `./gradlew test`
-- `turtle-soup-bot` (Kotlin/Ktor):
-  - 품질: `./gradlew ktlintCheck detekt`
-  - 포맷: `./gradlew ktlintFormat`
-  - 테스트: `./gradlew test`
+| 분류 | 기술 | 버전 |
+|------|------|------|
+| **언어** | Go | 1.25.5 |
+| **AI** | Google Gemini API | go-genai SDK |
+| **메시지큐** | Valkey Streams | 9.0-alpine |
+| **캐시** | Valkey (AOF) | 9.0-alpine |
+| **데이터베이스** | PostgreSQL | 18-alpine |
+| **HTTP** | h2c (HTTP/2 Cleartext) | - |
 
-## 배치 정책
-- 공통 인프라(LLM MCP 서버)는 `mcp-llm-server/`에 유지. 경로 변경 시 규칙 체인, 스크립트, 도커 설정 전체 수정이 필요하므로 현 구조를 권장합니다.
-- Docker/Compose: 운영은 루트의 `docker-compose.prod.yml`만 사용합니다.
+## 프로젝트 구조
 
-## Docker / Compose (운영)
-- 운영 스택 파일: `docker-compose.prod.yml` (Go 기반 `mcp-llm-server-go` 사용)
-- 컨테이너 이름이 고정(`container_name`)이므로 프로젝트명은 `-p 20q-kakao-bot`로 통일합니다.
-
-### 환경 변수 (SSOT)
-- 운영 스택 설정의 단일 소스는 루트 `./.env` 입니다.
-- `docker-compose.prod.yml`은 `mcp-llm-server-go`/봇 컨테이너에 `env_file: ./.env`로 주입하며, `${VAR}` 치환에도 동일 파일을 사용합니다.
-- `mcp-llm-server/.env`는 로컬에서 서버를 단독 실행할 때만 사용(Compose 운영 스택에서는 미사용)합니다.
-- (옵션) `HTTP_API_KEY`를 설정하면 `mcp-llm-server-go`의 `/api/*`가 인증 모드로 동작하며, Go 봇은 동일 키를 자동 전송합니다.
-- (옵션) `HTTP_RATE_LIMIT_RPM`로 `mcp-llm-server-go`의 `/api/*` 레이트리밋을 활성화할 수 있습니다.
-- 세션 스토어는 `SESSION_STORE_URL`, `SESSION_STORE_ENABLED`, `SESSION_STORE_REQUIRED`로 제어하며, 운영은 `valkey-cache`(+AOF) 기준입니다.
-- 로그 파일 설정은 `LOG_DIR`, `LOG_FILE_MAX_SIZE_MB`, `LOG_FILE_MAX_BACKUPS`, `LOG_FILE_MAX_AGE_DAYS`, `LOG_FILE_COMPRESS`를 사용합니다.
-- (Gemini3) `GEMINI_TEMPERATURE`는 **실제 적용 값이 1.0 미만으로 내려가지 않으며**, `/health/models`의 `temperature`로 확인할 수 있습니다.
-
-### 실행/재기동
-```bash
-docker compose -p 20q-kakao-bot -f docker-compose.prod.yml up -d --force-recreate
+```
+llm/
+├── mcp-llm-server-go/        # LLM 추론 서버
+│   ├── internal/
+│   │   ├── gemini/           # Gemini SDK 래퍼
+│   │   ├── guard/            # 프롬프트 인젝션 가드
+│   │   ├── session/          # 세션 관리
+│   │   ├── handler/          # HTTP 핸들러
+│   │   └── usage/            # 토큰 사용량 추적
+│   └── Dockerfile.prod
+│
+├── game-bot-go/              # 게임 봇 (모노레포)
+│   ├── cmd/
+│   │   ├── twentyq/          # 스무고개 엔트리포인트
+│   │   └── turtlesoup/       # 바다거북수프 엔트리포인트
+│   ├── internal/
+│   │   ├── common/           # 공통 유틸리티
+│   │   │   ├── valkeyx/      # Valkey 클라이언트 헬퍼
+│   │   │   ├── parser/       # 명령어 파서 기반
+│   │   │   ├── httputil/     # HTTP 유틸리티
+│   │   │   └── config/       # 공통 상수
+│   │   ├── twentyq/          # 스무고개 로직
+│   │   └── turtlesoup/       # 바다거북수프 로직
+│   └── Dockerfile.prod
+│
+├── hololive-kakao-bot-go/    # 홀로라이브 정보 봇
+│   ├── internal/
+│   │   ├── command/          # 명령어 핸들러
+│   │   ├── service/          # 비즈니스 로직
+│   │   └── repository/       # 데이터 접근
+│   └── Dockerfile
+│
+├── watchdog/                 # 컨테이너 헬스체크 모니터
+│   └── Dockerfile
+│
+├── docker-compose.prod.yml   # 프로덕션 스택
+├── .env                      # 환경 변수 (SSOT)
+├── logs/                     # 로그 디렉터리
+└── backups/                  # 백업 스크립트
 ```
 
-### 중지
+## 서비스 구성
+
+### 애플리케이션 서비스
+
+| 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
+|--------|------------|------|--------|------|
+| `mcp-llm-server` | mcp-llm-server | 40527 | 1GB | LLM 추론/가드/세션 |
+| `twentyq-bot` | twentyq-bot | 8081 | 512MB | 스무고개 게임 봇 |
+| `turtle-soup-bot` | turtle-soup-bot | 8082 | 512MB | 바다거북수프 게임 봇 |
+| `hololive-bot` | hololive-kakao-bot-go | 30001 | 512MB | 홀로라이브 정보 봇 |
+| `llm-watchdog` | llm-watchdog | 30002 | 512MB | 컨테이너 모니터링 |
+
+### 인프라 서비스
+
+| 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
+|--------|------------|------|--------|------|
+| `postgres` | llm-postgres | 5432 | 512MB | 통합 PostgreSQL |
+| `valkey-cache` | valkey-cache | 6379 | 512MB | 세션/캐시 (AOF) |
+| `valkey-mq` | valkey-mq | 1833 | 256MB | Streams 메시지큐 |
+
+## API 엔드포인트
+
+### LLM Server (`mcp-llm-server:40527`)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/health/ready` | 준비 상태 확인 |
+| GET | `/health/models` | 모델 설정 조회 |
+| POST | `/api/sessions` | 세션 생성 |
+| DELETE | `/api/sessions/:id` | 세션 삭제 |
+| POST | `/api/guard/checks` | 인젝션 가드 체크 |
+| POST | `/api/llm/twentyq/*` | 스무고개 LLM 호출 |
+| POST | `/api/llm/turtlesoup/*` | 바다거북수프 LLM 호출 |
+| GET | `/api/usage/*` | 토큰 사용량 조회 |
+
+### Game Bots
+
+| 봇 | 메서드 | 경로 | 설명 |
+|----|--------|------|------|
+| twentyq | GET | `/health` | 헬스체크 |
+| twentyq | GET/POST | `/api/twentyq/*` | REST API |
+| turtlesoup | GET | `/health` | 헬스체크 |
+| turtlesoup | GET/POST | `/api/turtlesoup/*` | REST API |
+
+## 빠른 시작
+
+### 요구사항
+
+- Docker 24.0+
+- Docker Compose v2
+- Make (선택)
+
+### 환경 설정
+
 ```bash
-docker compose -p 20q-kakao-bot -f docker-compose.prod.yml down --remove-orphans
+# .env 파일 생성
+cp .env.example .env
+
+# 필수 값 설정
+vi .env
 ```
 
-### 로그
-- 호스트의 `./logs/`에 파일로 기록됩니다. (예: `server.log`, `twentyq.log`, `turtlesoup.log`)
+### 빌드 및 실행
+
+```bash
+# 전체 빌드 (캐시 미사용)
+docker compose -f docker-compose.prod.yml build --no-cache
+
+# 서비스 기동
+docker compose -f docker-compose.prod.yml up -d
+
+# 상태 확인
+docker compose -f docker-compose.prod.yml ps
+
+# 헬스체크
+curl http://localhost:40527/health/ready
+curl http://localhost:8081/health
+curl http://localhost:8082/health
+```
+
+### 특정 서비스 재기동
+
+```bash
+# 빌드 후 재기동
+docker compose -f docker-compose.prod.yml build twentyq-bot turtle-soup-bot
+docker compose -f docker-compose.prod.yml up -d twentyq-bot turtle-soup-bot
+
+# 강제 재생성
+docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
+```
+
+## 환경 변수
+
+`.env` 파일이 모든 서비스의 환경 변수 **SSOT** (Single Source of Truth)입니다.
+
+### 필수 설정
+
+| 변수 | 설명 | 예시 |
+|------|------|------|
+| `GOOGLE_API_KEY` | Gemini API 키 | `AIza...` |
+| `DB_PASSWORD` | PostgreSQL 비밀번호 | `secure_password` |
+
+### Gemini 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `GEMINI_MODEL` | 기본 모델 | `gemini-2.5-flash` |
+| `GEMINI_TEMPERATURE` | Temperature | `1.0` |
+| `GEMINI_TIMEOUT_SECONDS` | 타임아웃 | `60` |
+| `GEMINI_MAX_RETRIES` | 최대 재시도 | `3` |
+
+### 보안 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `HTTP_API_KEY` | API 인증 키 | (비활성화) |
+| `HTTP_RATE_LIMIT_RPM` | 분당 요청 제한 | (비활성화) |
+| `GUARD_ENABLED` | 인젝션 가드 | `true` |
+| `GUARD_THRESHOLD` | 가드 임계값 | `0.85` |
+
+### 세션/캐시 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `SESSION_STORE_URL` | Valkey URL | `redis://valkey-cache:6379` |
+| `SESSION_STORE_ENABLED` | 세션 활성화 | `true` |
+| `SESSION_TTL_HOURS` | 세션 만료 시간 | `24` |
+
+### 로깅 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `LOG_DIR` | 로그 디렉터리 | `/app/logs` |
+| `LOG_LEVEL` | 로그 레벨 | `info` |
+| `LOG_FILE_MAX_SIZE_MB` | 최대 파일 크기 | `100` |
+| `LOG_FILE_MAX_BACKUPS` | 백업 개수 | `3` |
+
+## 아키텍처
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                           카카오톡 앱                                  │
+└─────────────────────────────────┬────────────────────────────────────┘
+                                  │
+                                  ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Valkey MQ (Streams)                           │
+│                            :1833                                     │
+└────────────┬─────────────────────────────────────┬───────────────────┘
+             │                                     │
+             ▼                                     ▼
+┌────────────────────────┐           ┌────────────────────────┐
+│    TwentyQ Bot         │           │   TurtleSoup Bot       │
+│       :8081            │           │       :8082            │
+└───────────┬────────────┘           └───────────┬────────────┘
+            │                                     │
+            │     ┌───────────────────────┐       │
+            └────►│    LLM Server         │◄──────┘
+                  │      :40527           │
+                  │   (h2c + Gin)         │
+                  └───────────┬───────────┘
+                              │
+            ┌─────────────────┼─────────────────┐
+            ▼                 ▼                 ▼
+┌───────────────────┐ ┌───────────────┐ ┌───────────────────┐
+│   Valkey Cache    │ │   Gemini API  │ │    PostgreSQL     │
+│     :6379         │ │   (External)  │ │      :5432        │
+│   (AOF 영속화)     │ │               │ │                   │
+└───────────────────┘ └───────────────┘ └───────────────────┘
+          │                                       │
+          │                                       │
+┌─────────┴─────────────────────────────┬─────────┴─────────┐
+│                                       │                   │
+│              Watchdog (:30002)        │   Hololive Bot    │
+│              헬스체크/자동재시작          │     :30001        │
+│                                       │                   │
+└───────────────────────────────────────┴───────────────────┘
+```
+
+## 개발 가이드
+
+### 로컬 개발
+
+```bash
+# game-bot-go 개발
+cd game-bot-go
+go build ./...
+go test ./... -race -count=1
+
+# mcp-llm-server-go 개발
+cd mcp-llm-server-go
+go build ./...
+go test ./... -race -count=1
+make lint
+```
+
+### 코드 품질
+
+```bash
+# 포맷팅
+gofmt -w .
+goimports -w .
+
+# 린팅
+go vet ./...
+staticcheck ./...
+
+# 테스트 커버리지
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
+### 공통 패키지 (game-bot-go/internal/common)
+
+| 패키지 | 설명 |
+|--------|------|
+| `valkeyx` | Valkey 클라이언트, 키 빌더 |
+| `parser` | 명령어 파서 기반 클래스 |
+| `httputil` | JSON 응답, HTTP 상수 |
+| `config` | 공통 상수 (TTL, 타임아웃 등) |
+| `textutil` | 텍스트 청킹 유틸리티 |
+| `llmrest` | LLM 서버 REST 클라이언트 |
+
+## 운영 가이드
+
+### 로그 확인
+
+```bash
+# 실시간 로그
+docker compose -f docker-compose.prod.yml logs -f
+
+# 특정 서비스
+docker compose -f docker-compose.prod.yml logs -f mcp-llm-server
+
+# 파일 로그 (호스트)
+tail -f logs/server.log
+tail -f logs/twentyq.log
+tail -f logs/turtlesoup.log
+```
+
+### 서비스 중지
+
+```bash
+docker compose -f docker-compose.prod.yml down --remove-orphans
+```
+
+### 볼륨 정리 (주의!)
+
+```bash
+# 데이터 포함 전체 삭제
+docker compose -f docker-compose.prod.yml down -v
+```
+
+### 백업
+
+```bash
+# PostgreSQL 백업
+docker exec llm-postgres pg_dumpall -U twentyq_app > backups/pgdump_$(date +%Y%m%d).sql
+
+# Valkey 스냅샷
+docker exec valkey-cache valkey-cli BGSAVE
+```
+
+## 트러블슈팅
+
+### 서비스가 시작되지 않음
+
+```bash
+# 로그 확인
+docker compose -f docker-compose.prod.yml logs <서비스명>
+
+# 헬스체크 상태
+docker inspect <컨테이너명> --format='{{json .State.Health}}'
+```
+
+### LLM 호출 실패
+
+```bash
+# LLM 서버 헬스체크
+curl http://localhost:40527/health/ready
+
+# 모델 설정 확인
+curl http://localhost:40527/health/models
+```
+
+### Valkey 연결 실패
+
+```bash
+# Valkey 상태 확인
+docker exec valkey-cache valkey-cli ping
+docker exec valkey-mq valkey-cli -p 1833 ping
+```
+
+## 레거시 참고
+
+| 디렉터리 | 상태 | 비고 |
+|----------|------|------|
+| `mcp-llm-server/` | 개발용 | Python FastAPI |
+| `20q-kakao-bot/` | 마이그레이션 완료 | → `game-bot-go` |
+| `turtle-soup-bot/` | 마이그레이션 완료 | → `game-bot-go` |
+
+---
+
+**Last Updated**: 2025-12-25
