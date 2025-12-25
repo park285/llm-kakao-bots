@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -41,40 +40,24 @@ func (h *TwentyQHandler) handleVerify(c *gin.Context) {
 		SystemPrompt: system,
 		Task:         "verify",
 	}, twentyq.VerifySchema())
-	if err == nil {
-		rawValue, parseErr := shared.ParseStringField(payload, "result")
-		if parseErr == nil {
-			resultName, ok := twentyq.VerifyResultName(rawValue)
-			var result *string
-			if ok {
-				result = &resultName
-			}
-			c.JSON(http.StatusOK, TwentyQVerifyResponse{
-				Result:  result,
-				RawText: rawValue,
-			})
-			return
-		}
-		h.logError(parseErr)
-	} else {
-		h.logError(err)
-	}
-
-	rawText, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "verify",
-	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
-	rawText = strings.TrimSpace(rawText)
-	parsed := parseVerifyFallback(rawText)
+
+	rawValue, parseErr := shared.ParseStringField(payload, "result")
+	var result *string
+	if parseErr == nil {
+		resultName, ok := twentyq.VerifyResultName(rawValue)
+		if ok {
+			result = &resultName
+		}
+	}
+
 	c.JSON(http.StatusOK, TwentyQVerifyResponse{
-		Result:  parsed,
-		RawText: rawText,
+		Result:  result,
+		RawText: rawValue,
 	})
 }
 
@@ -153,78 +136,23 @@ func (h *TwentyQHandler) handleSynonym(c *gin.Context) {
 		Prompt:       userContent,
 		SystemPrompt: system,
 	}, twentyq.SynonymSchema())
-	if err == nil {
-		rawValue, parseErr := shared.ParseStringField(payload, "result")
-		if parseErr == nil {
-			resultName, ok := twentyq.SynonymResultName(rawValue)
-			var result *string
-			if ok {
-				result = &resultName
-			}
-			c.JSON(http.StatusOK, TwentyQSynonymResponse{
-				Result:  result,
-				RawText: rawValue,
-			})
-			return
-		}
-		h.logError(parseErr)
-	} else {
-		h.logError(err)
-	}
-
-	rawText, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
-	rawText = strings.TrimSpace(rawText)
-	parsed := parseSynonymFallback(rawText)
+
+	rawValue, parseErr := shared.ParseStringField(payload, "result")
+	var result *string
+	if parseErr == nil {
+		resultName, ok := twentyq.SynonymResultName(rawValue)
+		if ok {
+			result = &resultName
+		}
+	}
+
 	c.JSON(http.StatusOK, TwentyQSynonymResponse{
-		Result:  parsed,
-		RawText: rawText,
+		Result:  result,
+		RawText: rawValue,
 	})
-}
-
-// parseVerifyFallback 는 검증 결과를 파싱한다 (fallback).
-func parseVerifyFallback(rawText string) *string {
-	rawUpper := strings.ToUpper(rawText)
-	for _, candidate := range []string{"ACCEPT", "CLOSE", "REJECT"} {
-		if strings.Contains(rawUpper, candidate) {
-			result := candidate
-			return &result
-		}
-	}
-	for _, candidate := range []string{string(twentyq.VerifyAccept), string(twentyq.VerifyClose), string(twentyq.VerifyReject)} {
-		if strings.Contains(rawText, candidate) {
-			result, ok := twentyq.VerifyResultName(candidate)
-			if ok {
-				return &result
-			}
-		}
-	}
-	return nil
-}
-
-// parseSynonymFallback 는 유의어 확인 결과를 파싱한다 (fallback).
-func parseSynonymFallback(rawText string) *string {
-	rawUpper := strings.ToUpper(rawText)
-	for _, candidate := range []string{"NOT_EQUIVALENT", "EQUIVALENT"} {
-		if strings.Contains(rawUpper, candidate) {
-			result := candidate
-			return &result
-		}
-	}
-	for _, candidate := range []string{string(twentyq.SynonymEquivalent), string(twentyq.SynonymNotEquivalent)} {
-		if strings.Contains(rawText, candidate) {
-			result, ok := twentyq.SynonymResultName(candidate)
-			if ok {
-				return &result
-			}
-		}
-	}
-	return nil
 }

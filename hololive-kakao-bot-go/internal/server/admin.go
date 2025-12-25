@@ -135,7 +135,7 @@ func (h *AdminHandler) handleAliasOperation(
 		slog.String("alias", req.Alias),
 	)
 
-	h.activity.Log("member_alias_"+operationName, fmt.Sprintf("Member alias %s: %s (ID: %d)", operationName, req.Alias, memberID), map[string]interface{}{
+	h.activity.Log("member_alias_"+operationName, fmt.Sprintf("Member alias %s: %s (ID: %d)", operationName, req.Alias, memberID), map[string]any{
 		"member_id": memberID,
 		"type":      req.Type,
 		"alias":     req.Alias,
@@ -205,7 +205,7 @@ func (h *AdminHandler) SetGraduation(c *gin.Context) {
 	if !req.IsGraduated {
 		statusStr = "active"
 	}
-	h.activity.Log("member_graduation", fmt.Sprintf("Member status changed to %s (ID: %d)", statusStr, memberID), map[string]interface{}{
+	h.activity.Log("member_graduation", fmt.Sprintf("Member status changed to %s (ID: %d)", statusStr, memberID), map[string]any{
 		"member_id":    memberID,
 		"is_graduated": req.IsGraduated,
 	})
@@ -258,7 +258,7 @@ func (h *AdminHandler) UpdateChannelID(c *gin.Context) {
 		slog.String("channel_id", req.ChannelID),
 	)
 
-	h.activity.Log("member_channel_update", fmt.Sprintf("Member channel ID updated to %s (ID: %d)", req.ChannelID, memberID), map[string]interface{}{
+	h.activity.Log("member_channel_update", fmt.Sprintf("Member channel ID updated to %s (ID: %d)", req.ChannelID, memberID), map[string]any{
 		"member_id":  memberID,
 		"channel_id": req.ChannelID,
 	})
@@ -324,7 +324,7 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 		slog.String("ip", ip),
 	)
 
-	h.activity.Log("auth_login", "Admin login successful", map[string]interface{}{
+	h.activity.Log("auth_login", "Admin login successful", map[string]any{
 		"username": req.Username,
 		"ip":       ip,
 	})
@@ -368,7 +368,7 @@ func (h *AdminHandler) HandleLogout(c *gin.Context) {
 
 	ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
 
-	h.activity.Log("auth_logout", "Admin logout", map[string]interface{}{
+	h.activity.Log("auth_logout", "Admin logout", map[string]any{
 		"ip": c.ClientIP(),
 	})
 
@@ -438,7 +438,7 @@ func (h *AdminHandler) DeleteAlarm(c *gin.Context) {
 		return
 	}
 
-	h.activity.Log("alarm_delete", fmt.Sprintf("Alarm deleted: %s / %s", req.UserID, req.ChannelID), map[string]interface{}{
+	h.activity.Log("alarm_delete", fmt.Sprintf("Alarm deleted: %s / %s", req.UserID, req.ChannelID), map[string]any{
 		"room_id":    req.RoomID,
 		"user_id":    req.UserID,
 		"channel_id": req.ChannelID,
@@ -498,7 +498,7 @@ func (h *AdminHandler) AddRoom(c *gin.Context) {
 		"message": "Room added successfully",
 	})
 
-	h.activity.Log("room_add", "Room added to whitelist: "+req.Room, map[string]interface{}{"room": req.Room})
+	h.activity.Log("room_add", "Room added to whitelist: "+req.Room, map[string]any{"room": req.Room})
 }
 
 // RemoveRoom removes a room from the whitelist
@@ -530,7 +530,7 @@ func (h *AdminHandler) RemoveRoom(c *gin.Context) {
 		"message": "Room removed successfully",
 	})
 
-	h.activity.Log("room_remove", "Room removed from whitelist: "+req.Room, map[string]interface{}{"room": req.Room})
+	h.activity.Log("room_remove", "Room removed from whitelist: "+req.Room, map[string]any{"room": req.Room})
 }
 
 // SetACL enables or disables room ACL
@@ -558,7 +558,7 @@ func (h *AdminHandler) SetACL(c *gin.Context) {
 
 	h.logger.Info("Room ACL updated", slog.Bool("enabled", req.Enabled))
 
-	h.activity.Log("acl_update", fmt.Sprintf("Room ACL state changed to %v", req.Enabled), map[string]interface{}{"enabled": req.Enabled})
+	h.activity.Log("acl_update", fmt.Sprintf("Room ACL state changed to %v", req.Enabled), map[string]any{"enabled": req.Enabled})
 	c.JSON(200, gin.H{
 		"status":  "ok",
 		"message": "ACL setting updated successfully",
@@ -636,7 +636,7 @@ func (h *AdminHandler) SetRoomName(c *gin.Context) {
 		slog.String("room_name", req.RoomName),
 	)
 
-	h.activity.Log("name_update", fmt.Sprintf("Room name set: %s -> %s", req.RoomID, req.RoomName), map[string]interface{}{
+	h.activity.Log("name_update", fmt.Sprintf("Room name set: %s -> %s", req.RoomID, req.RoomName), map[string]any{
 		"room_id":   req.RoomID,
 		"room_name": req.RoomName,
 	})
@@ -776,7 +776,7 @@ func (h *AdminHandler) AddMember(c *gin.Context) {
 		h.logger.Warn("Failed to refresh member cache", slog.Any("error", err))
 	}
 
-	h.activity.Log("member_add", "Member added: "+req.Name, map[string]interface{}{"name": req.Name})
+	h.activity.Log("member_add", "Member added: "+req.Name, map[string]any{"name": req.Name})
 
 	c.JSON(200, gin.H{"status": "ok", "message": "Member added successfully"})
 }

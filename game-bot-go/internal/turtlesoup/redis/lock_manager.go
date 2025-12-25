@@ -12,10 +12,10 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	tsassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/assets"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
 // LockManager: Redis와 Lua 스크립트를 사용하여 분산 락(Distributed Lock)을 구현한 관리자
@@ -75,7 +75,7 @@ func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, 
 	cmd := m.client.B().Set().Key(lockKey).Value("1").Nx().Ex(time.Duration(ttlSeconds) * time.Second).Build()
 	err := m.client.Do(ctx, cmd).Error()
 	if err != nil {
-		if strings.Contains(err.Error(), "nil") {
+		if valkeyx.IsNil(err) {
 			return false, nil
 		}
 		return false, cerrors.RedisError{Operation: "shared_lock_acquire", Err: err}
@@ -186,7 +186,7 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 		cmd := m.client.B().Set().Key(key).Value(token).Nx().Ex(ttl).Build()
 		err := m.client.Do(ctx, cmd).Error()
 		if err != nil {
-			if strings.Contains(err.Error(), "nil") {
+			if valkeyx.IsNil(err) {
 				// SET NX failed (key exists)
 				if ctx.Err() != nil {
 					return false, nil
@@ -233,7 +233,7 @@ func (m *LockManager) release(ctx context.Context, sessionID string, token strin
 
 	cmd := m.client.B().Evalsha().Sha1(sha).Numkeys(2).Key(key, holderKey).Arg(token).Build()
 	if err := m.client.Do(ctx, cmd).Error(); err != nil {
-		if strings.Contains(err.Error(), "NOSCRIPT") {
+		if valkeyx.IsNoScript(err) {
 			m.clearScriptCache()
 			return m.release(ctx, sessionID, token)
 		}

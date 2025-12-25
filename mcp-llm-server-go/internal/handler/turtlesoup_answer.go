@@ -2,12 +2,12 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
 )
 
@@ -44,24 +44,22 @@ func (h *TurtleSoupHandler) handleAnswer(c *gin.Context) {
 		return
 	}
 
-	rawText, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
+	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
 		Task:         "answer",
-	})
+	}, turtlesoup.AnswerSchema())
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
-	rawText = strings.TrimSpace(rawText)
-	isImportant := turtlesoup.IsImportantAnswer(rawText)
-	base, ok := turtlesoup.ParseBaseAnswer(rawText)
-	if !ok && isImportant {
-		base = turtlesoup.AnswerYes
-		ok = true
-	}
-	if !ok {
+
+	rawAnswer, _ := shared.ParseStringField(payload, "answer")
+	isImportant, _ := payload["important"].(bool)
+
+	base := turtlesoup.AnswerType(rawAnswer)
+	if rawAnswer == "" {
 		base = turtlesoup.AnswerCannotAnswer
 	}
 	answerText := turtlesoup.FormatAnswerText(base, isImportant)
@@ -77,7 +75,7 @@ func (h *TurtleSoupHandler) handleAnswer(c *gin.Context) {
 
 	c.JSON(http.StatusOK, TurtleSoupAnswerResponse{
 		Answer:        answerText,
-		RawText:       rawText,
+		RawText:       rawAnswer,
 		QuestionCount: historyPairs + 1,
 		History:       items,
 	})

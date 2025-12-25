@@ -108,7 +108,7 @@ func (s *Store) enqueueInternal(
 	res, err := s.client.Do(ctx, cmd).ToAny()
 	if err != nil {
 		// NOSCRIPT 오류 시 스크립트 재로드
-		if strings.Contains(err.Error(), "NOSCRIPT") {
+		if valkeyx.IsNoScript(err) {
 			s.enqueueSHA = ""
 			return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, replaceOnDuplicate)
 		}
@@ -152,7 +152,7 @@ func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, erro
 			return DequeueResult{Status: DequeueEmpty}, nil
 		}
 		// NOSCRIPT 오류 시 스크립트 재로드
-		if strings.Contains(err.Error(), "NOSCRIPT") {
+		if valkeyx.IsNoScript(err) {
 			s.dequeueSHA = ""
 			return s.Dequeue(ctx, chatID)
 		}

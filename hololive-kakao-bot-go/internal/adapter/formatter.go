@@ -2,7 +2,7 @@ package adapter
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -500,11 +500,20 @@ func (f *ResponseFormatter) AlarmNotificationGroup(minutesUntil int, notificatio
 		return ""
 	}
 
-	sort.SliceStable(entries, func(i, j int) bool {
-		if entries[i].ChannelName == entries[j].ChannelName {
-			return entries[i].Title < entries[j].Title
+	slices.SortStableFunc(entries, func(a, b entry) int {
+		if a.ChannelName != b.ChannelName {
+			if a.ChannelName < b.ChannelName {
+				return -1
+			}
+			return 1
 		}
-		return entries[i].ChannelName < entries[j].ChannelName
+		if a.Title < b.Title {
+			return -1
+		}
+		if a.Title > b.Title {
+			return 1
+		}
+		return 0
 	})
 
 	instruction := DefaultEmoji.Alarm + " 방송 알림"

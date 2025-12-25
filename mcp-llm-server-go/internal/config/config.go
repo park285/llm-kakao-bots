@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
 	"net"
 	"net/url"
 	"os"
@@ -90,10 +89,7 @@ func (g GeminiConfig) ModelForTask(task string) string {
 // TemperatureForModel 는 모델별 temperature 를 계산한다.
 func (g GeminiConfig) TemperatureForModel(model string) float64 {
 	if isGemini3(model) {
-		if math.IsNaN(g.Temperature) || math.IsInf(g.Temperature, 0) {
-			return gemini3MinTemperature
-		}
-		return math.Max(gemini3MinTemperature, g.Temperature)
+		return max(gemini3MinTemperature, g.Temperature)
 	}
 	return g.Temperature
 }

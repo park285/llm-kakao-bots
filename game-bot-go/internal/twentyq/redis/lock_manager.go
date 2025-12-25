@@ -14,6 +14,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/assets"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 )
@@ -143,7 +144,7 @@ func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, 
 	cmd := m.client.B().Set().Key(lockKey).Value("1").Nx().Ex(time.Duration(ttlSeconds) * time.Second).Build()
 	err := m.client.Do(ctx, cmd).Error()
 	if err != nil {
-		if strings.Contains(err.Error(), "nil") {
+		if valkeyx.IsNil(err) {
 			return false, nil
 		}
 		return false, cerrors.RedisError{Operation: "shared_lock_acquire", Err: err}
@@ -315,7 +316,7 @@ func (m *LockManager) acquire(ctx context.Context, chatID string, mode lockMode,
 		cmd := m.client.B().Evalsha().Sha1(m.acquireWriteSHA).Numkeys(2).Key(writeKey, readKey).Arg(token, ttlArg).Build()
 		n, err := m.client.Do(ctx, cmd).AsInt64()
 		if err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.acquire(ctx, chatID, mode, token, ttlMillis)
 			}
@@ -326,7 +327,7 @@ func (m *LockManager) acquire(ctx context.Context, chatID string, mode lockMode,
 		cmd := m.client.B().Evalsha().Sha1(m.acquireReadSHA).Numkeys(2).Key(writeKey, readKey).Arg(token, ttlArg).Build()
 		n, err := m.client.Do(ctx, cmd).AsInt64()
 		if err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.acquire(ctx, chatID, mode, token, ttlMillis)
 			}
@@ -402,7 +403,7 @@ func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, t
 		cmd := m.client.B().Evalsha().Sha1(m.renewWriteSHA).Numkeys(1).Key(writeKey).Arg(token, ttlArg).Build()
 		n, err := m.client.Do(ctx, cmd).AsInt64()
 		if err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.renew(ctx, chatID, mode, token, ttlMillis)
 			}
@@ -413,7 +414,7 @@ func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, t
 		cmd := m.client.B().Evalsha().Sha1(m.renewReadSHA).Numkeys(1).Key(readKey).Arg(token, ttlArg).Build()
 		n, err := m.client.Do(ctx, cmd).AsInt64()
 		if err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.renew(ctx, chatID, mode, token, ttlMillis)
 			}
@@ -438,7 +439,7 @@ func (m *LockManager) release(ctx context.Context, chatID string, mode lockMode,
 	case lockModeWrite:
 		cmd := m.client.B().Evalsha().Sha1(m.releaseWriteSHA).Numkeys(1).Key(writeKey).Arg(token).Build()
 		if err := m.client.Do(ctx, cmd).Error(); err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.release(ctx, chatID, mode, token, ttlMillis)
 			}
@@ -448,7 +449,7 @@ func (m *LockManager) release(ctx context.Context, chatID string, mode lockMode,
 	case lockModeRead:
 		cmd := m.client.B().Evalsha().Sha1(m.releaseReadSHA).Numkeys(1).Key(readKey).Arg(token, ttlArg).Build()
 		if err := m.client.Do(ctx, cmd).Error(); err != nil {
-			if strings.Contains(err.Error(), "NOSCRIPT") {
+			if valkeyx.IsNoScript(err) {
 				m.clearScriptCache()
 				return m.release(ctx, chatID, mode, token, ttlMillis)
 			}

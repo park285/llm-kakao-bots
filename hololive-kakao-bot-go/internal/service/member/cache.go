@@ -138,7 +138,7 @@ func (c *Cache) cacheChunk(ctx context.Context, members []*domain.Member) {
 	}
 
 	// 배치 저장을 위한 맵 준비
-	pairs := make(map[string]interface{}, len(members)*2)
+	pairs := make(map[string]any, len(members)*2)
 
 	for _, member := range members {
 		if member.ChannelID != "" {

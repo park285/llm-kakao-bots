@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/goccy/go-json"
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	domain "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
@@ -85,14 +85,14 @@ func newTestTurtleSoupHandler(t *testing.T, client LLMClient) (*TurtleSoupHandle
 
 func TestTurtleSoupAnswerHistory(t *testing.T) {
 	client := fakeLLMClient{
-		chatFn: func(ctx context.Context, req gemini.Request) (string, string, error) {
+		structuredFn: func(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error) {
 			if strings.Contains(req.Prompt, "q2") {
-				return "아니오 하지만 중요한 질문입니다!", "gemini-3-test", nil
+				return map[string]any{"answer": "아니오", "important": true}, "gemini-3-test", nil
 			}
 			if strings.Contains(req.Prompt, "q1") {
-				return "중요한 질문입니다!", "gemini-3-test", nil
+				return map[string]any{"answer": "예", "important": true}, "gemini-3-test", nil
 			}
-			return "예", "gemini-3-test", nil
+			return map[string]any{"answer": "예", "important": false}, "gemini-3-test", nil
 		},
 	}
 	_, router := newTestTurtleSoupHandler(t, client)
@@ -188,8 +188,8 @@ func TestTurtleSoupHintStructured(t *testing.T) {
 
 func TestTurtleSoupValidateReturnsEnum(t *testing.T) {
 	client := fakeLLMClient{
-		chatFn: func(ctx context.Context, req gemini.Request) (string, string, error) {
-			return "CLOSE", "gemini-3-test", nil
+		structuredFn: func(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error) {
+			return map[string]any{"result": "CLOSE"}, "gemini-3-test", nil
 		},
 	}
 	_, router := newTestTurtleSoupHandler(t, client)

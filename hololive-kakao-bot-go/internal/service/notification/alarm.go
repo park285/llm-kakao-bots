@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -88,9 +88,7 @@ func buildTargetMinutes(advanceMinutes []int) []int {
 		return []int{5, 3, 1}
 	}
 
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i] > filtered[j]
-	})
+	slices.SortFunc(filtered, func(a, b int) int { return b - a })
 
 	if _, hasFallback := seen[1]; !hasFallback {
 		filtered = append(filtered, 1)
@@ -695,7 +693,7 @@ func (as *AlarmService) nextUpcomingStream(streams []*domain.Stream) *domain.Str
 }
 
 func (as *AlarmService) cacheLiveStream(ctx context.Context, key string, stream *domain.Stream) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"title":    stream.Title,
 		"video_id": stream.ID,
 		"status":   "live",
@@ -714,7 +712,7 @@ func (as *AlarmService) cacheLiveStream(ctx context.Context, key string, stream 
 }
 
 func (as *AlarmService) cacheUpcomingStream(ctx context.Context, key string, stream *domain.Stream) error {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"title":           stream.Title,
 		"start_scheduled": stream.StartScheduled.Format(time.RFC3339),
 		"video_id":        stream.ID,
@@ -731,7 +729,7 @@ func (as *AlarmService) cacheUpcomingStream(ctx context.Context, key string, str
 }
 
 func (as *AlarmService) cacheStatus(ctx context.Context, key, status string) error {
-	if err := as.cache.HMSet(ctx, key, map[string]interface{}{"status": status}); err != nil {
+	if err := as.cache.HMSet(ctx, key, map[string]any{"status": status}); err != nil {
 		as.logger.Error("Failed to set cache status", slog.String("status", status), slog.Any("error", err))
 		return fmt.Errorf("cache status: %w", err)
 	}

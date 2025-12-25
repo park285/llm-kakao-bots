@@ -124,7 +124,7 @@ func (c *Client) GetManagedTargets(ctx context.Context) ([]ContainerInfo, error)
 func (c *Client) RestartContainer(ctx context.Context, name, reason string, force bool) (*RestartResponse, error) {
 	url := c.baseURL + "/admin/api/v1/targets/" + name + "/restart?skip_auth=true"
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"reason": reason,
 		"force":  force,
 	}

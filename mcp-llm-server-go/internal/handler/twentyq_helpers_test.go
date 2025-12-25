@@ -62,15 +62,6 @@ func TestParseStringHelpers(t *testing.T) {
 	}
 }
 
-func TestFallbackParsing(t *testing.T) {
-	if result := parseVerifyFallback("ACCEPT"); result == nil || *result != "ACCEPT" {
-		t.Fatalf("unexpected verify fallback")
-	}
-	if result := parseSynonymFallback("EQUIVALENT"); result == nil || *result != "EQUIVALENT" {
-		t.Fatalf("unexpected synonym fallback")
-	}
-}
-
 func TestTrimRunes(t *testing.T) {
 	if trimmed := shared.TrimRunes("abcdef", 3); trimmed != "abc" {
 		t.Fatalf("unexpected trim result: %s", trimmed)

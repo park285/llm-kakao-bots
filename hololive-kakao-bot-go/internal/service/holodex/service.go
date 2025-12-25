@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -227,16 +227,22 @@ func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hour
 
 	hololiveOnly := h.filterHololiveStreams(allStreams)
 
-	sort.Slice(hololiveOnly, func(i, j int) bool {
-		iTime := int64(0)
-		jTime := int64(0)
-		if hololiveOnly[i].StartScheduled != nil {
-			iTime = hololiveOnly[i].StartScheduled.Unix()
+	slices.SortFunc(hololiveOnly, func(a, b *domain.Stream) int {
+		aTime := int64(0)
+		bTime := int64(0)
+		if a.StartScheduled != nil {
+			aTime = a.StartScheduled.Unix()
 		}
-		if hololiveOnly[j].StartScheduled != nil {
-			jTime = hololiveOnly[j].StartScheduled.Unix()
+		if b.StartScheduled != nil {
+			bTime = b.StartScheduled.Unix()
 		}
-		return iTime < jTime
+		if aTime < bTime {
+			return -1
+		}
+		if aTime > bTime {
+			return 1
+		}
+		return 0
 	})
 
 	result := hololiveOnly

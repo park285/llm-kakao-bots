@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -23,7 +23,7 @@ func (m orderedMap) MarshalJSON() ([]byte, error) {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	var buf bytes.Buffer
 	buf.WriteByte('{')

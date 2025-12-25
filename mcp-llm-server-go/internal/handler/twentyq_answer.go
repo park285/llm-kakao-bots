@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -199,40 +198,24 @@ func (h *TwentyQHandler) logAnswerRequest(sessionID string, historyCount int, qu
 }
 
 func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userContent string) (string, string, error) {
-	rawText, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
+	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
 		Task:         "answer",
-	})
+	}, twentyq.AnswerSchema())
 	if err != nil {
-		return "", "", fmt.Errorf("answer chat: %w", err)
+		return "", "", fmt.Errorf("answer structured: %w", err)
 	}
-	rawText = strings.TrimSpace(rawText)
-	if rawText == "" {
+
+	rawValue, ok := payload["answer"].(string)
+	if !ok || rawValue == "" {
 		return "", "", nil
 	}
 
-	scale, ok := twentyq.ParseAnswerScale(rawText)
-	if !ok {
-		retryPrompt := userContent + "\n\n반드시 다음 중 하나만 출력: 예 | 아마도 예 | 아마도 아니오 | 아니오"
-		rawText, _, err = h.client.Chat(c.Request.Context(), gemini.Request{
-			Prompt:       retryPrompt,
-			SystemPrompt: system,
-			Task:         "answer",
-		})
-		if err != nil {
-			return "", "", fmt.Errorf("answer retry chat: %w", err)
-		}
-		rawText = strings.TrimSpace(rawText)
-		if rawText == "" {
-			return "", "", nil
-		}
-		scale, ok = twentyq.ParseAnswerScale(rawText)
-	}
-
+	scale, ok := twentyq.ParseAnswerScale(rawValue)
 	scaleText := ""
 	if ok {
 		scaleText = string(scale)
 	}
-	return rawText, scaleText, nil
+	return rawValue, scaleText, nil
 }

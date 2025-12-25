@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"log/slog"
@@ -247,7 +247,7 @@ func (c *MemberInfoCommand) sortGroupsByPreference(groupEntries map[string]map[s
 			remaining = append(remaining, name)
 		}
 	}
-	sort.Strings(remaining)
+	slices.Sort(remaining)
 
 	for _, name := range remaining {
 		ordered = append(ordered, buildMemberDirectoryGroup(name, groupEntries[name]))
@@ -261,8 +261,14 @@ func buildMemberDirectoryGroup(groupName string, entries map[string]adapter.Memb
 	for _, entry := range entries {
 		list = append(list, entry)
 	}
-	sort.SliceStable(list, func(i, j int) bool {
-		return list[i].PrimaryName < list[j].PrimaryName
+	slices.SortStableFunc(list, func(a, b adapter.MemberDirectoryEntry) int {
+		if a.PrimaryName < b.PrimaryName {
+			return -1
+		}
+		if a.PrimaryName > b.PrimaryName {
+			return 1
+		}
+		return 0
 	})
 	return adapter.MemberDirectoryGroup{
 		GroupName: groupName,

@@ -3,7 +3,7 @@ package toon
 import (
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -294,7 +294,7 @@ func sortedKeys(mapping map[string]any) []string {
 	for key := range mapping {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }
 

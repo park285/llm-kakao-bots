@@ -133,3 +133,30 @@ func VerifySchema() map[string]any {
 func SynonymSchema() map[string]any {
 	return synonymSchema
 }
+
+// AnswerOutput 은 답변 출력 스키마다.
+type AnswerOutput struct {
+	Answer string `json:"answer"`
+}
+
+// answerSchema 는 답변 스키마다 (enum 제약).
+var answerSchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"answer": map[string]any{
+			"type": "string",
+			"enum": []string{
+				string(AnswerYes),
+				string(AnswerProbablyYes),
+				string(AnswerProbablyNo),
+				string(AnswerNo),
+			},
+		},
+	},
+	"required": []string{"answer"},
+}
+
+// AnswerSchema 는 답변 JSON 스키마를 반환한다.
+func AnswerSchema() map[string]any {
+	return answerSchema
+}

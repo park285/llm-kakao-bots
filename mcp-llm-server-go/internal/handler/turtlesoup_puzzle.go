@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/goccy/go-json"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
@@ -265,40 +264,15 @@ func (h *TurtleSoupHandler) rewritePuzzle(ctx context.Context, system string, us
 		SystemPrompt: system,
 		Task:         "answer",
 	}, turtlesoup.RewriteSchema())
-	if err == nil {
-		scenario, sErr := shared.ParseStringField(payload, "scenario")
-		solution, aErr := shared.ParseStringField(payload, "solution")
-		if sErr == nil && aErr == nil && strings.TrimSpace(scenario) != "" && strings.TrimSpace(solution) != "" {
-			return strings.TrimSpace(scenario), strings.TrimSpace(solution), nil
-		}
-	}
-
-	rawText, _, err := h.client.Chat(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "answer",
-	})
 	if err != nil {
-		return "", "", fmt.Errorf("rewrite chat: %w", err)
+		return "", "", fmt.Errorf("rewrite structured: %w", err)
 	}
 
-	parsed := strings.TrimSpace(rawText)
-	if strings.HasPrefix(parsed, "```") {
-		parsed = strings.TrimSpace(strings.TrimPrefix(parsed, "```json"))
-		parsed = strings.TrimSpace(strings.TrimPrefix(parsed, "```"))
-		if idx := strings.Index(parsed, "```"); idx >= 0 {
-			parsed = strings.TrimSpace(parsed[:idx])
-		}
+	scenario, sErr := shared.ParseStringField(payload, "scenario")
+	solution, aErr := shared.ParseStringField(payload, "solution")
+	if sErr != nil || aErr != nil || strings.TrimSpace(scenario) == "" || strings.TrimSpace(solution) == "" {
+		return "", "", httperror.NewInternalError("rewrite response invalid")
 	}
 
-	var decoded map[string]any
-	if err := json.Unmarshal([]byte(parsed), &decoded); err == nil {
-		scenario, sErr := shared.ParseStringField(decoded, "scenario")
-		solution, aErr := shared.ParseStringField(decoded, "solution")
-		if sErr == nil && aErr == nil && strings.TrimSpace(scenario) != "" && strings.TrimSpace(solution) != "" {
-			return strings.TrimSpace(scenario), strings.TrimSpace(solution), nil
-		}
-	}
-
-	return "", "", httperror.NewInternalError("rewrite response invalid")
+	return strings.TrimSpace(scenario), strings.TrimSpace(solution), nil
 }

@@ -153,7 +153,7 @@ services:
       - ./.env
     environment:
       SERVER_HOST: 0.0.0.0
-      SERVER_PORT: 8081
+      SERVER_PORT: 30081
       LLM_REST_BASE_URL: http://mcp-llm-server:40527
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
@@ -170,7 +170,7 @@ services:
     volumes:
       - ./logs:/app/logs
     ports:
-      - "8081:8081"
+      - "30081:30081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -181,7 +181,7 @@ services:
       mcp-llm-server:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:8081/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
+      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:30081/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
       interval: 30s
       timeout: 45s
       retries: 1
@@ -203,7 +203,7 @@ services:
       - ./.env
     environment:
       SERVER_HOST: 0.0.0.0
-      SERVER_PORT: 8082
+      SERVER_PORT: 30082
       LLM_REST_BASE_URL: http://mcp-llm-server:40527
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
@@ -219,7 +219,7 @@ services:
     volumes:
       - ./logs:/app/logs
     ports:
-      - "8082:8082"
+      - "30082:30082"
     depends_on:
       valkey-cache:
         condition: service_healthy
@@ -228,7 +228,7 @@ services:
       mcp-llm-server:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:8082/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
+      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:30082/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
       interval: 30s
       timeout: 45s
       retries: 1

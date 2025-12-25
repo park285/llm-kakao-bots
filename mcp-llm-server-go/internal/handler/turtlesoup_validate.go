@@ -2,12 +2,12 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 )
 
 func (h *TurtleSoupHandler) handleValidate(c *gin.Context) {
@@ -35,24 +35,25 @@ func (h *TurtleSoupHandler) handleValidate(c *gin.Context) {
 		return
 	}
 
-	rawText, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
+	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
 		Task:         "verify",
-	})
+	}, turtlesoup.ValidateSchema())
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
 
-	result, ok := turtlesoup.ParseValidationResult(rawText)
-	if !ok {
-		result = turtlesoup.ValidationNo
+	rawValue, parseErr := shared.ParseStringField(payload, "result")
+	result := string(turtlesoup.ValidationNo)
+	if parseErr == nil && rawValue != "" {
+		result = rawValue
 	}
 
 	c.JSON(http.StatusOK, TurtleSoupValidateResponse{
-		Result:  string(result),
-		RawText: strings.TrimSpace(rawText),
+		Result:  result,
+		RawText: rawValue,
 	})
 }

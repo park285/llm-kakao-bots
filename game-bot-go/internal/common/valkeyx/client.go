@@ -103,6 +103,37 @@ func IsNil(err error) bool {
 	return false
 }
 
+// IsNoScript: Lua 스크립트 SHA가 서버에 존재하지 않을 때 발생하는 NOSCRIPT 에러인지 확인한다.
+// 에러 래핑을 고려하여 언래핑 후 검사를 수행한다.
+func IsNoScript(err error) bool {
+	return containsValkeyErrorPrefix(err, "NOSCRIPT")
+}
+
+// IsBusyGroup: 소비자 그룹이 이미 존재할 때 발생하는 BUSYGROUP 에러인지 확인한다.
+// Redis Streams의 XGROUP CREATE 명령어 실행 시 발생할 수 있다.
+func IsBusyGroup(err error) bool {
+	return containsValkeyErrorPrefix(err, "BUSYGROUP")
+}
+
+// containsValkeyErrorPrefix: Valkey 에러 메시지가 특정 접두사로 시작하는지 확인한다.
+// valkey-go의 ValkeyError 타입을 활용하여 에러 체크를 수행한다.
+func containsValkeyErrorPrefix(err error, prefix string) bool {
+	if err == nil {
+		return false
+	}
+
+	// ValkeyError 타입으로 변환하여 IsNoScript/IsBusyGroup 등의 메서드 활용
+	var valkeyErr *valkey.ValkeyError
+	if errors.As(err, &valkeyErr) {
+		// ValkeyError는 접두사 기반 체크를 지원
+		return valkeyErr.IsNoScript() && prefix == "NOSCRIPT" ||
+			valkeyErr.IsBusyGroup() && prefix == "BUSYGROUP"
+	}
+
+	// fallback: 문자열 기반 체크 (래핑된 에러 등)
+	return strings.Contains(err.Error(), prefix)
+}
+
 // Close: Valkey 클라이언트 연결을 안전하게 종료한다.
 func Close(client valkey.Client) {
 	if client != nil {

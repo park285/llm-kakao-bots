@@ -293,7 +293,7 @@ func (b *batcher) registerFailure(firstErr error) {
 }
 
 func (b *batcher) computeBackoff() time.Duration {
-	backoff := b.flushInterval * time.Duration(1<<maxInt(0, b.consecutiveFlushFailures-1))
+	backoff := b.flushInterval * time.Duration(1<<max(0, b.consecutiveFlushFailures-1))
 	if backoff > b.maxBackoff {
 		backoff = b.maxBackoff
 	}
@@ -323,11 +323,4 @@ func (b *batcher) shouldLogFailure() bool {
 
 func isPowerOfTwo(value int) bool {
 	return value > 0 && (value&(value-1)) == 0
-}
-
-func maxInt(a int, b int) int {
-	if a >= b {
-		return a
-	}
-	return b
 }

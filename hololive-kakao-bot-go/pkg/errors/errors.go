@@ -77,11 +77,11 @@ func NewAPIError(message string, statusCode int, context map[string]any) *APIErr
 type ValidationError struct {
 	*BotError
 	Field string
-	Value interface{}
+	Value any
 }
 
 // NewValidationError 는 동작을 수행한다.
-func NewValidationError(message, field string, value interface{}) *ValidationError {
+func NewValidationError(message, field string, value any) *ValidationError {
 	return &ValidationError{
 		BotError: &BotError{
 			Message:    message,
