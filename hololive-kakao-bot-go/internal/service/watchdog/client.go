@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
-
-	"log/slog"
 )
 
 // ContainerInfo represents a container's status from watchdog.
@@ -64,7 +63,7 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 func (c *Client) GetContainers(ctx context.Context) (*ContainersResponse, error) {
 	url := c.baseURL + "/admin/api/v1/docker/containers?skip_auth=true"
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -93,7 +92,7 @@ func (c *Client) GetContainers(ctx context.Context) (*ContainersResponse, error)
 func (c *Client) GetManagedTargets(ctx context.Context) ([]ContainerInfo, error) {
 	url := c.baseURL + "/admin/api/v1/targets?skip_auth=true"
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -173,7 +172,7 @@ func (c *Client) RestartContainer(ctx context.Context, name, reason string, forc
 func (c *Client) IsAvailable(ctx context.Context) bool {
 	url := c.baseURL + "/health"
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return false
 	}

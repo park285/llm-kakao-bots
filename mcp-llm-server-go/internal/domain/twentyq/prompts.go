@@ -190,20 +190,20 @@ func (p *Prompts) SynonymUser(target string, guess string) (string, error) {
 }
 
 func (p *Prompts) getPrompt(name string) (map[string]string, error) {
-	if p == nil || p.prompts == nil {
+	if p == nil {
 		return nil, fmt.Errorf("twentyq prompts not initialized")
 	}
-	promptMap, ok := p.prompts[name]
-	if !ok {
-		return nil, fmt.Errorf("prompt not found: %s", name)
+	promptMap, err := prompt.Get(p.prompts, name, "twentyq")
+	if err != nil {
+		return nil, fmt.Errorf("get twentyq prompt %s: %w", name, err)
 	}
 	return promptMap, nil
 }
 
 func promptField(data map[string]string, key string, label string) (string, error) {
-	value, ok := data[key]
-	if !ok {
-		return "", fmt.Errorf("prompt field missing: %s", label)
+	value, err := prompt.Field(data, key, label)
+	if err != nil {
+		return "", fmt.Errorf("get twentyq prompt field %s: %w", label, err)
 	}
 	return value, nil
 }

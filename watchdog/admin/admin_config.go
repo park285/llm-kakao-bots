@@ -16,6 +16,10 @@ type Config struct {
 	CFAccessTeamDomain string
 	CFAccessAUD        string
 
+	// InternalServiceToken 은 내부 서비스 간 인증에 사용되는 토큰이다.
+	// CF Access 인증을 우회하여 Docker 네트워크 내 서비스 간 호출을 허용한다.
+	InternalServiceToken string
+
 	AllowedEmails []string
 	AllowedIPs    []string
 
@@ -90,6 +94,8 @@ func LoadAdminConfig() Config {
 
 		CFAccessTeamDomain: strings.TrimSpace(os.Getenv("WATCHDOG_ADMIN_CF_ACCESS_TEAM_DOMAIN")),
 		CFAccessAUD:        strings.TrimSpace(os.Getenv("WATCHDOG_ADMIN_CF_ACCESS_AUD")),
+
+		InternalServiceToken: strings.TrimSpace(os.Getenv("WATCHDOG_INTERNAL_SERVICE_TOKEN")),
 
 		AllowedEmails: splitList(os.Getenv("WATCHDOG_ADMIN_ALLOWED_EMAILS")),
 		AllowedIPs:    splitList(os.Getenv("WATCHDOG_ADMIN_ALLOWED_IPS")),

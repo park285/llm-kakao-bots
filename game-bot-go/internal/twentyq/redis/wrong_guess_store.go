@@ -7,9 +7,9 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
 // WrongGuessStore: 사용자 및 세션별 오답 기록을 Redis에 저장하고 조회하는 저장소

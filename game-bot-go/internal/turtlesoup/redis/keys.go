@@ -41,3 +41,7 @@ func processingKey(chatID string) string {
 func puzzleChatKey(chatID string) string {
 	return valkeyx.BuildKey(tsconfig.RedisKeyPuzzleChat, chatID)
 }
+
+func pendingKeyPrefix() string {
+	return tsconfig.RedisKeyPendingPrefix
+}

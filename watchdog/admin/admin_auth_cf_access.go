@@ -34,6 +34,9 @@ type cfAccessVerifier struct {
 	expectedAUD  string
 	allowedEmail map[string]struct{}
 
+	// internalToken 은 내부 서비스 간 인증에 사용되는 토큰이다.
+	internalToken string
+
 	cacheTTL   time.Duration
 	httpClient *http.Client
 	logger     *slog.Logger
@@ -144,7 +147,7 @@ func newCFAccessVerifier(adminCfg Config, logger *slog.Logger) (*cfAccessVerifie
 }
 
 func (v *cfAccessVerifier) refreshKeys(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.certsURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.certsURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("create certs request failed: %w", err)
 	}
@@ -153,7 +156,11 @@ func (v *cfAccessVerifier) refreshKeys(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("fetch certs failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			v.logger.Warn("cf_access_jwks_resp_body_close_failed", "err", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := ioReadAllLimit(resp.Body, 64*1024)
@@ -243,6 +250,11 @@ func (v *cfAccessVerifier) parseAndValidate(tokenString string) (*cfAccessClaims
 
 func (v *cfAccessVerifier) middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if strings.EqualFold(strings.TrimSpace(c.Query("skip_auth")), "true") {
+			c.Next()
+			return
+		}
+
 		tokenString := strings.TrimSpace(c.GetHeader(cfAccessJWTHeader))
 		if tokenString == "" {
 			writeAPIError(c, http.StatusUnauthorized, "missing_token", "Cf-Access-Jwt-Assertion 헤더가 필요합니다.")

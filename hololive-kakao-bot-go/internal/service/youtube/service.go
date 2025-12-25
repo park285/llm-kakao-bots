@@ -4,16 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -55,10 +55,22 @@ func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service,
 	return ys, nil
 }
 
+// getNextQuotaReset: YouTube API quota 리셋 시간 계산
+// YouTube quota는 PST 자정에 리셋됨 = KST 17:00 (UTC+9)
 func getNextQuotaReset() time.Time {
-	pt, _ := time.LoadLocation("America/Los_Angeles")
-	now := time.Now().In(pt)
-	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, pt)
+	// KST = UTC+9 고정 오프셋 사용 (시간대 파일 불필요)
+	kst := time.FixedZone("KST", 9*60*60)
+	now := time.Now().In(kst)
+
+	// KST 17:00 = PST 자정
+	resetHour := 17
+	next := time.Date(now.Year(), now.Month(), now.Day(), resetHour, 0, 0, 0, kst)
+
+	// 이미 오늘 17시가 지났으면 내일 17시
+	if now.After(next) {
+		next = next.AddDate(0, 0, 1)
+	}
+
 	return next
 }
 
@@ -318,6 +330,7 @@ func stringPtr(s string) *string {
 }
 
 // FetchChannelStats: 지정된 채널들의 통계(구독자 수, 조회수 등)를 조회한다.
+// 여러 배치를 병렬로 처리하여 레이턴시를 개선한다.
 func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string) (map[string]*ChannelStats, error) {
 	if len(channelIDs) == 0 {
 		return make(map[string]*ChannelStats), nil
@@ -328,46 +341,64 @@ func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string
 		return nil, err
 	}
 
-	result := make(map[string]*ChannelStats)
-
+	// 배치로 분할
 	batchSize := 50
+	var batches [][]string
 	for i := 0; i < len(channelIDs); i += batchSize {
 		end := i + batchSize
 		if end > len(channelIDs) {
 			end = len(channelIDs)
 		}
-
-		batch := channelIDs[i:end]
-
-		call := ys.service.Channels.List([]string{"statistics", "snippet"}).
-			Id(batch...)
-
-		response, err := call.Context(ctx).Do()
-		if err != nil {
-			ys.logger.Error("Failed to fetch channel statistics",
-				slog.Int("batch_size", len(batch)),
-				slog.Any("error", err))
-			continue
-		}
-
-		for _, channel := range response.Items {
-			stats := &ChannelStats{
-				ChannelID:       channel.Id,
-				ChannelTitle:    channel.Snippet.Title,
-				SubscriberCount: channel.Statistics.SubscriberCount,
-				VideoCount:      channel.Statistics.VideoCount,
-				ViewCount:       channel.Statistics.ViewCount,
-				Timestamp:       time.Now(),
-			}
-			result[channel.Id] = stats
-		}
+		batches = append(batches, channelIDs[i:end])
 	}
+
+	// 병렬 처리 결과 저장용
+	result := make(map[string]*ChannelStats)
+	var mu sync.Mutex
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	for _, batch := range batches {
+		batch := batch // 캡처용
+		g.Go(func() error {
+			call := ys.service.Channels.List([]string{"statistics", "snippet"}).
+				Id(batch...)
+
+			response, err := call.Context(gctx).Do()
+			if err != nil {
+				ys.logger.Error("Failed to fetch channel statistics",
+					slog.Int("batch_size", len(batch)),
+					slog.Any("error", err))
+				// 개별 배치 실패는 무시하고 계속 진행
+				return nil
+			}
+
+			now := time.Now()
+			mu.Lock()
+			for _, channel := range response.Items {
+				result[channel.Id] = &ChannelStats{
+					ChannelID:       channel.Id,
+					ChannelTitle:    channel.Snippet.Title,
+					SubscriberCount: channel.Statistics.SubscriberCount,
+					VideoCount:      channel.Statistics.VideoCount,
+					ViewCount:       channel.Statistics.ViewCount,
+					Timestamp:       now,
+				}
+			}
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	// 모든 배치 완료 대기
+	_ = g.Wait()
 
 	ys.consumeQuota(cost)
 
 	ys.logger.Info("Channel statistics fetched",
 		slog.Int("channels", len(channelIDs)),
 		slog.Int("results", len(result)),
+		slog.Int("batches", len(batches)),
 		slog.Int("quota_used", cost))
 
 	return result, nil

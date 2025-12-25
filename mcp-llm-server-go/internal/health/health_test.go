@@ -1,6 +1,7 @@
 package health
 
 import (
+	"context"
 	"testing"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
@@ -20,7 +21,7 @@ func TestCollectStatus(t *testing.T) {
 		},
 	}
 
-	resp := Collect(cfg, false)
+	resp := Collect(context.Background(), cfg, false)
 	if resp.Status != "degraded" {
 		t.Fatalf("expected degraded status, got %s", resp.Status)
 	}

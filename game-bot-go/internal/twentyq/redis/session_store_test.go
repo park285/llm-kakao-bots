@@ -166,7 +166,27 @@ func TestSessionStore_ClearAllData(t *testing.T) {
 	chatID := prefix + "room1"
 
 	// Save data
-	store.SaveSecret(ctx, chatID, qmodel.RiddleSecret{Target: "Test"})
+	if err := store.SaveSecret(ctx, chatID, qmodel.RiddleSecret{Target: "Test"}); err != nil {
+		t.Fatalf("save secret failed: %v", err)
+	}
+
+	pendingDataKey := qconfig.RedisKeyPendingPrefix + ":data:{" + chatID + "}"
+	pendingOrderKey := qconfig.RedisKeyPendingPrefix + ":order:{" + chatID + "}"
+
+	if err := client.Do(ctx, client.B().Set().Key(pendingDataKey).Value("dummy").Build()).Error(); err != nil {
+		t.Fatalf("set pending data key failed: %v", err)
+	}
+	if err := client.Do(ctx, client.B().Set().Key(pendingOrderKey).Value("dummy").Build()).Error(); err != nil {
+		t.Fatalf("set pending order key failed: %v", err)
+	}
+
+	existsBefore, err := client.Do(ctx, client.B().Exists().Key(pendingDataKey, pendingOrderKey).Build()).AsInt64()
+	if err != nil {
+		t.Fatalf("exists failed: %v", err)
+	}
+	if existsBefore != 2 {
+		t.Fatalf("expected pending keys to exist before clear, got %d", existsBefore)
+	}
 
 	// Wait a bit for data to persist
 	time.Sleep(50 * time.Millisecond)
@@ -180,5 +200,13 @@ func TestSessionStore_ClearAllData(t *testing.T) {
 	got, _ := store.GetSecret(ctx, chatID)
 	if got != nil {
 		t.Error("expected nil after clear")
+	}
+
+	existsAfter, err := client.Do(ctx, client.B().Exists().Key(pendingDataKey, pendingOrderKey).Build()).AsInt64()
+	if err != nil {
+		t.Fatalf("exists after clear failed: %v", err)
+	}
+	if existsAfter != 0 {
+		t.Fatalf("expected pending keys deleted, got %d", existsAfter)
 	}
 }

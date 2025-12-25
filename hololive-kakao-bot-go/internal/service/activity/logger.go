@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
-
-	"log/slog"
 )
 
 // LogEntry: 활동 로그의 한 항목을 나타내는 구조체

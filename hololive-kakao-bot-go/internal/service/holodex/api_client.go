@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"math/rand/v2"
 	"net/http"
@@ -12,8 +13,6 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
@@ -128,7 +127,7 @@ func (c *APIClient) tryHolodexRequest(ctx context.Context, method, path string, 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		if c.retryAfterNetworkFailure(err, attempt, maxAttempts) {
+		if c.retryAfterNetworkFailure(ctx, err, attempt, maxAttempts) {
 			return nil, false, fmt.Errorf("HTTP request failed (retrying): %w", err)
 		}
 		return nil, true, fmt.Errorf("HTTP request failed: %w", err)
@@ -140,7 +139,7 @@ func (c *APIClient) tryHolodexRequest(ctx context.Context, method, path string, 
 		return nil, false, fmt.Errorf("failed to read response: %w", readErr)
 	}
 
-	return c.processHolodexResponse(resp.StatusCode, body, reqURL, attempt, maxAttempts)
+	return c.processHolodexResponse(ctx, resp.StatusCode, body, reqURL, attempt, maxAttempts)
 }
 
 func (c *APIClient) buildRequestURL(path string, params url.Values) string {
@@ -162,7 +161,7 @@ func (c *APIClient) newRequest(ctx context.Context, method, url string, apiKey s
 	return req, nil
 }
 
-func (c *APIClient) retryAfterNetworkFailure(err error, attempt, maxAttempts int) bool {
+func (c *APIClient) retryAfterNetworkFailure(ctx context.Context, err error, attempt, maxAttempts int) bool {
 	count := c.incrementFailureCount()
 	if count >= constants.CircuitBreakerConfig.FailureThreshold {
 		c.openCircuit()
@@ -176,14 +175,16 @@ func (c *APIClient) retryAfterNetworkFailure(err error, attempt, maxAttempts int
 			slog.Int("attempt", attempt+1),
 			slog.Duration("delay", delay),
 		)
-		time.Sleep(delay)
+		if !sleepWithContext(ctx, delay) {
+			return false // context 취소 시 재시도 중단
+		}
 		return true
 	}
 
 	return false
 }
 
-func (c *APIClient) processHolodexResponse(status int, body []byte, reqURL string, attempt, maxAttempts int) ([]byte, bool, error) {
+func (c *APIClient) processHolodexResponse(ctx context.Context, status int, body []byte, reqURL string, attempt, maxAttempts int) ([]byte, bool, error) {
 	switch {
 	case status == 429 || status == 403:
 		c.logger.Warn("Rate limited, rotating key",
@@ -197,7 +198,7 @@ func (c *APIClient) processHolodexResponse(status int, body []byte, reqURL strin
 			"url": reqURL,
 		})
 	case status >= 500:
-		return c.handleServerError(status, attempt, maxAttempts)
+		return c.handleServerError(ctx, status, attempt, maxAttempts)
 	case status >= 400:
 		return nil, true, errors.NewAPIError(fmt.Sprintf("Client error: %d", status), status, map[string]any{
 			"url":  reqURL,
@@ -208,7 +209,7 @@ func (c *APIClient) processHolodexResponse(status int, body []byte, reqURL strin
 	}
 }
 
-func (c *APIClient) handleServerError(status, attempt, maxAttempts int) ([]byte, bool, error) {
+func (c *APIClient) handleServerError(ctx context.Context, status, attempt, maxAttempts int) ([]byte, bool, error) {
 	count := c.incrementFailureCount()
 	c.logger.Warn("Server error",
 		slog.Int("status", status),
@@ -222,7 +223,9 @@ func (c *APIClient) handleServerError(status, attempt, maxAttempts int) ([]byte,
 
 	if attempt < maxAttempts-1 {
 		delay := c.computeDelay(attempt)
-		time.Sleep(delay)
+		if !sleepWithContext(ctx, delay) {
+			return nil, true, fmt.Errorf("context canceled during backoff: %w", ctx.Err()) // context 취소 시 재시도 중단
+		}
 		return nil, false, errors.NewAPIError(fmt.Sprintf("Server error: %d", status), status, nil)
 	}
 
@@ -298,4 +301,17 @@ func (c *APIClient) computeDelay(attempt int) time.Duration {
 	base := constants.RetryConfig.BaseDelay * time.Duration(math.Pow(2, float64(attempt)))
 	jitter := time.Duration(rand.Float64() * float64(constants.RetryConfig.Jitter))
 	return base + jitter
+}
+
+// sleepWithContext: context 취소를 지원하는 sleep
+// 정상 대기 완료 시 true, context 취소 시 false 반환
+func sleepWithContext(ctx context.Context, delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

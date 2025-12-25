@@ -128,3 +128,72 @@ func TestSessionStore_RefreshTTL(t *testing.T) {
 		t.Error("expected refresh success")
 	}
 }
+
+func TestPendingMessageStore_KeyPrefix(t *testing.T) {
+	client := testhelper.NewTestValkeyClient(t)
+	defer client.Close()
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	store := NewPendingMessageStore(client, logger)
+	prefix := testhelper.UniqueTestPrefix(t)
+	defer testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPrefix+":")
+
+	ctx := context.Background()
+	chatID := prefix + "room1"
+
+	res, err := store.Enqueue(ctx, chatID, tsmodel.PendingMessage{UserID: "user_1", Content: "hello", Timestamp: 123})
+	if err != nil {
+		t.Fatalf("enqueue failed: %v", err)
+	}
+	if res != EnqueueSuccess {
+		t.Fatalf("expected EnqueueSuccess, got %s", res)
+	}
+
+	dataKey := tsconfig.RedisKeyPendingPrefix + ":data:{" + chatID + "}"
+	orderKey := tsconfig.RedisKeyPendingPrefix + ":order:{" + chatID + "}"
+
+	exists, err := client.Do(ctx, client.B().Exists().Key(dataKey, orderKey).Build()).AsInt64()
+	if err != nil {
+		t.Fatalf("exists failed: %v", err)
+	}
+	if exists != 2 {
+		t.Fatalf("expected pending keys to exist, got %d", exists)
+	}
+
+	dequeued, err := store.Dequeue(ctx, chatID)
+	if err != nil {
+		t.Fatalf("dequeue failed: %v", err)
+	}
+	if dequeued.Status != DequeueSuccess {
+		t.Fatalf("expected DequeueSuccess, got %s", dequeued.Status)
+	}
+	if dequeued.Message == nil {
+		t.Fatal("expected message")
+	}
+	if dequeued.Message.UserID != "user_1" {
+		t.Fatalf("expected user_1, got %s", dequeued.Message.UserID)
+	}
+	if dequeued.Message.Content != "hello" {
+		t.Fatalf("expected hello content, got %s", dequeued.Message.Content)
+	}
+
+	res, err = store.Enqueue(ctx, chatID, tsmodel.PendingMessage{UserID: "user_2", Content: "hello2", Timestamp: 124})
+	if err != nil {
+		t.Fatalf("enqueue second failed: %v", err)
+	}
+	if res != EnqueueSuccess {
+		t.Fatalf("expected EnqueueSuccess, got %s", res)
+	}
+
+	if err := store.Clear(ctx, chatID); err != nil {
+		t.Fatalf("clear failed: %v", err)
+	}
+
+	existsAfter, err := client.Do(ctx, client.B().Exists().Key(dataKey, orderKey).Build()).AsInt64()
+	if err != nil {
+		t.Fatalf("exists after clear failed: %v", err)
+	}
+	if existsAfter != 0 {
+		t.Fatalf("expected pending keys deleted, got %d", existsAfter)
+	}
+}

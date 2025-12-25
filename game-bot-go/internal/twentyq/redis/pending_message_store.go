@@ -10,11 +10,11 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/pending"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 

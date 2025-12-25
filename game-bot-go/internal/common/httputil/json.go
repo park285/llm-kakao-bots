@@ -15,7 +15,7 @@ const (
 	// ContentTypeJSON: JSON 응답을 위한 Content-Type 헤더 값
 	ContentTypeJSON = "application/json"
 	// HeaderAPIKey: API 키 인증 헤더 이름
-	HeaderAPIKey = "X-API-Key"
+	HeaderAPIKey = "X-API-Key" //nolint:gosec // 헤더 이름 상수이며 시크릿이 아님
 	// HeaderContentType: Content-Type 헤더 이름
 	HeaderContentType = "Content-Type"
 )

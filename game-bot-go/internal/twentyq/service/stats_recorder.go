@@ -5,8 +5,12 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
 )
 
@@ -17,12 +21,6 @@ type GameResult string
 const (
 	GameResultCorrect   GameResult = "CORRECT"
 	GameResultSurrender GameResult = "SURRENDER"
-)
-
-// 비동기 처리 설정
-const (
-	statsQueueSize   = 100 // 버퍼 크기
-	statsWorkerCount = 2   // 워커 수
 )
 
 // PlayerCompletionRecord: 플레이어별 완료 기록 구조체
@@ -52,32 +50,43 @@ type StatsRecorder struct {
 	logger *slog.Logger
 
 	// 비동기 처리용 (분석용 로그만)
-	completionQueue chan asyncRecord
-	wg              sync.WaitGroup
-	stopOnce        sync.Once
-	stopped         chan struct{}
+	completionQueue    chan asyncRecord
+	wg                 sync.WaitGroup
+	stopOnce           sync.Once
+	stopped            chan struct{}
+	dropLogOnQueueFull bool
 }
 
 // NewStatsRecorder: 새로운 StatsRecorder 인스턴스를 생성한다.
-func NewStatsRecorder(repo *qrepo.Repository, logger *slog.Logger) *StatsRecorder {
+func NewStatsRecorder(repo *qrepo.Repository, logger *slog.Logger, cfg qconfig.StatsConfig) *StatsRecorder {
 	if repo == nil {
 		return nil
 	}
 
+	queueSize := cfg.QueueSize
+	if queueSize <= 0 {
+		queueSize = 100
+	}
+	workerCount := cfg.WorkerCount
+	if workerCount <= 0 {
+		workerCount = 2
+	}
+
 	r := &StatsRecorder{
-		repo:            repo,
-		logger:          logger,
-		completionQueue: make(chan asyncRecord, statsQueueSize),
-		stopped:         make(chan struct{}),
+		repo:               repo,
+		logger:             logger,
+		completionQueue:    make(chan asyncRecord, queueSize),
+		stopped:            make(chan struct{}),
+		dropLogOnQueueFull: cfg.DropLogOnQueueFull,
 	}
 
 	// 백그라운드 워커 시작
-	for i := 0; i < statsWorkerCount; i++ {
+	for i := 0; i < workerCount; i++ {
 		r.wg.Add(1)
 		go r.worker(i)
 	}
 
-	logger.Info("stats_recorder_started", "workers", statsWorkerCount, "queue_size", statsQueueSize)
+	logger.Info("stats_recorder_started", "workers", workerCount, "queue_size", queueSize, "drop_on_full", cfg.DropLogOnQueueFull)
 	return r
 }
 
@@ -147,9 +156,15 @@ func (r *StatsRecorder) RecordGameCompletion(ctx context.Context, record GameCom
 	case <-r.stopped:
 		r.logger.Warn("stats_recorder_stopped_dropping_record", "chat_id", record.ChatID)
 	default:
-		// 큐가 가득 참 - 동기로 처리 (fallback)
-		r.logger.Warn("stats_queue_full_sync_fallback", "chat_id", record.ChatID)
-		r.processNonCriticalAsync(ctx, record, now)
+		// 큐가 가득 참
+		if r.dropLogOnQueueFull {
+			// 드랍 옵션이 켜져있으면 경고 로그만 남기고 무시
+			r.logger.Warn("stats_queue_full_dropped", "chat_id", record.ChatID)
+		} else {
+			// 기본: 동기로 처리 (fallback)
+			r.logger.Warn("stats_queue_full_sync_fallback", "chat_id", record.ChatID)
+			r.processNonCriticalAsync(ctx, record, now)
+		}
 	}
 }
 
@@ -201,35 +216,45 @@ func (r *StatsRecorder) processCriticalSync(ctx context.Context, record GameComp
 		}
 	}
 
-	// 각 플레이어별 통계 업데이트 (사용자에게 표시됨)
-	// TODO: 향후 배치 처리 가능 (현재는 트랜잭션 복잡도로 인해 개별 처리 유지)
-	var failedCount int
+	// 각 플레이어별 통계 업데이트 - 병렬 처리로 레이턴시 개선
+	// 각 트랜잭션은 독립적인 user_stats 레코드를 다루므로 동시 실행 가능
+	var failedCount atomic.Int32
+	g, gctx := errgroup.WithContext(ctx)
+
 	for _, p := range record.Players {
+		p := p // 캡처용
 		userID := strings.TrimSpace(p.UserID)
 		if userID == "" {
 			continue
 		}
 
-		if err := r.repo.RecordGameCompletion(ctx, qrepo.GameCompletionParams{
-			ChatID:                 record.ChatID,
-			UserID:                 userID,
-			Category:               record.Category,
-			Result:                 qrepo.GameResult(record.Result),
-			QuestionCount:          p.QuestionCount,
-			HintCount:              record.HintCount,
-			WrongGuessCount:        p.WrongGuessCount,
-			Target:                 p.Target,
-			TotalGameQuestionCount: record.TotalQuestionCount,
-			CompletedAt:            record.CompletedAt,
-			Now:                    now,
-		}); err != nil {
-			failedCount++
-			r.logger.Warn("stats_user_stats_record_failed", "chat_id", record.ChatID, "user_id", userID, "err", err)
-		}
+		g.Go(func() error {
+			if err := r.repo.RecordGameCompletion(gctx, qrepo.GameCompletionParams{
+				ChatID:                 record.ChatID,
+				UserID:                 userID,
+				Category:               record.Category,
+				Result:                 qrepo.GameResult(record.Result),
+				QuestionCount:          p.QuestionCount,
+				HintCount:              record.HintCount,
+				WrongGuessCount:        p.WrongGuessCount,
+				Target:                 p.Target,
+				TotalGameQuestionCount: record.TotalQuestionCount,
+				CompletedAt:            record.CompletedAt,
+				Now:                    now,
+			}); err != nil {
+				failedCount.Add(1)
+				r.logger.Warn("stats_user_stats_record_failed", "chat_id", record.ChatID, "user_id", userID, "err", err)
+			}
+			// 개별 실패는 무시하고 다른 플레이어 처리 계속
+			return nil
+		})
 	}
 
-	if failedCount > 0 {
-		r.logger.Warn("stats_completion_partial_failure", "chat_id", record.ChatID, "failed", failedCount, "total", len(record.Players))
+	// 모든 병렬 작업 완료 대기
+	_ = g.Wait()
+
+	if failed := failedCount.Load(); failed > 0 {
+		r.logger.Warn("stats_completion_partial_failure", "chat_id", record.ChatID, "failed", failed, "total", len(record.Players))
 	}
 }
 

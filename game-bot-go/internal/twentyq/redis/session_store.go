@@ -10,9 +10,9 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
@@ -39,8 +39,8 @@ func (s *SessionStore) SaveSecret(ctx context.Context, chatID string, secret qmo
 		return cerrors.RedisError{Operation: "marshal_secret", Err: err}
 	}
 
-	cmd := s.client.B().Set().Key(key).Value(string(payload)).Ex(time.Duration(qconfig.RedisSessionTTLSeconds) * time.Second).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	ttl := time.Duration(qconfig.RedisSessionTTLSeconds) * time.Second
+	if err := valkeyx.SetStringEX(ctx, s.client, key, string(payload), ttl); err != nil {
 		return cerrors.RedisError{Operation: "save_secret", Err: err}
 	}
 
@@ -52,13 +52,12 @@ func (s *SessionStore) SaveSecret(ctx context.Context, chatID string, secret qmo
 func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.RiddleSecret, error) {
 	key := sessionKey(chatID)
 
-	cmd := s.client.B().Get().Key(key).Build()
-	raw, err := s.client.Do(ctx, cmd).AsBytes()
+	raw, ok, err := valkeyx.GetBytes(ctx, s.client, key)
 	if err != nil {
-		if valkeyx.IsNil(err) {
-			return nil, nil
-		}
 		return nil, cerrors.RedisError{Operation: "get_secret", Err: err}
+	}
+	if !ok {
+		return nil, nil
 	}
 
 	var secret qmodel.RiddleSecret
@@ -72,8 +71,7 @@ func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.Ri
 func (s *SessionStore) Delete(ctx context.Context, chatID string) error {
 	key := sessionKey(chatID)
 
-	cmd := s.client.B().Del().Key(key).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	if err := valkeyx.DeleteKeys(ctx, s.client, key); err != nil {
 		return cerrors.RedisError{Operation: "delete_secret", Err: err}
 	}
 	s.logger.Info("secret_deleted", "chat_id", chatID)
@@ -179,8 +177,9 @@ func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 		hintCountKey(chatID),         // 20q:hints:{chatID}
 		wrongGuessSessionKey(chatID), // 20q:wrongGuesses:{chatID}
 		voteKey(chatID),              // 20q:surrender:vote:{chatID}
-		fmt.Sprintf("%s:%s", qconfig.RedisKeyPendingPrefix, chatID), // 20q:pending-messages:{chatID}
-		fmt.Sprintf("%s:%s", qconfig.RedisKeyTopics, chatID),        // 20q:topics:{chatID}
+		fmt.Sprintf("%s:data:{%s}", qconfig.RedisKeyPendingPrefix, chatID),  // 20q:pending-messages:data:{chatID}
+		fmt.Sprintf("%s:order:{%s}", qconfig.RedisKeyPendingPrefix, chatID), // 20q:pending-messages:order:{chatID}
+		fmt.Sprintf("%s:%s", qconfig.RedisKeyTopics, chatID),                // 20q:topics:{chatID}
 		lockKey(chatID),       // 20q:lock:{chatID}
 		readLockKey(chatID),   // 20q:lock:{chatID}:read
 		processingKey(chatID), // 20q:lock:processing:{chatID}

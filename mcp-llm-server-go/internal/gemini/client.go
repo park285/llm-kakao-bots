@@ -38,7 +38,7 @@ type Client struct {
 	cfg           *config.Config
 	metrics       *metrics.Store
 	usageRecorder *usage.Recorder
-	mu            sync.Mutex
+	mu            sync.RWMutex // RWMutex로 읽기 경로 락 경합 감소
 	clients       map[string]*genai.Client
 	apiKeys       []string
 	apiKeyIdx     int
@@ -159,16 +159,34 @@ func (c *Client) generate(
 	return response, model, nil
 }
 
+// selectClient는 라운드로빈으로 API 키를 선택하고 해당 클라이언트를 반환한다.
+// Double-checked locking 패턴으로 읽기 경로 최적화.
 func (c *Client) selectClient(ctx context.Context) (*genai.Client, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if len(c.apiKeys) == 0 {
 		return nil, ErrMissingAPIKey
 	}
 
-	key := c.apiKeys[c.apiKeyIdx%len(c.apiKeys)]
+	// 먼저 API 키 인덱스를 원자적으로 증가 (락 없이)
+	c.mu.Lock()
+	keyIdx := c.apiKeyIdx
 	c.apiKeyIdx++
+	c.mu.Unlock()
+
+	key := c.apiKeys[keyIdx%len(c.apiKeys)]
+
+	// 읽기 락으로 캐시 히트 확인
+	c.mu.RLock()
+	if client, ok := c.clients[key]; ok {
+		c.mu.RUnlock()
+		return client, nil
+	}
+	c.mu.RUnlock()
+
+	// 쓰기 락으로 클라이언트 생성 (Double-checked locking)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// 다른 goroutine이 이미 생성했을 수 있으므로 재확인
 	if client, ok := c.clients[key]; ok {
 		return client, nil
 	}

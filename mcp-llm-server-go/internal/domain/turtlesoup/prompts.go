@@ -204,20 +204,20 @@ func (p *Prompts) RewriteUser(title string, scenario string, solution string, di
 }
 
 func (p *Prompts) getPrompt(name string) (map[string]string, error) {
-	if p == nil || p.prompts == nil {
+	if p == nil {
 		return nil, fmt.Errorf("turtlesoup prompts not initialized")
 	}
-	promptMap, ok := p.prompts[name]
-	if !ok {
-		return nil, fmt.Errorf("prompt not found: %s", name)
+	promptMap, err := prompt.Get(p.prompts, name, "turtlesoup")
+	if err != nil {
+		return nil, fmt.Errorf("get turtlesoup prompt %s: %w", name, err)
 	}
 	return promptMap, nil
 }
 
 func promptField(data map[string]string, key string, label string) (string, error) {
-	value, ok := data[key]
-	if !ok {
-		return "", fmt.Errorf("prompt field missing: %s", label)
+	value, err := prompt.Field(data, key, label)
+	if err != nil {
+		return "", fmt.Errorf("get turtlesoup prompt field %s: %w", label, err)
 	}
 	return value, nil
 }

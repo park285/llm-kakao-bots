@@ -34,8 +34,8 @@ type managedRequest struct {
 	Reason  string `json:"reason"`
 }
 
-func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *slog.Logger) {
-	api := router.Group("/admin/api/v1")
+func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *slog.Logger, middlewares ...gin.HandlerFunc) {
+	api := router.Group("/admin/api/v1", middlewares...)
 	api.Use(noCacheHeaders)
 
 	api.GET("/watchdog/status", func(c *gin.Context) {
@@ -51,6 +51,8 @@ func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *sl
 			"containers":        cfg.Containers,
 			"intervalSec":       cfg.IntervalSeconds,
 			"maxFailures":       cfg.MaxFailures,
+			"retryChecks":       cfg.RetryChecks,
+			"retryIntervalSec":  cfg.RetryIntervalSeconds,
 			"cooldownSec":       cfg.CooldownSeconds,
 			"restartTimeoutSec": cfg.RestartTimeoutSec,
 			"dockerSocket":      cfg.DockerSocket,
@@ -303,17 +305,18 @@ func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *sl
 			tail = 2000
 		}
 
-		timestamps := true
-		if strings.TrimSpace(c.Query("timestamps")) == "false" {
-			timestamps = false
-		}
+		timestamps := strings.TrimSpace(c.Query("timestamps")) != "false"
 
 		reader, isTTY, err := w.OpenDockerLogs(c.Request.Context(), name, tail, false, timestamps)
 		if err != nil {
 			writeAPIError(c, http.StatusServiceUnavailable, "docker_error", err.Error())
 			return
 		}
-		defer reader.Close()
+		defer func() {
+			if err := reader.Close(); err != nil {
+				logger.Warn("docker_logs_reader_close_failed", "err", err, "container", name, "admin_email", getAdminEmail(c))
+			}
+		}()
 
 		reader = watchdog.WrapDockerLogsReader(reader, isTTY)
 		body, err := ioReadAllLimit(reader, 5*1024*1024)
@@ -326,6 +329,7 @@ func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *sl
 
 	api.GET("/targets/:name/logs/stream", func(c *gin.Context) {
 		name := watchdog.CanonicalContainerName(c.Param("name"))
+		adminEmail := getAdminEmail(c)
 		_, ok := w.GetState(name)
 		if !ok {
 			writeAPIError(c, http.StatusNotFound, "not_found", "관리 대상 컨테이너가 아닙니다.")
@@ -345,7 +349,11 @@ func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *sl
 			writeAPIError(c, http.StatusServiceUnavailable, "docker_error", err.Error())
 			return
 		}
-		defer reader.Close()
+		defer func() {
+			if err := reader.Close(); err != nil {
+				logger.Warn("docker_logs_reader_close_failed", "err", err, "container", name, "admin_email", adminEmail)
+			}
+		}()
 
 		reader = watchdog.WrapDockerLogsReader(reader, isTTY)
 
@@ -355,7 +363,6 @@ func registerAdminAPIRoutes(router *gin.Engine, w *watchdog.Watchdog, logger *sl
 		c.Status(http.StatusOK)
 		c.Writer.Flush()
 
-		adminEmail := getAdminEmail(c)
 		logger.Info("admin_action", "action", "logs_stream", "container", name, "admin_email", adminEmail, "tail", tail)
 
 		_ = watchdog.StreamLines(c.Request.Context(), reader, func(line string) error {

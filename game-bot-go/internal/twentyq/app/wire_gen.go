@@ -8,9 +8,10 @@ package app
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/bootstrap"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	"log/slog"
 )
 
 // Injectors from wire.go:
@@ -41,7 +42,7 @@ func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 		cleanup()
 		return nil, nil, err
 	}
-	statsRecorder, cleanup3 := newTwentyQStatsRecorder(repository, logger)
+	statsRecorder, cleanup3 := newTwentyQStatsRecorder(cfg, repository, logger)
 	riddleService := newTwentyQRiddleService(cfg, client, provider, appTwentyQStores, statsRecorder, logger)
 	serveMux := newTwentyQHTTPMux(riddleService, db, provider, logger)
 	server := newTwentyQHTTPServer(cfg, serveMux)

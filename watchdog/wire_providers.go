@@ -43,7 +43,6 @@ func newDockerHost(cfg watchdog.Config) string {
 func newDockerClient(dockerHost string) (*client.Client, error) {
 	cli, err := client.New(
 		client.WithHost(dockerHost),
-		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
 		return nil, &DockerClientInitError{Host: dockerHost, Err: err}

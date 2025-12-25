@@ -68,16 +68,18 @@ func (w *Watchdog) reloadConfigFromFileUnlocked(ctx context.Context) (ReloadResu
 		AppliedFields:         applied,
 		RequiresRestartFields: requiresRestart,
 		EffectiveConfigSummary: map[string]any{
-			"enabled":             w.GetConfig().Enabled,
-			"containers":          w.GetConfig().Containers,
-			"intervalSeconds":     w.GetConfig().IntervalSeconds,
-			"maxFailures":         w.GetConfig().MaxFailures,
-			"cooldownSeconds":     w.GetConfig().CooldownSeconds,
-			"restartTimeoutSec":   w.GetConfig().RestartTimeoutSec,
-			"useEvents":           w.GetConfig().UseEvents,
-			"eventMinIntervalSec": w.GetConfig().EventMinIntervalSec,
-			"statusReportSeconds": w.GetConfig().StatusReportSeconds,
-			"verboseLogging":      w.GetConfig().VerboseLogging,
+			"enabled":              w.GetConfig().Enabled,
+			"containers":           w.GetConfig().Containers,
+			"intervalSeconds":      w.GetConfig().IntervalSeconds,
+			"maxFailures":          w.GetConfig().MaxFailures,
+			"retryChecks":          w.GetConfig().RetryChecks,
+			"retryIntervalSeconds": w.GetConfig().RetryIntervalSeconds,
+			"cooldownSeconds":      w.GetConfig().CooldownSeconds,
+			"restartTimeoutSec":    w.GetConfig().RestartTimeoutSec,
+			"useEvents":            w.GetConfig().UseEvents,
+			"eventMinIntervalSec":  w.GetConfig().EventMinIntervalSec,
+			"statusReportSeconds":  w.GetConfig().StatusReportSeconds,
+			"verboseLogging":       w.GetConfig().VerboseLogging,
 		},
 	}, nil
 }
@@ -119,6 +121,14 @@ func (w *Watchdog) applyRuntimeConfig(next Config) ([]string, []string) {
 	if old.MaxFailures != next.MaxFailures {
 		w.cfg.MaxFailures = next.MaxFailures
 		applied = append(applied, "maxFailures")
+	}
+	if old.RetryChecks != next.RetryChecks {
+		w.cfg.RetryChecks = next.RetryChecks
+		applied = append(applied, "retryChecks")
+	}
+	if old.RetryIntervalSeconds != next.RetryIntervalSeconds {
+		w.cfg.RetryIntervalSeconds = next.RetryIntervalSeconds
+		applied = append(applied, "retryIntervalSeconds")
 	}
 	if old.CooldownSeconds != next.CooldownSeconds {
 		w.cfg.CooldownSeconds = next.CooldownSeconds

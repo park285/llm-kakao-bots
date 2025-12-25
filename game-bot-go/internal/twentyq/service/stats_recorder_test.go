@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/ptr"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
 )
 
@@ -30,13 +31,22 @@ func TestStatsRecorder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
 	repo := qrepo.New(db)
 	if err := repo.AutoMigrate(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	recorder := NewStatsRecorder(repo, logger)
+	recorder := NewStatsRecorder(repo, logger, qconfig.StatsConfig{})
 
 	ctx := context.Background()
 	chatID := "chat_rec_1"
@@ -186,13 +196,22 @@ func TestBestScoreUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
 	repo := qrepo.New(db)
 	if err := repo.AutoMigrate(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	recorder := NewStatsRecorder(repo, logger)
+	recorder := NewStatsRecorder(repo, logger, qconfig.StatsConfig{})
 
 	ctx := context.Background()
 	chatID := "chat_best_update"

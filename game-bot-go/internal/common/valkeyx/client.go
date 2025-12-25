@@ -140,3 +140,56 @@ func Close(client valkey.Client) {
 		client.Close()
 	}
 }
+
+// GetBytes 는 Valkey에서 key 값을 bytes로 조회한다.
+// 키가 없으면 (nil, false, nil)을 반환한다.
+func GetBytes(ctx context.Context, client valkey.Client, key string) ([]byte, bool, error) {
+	if client == nil {
+		return nil, false, errors.New("valkey client is nil")
+	}
+
+	cmd := client.B().Get().Key(key).Build()
+	raw, err := client.Do(ctx, cmd).AsBytes()
+	if err != nil {
+		if IsNil(err) {
+			return nil, false, nil
+		}
+		return nil, false, fmt.Errorf("valkey get bytes failed: %w", err)
+	}
+	return raw, true, nil
+}
+
+// SetStringEX 는 Valkey에 값을 저장하고 ttl이 0보다 크면 TTL을 설정한다.
+func SetStringEX(ctx context.Context, client valkey.Client, key string, value string, ttl time.Duration) error {
+	if client == nil {
+		return errors.New("valkey client is nil")
+	}
+
+	var cmd valkey.Completed
+	if ttl > 0 {
+		cmd = client.B().Set().Key(key).Value(value).Ex(ttl).Build()
+	} else {
+		cmd = client.B().Set().Key(key).Value(value).Build()
+	}
+
+	if err := client.Do(ctx, cmd).Error(); err != nil {
+		return fmt.Errorf("valkey set string failed: %w", err)
+	}
+	return nil
+}
+
+// DeleteKeys 는 지정한 key 목록을 삭제한다.
+func DeleteKeys(ctx context.Context, client valkey.Client, keys ...string) error {
+	if client == nil {
+		return errors.New("valkey client is nil")
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+
+	cmd := client.B().Del().Key(keys...).Build()
+	if err := client.Do(ctx, cmd).Error(); err != nil {
+		return fmt.Errorf("valkey delete keys failed: %w", err)
+	}
+	return nil
+}

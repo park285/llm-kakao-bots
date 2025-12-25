@@ -3,10 +3,9 @@ package command
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"

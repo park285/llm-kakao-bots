@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/sourcegraph/conc/pool"
 	"github.com/valkey-io/valkey-go"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/iris"
@@ -64,6 +63,7 @@ func newValkeyClient(host string, port int, password string, logger *slog.Logger
 		}
 
 		if attempt < maxAttempts {
+			// 초기화 단계에서는 context가 없으므로 time.Sleep 사용
 			time.Sleep(constants.MQConfig.RetryDelay)
 		}
 	}
@@ -221,7 +221,7 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 		// 별도 timeout context: parent context 취소와 분리
 		// BlockTimeout + 2초 여유를 두어 Block 완료 후 응답 처리 시간 확보
 		readTimeout := constants.MQConfig.BlockTimeout + 2*time.Second
-		readCtx, readCancel := context.WithTimeout(context.Background(), readTimeout)
+		readCtx, readCancel := context.WithTimeout(context.WithoutCancel(ctx), readTimeout)
 		resp := c.client.Do(readCtx, cmd)
 		readCancel()
 
@@ -243,7 +243,9 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 					slog.Any("error", resp.Error()),
 				)
 				c.ensureGroup(ctx, streamKey, group)
-				time.Sleep(constants.MQConfig.RetryDelay)
+				if !sleepWithContext(ctx, constants.MQConfig.RetryDelay) {
+					return // context 취소 시 종료
+				}
 				continue
 			}
 
@@ -261,7 +263,9 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 				slog.String("stream", streamKey),
 				slog.Any("error", resp.Error()),
 			)
-			time.Sleep(constants.MQConfig.RetryDelay)
+			if !sleepWithContext(ctx, constants.MQConfig.RetryDelay) {
+				return // context 취소 시 종료
+			}
 			continue
 		}
 
@@ -430,4 +434,17 @@ func getField(fields map[string]string, key string) string {
 		return val
 	}
 	return ""
+}
+
+// sleepWithContext: context 취소를 지원하는 sleep
+// 정상 대기 완료 시 true, context 취소 시 false 반환
+func sleepWithContext(ctx context.Context, delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

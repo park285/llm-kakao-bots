@@ -376,10 +376,14 @@ func (m *LockManager) acquireWithRetry(
 		}
 
 		// Context 취소 확인 후 대기
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
 			return false, fmt.Errorf("lock acquire canceled: %w", ctx.Err())
-		case <-time.After(delay):
+		case <-timer.C:
 			// 다음 재시도를 위해 delay 증가 (exponential backoff)
 			delay = min(delay*lockRetryDelayMultiply, lockRetryMaxDelay)
 		}

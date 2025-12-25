@@ -215,6 +215,7 @@ func (s *Store) UpdateSession(ctx context.Context, meta Meta) error {
 }
 
 // DeleteSession 세션 삭제
+// DoMulti로 배치 처리하여 2 RTT → 1 RTT로 최적화
 func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
 	if !s.enabled {
 		return ErrStoreDisabled
@@ -226,13 +227,15 @@ func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
 	metaCmd := s.client.B().Del().Key(s.metaKey(sessionID)).Build()
 	historyCmd := s.client.B().Del().Key(s.historyKey(sessionID)).Build()
 
-	if err := s.client.Do(ctx, metaCmd).Error(); err != nil {
-		return fmt.Errorf("delete session meta: %w", err)
+	results := s.client.DoMulti(ctx, metaCmd, historyCmd)
+	for i, result := range results {
+		if err := result.Error(); err != nil && !valkey.IsValkeyNil(err) {
+			if i == 0 {
+				return fmt.Errorf("delete session meta: %w", err)
+			}
+			return fmt.Errorf("delete session history: %w", err)
+		}
 	}
-	if err := s.client.Do(ctx, historyCmd).Error(); err != nil {
-		return fmt.Errorf("delete session history: %w", err)
-	}
-
 	return nil
 }
 
@@ -264,41 +267,59 @@ func (s *Store) GetHistory(ctx context.Context, sessionID string) ([]llm.History
 }
 
 // AppendHistory 히스토리에 메시지 추가
+// DoMulti로 배치 처리하여 N+2 RTT → 1 RTT로 최적화
 func (s *Store) AppendHistory(ctx context.Context, sessionID string, entries ...llm.HistoryEntry) error {
 	if !s.enabled {
 		return ErrStoreDisabled
+	}
+	if len(entries) == 0 {
+		return nil
 	}
 	if s.backend == storeBackendMemory {
 		return s.appendHistoryMemory(sessionID, entries...)
 	}
 
+	historyKey := s.historyKey(sessionID)
+
+	// 모든 entry를 미리 직렬화
+	elements := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		data, err := json.Marshal(entry)
 		if err != nil {
 			return fmt.Errorf("marshal history entry: %w", err)
 		}
-
-		cmd := s.client.B().Rpush().Key(s.historyKey(sessionID)).Element(string(data)).Build()
-		if err := s.client.Do(ctx, cmd).Error(); err != nil {
-			return fmt.Errorf("append history: %w", err)
-		}
+		elements = append(elements, string(data))
 	}
 
+	// 명령어 배치 구성: RPUSH + EXPIRE + (optional) LTRIM
+	cmds := make([]valkey.Completed, 0, 3)
+
+	// 단일 RPUSH로 모든 요소 추가
+	rpushCmd := s.client.B().Rpush().Key(historyKey).Element(elements...).Build()
+	cmds = append(cmds, rpushCmd)
+
 	// TTL 갱신
-	expireCmd := s.client.B().Expire().Key(s.historyKey(sessionID)).Seconds(int64(s.ttl().Seconds())).Build()
-	_ = s.client.Do(ctx, expireCmd)
+	expireCmd := s.client.B().Expire().Key(historyKey).Seconds(int64(s.ttl().Seconds())).Build()
+	cmds = append(cmds, expireCmd)
 
 	// 히스토리 크기 제한
 	maxPairs := s.cfg.Session.HistoryMaxPairs
 	if maxPairs > 0 {
-		trimCmd := s.client.B().Ltrim().Key(s.historyKey(sessionID)).Start(int64(-maxPairs * 2)).Stop(-1).Build()
-		_ = s.client.Do(ctx, trimCmd)
+		trimCmd := s.client.B().Ltrim().Key(historyKey).Start(int64(-maxPairs * 2)).Stop(-1).Build()
+		cmds = append(cmds, trimCmd)
+	}
+
+	// 모든 명령을 단일 RTT로 실행
+	results := s.client.DoMulti(ctx, cmds...)
+	if err := results[0].Error(); err != nil {
+		return fmt.Errorf("append history: %w", err)
 	}
 
 	return nil
 }
 
 // SessionCount 현재 세션 수 (근사치)
+// SCAN 기반으로 구현하여 O(N) 블로킹 KEYS 명령 대신 논블로킹 처리
 func (s *Store) SessionCount(ctx context.Context) (int, error) {
 	if !s.enabled {
 		return 0, nil
@@ -307,13 +328,21 @@ func (s *Store) SessionCount(ctx context.Context) (int, error) {
 		return s.sessionCountMemory(), nil
 	}
 
-	cmd := s.client.B().Keys().Pattern("session:*:meta").Build()
-	results, err := s.client.Do(ctx, cmd).AsStrSlice()
-	if err != nil {
-		return 0, fmt.Errorf("count sessions: %w", err)
+	var count int
+	var cursor uint64
+	for {
+		cmd := s.client.B().Scan().Cursor(cursor).Match("session:*:meta").Count(100).Build()
+		result, err := s.client.Do(ctx, cmd).AsScanEntry()
+		if err != nil {
+			return 0, fmt.Errorf("scan sessions: %w", err)
+		}
+		count += len(result.Elements)
+		cursor = result.Cursor
+		if cursor == 0 {
+			break
+		}
 	}
-
-	return len(results), nil
+	return count, nil
 }
 
 // Ping Valkey 연결 확인

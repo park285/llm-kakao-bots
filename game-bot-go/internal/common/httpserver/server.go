@@ -23,7 +23,7 @@ func Serve(ctx context.Context, server *http.Server, shutdownTimeout time.Durati
 		}
 		return fmt.Errorf("http server listen failed: %w", err)
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 		defer cancel()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {

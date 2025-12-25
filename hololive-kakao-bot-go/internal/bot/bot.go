@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/command"
@@ -388,27 +387,34 @@ func (b *Bot) getErrorMessage(err error, commandType string) string {
 		return msg
 	}
 
-	serviceErr := &appErrors.ServiceError{}
+	// 서비스 에러 체크 (Iris 연결 실패)
+	var serviceErr *appErrors.ServiceError
 	if errors.As(err, &serviceErr) && strings.EqualFold(serviceErr.Service, "iris") {
 		return adapter.ErrIrisConnectionFailed
 	}
 
-	type codedError interface {
-		ErrorCode() string
+	// API 에러 체크 (외부 API 호출 실패)
+	var apiErr *appErrors.APIError
+	if errors.As(err, &apiErr) {
+		return adapter.ErrExternalAPICallFailed
 	}
 
-	var coded codedError
-	if errors.As(err, &coded) {
-		switch coded.ErrorCode() {
-		case appErrors.CodeAPIError, appErrors.CodeKeyRotation:
-			return adapter.ErrExternalAPICallFailed
-		case appErrors.CodeCache:
-			return adapter.ErrCacheConnectionFailed
-		case appErrors.CodeValidation:
-			return msg
-		case appErrors.CodeService:
-			return adapter.ErrExternalAPICallFailed
-		}
+	// 키 로테이션 에러 체크
+	var keyRotationErr *appErrors.KeyRotationError
+	if errors.As(err, &keyRotationErr) {
+		return adapter.ErrExternalAPICallFailed
+	}
+
+	// 캐시 에러 체크
+	var cacheErr *appErrors.CacheError
+	if errors.As(err, &cacheErr) {
+		return adapter.ErrCacheConnectionFailed
+	}
+
+	// 유효성 검사 에러 체크
+	var validationErr *appErrors.ValidationError
+	if errors.As(err, &validationErr) {
+		return msg
 	}
 
 	if strings.Contains(msg, "Valkey") || strings.Contains(msg, "cache") {

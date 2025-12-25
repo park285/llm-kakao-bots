@@ -26,7 +26,9 @@ func isLegacyWatchdogLog(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	buf := make([]byte, 256)
 	n, _ := file.Read(buf)
@@ -141,7 +143,11 @@ func main() {
 		logger.Error("init_failed", "err", err)
 		os.Exit(2)
 	}
-	defer runtime.DockerClient.Close()
+	defer func() {
+		if err := runtime.DockerClient.Close(); err != nil {
+			logger.Warn("docker_client_close_failed", "err", err)
+		}
+	}()
 
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	ping, err := runtime.DockerClient.Ping(pingCtx, client.PingOptions{})

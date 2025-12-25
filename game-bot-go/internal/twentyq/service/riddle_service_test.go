@@ -19,6 +19,7 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 	qredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/redis"
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
@@ -55,12 +56,21 @@ func setupTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("failed to connect sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("failed to get sql db: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
 	repo := qrepo.New(db)
 	if err := repo.AutoMigrate(context.Background()); err != nil {
 		t.Fatalf("failed to migrate: %v", err)
 	}
 
-	statsRecorder := NewStatsRecorder(repo, logger)
+	statsRecorder := NewStatsRecorder(repo, logger, qconfig.StatsConfig{})
 
 	// 4. TopicSelector (Builtin Mock)
 	// We can use the real one, but with a small list of topics

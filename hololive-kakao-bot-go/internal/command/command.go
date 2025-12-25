@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-
 	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
