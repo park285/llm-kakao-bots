@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -12,37 +12,43 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// CacheResources 는 타입이다.
+// CacheResources: 초기화된 캐시 서비스 인스턴스와 리소스 해제(Close) 함수를 캡슐화한 구조체
 type CacheResources struct {
 	Service *cache.Service
 	Close   func()
 }
 
-// DatabaseResources 는 타입이다.
+// DatabaseResources: 초기화된 DB 서비스 인스턴스와 리소스 해제(Close) 함수를 캡슐화한 구조체
 type DatabaseResources struct {
 	Service *database.PostgresService
 	Close   func()
 }
 
-// NewLogger 는 동작을 수행한다.
-func NewLogger(cfg *config.Config) (*zap.Logger, error) {
+// NewLogger: 설정(Config)을 기반으로 새로운 slog 로거 인스턴스를 생성한다.
+func NewLogger(cfg *config.Config) (*slog.Logger, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config must not be nil")
 	}
-	logger, err := util.NewLogger(cfg.Logging.Level, cfg.Logging.File)
+	logger, err := util.EnableFileLoggingWithLevel(util.LogConfig{
+		Dir:        cfg.Logging.Dir,
+		MaxSizeMB:  cfg.Logging.MaxSizeMB,
+		MaxBackups: cfg.Logging.MaxBackups,
+		MaxAgeDays: cfg.Logging.MaxAgeDays,
+		Compress:   cfg.Logging.Compress,
+	}, "bot.log", cfg.Logging.Level)
 	if err != nil {
 		return nil, fmt.Errorf("create logger: %w", err)
 	}
 	return logger, nil
 }
 
-// NewMessageStack 는 동작을 수행한다.
+// NewMessageStack: 메시지 파싱(Adapter) 및 포맷팅(Formatter) 유틸리티 인스턴스를 생성하여 반환한다.
 func NewMessageStack(prefix string) (*adapter.MessageAdapter, *adapter.ResponseFormatter) {
 	return adapter.NewMessageAdapter(prefix), adapter.NewResponseFormatter(prefix)
 }
 
-// NewCacheResources 는 동작을 수행한다.
-func NewCacheResources(cfg config.ValkeyConfig, logger *zap.Logger) (*CacheResources, error) {
+// NewCacheResources: Redis(Valkey) 설정을 기반으로 캐시 서비스를 초기화하고 리소스 객체를 반환한다.
+func NewCacheResources(cfg config.ValkeyConfig, logger *slog.Logger) (*CacheResources, error) {
 	cacheSvc, err := cache.NewCacheService(cache.Config{
 		Host:     cfg.Host,
 		Port:     cfg.Port,
@@ -62,8 +68,8 @@ func NewCacheResources(cfg config.ValkeyConfig, logger *zap.Logger) (*CacheResou
 	return res, nil
 }
 
-// NewDatabaseResources 는 동작을 수행한다.
-func NewDatabaseResources(cfg config.PostgresConfig, logger *zap.Logger) (*DatabaseResources, error) {
+// NewDatabaseResources: PostgreSQL 설정을 기반으로 DB 서비스를 초기화하고 리소스 객체를 반환한다.
+func NewDatabaseResources(cfg config.PostgresConfig, logger *slog.Logger) (*DatabaseResources, error) {
 	dbSvc, err := database.NewPostgresService(database.PostgresConfig{
 		Host:     cfg.Host,
 		Port:     cfg.Port,

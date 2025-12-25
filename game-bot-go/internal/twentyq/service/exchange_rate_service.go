@@ -29,7 +29,7 @@ type ExchangeRateService interface {
 	RateInfo(ctx context.Context) string
 }
 
-// FrankfurterExchangeRateService 는 타입이다.
+// FrankfurterExchangeRateService: Frankfurter API를 이용한 환율 서비스 구현체
 type FrankfurterExchangeRateService struct {
 	client  *http.Client
 	apiURL  string
@@ -41,7 +41,7 @@ type FrankfurterExchangeRateService struct {
 	cachedUntil time.Time
 }
 
-// NewFrankfurterExchangeRateService 는 동작을 수행한다.
+// NewFrankfurterExchangeRateService: 새로운 FrankfurterExchangeRateService 인스턴스를 생성한다.
 func NewFrankfurterExchangeRateService(logger *slog.Logger) *FrankfurterExchangeRateService {
 	if logger == nil {
 		logger = slog.Default()
@@ -54,13 +54,13 @@ func NewFrankfurterExchangeRateService(logger *slog.Logger) *FrankfurterExchange
 	}
 }
 
-// UsdToKrw 는 동작을 수행한다.
+// UsdToKrw: USD 금액을 KRW로 변환한다.
 func (s *FrankfurterExchangeRateService) UsdToKrw(ctx context.Context, usdAmount float64) float64 {
 	rate := s.getUsdKrwRate(ctx)
 	return usdAmount * rate
 }
 
-// RateInfo 는 동작을 수행한다.
+// RateInfo: 현재 적용 중인 환율 정보를 문자열로 반환한다.
 func (s *FrankfurterExchangeRateService) RateInfo(ctx context.Context) string {
 	rate := s.getUsdKrwRate(ctx)
 	rounded := int64(math.Round(rate))

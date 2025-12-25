@@ -16,7 +16,7 @@ import (
 
 const maxHolodexAPIKeySlots = 5
 
-// Config 는 타입이다.
+// Config: 홀로라이브 봇의 전체 동작에 필요한 설정을 담는 구조체
 type Config struct {
 	Iris         IrisConfig
 	ValkeyMQ     ValkeyMQConfig
@@ -33,12 +33,12 @@ type Config struct {
 	WatchdogURL  string // Watchdog API 프록시용
 }
 
-// IrisConfig 는 타입이다.
+// IrisConfig: Iris 웹훅 서버 연결 및 메시지 전송 관련 설정
 type IrisConfig struct {
 	BaseURL string
 }
 
-// ValkeyMQConfig 는 타입이다.
+// ValkeyMQConfig: Redis(Valkey) 기반 메시지 큐 통신 설정
 type ValkeyMQConfig struct {
 	Host          string
 	Port          int
@@ -48,7 +48,7 @@ type ValkeyMQConfig struct {
 	ConsumerName  string
 }
 
-// ServerConfig 는 타입이다.
+// ServerConfig: 관리자용 웹 대시보드 및 API 서버 설정
 type ServerConfig struct {
 	Port            int
 	AdminUser       string
@@ -58,7 +58,7 @@ type ServerConfig struct {
 	AdminAllowedIPs []string
 }
 
-// KakaoConfig 는 타입이다.
+// KakaoConfig: 카카오톡 채팅방 허용 목록 및 접근 제어(ACL) 설정
 type KakaoConfig struct {
 	Rooms      []string
 	ACLEnabled bool
@@ -66,7 +66,8 @@ type KakaoConfig struct {
 	mu sync.RWMutex
 }
 
-// SnapshotACL 는 동작을 수행한다.
+// SnapshotACL: 현재 ACL 설정 상태(활성화 여부 및 허용된 방 목록)의 스냅샷을 반환한다.
+// Thread-safe하게 읽기 락을 사용한다.
 func (c *KakaoConfig) SnapshotACL() (enabled bool, rooms []string) {
 	if c == nil {
 		return false, nil
@@ -79,7 +80,7 @@ func (c *KakaoConfig) SnapshotACL() (enabled bool, rooms []string) {
 	return c.ACLEnabled, rooms
 }
 
-// SetACLEnabled 는 동작을 수행한다.
+// SetACLEnabled: ACL(접근 제어) 기능의 활성화 여부를 '동적으로' 설정한다.
 func (c *KakaoConfig) SetACLEnabled(enabled bool) {
 	if c == nil {
 		return
@@ -91,7 +92,7 @@ func (c *KakaoConfig) SetACLEnabled(enabled bool) {
 	c.ACLEnabled = enabled
 }
 
-// AddRoom 는 동작을 수행한다.
+// AddRoom: 허용 목록에 새로운 채팅방을 추가한다. 이미 존재하면 false를 반환한다.
 func (c *KakaoConfig) AddRoom(room string) bool {
 	if c == nil {
 		return false
@@ -115,7 +116,7 @@ func (c *KakaoConfig) AddRoom(room string) bool {
 	return true
 }
 
-// RemoveRoom 는 동작을 수행한다.
+// RemoveRoom: 허용 목록에서 특정 채팅방을 제거한다.
 func (c *KakaoConfig) RemoveRoom(room string) bool {
 	if c == nil {
 		return false
@@ -143,7 +144,8 @@ func (c *KakaoConfig) RemoveRoom(room string) bool {
 	return removed
 }
 
-// IsRoomAllowed 는 동작을 수행한다.
+// IsRoomAllowed: 해당 채팅방(chatID)이 봇 사용이 허용된 곳인지 확인한다.
+// ACL이 비활성화되어 있으면 모든 방을 허용한다.
 func (c *KakaoConfig) IsRoomAllowed(roomName, chatID string) bool {
 	if c == nil {
 		return true
@@ -172,18 +174,18 @@ func (c *KakaoConfig) IsRoomAllowed(roomName, chatID string) bool {
 	return false
 }
 
-// HolodexConfig 는 타입이다.
+// HolodexConfig: Holodex API 키 및 호출 관련 설정
 type HolodexConfig struct {
 	APIKeys []string
 }
 
-// YouTubeConfig 는 타입이다.
+// YouTubeConfig: YouTube Data API 키 및 Quota 관리 설정
 type YouTubeConfig struct {
 	APIKey              string
 	EnableQuotaBuilding bool
 }
 
-// ValkeyConfig 는 타입이다.
+// ValkeyConfig: 데이터 캐싱 용도의 Redis(Valkey) 연결 설정
 type ValkeyConfig struct {
 	Host     string
 	Port     int
@@ -191,7 +193,7 @@ type ValkeyConfig struct {
 	DB       int
 }
 
-// PostgresConfig 는 타입이다.
+// PostgresConfig: 메인 데이터베이스(PostgreSQL) 연결 설정
 type PostgresConfig struct {
 	Host     string
 	Port     int
@@ -200,25 +202,29 @@ type PostgresConfig struct {
 	Database string
 }
 
-// NotificationConfig 는 타입이다.
+// NotificationConfig: 방송 알림 스케줄링(미리 알림 시간, 체크 주기) 설정
 type NotificationConfig struct {
 	AdvanceMinutes []int
 	CheckInterval  time.Duration
 }
 
-// LoggingConfig 는 타입이다.
+// LoggingConfig: 애플리케이션 로그 설정 (레벨, 디렉토리, 로테이션 정책)
 type LoggingConfig struct {
-	Level string
-	File  string
+	Level      string
+	Dir        string
+	MaxSizeMB  int
+	MaxBackups int
+	MaxAgeDays int
+	Compress   bool
 }
 
-// BotConfig 는 타입이다.
+// BotConfig: 봇의 기본 동작(명령어 접두사, 자기 자신 식별자) 설정
 type BotConfig struct {
 	Prefix   string
 	SelfUser string
 }
 
-// Load 는 동작을 수행한다.
+// Load: .env 파일 및 환경 변수로부터 설정을 로드하고, 기본값을 적용하여 Config 객체를 생성한다.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -271,8 +277,12 @@ func Load() (*Config, error) {
 			CheckInterval:  time.Duration(getEnvInt("CHECK_INTERVAL_SECONDS", 60)) * time.Second,
 		},
 		Logging: LoggingConfig{
-			Level: getEnv("LOG_LEVEL", "info"),
-			File:  getEnv("LOG_FILE", "logs/bot.log"),
+			Level:      getEnv("LOG_LEVEL", "info"),
+			Dir:        getEnv("LOG_DIR", "logs"),
+			MaxSizeMB:  getEnvInt("LOG_MAX_SIZE_MB", 100),
+			MaxBackups: getEnvInt("LOG_MAX_BACKUPS", 5),
+			MaxAgeDays: getEnvInt("LOG_MAX_AGE_DAYS", 30),
+			Compress:   getEnvBool("LOG_COMPRESS", true),
 		},
 		Bot: BotConfig{
 			Prefix:   getEnv("BOT_PREFIX", "!"),
@@ -289,7 +299,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Validate 는 동작을 수행한다.
+// Validate: 필수 설정값이 누락되지 않았는지 검증한다.
 func (c *Config) Validate() error {
 	if c.Server.Port == 0 {
 		return fmt.Errorf("SERVER_PORT is required")

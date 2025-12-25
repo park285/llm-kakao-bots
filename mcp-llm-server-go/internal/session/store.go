@@ -6,9 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -55,14 +52,6 @@ type Store struct {
 	history         map[string][]llm.HistoryEntry
 	metaExpiresAt   map[string]time.Time
 	historyExpireAt map[string]time.Time
-}
-
-type storeConnInfo struct {
-	addr     string
-	username string
-	password string
-	selectDB int
-	useTLS   bool
 }
 
 // NewStore 는 세션 저장소를 생성한다.
@@ -176,22 +165,6 @@ func (s *Store) CreateSession(ctx context.Context, meta Meta) error {
 	return nil
 }
 
-func (s *Store) createSessionMemory(meta Meta) error {
-	now := time.Now()
-	expiresAt := s.computeExpiry(now)
-
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	s.meta[meta.ID] = meta
-	if !expiresAt.IsZero() {
-		s.metaExpiresAt[meta.ID] = expiresAt
-	} else {
-		delete(s.metaExpiresAt, meta.ID)
-	}
-	s.mu.Unlock()
-	return nil
-}
-
 // GetSession 세션 메타데이터 조회
 func (s *Store) GetSession(ctx context.Context, sessionID string) (*Meta, error) {
 	if !s.enabled {
@@ -210,39 +183,12 @@ func (s *Store) GetSession(ctx context.Context, sessionID string) (*Meta, error)
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	var meta Meta
-	if err := json.Unmarshal([]byte(result), &meta); err != nil {
+	var m Meta
+	if err := json.Unmarshal([]byte(result), &m); err != nil {
 		return nil, fmt.Errorf("unmarshal session meta: %w", err)
 	}
 
-	return &meta, nil
-}
-
-func (s *Store) getSessionMemory(sessionID string) (*Meta, error) {
-	if strings.TrimSpace(sessionID) == "" {
-		return nil, ErrSessionNotFound
-	}
-
-	now := time.Now()
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	expiresAt, ok := s.metaExpiresAt[sessionID]
-	if ok && !expiresAt.IsZero() && now.After(expiresAt) {
-		delete(s.metaExpiresAt, sessionID)
-		delete(s.meta, sessionID)
-		s.mu.Unlock()
-		return nil, ErrSessionNotFound
-	}
-
-	meta, ok := s.meta[sessionID]
-	if !ok {
-		s.mu.Unlock()
-		return nil, ErrSessionNotFound
-	}
-	s.mu.Unlock()
-
-	copied := meta
-	return &copied, nil
+	return &m, nil
 }
 
 // UpdateSession 세션 메타데이터 업데이트
@@ -268,23 +214,6 @@ func (s *Store) UpdateSession(ctx context.Context, meta Meta) error {
 	return nil
 }
 
-func (s *Store) updateSessionMemory(meta Meta) error {
-	now := time.Now()
-	meta.UpdatedAt = now
-	expiresAt := s.computeExpiry(now)
-
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	s.meta[meta.ID] = meta
-	if !expiresAt.IsZero() {
-		s.metaExpiresAt[meta.ID] = expiresAt
-	} else {
-		delete(s.metaExpiresAt, meta.ID)
-	}
-	s.mu.Unlock()
-	return nil
-}
-
 // DeleteSession 세션 삭제
 func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
 	if !s.enabled {
@@ -304,18 +233,6 @@ func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
 		return fmt.Errorf("delete session history: %w", err)
 	}
 
-	return nil
-}
-
-func (s *Store) deleteSessionMemory(sessionID string) error {
-	now := time.Now()
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	delete(s.meta, sessionID)
-	delete(s.history, sessionID)
-	delete(s.metaExpiresAt, sessionID)
-	delete(s.historyExpireAt, sessionID)
-	s.mu.Unlock()
 	return nil
 }
 
@@ -344,28 +261,6 @@ func (s *Store) GetHistory(ctx context.Context, sessionID string) ([]llm.History
 	}
 
 	return history, nil
-}
-
-func (s *Store) getHistoryMemory(sessionID string) []llm.HistoryEntry {
-	now := time.Now()
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	expiresAt, ok := s.historyExpireAt[sessionID]
-	if ok && !expiresAt.IsZero() && now.After(expiresAt) {
-		delete(s.historyExpireAt, sessionID)
-		delete(s.history, sessionID)
-		s.mu.Unlock()
-		return nil
-	}
-
-	history := s.history[sessionID]
-	if len(history) == 0 {
-		s.mu.Unlock()
-		return nil
-	}
-	copied := append([]llm.HistoryEntry(nil), history...)
-	s.mu.Unlock()
-	return copied
 }
 
 // AppendHistory 히스토리에 메시지 추가
@@ -403,36 +298,6 @@ func (s *Store) AppendHistory(ctx context.Context, sessionID string, entries ...
 	return nil
 }
 
-func (s *Store) appendHistoryMemory(sessionID string, entries ...llm.HistoryEntry) error {
-	now := time.Now()
-	expiresAt := s.computeExpiry(now)
-
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	existing := s.history[sessionID]
-	existing = append(existing, entries...)
-
-	maxPairs := 0
-	if s.cfg != nil {
-		maxPairs = s.cfg.Session.HistoryMaxPairs
-	}
-	if maxPairs > 0 {
-		maxEntries := maxPairs * 2
-		if len(existing) > maxEntries {
-			existing = existing[len(existing)-maxEntries:]
-		}
-	}
-
-	s.history[sessionID] = existing
-	if !expiresAt.IsZero() {
-		s.historyExpireAt[sessionID] = expiresAt
-	} else {
-		delete(s.historyExpireAt, sessionID)
-	}
-	s.mu.Unlock()
-	return nil
-}
-
 // SessionCount 현재 세션 수 (근사치)
 func (s *Store) SessionCount(ctx context.Context) (int, error) {
 	if !s.enabled {
@@ -451,15 +316,6 @@ func (s *Store) SessionCount(ctx context.Context) (int, error) {
 	return len(results), nil
 }
 
-func (s *Store) sessionCountMemory() int {
-	now := time.Now()
-	s.mu.Lock()
-	s.pruneExpiredLocked(now)
-	count := len(s.meta)
-	s.mu.Unlock()
-	return count
-}
-
 // Ping Valkey 연결 확인
 func (s *Store) Ping(ctx context.Context) error {
 	if !s.enabled {
@@ -474,124 +330,4 @@ func (s *Store) Ping(ctx context.Context) error {
 		return fmt.Errorf("ping valkey: %w", err)
 	}
 	return nil
-}
-
-func (s *Store) computeExpiry(now time.Time) time.Time {
-	ttl := time.Duration(0)
-	if s != nil {
-		ttl = s.ttl()
-	}
-	if ttl <= 0 {
-		return time.Time{}
-	}
-	return now.Add(ttl)
-}
-
-func (s *Store) pruneExpiredLocked(now time.Time) {
-	for sessionID, expiresAt := range s.metaExpiresAt {
-		if expiresAt.IsZero() || now.Before(expiresAt) {
-			continue
-		}
-		delete(s.metaExpiresAt, sessionID)
-		delete(s.meta, sessionID)
-	}
-
-	for sessionID, expiresAt := range s.historyExpireAt {
-		if expiresAt.IsZero() || now.Before(expiresAt) {
-			continue
-		}
-		delete(s.historyExpireAt, sessionID)
-		delete(s.history, sessionID)
-	}
-}
-
-func parseStoreURL(raw string) (storeConnInfo, error) {
-	if strings.TrimSpace(raw) == "" {
-		return storeConnInfo{}, errors.New("session store url is empty")
-	}
-
-	if !strings.Contains(raw, "://") {
-		return parseStoreAddr(raw)
-	}
-
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return storeConnInfo{}, fmt.Errorf("parse url: %w", err)
-	}
-
-	host := parsed.Hostname()
-	if host == "" {
-		return storeConnInfo{}, errors.New("session store host missing")
-	}
-
-	port := parsed.Port()
-	if port == "" {
-		port = "6379"
-	}
-
-	selectDB := 0
-	if strings.TrimSpace(parsed.Path) != "" && parsed.Path != "/" {
-		path := strings.TrimPrefix(parsed.Path, "/")
-		db, err := strconv.Atoi(path)
-		if err != nil {
-			return storeConnInfo{}, fmt.Errorf("invalid session store db: %w", err)
-		}
-		if db < 0 {
-			return storeConnInfo{}, errors.New("invalid session store db")
-		}
-		selectDB = db
-	}
-
-	username := ""
-	password := ""
-	if parsed.User != nil {
-		username = parsed.User.Username()
-		pw, _ := parsed.User.Password()
-		password = pw
-	}
-
-	useTLS := strings.EqualFold(parsed.Scheme, "rediss")
-
-	return storeConnInfo{
-		addr:     net.JoinHostPort(host, port),
-		username: username,
-		password: password,
-		selectDB: selectDB,
-		useTLS:   useTLS,
-	}, nil
-}
-
-func parseStoreAddr(addr string) (storeConnInfo, error) {
-	trimmed := strings.TrimSpace(addr)
-	if trimmed == "" {
-		return storeConnInfo{}, errors.New("session store address is empty")
-	}
-
-	host, port, err := net.SplitHostPort(trimmed)
-	if err != nil {
-		var addrErr *net.AddrError
-		if !errors.As(err, &addrErr) {
-			return storeConnInfo{}, fmt.Errorf("invalid session store address: %w", err)
-		}
-		switch addrErr.Err {
-		case "missing port in address":
-			host = strings.TrimSuffix(strings.TrimPrefix(trimmed, "["), "]")
-			port = "6379"
-		case "too many colons in address":
-			host = trimmed
-			port = "6379"
-		default:
-			return storeConnInfo{}, fmt.Errorf("invalid session store address: %w", err)
-		}
-	}
-
-	if strings.TrimSpace(host) == "" {
-		return storeConnInfo{}, errors.New("session store host missing")
-	}
-
-	return storeConnInfo{
-		addr:     net.JoinHostPort(host, port),
-		selectDB: 0,
-		useTLS:   false,
-	}, nil
 }

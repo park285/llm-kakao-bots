@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"os"
 
-	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
+
+	"log/slog"
 )
 
 const (
@@ -18,18 +19,18 @@ const (
 	credentialsFile = "credentials.json"
 )
 
-// OAuthService 는 타입이다.
+// OAuthService: YouTube API OAuth2 인증을 처리하고 관리하는 서비스
 type OAuthService struct {
 	service *youtube.Service
 	config  *oauth2.Config
 	token   *oauth2.Token
-	logger  *zap.Logger
+	logger  *slog.Logger
 }
 
-// NewYouTubeOAuthService 는 동작을 수행한다.
-func NewYouTubeOAuthService(logger *zap.Logger) (*OAuthService, error) {
+// NewYouTubeOAuthService: 저장된 토큰이나 자격 증명을 로드하여 OAuth 서비스를 초기화한다.
+func NewYouTubeOAuthService(logger *slog.Logger) (*OAuthService, error) {
 	if logger == nil {
-		logger = zap.NewNop()
+		logger = slog.Default()
 	}
 
 	credBytes, err := os.ReadFile(credentialsFile)
@@ -45,7 +46,7 @@ func NewYouTubeOAuthService(logger *zap.Logger) (*OAuthService, error) {
 	token, err := loadToken(tokenFile)
 	if err != nil {
 		logger.Warn("No existing token found, need to authorize",
-			zap.String("file", tokenFile))
+			slog.String("file", tokenFile))
 
 		return &OAuthService{
 			config: config,
@@ -63,7 +64,7 @@ func NewYouTubeOAuthService(logger *zap.Logger) (*OAuthService, error) {
 	}
 
 	logger.Info("YouTube OAuth service initialized",
-		zap.Bool("authenticated", true))
+		slog.Bool("authenticated", true))
 
 	return &OAuthService{
 		service: ytService,
@@ -73,7 +74,7 @@ func NewYouTubeOAuthService(logger *zap.Logger) (*OAuthService, error) {
 	}, nil
 }
 
-// Authorize 는 동작을 수행한다.
+// Authorize: CLI 기반의 대화형 OAuth 인증 프로세스를 시작한다. (브라우저 인증 URL 표시 및 코드 입력 대기)
 func (ys *OAuthService) Authorize(ctx context.Context) error {
 	if ys == nil {
 		return fmt.Errorf("service not initialized")
@@ -112,19 +113,19 @@ func (ys *OAuthService) Authorize(ctx context.Context) error {
 	ys.service = ytService
 
 	ys.logger.Info("YouTube OAuth authorization complete",
-		zap.String("token_file", tokenFile))
+		slog.String("token_file", tokenFile))
 
 	fmt.Println("\nAuthorization successful. Token saved.")
 
 	return nil
 }
 
-// IsAuthorized 는 동작을 수행한다.
+// IsAuthorized: 현재 유효한 인증 토큰이 있는지 확인한다.
 func (ys *OAuthService) IsAuthorized() bool {
 	return ys != nil && ys.service != nil && ys.token != nil
 }
 
-// GetService 는 동작을 수행한다.
+// GetService: 인증된 YouTube API 클라이언트를 반환한다.
 func (ys *OAuthService) GetService() *youtube.Service {
 	if ys == nil {
 		return nil

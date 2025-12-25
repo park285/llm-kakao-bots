@@ -2,7 +2,7 @@ package util
 
 import "strings"
 
-// TruncateString 는 동작을 수행한다.
+// TruncateString: 주어진 문자열을 최대 길이(Rune 기준)로 자르고, 초과 시 "..."을 붙여 반환한다.
 func TruncateString(s string, maxRunes int) string {
 	runes := []rune(s)
 	if len(runes) <= maxRunes {
@@ -11,17 +11,17 @@ func TruncateString(s string, maxRunes int) string {
 	return string(runes[:maxRunes]) + "..."
 }
 
-// TrimSpace 는 동작을 수행한다.
+// TrimSpace: 문자열 양쪽 끝의 공백을 제거한다. (strings.TrimSpace 래퍼)
 func TrimSpace(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// Normalize 는 동작을 수행한다.
+// Normalize: 문자열을 소문자로 변환하고 양쪽 공백을 제거한다.
 func Normalize(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
 
-// NormalizeSuffix 는 동작을 수행한다.
+// NormalizeSuffix: 문자열에서 "짱", "쨩"과 같은 한국어 호칭 접미사를 제거하고 정규화한다.
 func NormalizeSuffix(s string) string {
 	normalized := Normalize(s)
 
@@ -36,7 +36,7 @@ func NormalizeSuffix(s string) string {
 	return normalized
 }
 
-// NormalizeKey 는 동작을 수행한다.
+// NormalizeKey: 검색 키 생성을 위해 특수문자, 공백 등을 제거하여 문자열을 정규화한다.
 func NormalizeKey(name string) string {
 	name = Normalize(name)
 	if name == "" {
@@ -55,7 +55,7 @@ func NormalizeKey(name string) string {
 	return builder.String()
 }
 
-// Slugify 는 동작을 수행한다.
+// Slugify: URL 등에 사용하기 적합하도록 문자열을 변환한다. (공백 -> "-", 특수문자 제거)
 func Slugify(name string) string {
 	name = Normalize(name)
 	name = strings.ReplaceAll(name, " ", "-")
@@ -65,7 +65,7 @@ func Slugify(name string) string {
 	return name
 }
 
-// Contains 는 동작을 수행한다.
+// Contains: 문자열 슬라이스에 특정 문자열이 포함되어 있는지 확인한다.
 func Contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {

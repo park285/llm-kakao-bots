@@ -4,7 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/activity"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/watchdog"
@@ -13,12 +14,12 @@ import (
 // WatchdogProxyHandler handles watchdog API proxy requests.
 type WatchdogProxyHandler struct {
 	client   *watchdog.Client
-	logger   *zap.Logger
+	logger   *slog.Logger
 	activity *activity.Logger
 }
 
 // NewWatchdogProxyHandler creates a new watchdog proxy handler.
-func NewWatchdogProxyHandler(watchdogURL string, logger *zap.Logger, activity *activity.Logger) *WatchdogProxyHandler {
+func NewWatchdogProxyHandler(watchdogURL string, logger *slog.Logger, activity *activity.Logger) *WatchdogProxyHandler {
 	return &WatchdogProxyHandler{
 		client:   watchdog.NewClient(watchdogURL, logger),
 		logger:   logger,
@@ -32,7 +33,7 @@ func (h *WatchdogProxyHandler) GetContainers(c *gin.Context) {
 
 	containers, err := h.client.GetContainers(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get containers from watchdog", zap.Error(err))
+		h.logger.Error("Failed to get containers from watchdog", slog.Any("error", err))
 		c.JSON(http.StatusBadGateway, gin.H{
 			"error":  "Failed to connect to watchdog",
 			"detail": err.Error(),
@@ -52,7 +53,7 @@ func (h *WatchdogProxyHandler) GetManagedTargets(c *gin.Context) {
 
 	targets, err := h.client.GetManagedTargets(ctx)
 	if err != nil {
-		h.logger.Error("Failed to get targets from watchdog", zap.Error(err))
+		h.logger.Error("Failed to get targets from watchdog", slog.Any("error", err))
 		c.JSON(http.StatusBadGateway, gin.H{
 			"error":  "Failed to connect to watchdog",
 			"detail": err.Error(),
@@ -87,8 +88,8 @@ func (h *WatchdogProxyHandler) RestartContainer(c *gin.Context) {
 	result, err := h.client.RestartContainer(ctx, name, req.Reason, req.Force)
 	if err != nil {
 		h.logger.Error("Failed to restart container",
-			zap.String("container", name),
-			zap.Error(err),
+			slog.String("container", name),
+			slog.Any("error", err),
 		)
 		c.JSON(http.StatusBadGateway, gin.H{
 			"error":  "Failed to restart container",
@@ -98,8 +99,8 @@ func (h *WatchdogProxyHandler) RestartContainer(c *gin.Context) {
 	}
 
 	h.logger.Info("Container restart initiated via admin",
-		zap.String("container", name),
-		zap.String("reason", req.Reason),
+		slog.String("container", name),
+		slog.String("reason", req.Reason),
 	)
 
 	h.activity.Log("container_restart", "Container restart: "+name, map[string]interface{}{

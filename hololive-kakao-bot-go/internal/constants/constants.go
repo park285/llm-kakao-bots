@@ -185,6 +185,7 @@ var MQConfig = struct {
 	ReadCount         int64
 	WorkerCount       int
 	IdempotencyTTL    time.Duration
+	InitRetryCount    int
 	RetryDelay        time.Duration
 }{
 	ReplyStreamKey:    "kakao:bot:reply",
@@ -197,6 +198,7 @@ var MQConfig = struct {
 	ReadCount:         50,
 	WorkerCount:       10,
 	IdempotencyTTL:    24 * time.Hour,
+	InitRetryCount:    10,
 	RetryDelay:        1 * time.Second,
 }
 

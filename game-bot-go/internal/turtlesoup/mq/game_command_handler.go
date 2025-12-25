@@ -16,7 +16,7 @@ import (
 	tssvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/service"
 )
 
-// GameCommandHandler 는 타입이다.
+// GameCommandHandler: 사용자의 파싱된 명령어를 받아 실제 바다거북스프 게임 로직(Service)을 호출하고 결과를 반환한다.
 type GameCommandHandler struct {
 	gameService      *tssvc.GameService
 	surrenderHandler *SurrenderHandler
@@ -25,7 +25,7 @@ type GameCommandHandler struct {
 	logger           *slog.Logger
 }
 
-// NewGameCommandHandler 는 동작을 수행한다.
+// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성한다.
 func NewGameCommandHandler(
 	gameService *tssvc.GameService,
 	surrenderHandler *SurrenderHandler,
@@ -42,7 +42,7 @@ func NewGameCommandHandler(
 	}
 }
 
-// ProcessCommand 는 동작을 수행한다.
+// ProcessCommand: 명령어의 종류(Start, Ask, Answer 등)에 따라 적절한 핸들러 로직을 분기하여 실행한다.
 func (h *GameCommandHandler) ProcessCommand(ctx context.Context, message mqmsg.InboundMessage, command Command) (string, error) {
 	if h.shouldRegisterPlayer(command) {
 		_ = h.gameService.RegisterPlayer(ctx, message.ChatID, message.UserID)
@@ -74,6 +74,7 @@ func (h *GameCommandHandler) ProcessCommand(ctx context.Context, message mqmsg.I
 	}
 }
 
+// handleStart: 새로운 게임을 시작하거나 기존 게임을 재개한다. 시나리오와 게임 규칙을 안내한다.
 func (h *GameCommandHandler) handleStart(ctx context.Context, message mqmsg.InboundMessage, command Command) (string, error) {
 	selection := h.resolveDifficulty(command)
 	startState, err := h.startOrResumeGame(ctx, message, selection.Value)
@@ -93,6 +94,7 @@ func (h *GameCommandHandler) handleStart(ctx context.Context, message mqmsg.Inbo
 	return scenario + "\n\n" + instruction, nil
 }
 
+// handleAsk: 사용자의 질문을 AI에게 전달하여 "예/아니오" 답변을 받아 반환한다.
 func (h *GameCommandHandler) handleAsk(ctx context.Context, message mqmsg.InboundMessage, question string) (string, error) {
 	h.logger.Debug("handleAsk_start", "session_id", message.ChatID)
 	_, result, err := h.gameService.AskQuestion(ctx, message.ChatID, question)
@@ -104,6 +106,7 @@ func (h *GameCommandHandler) handleAsk(ctx context.Context, message mqmsg.Inboun
 	return h.msgProvider.Get(tsmessages.AnswerResponseSingle, messageprovider.P("answer", result.Answer)), nil
 }
 
+// handleAnswer: 사용자가 제출한 정답을 검증하고, 결과(정답/오답/근접)에 따른 메시지를 생성한다.
 func (h *GameCommandHandler) handleAnswer(ctx context.Context, message mqmsg.InboundMessage, answer string) (string, error) {
 	result, err := h.gameService.SubmitAnswer(ctx, message.ChatID, answer)
 	if err != nil {
@@ -127,6 +130,7 @@ func (h *GameCommandHandler) handleAnswer(ctx context.Context, message mqmsg.Inb
 	}
 }
 
+// handleHint: 게임 진행 중 힌트를 생성하고 제공한다. 힌트 카운트를 차감한다.
 func (h *GameCommandHandler) handleHint(ctx context.Context, message mqmsg.InboundMessage) (string, error) {
 	state, hint, err := h.gameService.RequestHint(ctx, message.ChatID)
 	if err != nil {
@@ -139,6 +143,7 @@ func (h *GameCommandHandler) handleHint(ctx context.Context, message mqmsg.Inbou
 	), nil
 }
 
+// handleProblem: 현재 문제의 시나리오와 상태(남은 힌트 등)를 다시 보여준다.
 func (h *GameCommandHandler) handleProblem(ctx context.Context, message mqmsg.InboundMessage) (string, error) {
 	state, err := h.gameService.GetGameState(ctx, message.ChatID)
 	if err != nil {
@@ -159,6 +164,7 @@ func (h *GameCommandHandler) handleProblem(ctx context.Context, message mqmsg.In
 	), nil
 }
 
+// handleSummary: 지금까지 주고받은 질문과 답변의 이력을 요약하여 보여준다.
 func (h *GameCommandHandler) handleSummary(ctx context.Context, message mqmsg.InboundMessage) (string, error) {
 	state, err := h.gameService.GetGameState(ctx, message.ChatID)
 	if err != nil {

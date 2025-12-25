@@ -121,19 +121,30 @@ func TestSurrenderVoteStore_Approve(t *testing.T) {
 		CreatedAt:       time.Now().UnixMilli(),
 		Approvals:       []string{"user1"},
 	}
-	store.Save(ctx, chatID, vote)
+	if err := store.Save(ctx, chatID, vote); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
 
 	// 1. Valid Approval
 	updated, err := store.Approve(ctx, chatID, "user2")
 	if err != nil {
 		t.Fatalf("approve failed: %v", err)
 	}
+	if updated == nil {
+		t.Fatal("expected vote, got nil")
+	}
 	if len(updated.Approvals) != 2 {
 		t.Errorf("expected 2 approvals, got %d", len(updated.Approvals))
 	}
 
 	// Verify persistence
-	got, _ := store.Get(ctx, chatID)
+	got, err := store.Get(ctx, chatID)
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected vote, got nil")
+	}
 	if len(got.Approvals) != 2 {
 		t.Errorf("expected 2 approvals persisted, got %d", len(got.Approvals))
 	}
@@ -142,6 +153,9 @@ func TestSurrenderVoteStore_Approve(t *testing.T) {
 	updated2, err := store.Approve(ctx, chatID, "user2")
 	if err != nil {
 		t.Fatalf("duplicate approve failed: %v", err)
+	}
+	if updated2 == nil {
+		t.Fatal("expected vote, got nil")
 	}
 	if len(updated2.Approvals) != 2 {
 		t.Errorf("expected approval count to remain 2, got %d", len(updated2.Approvals))

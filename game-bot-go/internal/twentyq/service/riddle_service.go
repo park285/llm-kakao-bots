@@ -12,7 +12,7 @@ import (
 	qredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/redis"
 )
 
-// RiddleService 는 타입이다.
+// RiddleService: 스무고개 게임의 핵심 로직을 담당하는 서비스
 type RiddleService struct {
 	restClient    *llmrest.Client
 	commandPrefix string
@@ -37,7 +37,7 @@ type RiddleService struct {
 	playerRegistrationTasks chan playerRegistrationTask
 }
 
-// NewRiddleService 는 동작을 수행한다.
+// NewRiddleService: 새로운 RiddleService 인스턴스를 생성한다.
 func NewRiddleService(
 	restClient *llmrest.Client,
 	commandPrefix string,
@@ -88,7 +88,7 @@ func (s *RiddleService) HasSession(ctx context.Context, chatID string) (bool, er
 	return exists, nil
 }
 
-// RegisterPlayer 는 동작을 수행한다.
+// RegisterPlayer: 게임 참여자를 등록하고 통계를 기록한다.
 func (s *RiddleService) RegisterPlayer(ctx context.Context, chatID string, userID string, sender *string) error {
 	chatID = strings.TrimSpace(chatID)
 	userID = strings.TrimSpace(userID)

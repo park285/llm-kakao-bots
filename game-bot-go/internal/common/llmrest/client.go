@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,9 +17,10 @@ import (
 	"github.com/goccy/go-json"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httpclient"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httputil"
 )
 
-// Config 는 타입이다.
+// Config: REST 클라이언트 설정
 type Config struct {
 	BaseURL          string
 	APIKey           string
@@ -29,7 +31,7 @@ type Config struct {
 	RetryDelay       time.Duration
 }
 
-// Client 는 타입이다.
+// Client: LLM 서버와 통신하기 위한 HTTP 클라이언트
 type Client struct {
 	baseURL          *url.URL
 	httpClient       *http.Client
@@ -38,7 +40,7 @@ type Client struct {
 	retryDelay       time.Duration
 }
 
-// New 는 동작을 수행한다.
+// New: 새로운 Client 인스턴스를 생성하고 초기화한다.
 func New(cfg Config) (*Client, error) {
 	parsedBaseURL, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
 	if err != nil {
@@ -122,34 +124,24 @@ func responseBodyReader(resp *http.Response) (io.Reader, func(), error) {
 	return gzipReader, func() { _ = gzipReader.Close() }, nil
 }
 
-// Get 는 동작을 수행한다.
+// Get: HTTP GET 요청을 전송한다.
 func (c *Client) Get(ctx context.Context, path string, out any) error {
 	return c.doJSON(ctx, http.MethodGet, path, nil, nil, out)
 }
 
-// Post 는 동작을 수행한다.
+// Post: HTTP POST 요청을 전송한다.
 func (c *Client) Post(ctx context.Context, path string, in any, out any) error {
 	return c.doJSON(ctx, http.MethodPost, path, in, nil, out)
 }
 
-// Delete 는 동작을 수행한다.
+// Delete: HTTP DELETE 요청을 전송한다.
 func (c *Client) Delete(ctx context.Context, path string, out any) error {
 	return c.doJSON(ctx, http.MethodDelete, path, nil, nil, out)
 }
 
-// GetWithHeaders 는 동작을 수행한다.
+// GetWithHeaders: 헤더를 포함하여 HTTP GET 요청을 전송한다.
 func (c *Client) GetWithHeaders(ctx context.Context, path string, headers map[string]string, out any) error {
 	return c.doJSON(ctx, http.MethodGet, path, nil, headers, out)
-}
-
-// PostWithHeaders 는 동작을 수행한다.
-func (c *Client) PostWithHeaders(ctx context.Context, path string, headers map[string]string, in any, out any) error {
-	return c.doJSON(ctx, http.MethodPost, path, in, headers, out)
-}
-
-// DeleteWithHeaders 는 동작을 수행한다.
-func (c *Client) DeleteWithHeaders(ctx context.Context, path string, headers map[string]string, out any) error {
-	return c.doJSON(ctx, http.MethodDelete, path, nil, headers, out)
 }
 
 func (c *Client) doJSON(
@@ -191,7 +183,9 @@ func (c *Client) doJSON(
 		}
 
 		if c.retryDelay > 0 {
-			timer := time.NewTimer(c.retryDelay)
+			// Jitter: Thundering Herd 문제를 방지하기 위해 0.8~1.2 배수의 무작위 지연 시간을 적용한다.
+			jitter := time.Duration(float64(c.retryDelay) * (0.8 + rand.Float64()*0.4))
+			timer := time.NewTimer(jitter)
 			select {
 			case <-ctx.Done():
 				timer.Stop()
@@ -212,10 +206,8 @@ func (c *Client) doJSONOnce(
 	headers map[string]string,
 	out any,
 ) error {
-	fullURL, err := c.baseURL.Parse(path)
-	if err != nil {
-		return fmt.Errorf("build request url failed path=%s: %w", path, err)
-	}
+	// JoinPath: URL 경로를 안전하게 결합하고 슬래시를 정리한다.
+	fullURL := c.baseURL.JoinPath(path)
 
 	var body io.Reader
 	if payload != nil {
@@ -226,13 +218,13 @@ func (c *Client) doJSONOnce(
 	if err != nil {
 		return fmt.Errorf("create request failed: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", httputil.ContentTypeJSON)
 	req.Header.Set("Accept-Encoding", "gzip")
 	if payload != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", httputil.ContentTypeJSON)
 	}
 	if c.apiKey != "" {
-		req.Header.Set("X-API-Key", c.apiKey)
+		req.Header.Set(httputil.HeaderAPIKey, c.apiKey)
 	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
@@ -246,9 +238,9 @@ func (c *Client) doJSONOnce(
 		_ = resp.Body.Close()
 	}()
 
-	// Check status code first
+	// 상태 코드 우선 확인
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Only read body for error cases
+		// 오류 발생 시에만 본문 읽기
 		decodeReader, closeReader, bodyReaderErr := responseBodyReader(resp)
 		if bodyReaderErr != nil {
 			return bodyReaderErr
@@ -263,12 +255,12 @@ func (c *Client) doJSONOnce(
 	}
 
 	if out == nil {
-		// Eliminate drain body if not needed, close is enough (handled by defer)
+		// 결과가 필요 없으면 drain 하지 않고 종료 (defer에서 닫힘)
 		return nil
 	}
 
-	// Use Stream Decoder for Zero-Copy parsing
-	// This is the most efficient way as it avoids allocating a large buffer for the entire body
+	// Stream Decoder를 사용하여 Zero-Copy 파싱 수행
+	// 전체 본문을 메모리에 올리지 않아 효율적임
 	decodeReader, closeReader, bodyReaderErr := responseBodyReader(resp)
 	if bodyReaderErr != nil {
 		return bodyReaderErr

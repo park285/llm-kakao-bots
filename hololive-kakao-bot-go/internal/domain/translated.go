@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// LoadTranslated 는 동작을 수행한다.
+// LoadTranslated: 번역된 프로필 파일(official_profiles_ko 디렉토리)을 읽어 메모리에 로드한다.
 func LoadTranslated() (map[string]*Translated, error) {
 	profilesDir := "internal/domain/data/official_profiles_ko"
 

@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
+	"time"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -22,18 +22,23 @@ func main() {
 		return
 	}
 
-	logger, err := util.NewLogger(cfg.Logging.Level, cfg.Logging.File)
+	logger, err := util.EnableFileLoggingWithLevel(util.LogConfig{
+		Dir:        cfg.Logging.Dir,
+		MaxSizeMB:  cfg.Logging.MaxSizeMB,
+		MaxBackups: cfg.Logging.MaxBackups,
+		MaxAgeDays: cfg.Logging.MaxAgeDays,
+		Compress:   cfg.Logging.Compress,
+	}, "warm_member_cache.log", cfg.Logging.Level)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		return
 	}
-	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Manual member list cache refresh started")
 
 	_, cleanup, err := app.InitializeWarmMemberCache(ctx, cfg, logger)
 	if err != nil {
-		logger.Error("Manual cache refresh failed", zap.Error(err))
+		logger.Error("Manual cache refresh failed", slog.Any("error", err))
 		return
 	}
 	defer cleanup()

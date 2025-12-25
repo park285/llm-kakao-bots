@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/root/.pnpm-store pnpm install --frozen-lockfile
 COPY admin-ui/ ./
 RUN pnpm run build
 
-FROM golang:1.25-alpine3.23 AS build
+FROM golang:1.25.5-alpine3.23 AS build
 WORKDIR /src
 RUN apk add --no-cache git
 COPY go.mod go.sum ./
@@ -20,5 +20,14 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 FROM alpine:3.23
 
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
+    echo "Asia/Seoul" > /etc/timezone
+
+ENV GOGC=200 \
+    GOMEMLIMIT=450MiB
+
+# root 권한 유지: Docker 소켓(/var/run/docker.sock) 접근에 필요
+# ca-certificates 불필요: 외부 HTTPS 요청 없음, Docker API만 사용
 COPY --from=build /out/llm-watchdog /usr/local/bin/llm-watchdog
 ENTRYPOINT ["llm-watchdog"]

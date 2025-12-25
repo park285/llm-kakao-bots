@@ -12,17 +12,17 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// SessionStore 는 타입이다.
+// SessionStore: 스무고개 게임의 정답(Secret) 및 세션 정보를 Redis에 저장하고 관리하는 저장소
 type SessionStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewSessionStore 는 동작을 수행한다.
+// NewSessionStore: 새로운 SessionStore 인스턴스를 생성한다.
 func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	return &SessionStore{
 		client: client,
@@ -30,25 +30,25 @@ func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	}
 }
 
-// SaveSecret 는 동작을 수행한다.
+// SaveSecret: 게임의 정답(비밀) 정보를 Redis에 저장한다. (TTL 설정됨)
 func (s *SessionStore) SaveSecret(ctx context.Context, chatID string, secret qmodel.RiddleSecret) error {
 	key := sessionKey(chatID)
 
 	payload, err := json.Marshal(secret)
 	if err != nil {
-		return qerrors.RedisError{Operation: "marshal_secret", Err: err}
+		return cerrors.RedisError{Operation: "marshal_secret", Err: err}
 	}
 
 	cmd := s.client.B().Set().Key(key).Value(string(payload)).Ex(time.Duration(qconfig.RedisSessionTTLSeconds) * time.Second).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "save_secret", Err: err}
+		return cerrors.RedisError{Operation: "save_secret", Err: err}
 	}
 
 	s.logger.Info("secret_saved", "chat_id", chatID)
 	return nil
 }
 
-// GetSecret 는 동작을 수행한다.
+// GetSecret: 현재 진행 중인 게임의 정답 정보를 조회한다. (없으면 nil 반환)
 func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.RiddleSecret, error) {
 	key := sessionKey(chatID)
 
@@ -58,53 +58,53 @@ func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.Ri
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, qerrors.RedisError{Operation: "get_secret", Err: err}
+		return nil, cerrors.RedisError{Operation: "get_secret", Err: err}
 	}
 
 	var secret qmodel.RiddleSecret
 	if err := json.Unmarshal(raw, &secret); err != nil {
-		return nil, qerrors.RedisError{Operation: "unmarshal_secret", Err: err}
+		return nil, cerrors.RedisError{Operation: "unmarshal_secret", Err: err}
 	}
 	return &secret, nil
 }
 
-// Delete 는 동작을 수행한다.
+// Delete: 게임 세션(정답 정보)을 삭제한다. (게임 종료 시)
 func (s *SessionStore) Delete(ctx context.Context, chatID string) error {
 	key := sessionKey(chatID)
 
 	cmd := s.client.B().Del().Key(key).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "delete_secret", Err: err}
+		return cerrors.RedisError{Operation: "delete_secret", Err: err}
 	}
 	s.logger.Info("secret_deleted", "chat_id", chatID)
 	return nil
 }
 
-// Exists 는 동작을 수행한다.
+// Exists: 특정 채팅방에 진행 중인 게임 세션이 존재하는지 확인한다.
 func (s *SessionStore) Exists(ctx context.Context, chatID string) (bool, error) {
 	key := sessionKey(chatID)
 
 	cmd := s.client.B().Exists().Key(key).Build()
 	n, err := s.client.Do(ctx, cmd).AsInt64()
 	if err != nil {
-		return false, qerrors.RedisError{Operation: "secret_exists", Err: err}
+		return false, cerrors.RedisError{Operation: "secret_exists", Err: err}
 	}
 	return n > 0, nil
 }
 
-// RefreshTTL 는 동작을 수행한다.
+// RefreshTTL: 세션의 유효 기간(TTL)을 초기화하여 연장한다.
 func (s *SessionStore) RefreshTTL(ctx context.Context, chatID string) (bool, error) {
 	key := sessionKey(chatID)
 
 	cmd := s.client.B().Expire().Key(key).Seconds(int64(qconfig.RedisSessionTTLSeconds)).Build()
 	ok, err := s.client.Do(ctx, cmd).AsBool()
 	if err != nil {
-		return false, fmt.Errorf("refresh ttl failed: %w", qerrors.RedisError{Operation: "secret_refresh_ttl", Err: err})
+		return false, fmt.Errorf("refresh ttl failed: %w", cerrors.RedisError{Operation: "secret_refresh_ttl", Err: err})
 	}
 	return ok, nil
 }
 
-// Get 세션 조회 (GetSecret 별칭).
+// Get: GetSecret의 별칭으로, 세션 정보를 조회한다.
 func (s *SessionStore) Get(ctx context.Context, chatID string) (*qmodel.RiddleSecret, error) {
 	return s.GetSecret(ctx, chatID)
 }
@@ -115,9 +115,8 @@ type PlayerInfo struct {
 	Sender string
 }
 
-// GetPlayerByNickname 닉네임으로 플레이어 조회.
-// 현재 진행 중인 세션의 참여자 목록에서 닉네임으로 검색.
-// 조회 실패 또는 닉네임 미존재 시 nil 반환 (graceful degradation).
+// GetPlayerByNickname: 현재 세션의 참여자 목록에서 닉네임(Sender)을 기준으로 플레이어 정보를 조회한다.
+// 닉네임 매칭은 대소문자를 구분하지 않으며, 일치하는 사용자가 없거나 조회 실패 시 nil을 반환한다.
 func (s *SessionStore) GetPlayerByNickname(ctx context.Context, chatID string, nickname string) *PlayerInfo {
 	nickname = strings.TrimSpace(nickname)
 	if nickname == "" {
@@ -151,7 +150,7 @@ func (s *SessionStore) GetPlayerByNickname(ctx context.Context, chatID string, n
 	return nil
 }
 
-// ClearAllData 채팅방의 모든 20Q 관련 데이터 삭제.
+// ClearAllData: 채팅방에 연관된 모든 스무고개/바다거북스프 관련 Redis 데이터(세션, 히스토리, 락 등)를 삭제한다. (초기화)
 func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {
@@ -205,7 +204,7 @@ func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 	if len(keys) > 0 {
 		cmd := s.client.B().Del().Key(keys...).Build()
 		if err := s.client.Do(ctx, cmd).Error(); err != nil {
-			return fmt.Errorf("clear all data: %w", qerrors.RedisError{Operation: "clear_all", Err: err})
+			return fmt.Errorf("clear all data: %w", cerrors.RedisError{Operation: "clear_all", Err: err})
 		}
 	}
 

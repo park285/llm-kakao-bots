@@ -10,17 +10,17 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// ErrUnknownCommand 는 패키지 변수다.
+// ErrUnknownCommand: 등록되지 않은 명령어를 호출했을 때 발생하는 오류
 var ErrUnknownCommand = errors.New("unknown command")
 
-// Registry 는 타입이다.
+// Registry: 봇의 모든 명령어 핸들러를 등록하고 관리하며, 이름 기반 조회 및 실행을 담당하는 레지스트리
 type Registry struct {
 	mu        sync.RWMutex
 	handlers  map[string]Command
 	aliasKeys map[string]string
 }
 
-// NewRegistry 는 동작을 수행한다.
+// NewRegistry: 새로운 명령어 레지스트리 인스턴스를 생성한다.
 func NewRegistry() *Registry {
 	return &Registry{
 		handlers:  make(map[string]Command),
@@ -28,7 +28,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Register 는 동작을 수행한다.
+// Register: 새로운 명령어 핸들러를 레지스트리에 등록한다. (이름 정규화 적용)
 func (r *Registry) Register(handler Command) {
 	if handler == nil {
 		return
@@ -41,7 +41,7 @@ func (r *Registry) Register(handler Command) {
 	r.handlers[name] = handler
 }
 
-// Execute 는 동작을 수행한다.
+// Execute: 주어진 키(명령어 이름)에 해당하는 핸들러를 찾아 명령을 실행한다. (스레드 안전)
 func (r *Registry) Execute(ctx context.Context, cmdCtx *domain.CommandContext, key string, params map[string]any) error {
 	if r == nil {
 		return fmt.Errorf("command registry is nil")
@@ -58,7 +58,7 @@ func (r *Registry) Execute(ctx context.Context, cmdCtx *domain.CommandContext, k
 	return nil
 }
 
-// Count 는 동작을 수행한다.
+// Count: 현재 등록된 명령어의 총 개수를 반환한다.
 func (r *Registry) Count() int {
 	if r == nil {
 		return 0

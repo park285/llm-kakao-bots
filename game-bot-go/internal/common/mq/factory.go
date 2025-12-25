@@ -7,7 +7,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 )
 
-// NewBotStreamConsumer 는 동작을 수행한다.
+// NewBotStreamConsumer: 봇 애플리케이션용 스트림 소비자 인스턴스를 생성한다.
 func NewBotStreamConsumer(
 	client valkey.Client,
 	logger *slog.Logger,
@@ -31,7 +31,7 @@ func NewBotStreamConsumer(
 	})
 }
 
-// NewBotReplyPublisher 는 동작을 수행한다.
+// NewBotReplyPublisher: 봇 애플리케이션용 응답 발행자 인스턴스를 생성한다.
 func NewBotReplyPublisher(
 	client valkey.Client,
 	logger *slog.Logger,

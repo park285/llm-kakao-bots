@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// PendingMessage 는 타입이다.
+// PendingMessage: 큐에 대기 중인 사용자 메시지 구조체
 type PendingMessage struct {
 	UserID    string  `json:"userId"`
 	Content   string  `json:"content"`
@@ -18,12 +18,12 @@ type PendingMessage struct {
 	BatchQuestions []string `json:"batchQuestions,omitempty"`
 }
 
-// DisplayName 는 동작을 수행한다.
+// DisplayName: 사용자의 표시 이름을 반환한다. (익명 설정 시 대체 이름 사용)
 func (m PendingMessage) DisplayName(chatID string, anonymous string) string {
 	return DisplayName(chatID, m.UserID, m.Sender, anonymous)
 }
 
-// SurrenderVote 는 타입이다.
+// SurrenderVote: 항복 투표 상태 관리 구조체
 type SurrenderVote struct {
 	Initiator       string   `json:"initiator"`
 	EligiblePlayers []string `json:"eligiblePlayers"`
@@ -31,7 +31,7 @@ type SurrenderVote struct {
 	CreatedAt       int64    `json:"createdAt"`
 }
 
-// RequiredApprovals 는 동작을 수행한다.
+// RequiredApprovals: 항복 승인에 필요한 최소 득표 수를 반환한다.
 func (v SurrenderVote) RequiredApprovals() int {
 	playerCount := len(v.EligiblePlayers)
 	switch {
@@ -44,16 +44,16 @@ func (v SurrenderVote) RequiredApprovals() int {
 	}
 }
 
-// IsApproved 는 동작을 수행한다.
+// IsApproved: 투표가 가결되었는지(필요 득표 수 충족) 확인한다.
 func (v SurrenderVote) IsApproved() bool { return len(v.Approvals) >= v.RequiredApprovals() }
 
-// CanVote 는 동작을 수행한다.
+// CanVote: 해당 사용자가 투표 자격이 있는지 확인한다.
 func (v SurrenderVote) CanVote(userID string) bool { return slices.Contains(v.EligiblePlayers, userID) }
 
-// HasVoted 는 동작을 수행한다.
+// HasVoted: 해당 사용자가 이미 투표했는지 확인한다.
 func (v SurrenderVote) HasVoted(userID string) bool { return slices.Contains(v.Approvals, userID) }
 
-// Approve 는 동작을 수행한다.
+// Approve: 사용자의 찬성 투표를 기록하고 갱신된 투표 상태를 반환한다.
 func (v SurrenderVote) Approve(userID string) (SurrenderVote, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

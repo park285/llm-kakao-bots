@@ -13,8 +13,8 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
-// Store 대기 메시지 큐 저장소.
-// 각 봇은 이 Store를 임베딩하거나 래핑하여 사용.
+// Store: 대기 메시지 큐(Pending Message Queue)를 Redis에 저장하고 관리하는 공통 저장소 구현체
+// Valkey(Redis) 클라이언트와 Lua 스크립트를 사용하여 원자적(Atomic) 연산을 수행한다.
 type Store struct {
 	client valkey.Client
 	logger *slog.Logger
@@ -24,7 +24,7 @@ type Store struct {
 	dequeueSHA string
 }
 
-// NewStore 새 Store 생성.
+// NewStore: 새로운 Store 인스턴스를 생성한다.
 func NewStore(client valkey.Client, logger *slog.Logger, config Config) *Store {
 	return &Store{
 		client: client,
@@ -33,14 +33,14 @@ func NewStore(client valkey.Client, logger *slog.Logger, config Config) *Store {
 	}
 }
 
-// DequeueResult dequeue 결과.
+// DequeueResult: Dequeue 연산의 결과를 담는 구조체
 type DequeueResult struct {
 	Status DequeueStatus
-	// UserID는 HASH field/ZSET member로 저장된 값.
+	// UserID: HASH 필드 또는 ZSET 멤버로 저장된 사용자 ID
 	UserID string
-	// Timestamp는 ZSET score(Unix ms).
+	// Timestamp: ZSET 점수(score)로 저장된 타임스탬프 (Unix ms)
 	Timestamp int64
-	// JSON 원본 데이터 (호출자가 직접 파싱).
+	// RawJSON: 저장된 원본 JSON 데이터 (호출자가 구조체로 언마샬링 필요)
 	RawJSON string
 }
 
@@ -65,14 +65,13 @@ func (s *Store) loadScripts(ctx context.Context) error {
 	return nil
 }
 
-// Enqueue 메시지 큐잉.
-// jsonValue는 이미 직렬화된 JSON 문자열.
-// 주의: userID는 숫자(KakaoTalk ID)를 가정. '|' 포함 시 파싱 오류 발생 가능.
+// Enqueue: 메시지를 JSON 형태로 대기열에 추가한다.
+// Lua 스크립트를 사용하여 중복 체크(UserID 기준)와 용량 제한을 원자적으로 처리한다.
 func (s *Store) Enqueue(ctx context.Context, chatID string, userID string, timestamp int64, jsonValue string) (EnqueueResult, error) {
 	return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, false)
 }
 
-// EnqueueReplacingDuplicate 는 동작을 수행한다.
+// EnqueueReplacingDuplicate: 메시지를 대기열에 추가하되, 동일 UserID의 중복 메시지가 있다면 최신 메시지로 교체한다.
 func (s *Store) EnqueueReplacingDuplicate(ctx context.Context, chatID string, userID string, timestamp int64, jsonValue string) (EnqueueResult, error) {
 	return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, true)
 }
@@ -132,8 +131,8 @@ func (s *Store) enqueueInternal(
 	}
 }
 
-// Dequeue 메시지 디큐.
-// 성공 시 RawJSON에 원본 JSON 포함.
+// Dequeue: 대기열에서 가장 오래된 메시지(stale 메시지 포함)를 꺼내어 반환한다.
+// 성공 시 RawJSON 필드에 원본 데이터가 포함된다.
 func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, error) {
 	if err := s.loadScripts(ctx); err != nil {
 		return DequeueResult{}, err
@@ -190,7 +189,7 @@ func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, erro
 	}
 }
 
-// Size 큐 크기.
+// Size: 현재 대기열에 쌓여 있는 메시지의 개수를 반환한다. (ZCard 사용)
 func (s *Store) Size(ctx context.Context, chatID string) (int, error) {
 	orderKey := s.orderKey(chatID)
 	cmd := s.client.B().Zcard().Key(orderKey).Build()
@@ -252,7 +251,7 @@ func (s *Store) GetRawEntries(ctx context.Context, chatID string) ([]string, err
 	return result, nil
 }
 
-// Clear 큐 초기화.
+// Clear: 대기열의 데이터와 순서 정보를 모두 삭제하여 초기화한다.
 func (s *Store) Clear(ctx context.Context, chatID string) error {
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)

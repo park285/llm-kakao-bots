@@ -40,6 +40,7 @@ type puzzleTestEnv struct {
 func setupPuzzleTestEnv(t *testing.T, rewriteEnabled bool) *puzzleTestEnv {
 	client := testhelper.NewTestValkeyClient(t)
 	testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPrefix+":")
+	testhelper.CleanupTestKeys(t, client, tsconfig.RedisKeyPuzzleGlobal)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	dedupStore := tsredis.NewPuzzleDedupStore(client, logger)
 

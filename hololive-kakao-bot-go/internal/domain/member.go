@@ -7,13 +7,13 @@ import (
 	"fmt"
 )
 
-// Aliases 는 타입이다.
+// Aliases: 멤버의 국가별(한국어, 일본어) 별명 목록
 type Aliases struct {
 	Ko []string `json:"ko"`
 	Ja []string `json:"ja"`
 }
 
-// Member 는 타입이다.
+// Member: Hololive 멤버의 기본 정보(ID, 채널, 이름 등)를 담는 구조체
 type Member struct {
 	ID          int      `json:"id,omitempty"`
 	ChannelID   string   `json:"channelId"`
@@ -24,7 +24,7 @@ type Member struct {
 	IsGraduated bool     `json:"isGraduated,omitempty"`
 }
 
-// MembersData 는 타입이다.
+// MembersData: 전체 멤버 데이터의 메타데이터 및 목록, 빠른 조회를 위한 맵(Map)을 포함한다.
 type MembersData struct {
 	Version     string    `json:"version"`
 	LastUpdated string    `json:"lastUpdated"`
@@ -38,7 +38,7 @@ type MembersData struct {
 //go:embed data/members.json
 var membersJSON []byte
 
-// GetAllAliases 는 동작을 수행한다.
+// GetAllAliases: 멤버의 한국어 및 일본어 별명을 모두 합쳐 하나의 슬라이스로 반환한다.
 func (m *Member) GetAllAliases() []string {
 	if m.Aliases == nil {
 		return []string{}
@@ -50,7 +50,7 @@ func (m *Member) GetAllAliases() []string {
 	return all
 }
 
-// HasAlias 는 동작을 수행한다.
+// HasAlias: 주어진 이름이 해당 멤버의 별명 목록에 포함되어 있는지 확인한다.
 func (m *Member) HasAlias(name string) bool {
 	aliases := m.GetAllAliases()
 	for _, alias := range aliases {
@@ -61,7 +61,7 @@ func (m *Member) HasAlias(name string) bool {
 	return false
 }
 
-// LoadMembersData 는 동작을 수행한다.
+// LoadMembersData: 임베딩된 JSON 데이터(members.json)를 파싱하여 MembersData 구조체를 생성하고 초기화한다.
 func LoadMembersData() (*MembersData, error) {
 	var data MembersData
 	if err := json.Unmarshal(membersJSON, &data); err != nil {
@@ -79,17 +79,17 @@ func LoadMembersData() (*MembersData, error) {
 	return &data, nil
 }
 
-// FindMemberByChannelID 는 동작을 수행한다.
+// FindMemberByChannelID: 채널 ID로 멤버를 검색하여 반환한다. (O(1) 조회)
 func (md *MembersData) FindMemberByChannelID(channelID string) *Member {
 	return md.byChannelID[channelID]
 }
 
-// FindMemberByName 는 동작을 수행한다.
+// FindMemberByName: 멤버 이름으로 검색하여 반환한다. (O(1) 조회)
 func (md *MembersData) FindMemberByName(name string) *Member {
 	return md.byName[name]
 }
 
-// FindMemberByAlias 는 동작을 수행한다.
+// FindMemberByAlias: 주어진 별명을 가진 멤버를 검색하여 반환한다. (선형 탐색)
 func (md *MembersData) FindMemberByAlias(alias string) *Member {
 	for _, member := range md.Members {
 		if member.HasAlias(alias) {
@@ -99,7 +99,7 @@ func (md *MembersData) FindMemberByAlias(alias string) *Member {
 	return nil
 }
 
-// GetChannelIDs 는 동작을 수행한다.
+// GetChannelIDs: 등록된 모든 멤버의 채널 ID 목록을 추출하여 반환한다.
 func (md *MembersData) GetChannelIDs() []string {
 	ids := make([]string, len(md.Members))
 	for i, member := range md.Members {
@@ -108,12 +108,12 @@ func (md *MembersData) GetChannelIDs() []string {
 	return ids
 }
 
-// GetAllMembers 는 동작을 수행한다.
+// GetAllMembers: 전체 멤버 목록을 반환한다.
 func (md *MembersData) GetAllMembers() []*Member {
 	return md.Members
 }
 
-// WithContext 는 동작을 수행한다.
+// WithContext: 현재 데이터 제공자를 새로운 컨텍스트와 함께 반환한다. (MembersData는 상태가 불변이므로 자신을 그대로 반환)
 func (md *MembersData) WithContext(ctx context.Context) MemberDataProvider {
 	return md
 }

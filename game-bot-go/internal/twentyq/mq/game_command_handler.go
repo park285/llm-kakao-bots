@@ -12,7 +12,7 @@ import (
 	qsvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/service"
 )
 
-// GameCommandHandler 게임 명령어 핸들러.
+// GameCommandHandler: 게임 관련 명령어를 적절한 서비스 메서드로 라우팅하고 응답을 생성하는 핸들러
 type GameCommandHandler struct {
 	gameService            *qsvc.RiddleService
 	statsService           *qsvc.StatsService
@@ -26,7 +26,7 @@ type GameCommandHandler struct {
 
 type commandHandlerFunc func(context.Context, mqmsg.InboundMessage, Command) ([]string, error)
 
-// NewGameCommandHandler 생성자.
+// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성하고 명령어별 핸들러를 등록한다.
 func NewGameCommandHandler(
 	gameService *qsvc.RiddleService,
 	statsService *qsvc.StatsService,
@@ -67,7 +67,7 @@ func NewGameCommandHandler(
 	return h
 }
 
-// ProcessCommand 명령어 처리.
+// ProcessCommand: 인입된 메시지와 파싱된 명령어를 바탕으로 적절한 핸들러를 실행하여 응답을 반환한다.
 func (h *GameCommandHandler) ProcessCommand(ctx context.Context, message mqmsg.InboundMessage, command Command) ([]string, error) {
 	handler, ok := h.handlers[command.Kind]
 	if !ok {

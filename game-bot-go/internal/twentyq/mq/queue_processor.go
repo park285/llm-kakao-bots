@@ -15,10 +15,10 @@ import (
 	qredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/redis"
 )
 
-// CommandExecutor 는 타입이다.
+// CommandExecutor: 실제 비즈니스 로직(명령어 처리)을 수행하는 함수 타입
 type CommandExecutor func(ctx context.Context, chatID string, pending qmodel.PendingMessage, emit func(mqmsg.OutboundMessage) error) error
 
-// MessageQueueProcessor 는 타입이다.
+// MessageQueueProcessor: 대기열 메시지 처리 및 락 관리, 알림 전송 등을 총괄하는 프로세서
 type MessageQueueProcessor struct {
 	queueCoordinator      *MessageQueueCoordinator
 	lockManager           *qredis.LockManager
@@ -30,7 +30,7 @@ type MessageQueueProcessor struct {
 	logger                *slog.Logger
 }
 
-// NewMessageQueueProcessor 는 동작을 수행한다.
+// NewMessageQueueProcessor: 새로운 MessageQueueProcessor 인스턴스를 생성한다.
 func NewMessageQueueProcessor(
 	queueCoordinator *MessageQueueCoordinator,
 	lockManager *qredis.LockManager,
@@ -53,12 +53,12 @@ func NewMessageQueueProcessor(
 	}
 }
 
-// HasPending 는 동작을 수행한다.
+// HasPending: 대기 중인 메시지가 있는지 확인한다.
 func (p *MessageQueueProcessor) HasPending(ctx context.Context, chatID string) (bool, error) {
 	return p.queueCoordinator.HasPending(ctx, chatID)
 }
 
-// EnqueueAndNotify 는 동작을 수행한다.
+// EnqueueAndNotify: 메시지를 대기열에 추가하고 사용자에게 현재 대기열 상태 등을 알린다.
 func (p *MessageQueueProcessor) EnqueueAndNotify(
 	ctx context.Context,
 	chatID string,
@@ -133,7 +133,7 @@ func (p *MessageQueueProcessor) buildQueueMessage(
 	}
 }
 
-// ProcessQueuedMessages 는 동작을 수행한다.
+// ProcessQueuedMessages: 대기열에 쌓인 메시지들을 순차적으로 처리한다. (최대 반복 횟수 제한)
 func (p *MessageQueueProcessor) ProcessQueuedMessages(ctx context.Context, chatID string, emit func(mqmsg.OutboundMessage) error) {
 	p.logger.Debug("queue_processing_start", "chat_id", chatID)
 	iterations := 0

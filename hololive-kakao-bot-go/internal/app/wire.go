@@ -6,7 +6,8 @@ import (
 	"context"
 
 	"github.com/google/wire"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -20,7 +21,7 @@ import (
 func InitializeBotDependencies(
 	ctx context.Context,
 	cfg *config.Config,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*bot.Dependencies, func(), error) {
 	wire.Build(AppSet)
 	return nil, nil, nil
@@ -30,7 +31,7 @@ func InitializeBotDependencies(
 func InitializeBotRuntime(
 	ctx context.Context,
 	cfg *config.Config,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*BotRuntime, func(), error) {
 	wire.Build(RuntimeSet)
 	return nil, nil, nil
@@ -40,7 +41,7 @@ func InitializeBotRuntime(
 func InitializeWarmMemberCache(
 	ctx context.Context,
 	cfg *config.Config,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*member.Cache, func(), error) {
 	wire.Build(WarmMemberCacheSet)
 	return nil, nil, nil
@@ -50,7 +51,7 @@ func InitializeWarmMemberCache(
 func InitializeDBIntegrationRuntime(
 	ctx context.Context,
 	pgCfg config.PostgresConfig,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*DBIntegrationRuntime, func(), error) {
 	wire.Build(DBIntegrationSet)
 	return nil, nil, nil

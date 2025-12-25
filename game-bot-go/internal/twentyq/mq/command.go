@@ -6,10 +6,10 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// CommandKind 는 타입이다.
+// CommandKind: 스무고개 게임 명령어의 종류를 정의하는 열거형
 type CommandKind int
 
-// CommandStart 는 명령 종류 상수 목록이다.
+// CommandStart: 게임 시작 명령어
 const (
 	CommandStart CommandKind = iota
 	CommandHints
@@ -25,19 +25,19 @@ const (
 
 	// 전적 조회
 
-	// CommandUserStats 는 사용자 전적 조회 명령이다.
+	// CommandUserStats: 사용자 전적 조회 명령
 	CommandUserStats
 	CommandRoomStats
 
 	// 관리자 명령어
 
-	// CommandAdminForceEnd 는 관리자 강제 종료 명령이다.
+	// CommandAdminForceEnd: 관리자 강제 종료 명령
 	CommandAdminForceEnd
 	CommandAdminClearAll
 	CommandAdminUsage
 )
 
-// Command 는 타입이다.
+// Command: 사용자 입력에서 파싱된 게임 명령어 정보를 담는 구조체
 type Command struct {
 	Kind       CommandKind
 	Categories []string
@@ -54,7 +54,8 @@ type Command struct {
 	ModelOverride *string
 }
 
-// RequiresWriteLock 는 동작을 수행한다.
+// RequiresWriteLock: 해당 명령어를 처리하기 위해 게임 상태에 대한 쓰기 락(배타적 락)이 필요한지 여부를 반환한다.
+// 조회성 명령어(Status, Stats 등)는 락 없이 또는 읽기 락으로 처리 가능할 수 있음을 나타낸다.
 func (c Command) RequiresWriteLock() bool {
 	switch c.Kind {
 	case CommandStatus,
@@ -65,7 +66,8 @@ func (c Command) RequiresWriteLock() bool {
 	}
 }
 
-// WaitingMessageKey 는 동작을 수행한다.
+// WaitingMessageKey: 명령어를 처리하는 동안 사용자에게 즉시 보여줄 '대기 중' 메시지의 키를 반환한다.
+// 반환값이 nil이면 별도의 대기 메시지를 보내지 않는다.
 func (c Command) WaitingMessageKey() *string {
 	switch c.Kind {
 	case CommandStart:

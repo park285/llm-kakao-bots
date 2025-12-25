@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// TurtleSoupAnswerRequest 는 타입이다.
+// TurtleSoupAnswerRequest: 바다거북 요청 답변 요청 파라미터
 type TurtleSoupAnswerRequest struct {
 	SessionID *string `json:"session_id,omitempty"`
 	ChatID    *string `json:"chat_id,omitempty"`
@@ -15,13 +15,13 @@ type TurtleSoupAnswerRequest struct {
 	Question  string  `json:"question"`
 }
 
-// TurtleSoupHistoryItem 는 타입이다.
+// TurtleSoupHistoryItem: 바다거북 스프 질문/답변 이력 항목
 type TurtleSoupHistoryItem struct {
 	Question string `json:"question"`
 	Answer   string `json:"answer"`
 }
 
-// TurtleSoupAnswerResponse 는 타입이다.
+// TurtleSoupAnswerResponse: 바다거북 스프 답변 응답
 type TurtleSoupAnswerResponse struct {
 	Answer        string                  `json:"answer"`
 	RawText       string                  `json:"raw_text"`
@@ -29,7 +29,7 @@ type TurtleSoupAnswerResponse struct {
 	History       []TurtleSoupHistoryItem `json:"history"`
 }
 
-// TurtleSoupHintRequest 는 타입이다.
+// TurtleSoupHintRequest: 바다거북 스프 힌트 요청 파라미터
 type TurtleSoupHintRequest struct {
 	SessionID *string `json:"session_id,omitempty"`
 	ChatID    *string `json:"chat_id,omitempty"`
@@ -39,13 +39,13 @@ type TurtleSoupHintRequest struct {
 	Level     int     `json:"level"`
 }
 
-// TurtleSoupHintResponse 는 타입이다.
+// TurtleSoupHintResponse: 바다거북 스프 힌트 응답
 type TurtleSoupHintResponse struct {
 	Hint  string `json:"hint"`
 	Level int    `json:"level"`
 }
 
-// TurtleSoupValidateRequest 는 타입이다.
+// TurtleSoupValidateRequest: 정답 검증 요청 파라미터
 type TurtleSoupValidateRequest struct {
 	SessionID    *string `json:"session_id,omitempty"`
 	ChatID       *string `json:"chat_id,omitempty"`
@@ -54,13 +54,13 @@ type TurtleSoupValidateRequest struct {
 	PlayerAnswer string  `json:"player_answer"`
 }
 
-// TurtleSoupValidateResponse 는 타입이다.
+// TurtleSoupValidateResponse: 정답 검증 응답
 type TurtleSoupValidateResponse struct {
 	Result  string `json:"result"`
 	RawText string `json:"raw_text"`
 }
 
-// TurtleSoupRewriteRequest 는 타입이다.
+// TurtleSoupRewriteRequest: 시나리오 재작성/최적화 요청 파라미터
 type TurtleSoupRewriteRequest struct {
 	Title      string `json:"title"`
 	Scenario   string `json:"scenario"`
@@ -68,7 +68,7 @@ type TurtleSoupRewriteRequest struct {
 	Difficulty int    `json:"difficulty"`
 }
 
-// TurtleSoupRewriteResponse 는 타입이다.
+// TurtleSoupRewriteResponse: 시나리오 재작성 응답
 type TurtleSoupRewriteResponse struct {
 	Scenario         string `json:"scenario"`
 	Solution         string `json:"solution"`
@@ -76,14 +76,14 @@ type TurtleSoupRewriteResponse struct {
 	OriginalSolution string `json:"original_solution"`
 }
 
-// TurtleSoupPuzzleGenerationRequest 는 타입이다.
+// TurtleSoupPuzzleGenerationRequest: 퍼즐 자동 생성 요청 파라미터
 type TurtleSoupPuzzleGenerationRequest struct {
 	Category   *string `json:"category,omitempty"`
 	Difficulty *int    `json:"difficulty,omitempty"`
 	Theme      *string `json:"theme,omitempty"`
 }
 
-// TurtleSoupPuzzleGenerationResponse 는 타입이다.
+// TurtleSoupPuzzleGenerationResponse: 퍼즐 자동 생성 응답
 type TurtleSoupPuzzleGenerationResponse struct {
 	Title      string   `json:"title"`
 	Scenario   string   `json:"scenario"`
@@ -93,7 +93,7 @@ type TurtleSoupPuzzleGenerationResponse struct {
 	Hints      []string `json:"hints"`
 }
 
-// TurtleSoupPuzzlePresetResponse 는 타입이다.
+// TurtleSoupPuzzlePresetResponse: 프리셋 퍼즐 정보 응답
 type TurtleSoupPuzzlePresetResponse struct {
 	ID         *int    `json:"id,omitempty"`
 	Title      *string `json:"title,omitempty"`
@@ -102,7 +102,7 @@ type TurtleSoupPuzzlePresetResponse struct {
 	Difficulty *int    `json:"difficulty,omitempty"`
 }
 
-// TurtleSoupAnswerQuestion 는 동작을 수행한다.
+// TurtleSoupAnswerQuestion: 사용자의 질문에 대한 예/아니오 답변을 요청한다.
 func (c *Client) TurtleSoupAnswerQuestion(
 	ctx context.Context,
 	chatID string,
@@ -126,7 +126,7 @@ func (c *Client) TurtleSoupAnswerQuestion(
 	return &out, nil
 }
 
-// TurtleSoupGenerateHint 는 동작을 수행한다.
+// TurtleSoupGenerateHint: 힌트 생성을 요청한다.
 func (c *Client) TurtleSoupGenerateHint(
 	ctx context.Context,
 	chatID string,
@@ -150,7 +150,7 @@ func (c *Client) TurtleSoupGenerateHint(
 	return &out, nil
 }
 
-// TurtleSoupValidateSolution 는 동작을 수행한다.
+// TurtleSoupValidateSolution: 사용자의 정답 시도를 검증한다.
 func (c *Client) TurtleSoupValidateSolution(
 	ctx context.Context,
 	chatID string,
@@ -172,7 +172,7 @@ func (c *Client) TurtleSoupValidateSolution(
 	return &out, nil
 }
 
-// TurtleSoupRewriteScenario 는 동작을 수행한다.
+// TurtleSoupRewriteScenario: 사용자가 입력한 시나리오를 게임에 맞게 최적화/재작성한다.
 func (c *Client) TurtleSoupRewriteScenario(
 	ctx context.Context,
 	title string,
@@ -194,7 +194,7 @@ func (c *Client) TurtleSoupRewriteScenario(
 	return &out, nil
 }
 
-// TurtleSoupGeneratePuzzle 는 동작을 수행한다.
+// TurtleSoupGeneratePuzzle: 새로운 퍼즐을 자동으로 생성한다.
 func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuzzleGenerationRequest) (*TurtleSoupPuzzleGenerationResponse, error) {
 	var out TurtleSoupPuzzleGenerationResponse
 	if err := c.Post(ctx, "/api/turtle-soup/puzzles", req, &out); err != nil {
@@ -203,7 +203,7 @@ func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuz
 	return &out, nil
 }
 
-// TurtleSoupGetRandomPuzzle 는 동작을 수행한다.
+// TurtleSoupGetRandomPuzzle: 프리셋 퍼즐 중 하나를 랜덤으로 가져온다.
 func (c *Client) TurtleSoupGetRandomPuzzle(ctx context.Context, difficulty *int) (*TurtleSoupPuzzlePresetResponse, error) {
 	path := "/api/turtle-soup/puzzles/random"
 	if difficulty != nil {

@@ -5,25 +5,25 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
-// FetchProfilesRuntime 는 타입이다.
+// FetchProfilesRuntime: 프로필 수집 작업을 실행하기 위한 런타임 환경
 type FetchProfilesRuntime struct {
-	Logger     *zap.Logger
+	Logger     *slog.Logger
 	HTTPClient *http.Client
 
 	cleanup func()
 }
 
-// Close 는 동작을 수행한다.
+// Close: 런타임 리소스를 정리한다.
 func (r *FetchProfilesRuntime) Close() {
 	if r != nil && r.cleanup != nil {
 		r.cleanup()
 	}
 }
 
-// BuildFetchProfilesRuntime 는 동작을 수행한다.
+// BuildFetchProfilesRuntime: 프로필 수집 런타임 환경을 구성하고 초기화한다.
 func BuildFetchProfilesRuntime(ctx context.Context) (*FetchProfilesRuntime, error) {
 	if ctx == nil {
 		ctx = context.Background()

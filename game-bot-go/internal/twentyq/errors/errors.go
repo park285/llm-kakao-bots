@@ -1,8 +1,10 @@
+// Package errors: 스무고개(TwentyQ) 게임에 특화된 에러 타입들을 정의한다.
+// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용한다.
 package errors
 
 import "fmt"
 
-// SessionNotFoundError 는 타입이다.
+// SessionNotFoundError: 게임 세션을 찾을 수 없을 때 발생하는 에러
 type SessionNotFoundError struct {
 	ChatID string
 }
@@ -14,24 +16,12 @@ func (e SessionNotFoundError) Error() string {
 	return fmt.Sprintf("session not found chatId=%s", e.ChatID)
 }
 
-// InvalidQuestionError 는 타입이다.
-type InvalidQuestionError struct {
-	Message string
-}
-
-func (e InvalidQuestionError) Error() string {
-	if e.Message == "" {
-		return "invalid question"
-	}
-	return "invalid question: " + e.Message
-}
-
-// DuplicateQuestionError 는 타입이다.
+// DuplicateQuestionError: 동일한 세션에서 이미 질문했던 내용일 때 발생하는 에러
 type DuplicateQuestionError struct{}
 
 func (e DuplicateQuestionError) Error() string { return "duplicate question" }
 
-// HintLimitExceededError 는 타입이다.
+// HintLimitExceededError: 게임별 최대 힌트 사용 횟수를 초과했을 때 발생하는 에러
 type HintLimitExceededError struct {
 	MaxHints  int
 	HintCount int
@@ -42,67 +32,7 @@ func (e HintLimitExceededError) Error() string {
 	return fmt.Sprintf("hint limit exceeded hintCount=%d maxHints=%d remaining=%d", e.HintCount, e.MaxHints, e.Remaining)
 }
 
-// HintNotAvailableError 는 타입이다.
+// HintNotAvailableError: 힌트를 생성할 수 없는 상태(예: 초반 진행)일 때 발생하는 에러
 type HintNotAvailableError struct{}
 
 func (e HintNotAvailableError) Error() string { return "hint not available" }
-
-// AccessDeniedError 는 타입이다.
-type AccessDeniedError struct {
-	Reason string
-}
-
-func (e AccessDeniedError) Error() string { return "access denied" }
-
-// UserBlockedError 는 타입이다.
-type UserBlockedError struct {
-	UserID string
-}
-
-func (e UserBlockedError) Error() string { return "user blocked" }
-
-// ChatBlockedError 는 타입이다.
-type ChatBlockedError struct {
-	ChatID string
-}
-
-func (e ChatBlockedError) Error() string { return "chat blocked" }
-
-// LockError 는 타입이다.
-type LockError struct {
-	ChatID      string
-	HolderName  *string
-	Description string
-}
-
-func (e LockError) Error() string {
-	desc := e.Description
-	if desc == "" {
-		desc = "lock error"
-	}
-	return desc
-}
-
-// RedisError 는 타입이다.
-type RedisError struct {
-	Operation string
-	Err       error
-}
-
-func (e RedisError) Error() string {
-	return fmt.Sprintf("redis error op=%s: %v", e.Operation, e.Err)
-}
-
-func (e RedisError) Unwrap() error { return e.Err }
-
-// DatabaseError 는 타입이다.
-type DatabaseError struct {
-	Operation string
-	Err       error
-}
-
-func (e DatabaseError) Error() string {
-	return fmt.Sprintf("db error op=%s: %v", e.Operation, e.Err)
-}
-
-func (e DatabaseError) Unwrap() error { return e.Err }

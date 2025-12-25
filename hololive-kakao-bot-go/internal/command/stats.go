@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -59,7 +59,7 @@ func (c *StatsCommand) showTopGainers(ctx context.Context, cmdCtx *domain.Comman
 
 	gainers, err := c.deps.StatsRepo.GetTopGainers(ctx, since, 10)
 	if err != nil {
-		c.deps.Logger.Error("Failed to get top gainers", zap.Error(err))
+		c.deps.Logger.Error("Failed to get top gainers", slog.Any("error", err))
 		return c.deps.SendError(ctx, cmdCtx.Room, adapter.ErrStatsQueryFailed)
 	}
 
@@ -106,7 +106,7 @@ func (c *StatsCommand) ensureDeps(cmdCtx *domain.CommandContext) error {
 	}
 
 	if c.deps.Logger == nil {
-		c.deps.Logger = zap.NewNop()
+		c.deps.Logger = slog.Default()
 	}
 
 	return nil

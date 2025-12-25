@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/command"
@@ -33,10 +33,10 @@ var (
 	numericRoomRegex = regexp.MustCompile(`^\d+$`)
 )
 
-// Bot 는 타입이다.
+// Bot: 홀로라이브 봇의 핵심 상태와 의존성(서비스, 캐시, 핸들러 등)을 관리하는 메인 구조체
 type Bot struct {
 	config           *config.Config
-	logger           *zap.Logger
+	logger           *slog.Logger
 	irisClient       iris.Client
 	messageAdapter   *adapter.MessageAdapter
 	formatter        *adapter.ResponseFormatter
@@ -58,13 +58,13 @@ type Bot struct {
 	selfSender       string
 }
 
-// NewBot 는 동작을 수행한다.
+// NewBot: 필요한 의존성(Dependencies)을 주입받아 새로운 Bot 인스턴스를 생성하고 초기화한다.
 func NewBot(deps *Dependencies) (*Bot, error) {
 	if deps == nil {
 		return nil, fmt.Errorf("bot dependencies are required")
 	}
 
-	deps.Logger.Info("Bot dependency snapshot", zap.Bool("stats_repo", deps.YouTubeStatsRepo != nil))
+	deps.Logger.Info("Bot dependency snapshot", slog.Bool("stats_repo", deps.YouTubeStatsRepo != nil))
 	if deps.Config == nil {
 		return nil, fmt.Errorf("config dependency is required")
 	}
@@ -153,7 +153,7 @@ func (b *Bot) initializeCommands() {
 
 	deps.Dispatcher = command.NewSequentialDispatcher(registry, b.normalizeCommand)
 
-	b.logger.Info("Stats repository detected", zap.Bool("available", deps.StatsRepo != nil))
+	b.logger.Info("Stats repository detected", slog.Bool("available", deps.StatsRepo != nil))
 
 	commandsList := []command.Command{
 		command.NewHelpCommand(deps),
@@ -173,10 +173,10 @@ func (b *Bot) initializeCommands() {
 		registry.Register(cmd)
 	}
 
-	b.logger.Info("Commands initialized", zap.Int("count", registry.Count()))
+	b.logger.Info("Commands initialized", slog.Int("count", registry.Count()))
 }
 
-// Start 는 동작을 수행한다.
+// Start: 봇 서비스를 시작한다. Redis/Iris 연결 확인, 알림 스케줄러 실행 등을 수행하며 Context가 종료될 때까지 대기한다.
 func (b *Bot) Start(ctx context.Context) error {
 	b.logger.Info("Starting Hololive KakaoTalk Bot...")
 
@@ -234,17 +234,17 @@ func (b *Bot) HandleMessage(ctx context.Context, message *iris.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			b.logger.Error("Panic in handleMessage",
-				zap.Any("panic", r),
-				zap.String("command", commandType),
+				slog.Any("panic", r),
+				slog.String("command", commandType),
 			)
 		}
 	}()
 
 	if b.isSelfSender(userName) {
 		b.logger.Debug("Skipping self-issued message",
-			zap.String("user", userName),
-			zap.String("room", chatID),
-			zap.String("payload", message.Msg),
+			slog.String("user", userName),
+			slog.String("room", chatID),
+			slog.String("payload", message.Msg),
 		)
 		return
 	}
@@ -252,9 +252,9 @@ func (b *Bot) HandleMessage(ctx context.Context, message *iris.Message) {
 	// ACL: 허용된 방이 아니면 메시지 무시
 	if b.acl != nil && !b.acl.IsRoomAllowed(roomName, chatID) {
 		b.logger.Debug("Room not in ACL whitelist, ignoring message",
-			zap.String("room", chatID),
-			zap.String("room_name", roomName),
-			zap.String("user_name", userName),
+			slog.String("room", chatID),
+			slog.String("room_name", roomName),
+			slog.String("user_name", userName),
 		)
 		return
 	}
@@ -264,26 +264,26 @@ func (b *Bot) HandleMessage(ctx context.Context, message *iris.Message) {
 
 	if parsed.Type == domain.CommandUnknown {
 		b.logger.Debug("Unknown command ignored",
-			zap.String("msg", message.Msg),
-			zap.String("room", chatID),
-			zap.String("user_name", userName),
+			slog.String("msg", message.Msg),
+			slog.String("room", chatID),
+			slog.String("user_name", userName),
 		)
 		return // Ignore unknown commands
 	}
 
 	b.logger.Info("Command received",
-		zap.String("raw", parsed.RawMessage),
-		zap.String("type", commandType),
-		zap.String("user_id", userID),
-		zap.String("user_name", userName),
-		zap.String("room", chatID),
-		zap.String("room_name", roomName),
+		slog.String("raw", parsed.RawMessage),
+		slog.String("type", commandType),
+		slog.String("user_id", userID),
+		slog.String("user_name", userName),
+		slog.String("room", chatID),
+		slog.String("room_name", roomName),
 	)
 
 	cmdCtx := domain.NewCommandContext(chatID, roomName, userID, userName, message.Msg, false)
 
 	if err := b.executeCommand(ctx, cmdCtx, parsed.Type, parsed.Params); err != nil {
-		b.logger.Error("Failed to execute command", zap.Error(err))
+		b.logger.Error("Failed to execute command", slog.Any("error", err))
 		errorMsg := b.getErrorMessage(err, commandType)
 		if chatID != "" {
 			b.sendError(ctx, chatID, errorMsg)
@@ -300,7 +300,7 @@ func (b *Bot) executeCommand(ctx context.Context, cmdCtx *domain.CommandContext,
 
 	if err := b.commandRegistry.Execute(ctx, cmdCtx, key, normalizedParams); err != nil {
 		if errors.Is(err, command.ErrUnknownCommand) {
-			b.logger.Warn("Unknown command", zap.String("type", cmdType.String()))
+			b.logger.Warn("Unknown command", slog.String("type", cmdType.String()))
 			if sendErr := b.sendMessage(ctx, cmdCtx.Room, adapter.ErrUnknownCommand); sendErr != nil {
 				return fmt.Errorf("failed to send unknown command message: %w", sendErr)
 			}
@@ -423,7 +423,7 @@ func (b *Bot) startAlarmChecker(ctx context.Context) {
 	b.alarmTicker = time.NewTicker(interval)
 	b.alarmStopCh = make(chan struct{})
 
-	b.logger.Info("Alarm checker started", zap.Duration("interval", interval))
+	b.logger.Info("Alarm checker started", slog.Duration("interval", interval))
 
 	go func() {
 		for {
@@ -453,7 +453,7 @@ func (b *Bot) performAlarmCheck(ctx context.Context) {
 
 	notifications, err := b.alarm.CheckUpcomingStreams(childCtx)
 	if err != nil {
-		b.logger.Error("Alarm check failed", zap.Error(err))
+		b.logger.Error("Alarm check failed", slog.Any("error", err))
 		return
 	}
 
@@ -483,9 +483,9 @@ func (b *Bot) performAlarmCheck(ctx context.Context) {
 
 			if err := b.sendMessage(childCtx, g.roomID, message); err != nil {
 				b.logger.Error("Failed to send alarm notification",
-					zap.String("room", g.roomID),
-					zap.Int("notifications", len(g.notifications)),
-					zap.Error(err),
+					slog.String("room", g.roomID),
+					slog.Int("notifications", len(g.notifications)),
+					slog.Any("error", err),
 				)
 				return
 			}
@@ -496,8 +496,8 @@ func (b *Bot) performAlarmCheck(ctx context.Context) {
 				}
 				if err := b.alarm.MarkAsNotified(childCtx, notif.Stream.ID, *notif.Stream.StartScheduled, notif.MinutesUntil); err != nil {
 					b.logger.Warn("Failed to mark as notified",
-						zap.String("stream_id", notif.Stream.ID),
-						zap.Error(err),
+						slog.String("stream_id", notif.Stream.ID),
+						slog.Any("error", err),
 					)
 				}
 			}
@@ -561,7 +561,7 @@ func buildAlarmGroupKey(notif *domain.AlarmNotification) string {
 	return fmt.Sprintf("%s|minutes|%d", notif.RoomID, notif.MinutesUntil)
 }
 
-// Shutdown 는 동작을 수행한다.
+// Shutdown: 봇의 리소스를 정리하고 실행 중인 작업(알림 체커 등)을 안전하게 종료한다.
 func (b *Bot) Shutdown(ctx context.Context) error {
 	b.logger.Info("Shutting down bot...")
 
@@ -574,13 +574,13 @@ func (b *Bot) Shutdown(ctx context.Context) error {
 
 	if b.cache != nil {
 		if err := b.cache.Close(); err != nil {
-			b.logger.Warn("Error closing cache", zap.Error(err))
+			b.logger.Warn("Error closing cache", slog.Any("error", err))
 		}
 	}
 
 	if b.postgres != nil {
 		if err := b.postgres.Close(); err != nil {
-			b.logger.Warn("Error closing postgres", zap.Error(err))
+			b.logger.Warn("Error closing postgres", slog.Any("error", err))
 		}
 	}
 

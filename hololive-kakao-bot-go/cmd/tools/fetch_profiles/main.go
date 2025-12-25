@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/PuerkitoBio/goquery"
-	"go.uber.org/zap"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
@@ -33,7 +34,8 @@ func main() {
 
 	talents, err := domain.LoadTalents()
 	if err != nil {
-		logger.Fatal("failed to load official talents list", zap.Error(err))
+		logger.Error("failed to load official talents list", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	httpClient := runtime.HTTPClient
@@ -48,11 +50,11 @@ func main() {
 		english := util.TrimSpace(talent.English)
 
 		profileURL := fmt.Sprintf("%s/%s/", constants.OfficialProfileConfig.BaseURL, slug)
-		logger.Info("Fetching profile", zap.Int("index", idx+1), zap.String("slug", slug), zap.String("url", profileURL))
+		logger.Info("Fetching profile", slog.Int("index", idx+1), slog.String("slug", slug), slog.String("url", profileURL))
 
 		profile, err := fetchProfile(ctx, httpClient, profileURL, english, slug)
 		if err != nil {
-			logger.Error("failed to fetch profile", zap.String("slug", slug), zap.Error(err))
+			logger.Error("failed to fetch profile", slog.String("slug", slug), slog.Any("error", err))
 			continue
 		}
 
@@ -61,16 +63,18 @@ func main() {
 	}
 
 	if len(profiles) == 0 {
-		logger.Fatal("no profiles fetched")
+		logger.Error("no profiles fetched")
+		os.Exit(1)
 	}
 
 	if err := writeProfiles(profiles); err != nil {
-		logger.Fatal("failed to write profiles", zap.Error(err))
+		logger.Error("failed to write profiles", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	logger.Info("Profile fetch completed",
-		zap.Int("count", len(profiles)),
-		zap.String("output", constants.OfficialProfileConfig.OutputFile),
+		slog.Int("count", len(profiles)),
+		slog.String("output", constants.OfficialProfileConfig.OutputFile),
 	)
 }
 

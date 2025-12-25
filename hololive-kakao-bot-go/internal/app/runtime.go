@@ -11,7 +11,8 @@ import (
 	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -21,14 +22,14 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// BotRuntime 는 타입이다.
+// BotRuntime: 봇 애플리케이션의 전체 실행 환경 및 상태를 관리하는 구조체
 type BotRuntime struct {
 	Config *config.Config
-	Logger *zap.Logger
+	Logger *slog.Logger
 
-	Bot              *bot.Bot
-	MQConsumer       *mq.ValkeyMQConsumer
-	Scheduler *youtube.Scheduler
+	Bot        *bot.Bot
+	MQConsumer *mq.ValkeyMQConsumer
+	Scheduler  *youtube.Scheduler
 
 	AdminHandler      *server.AdminHandler
 	Sessions          *server.ValkeySessionStore
@@ -48,8 +49,8 @@ func (r *BotRuntime) Close() {
 	}
 }
 
-// BuildRuntime 는 동작을 수행한다.
-func BuildRuntime(ctx context.Context, cfg *config.Config, logger *zap.Logger) (*BotRuntime, error) {
+// BuildRuntime: 설정과 로거를 기반으로 봇 런타임 환경을 구성하고 모든 의존성을 초기화한다.
+func BuildRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*BotRuntime, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config must not be nil")
 	}
@@ -69,7 +70,7 @@ func BuildRuntime(ctx context.Context, cfg *config.Config, logger *zap.Logger) (
 	return runtime, nil
 }
 
-// StartAdminServer 는 동작을 수행한다.
+// StartAdminServer: 관리자용 웹 서버를 비동기적으로 시작한다.
 func (r *BotRuntime) StartAdminServer(errCh chan<- error) {
 	if r == nil || r.AdminServer == nil {
 		return
@@ -82,13 +83,13 @@ func (r *BotRuntime) StartAdminServer(errCh chan<- error) {
 				return
 			}
 			if r.Logger != nil {
-				r.Logger.Error("HTTP server error", zap.Error(err))
+				r.Logger.Error("HTTP server error", slog.Any("error", err))
 			}
 		}
 	}()
 }
 
-// ShutdownAdminServer 는 동작을 수행한다.
+// ShutdownAdminServer: 관리자용 웹 서버를 안전하게 종료한다.
 func (r *BotRuntime) ShutdownAdminServer(ctx context.Context) error {
 	if r == nil || r.AdminServer == nil {
 		return nil
@@ -99,7 +100,7 @@ func (r *BotRuntime) ShutdownAdminServer(ctx context.Context) error {
 	return nil
 }
 
-// Start 는 동작을 수행한다.
+// Start: 봇의 모든 구성 요소(스케줄러, 알람 체커, MQ 컨슈머, 관리자 서버)를 시작한다.
 func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 	if r == nil {
 		return
@@ -125,7 +126,7 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 						r.Logger.Info("Bot alarm checker stopped (context done)")
 					}
 				} else if r.Logger != nil {
-					r.Logger.Error("Bot alarm checker error", zap.Error(err))
+					r.Logger.Error("Bot alarm checker error", slog.Any("error", err))
 				}
 			}
 		}()
@@ -137,11 +138,11 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 
 	r.StartAdminServer(errCh)
 	if r.Logger != nil && r.AdminAddr != "" {
-		r.Logger.Info("Admin HTTP server started", zap.String("addr", r.AdminAddr))
+		r.Logger.Info("Admin HTTP server started", slog.String("addr", r.AdminAddr))
 	}
 }
 
-// Shutdown 는 동작을 수행한다.
+// Shutdown: 봇의 모든 구성 요소를 안전하게 종료하고 리소스를 정리한다.
 func (r *BotRuntime) Shutdown(ctx context.Context) {
 	if r == nil {
 		return
@@ -157,19 +158,19 @@ func (r *BotRuntime) Shutdown(ctx context.Context) {
 
 	if err := r.ShutdownAdminServer(ctx); err != nil {
 		if r.Logger != nil {
-			r.Logger.Error("HTTP server shutdown error", zap.Error(err))
+			r.Logger.Error("HTTP server shutdown error", slog.Any("error", err))
 		}
 	}
 	if r.Bot != nil {
 		if err := r.Bot.Shutdown(ctx); err != nil {
 			if r.Logger != nil {
-				r.Logger.Error("Error during shutdown", zap.Error(err))
+				r.Logger.Error("Error during shutdown", slog.Any("error", err))
 			}
 		}
 	}
 }
 
-// Run 는 동작을 수행한다.
+// Run: 봇 애플리케이션을 실행하고 종료 신호(SIGINT, SIGTERM)를 대기한다. (블로킹)
 func (r *BotRuntime) Run() {
 	if r == nil {
 		return
@@ -191,11 +192,11 @@ func (r *BotRuntime) Run() {
 	select {
 	case sig := <-sigCh:
 		if r.Logger != nil {
-			r.Logger.Info("Received shutdown signal", zap.String("signal", sig.String()))
+			r.Logger.Info("Received shutdown signal", slog.String("signal", sig.String()))
 		}
 	case err := <-errCh:
 		if r.Logger != nil {
-			r.Logger.Error("Server error", zap.Error(err))
+			r.Logger.Error("Server error", slog.Any("error", err))
 		}
 	}
 

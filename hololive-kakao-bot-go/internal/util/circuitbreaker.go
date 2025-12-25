@@ -4,28 +4,31 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
-// CircuitState 는 타입이다.
+// CircuitState: 서킷 브레이커의 상태 (닫힘, 열림, 반열림)
 type CircuitState string
 
 // CircuitState 상수 목록.
 const (
-	// CircuitStateClosed 는 상수다.
-	CircuitStateClosed   CircuitState = "CLOSED"    // 정상 작동
-	CircuitStateOpen     CircuitState = "OPEN"      // 서비스 차단
-	CircuitStateHalfOpen CircuitState = "HALF_OPEN" // 복구 시도 중
+	// CircuitStateClosed: 정상 작동 상태 (요청 허용)
+	CircuitStateClosed CircuitState = "CLOSED"
+	// CircuitStateOpen: 에러 임계치 초과로 인한 차단 상태 (요청 거부)
+	CircuitStateOpen CircuitState = "OPEN"
+	// CircuitStateHalfOpen: 복구 시도 중인 상태 (제한적 요청 허용)
+	CircuitStateHalfOpen CircuitState = "HALF_OPEN"
 )
 
 func (s CircuitState) String() string {
 	return string(s)
 }
 
-// HealthCheckFunction 는 타입이다.
+// HealthCheckFunction: 외부 서비스의 상태를 점검하는 사용자 정의 함수 타입
 type HealthCheckFunction func() bool
 
-// CircuitBreaker 는 타입이다.
+// CircuitBreaker: 장애 전파 방지를 위한 서킷 브레이커 패턴 구현체
+// 실패 횟수를 모니터링하고 임계치 초과 시 요청을 일시 차단한다.
 type CircuitBreaker struct {
 	state               CircuitState
 	failureCount        int
@@ -36,17 +39,17 @@ type CircuitBreaker struct {
 	healthCheckInterval time.Duration
 	isHealthChecking    bool
 	healthCheckFn       HealthCheckFunction
-	logger              *zap.Logger
+	logger              *slog.Logger
 	mu                  sync.RWMutex
 }
 
-// NewCircuitBreaker 는 동작을 수행한다.
+// NewCircuitBreaker: 새로운 서킷 브레이커 인스턴스를 생성한다.
 func NewCircuitBreaker(
 	failureThreshold int,
 	resetTimeout time.Duration,
 	healthCheckInterval time.Duration,
 	healthCheckFn HealthCheckFunction,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) *CircuitBreaker {
 	return &CircuitBreaker{
 		state:               CircuitStateClosed,
@@ -59,7 +62,8 @@ func NewCircuitBreaker(
 	}
 }
 
-// GetState 는 동작을 수행한다.
+// GetState: 현재 서킷 브레이커의 상태를 반환한다.
+// 상태 조회 시 복구 시간이나 헬스 체크 조건을 확인하여 상태 전이를 트리거할 수도 있다.
 func (cb *CircuitBreaker) GetState() CircuitState {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -77,13 +81,14 @@ func (cb *CircuitBreaker) GetState() CircuitState {
 	return cb.state
 }
 
-// CanExecute 는 동작을 수행한다.
+// CanExecute: 현재 요청 실행이 가능한지(서킷이 열려있지 않은지) 확인한다.
 func (cb *CircuitBreaker) CanExecute() bool {
 	state := cb.GetState()
 	return state != CircuitStateOpen
 }
 
-// RecordSuccess 는 동작을 수행한다.
+// RecordSuccess: 요청 성공을 기록한다.
+// Half-Open 상태였다면 Closed 상태로 전환하여 서킷을 복구한다.
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -94,13 +99,14 @@ func (cb *CircuitBreaker) RecordSuccess() {
 		cb.failureCount = 0
 	} else if cb.state == CircuitStateClosed && cb.failureCount > 0 {
 		cb.logger.Debug("Circuit Breaker: Resetting failure count",
-			zap.Int("was", cb.failureCount),
+			slog.Int("was", cb.failureCount),
 		)
 		cb.failureCount = 0
 	}
 }
 
-// RecordFailure 는 동작을 수행한다.
+// RecordFailure: 요청 실패를 기록한다.
+// 실패 횟수가 임계치를 초과하면 서킷을 Open 상태로 전환한다.
 func (cb *CircuitBreaker) RecordFailure(customTimeout time.Duration) {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -113,9 +119,9 @@ func (cb *CircuitBreaker) RecordFailure(customTimeout time.Duration) {
 	}
 
 	cb.logger.Warn("Circuit Breaker: Failure recorded",
-		zap.Int("count", cb.failureCount),
-		zap.Int("threshold", cb.failureThreshold),
-		zap.Duration("timeout", timeout),
+		slog.Int("count", cb.failureCount),
+		slog.Int("threshold", cb.failureThreshold),
+		slog.Duration("timeout", timeout),
 	)
 
 	if cb.state == CircuitStateHalfOpen {
@@ -128,7 +134,7 @@ func (cb *CircuitBreaker) RecordFailure(customTimeout time.Duration) {
 		}
 	} else if cb.failureCount >= cb.failureThreshold {
 		cb.logger.Error("Circuit Breaker: Threshold reached, OPENING circuit",
-			zap.Int("threshold", cb.failureThreshold),
+			slog.Int("threshold", cb.failureThreshold),
 		)
 		cb.transitionTo(CircuitStateOpen)
 		cb.nextRetryTime = time.Now().Add(timeout)
@@ -176,14 +182,14 @@ func (cb *CircuitBreaker) transitionTo(newState CircuitState) {
 	}
 
 	cb.logger.Info("Circuit Breaker: State transition",
-		zap.String("from", oldState.String()),
-		zap.String("to", newState.String()),
-		zap.Int("failure_count", cb.failureCount),
-		zap.String("next_retry", nextRetry),
+		slog.String("from", oldState.String()),
+		slog.String("to", newState.String()),
+		slog.Int("failure_count", cb.failureCount),
+		slog.String("next_retry", nextRetry),
 	)
 }
 
-// Reset 는 동작을 수행한다.
+// Reset: 서킷 브레이커 상태를 강제로 초기화(Closed, 실패 횟수 0)한다.
 func (cb *CircuitBreaker) Reset() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -194,7 +200,7 @@ func (cb *CircuitBreaker) Reset() {
 	cb.nextRetryTime = time.Time{}
 }
 
-// GetStatus 는 동작을 수행한다.
+// GetStatus: 모니터링을 위해 현재 서킷 브레이커의 상세 상태 정보를 반환한다.
 func (cb *CircuitBreaker) GetStatus() CircuitBreakerStatus {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
@@ -211,7 +217,7 @@ func (cb *CircuitBreaker) GetStatus() CircuitBreakerStatus {
 	return status
 }
 
-// CircuitBreakerStatus 는 타입이다.
+// CircuitBreakerStatus: 서킷 브레이커의 상세 상태 정보 (스냅샷)
 type CircuitBreakerStatus struct {
 	State         CircuitState
 	FailureCount  int

@@ -9,28 +9,29 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 )
 
-// Service 는 타입이다.
+// Service: YouTube API와 상호작용하여 채널 및 영상 정보를 제공하는 서비스
 type Service struct {
 	service    *youtube.Service
 	cache      *cache.Service
-	logger     *zap.Logger
+	logger     *slog.Logger
 	quotaUsed  int
 	quotaMu    sync.Mutex
 	quotaReset time.Time
 }
 
-// NewYouTubeService 는 동작을 수행한다.
-func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service, logger *zap.Logger) (*Service, error) {
+// NewService: YouTube 서비스 인스턴스를 생성한다.
+func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service, logger *slog.Logger) (*Service, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("YouTube API key is required")
 	}
@@ -49,7 +50,7 @@ func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service,
 	}
 
 	logger.Info("YouTube backup service initialized",
-		zap.Time("quotaReset", ys.quotaReset))
+		slog.Time("quotaReset", ys.quotaReset))
 
 	return ys, nil
 }
@@ -70,7 +71,7 @@ func (ys *Service) checkQuota(cost int) error {
 		ys.quotaUsed = 0
 		ys.quotaReset = getNextQuotaReset()
 		ys.logger.Info("YouTube API quota auto-reset",
-			zap.Time("nextReset", ys.quotaReset))
+			slog.Time("nextReset", ys.quotaReset))
 	}
 
 	if ys.quotaUsed+cost > (constants.YouTubeConfig.DailyQuotaLimit - constants.YouTubeConfig.QuotaSafetyMargin) {
@@ -93,15 +94,15 @@ func (ys *Service) consumeQuota(cost int) {
 	remaining := constants.YouTubeConfig.DailyQuotaLimit - ys.quotaUsed
 
 	ys.logger.Debug("YouTube API quota consumed",
-		zap.Int("cost", cost),
-		zap.Int("used", ys.quotaUsed),
-		zap.Int("remaining", remaining),
-		zap.Float64("usagePercent", float64(ys.quotaUsed)/float64(constants.YouTubeConfig.DailyQuotaLimit)*100))
+		slog.Int("cost", cost),
+		slog.Int("used", ys.quotaUsed),
+		slog.Int("remaining", remaining),
+		slog.Float64("usagePercent", float64(ys.quotaUsed)/float64(constants.YouTubeConfig.DailyQuotaLimit)*100))
 
 	if remaining < constants.YouTubeConfig.QuotaSafetyMargin {
 		ys.logger.Warn("YouTube API quota running low",
-			zap.Int("remaining", remaining),
-			zap.Time("resetTime", ys.quotaReset))
+			slog.Int("remaining", remaining),
+			slog.Time("resetTime", ys.quotaReset))
 	}
 }
 
@@ -122,12 +123,12 @@ func (ys *Service) fetchChannelUpcoming(ctx context.Context, channelID string, a
 	costMu.Unlock()
 }
 
-// GetUpcomingStreams 는 동작을 수행한다.
+// FetchUpcomingStreams: 지정된 채널들의 예정된 방송(라이브 예정) 목록을 조회한다.
 func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) ([]*domain.Stream, error) {
 	if len(channelIDs) > constants.YouTubeConfig.MaxChannelsPerCall {
 		ys.logger.Warn("Too many channels requested, limiting to max",
-			zap.Int("requested", len(channelIDs)),
-			zap.Int("limited", constants.YouTubeConfig.MaxChannelsPerCall))
+			slog.Int("requested", len(channelIDs)),
+			slog.Int("limited", constants.YouTubeConfig.MaxChannelsPerCall))
 		channelIDs = channelIDs[:constants.YouTubeConfig.MaxChannelsPerCall]
 	}
 
@@ -137,7 +138,7 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 	cacheKey := fmt.Sprintf("youtube:upcoming:%s", strings.Join(sortedIDs, ","))
 	if cached, found := ys.cache.GetStreams(ctx, cacheKey); found {
 		ys.logger.Debug("YouTube cache hit (backup avoided)",
-			zap.Int("streams", len(cached)))
+			slog.Int("streams", len(cached)))
 		return cached, nil
 	}
 
@@ -147,8 +148,8 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 	}
 
 	ys.logger.Info("Fetching from YouTube API (BACKUP MODE)",
-		zap.Int("channels", len(channelIDs)),
-		zap.Int("estimatedCost", estimatedCost))
+		slog.Int("channels", len(channelIDs)),
+		slog.Int("estimatedCost", estimatedCost))
 
 	var allStreams []*domain.Stream
 	var mu sync.Mutex
@@ -182,8 +183,8 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 
 	if len(errors) > 0 {
 		ys.logger.Warn("Some YouTube API calls failed",
-			zap.Int("failures", len(errors)),
-			zap.Int("successes", len(channelIDs)-len(errors)))
+			slog.Int("failures", len(errors)),
+			slog.Int("successes", len(channelIDs)-len(errors)))
 	}
 
 	if len(allStreams) == 0 && len(errors) > 0 {
@@ -193,13 +194,14 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 	ys.cache.SetStreams(ctx, cacheKey, allStreams, constants.YouTubeConfig.CacheExpiration)
 
 	ys.logger.Info("YouTube API backup completed",
-		zap.Int("channels", len(channelIDs)),
-		zap.Int("streams", len(allStreams)),
-		zap.Int("quotaUsed", actualCost))
+		slog.Int("channels", len(channelIDs)),
+		slog.Int("streams", len(allStreams)),
+		slog.Int("quotaUsed", actualCost))
 
 	return allStreams, nil
 }
 
+// processUpcomingStreams: YouTube API 응답에서 예정된 방송 정보를 추출하고 가공한다.
 func (ys *Service) getChannelUpcomingStreams(ctx context.Context, channelID string) ([]*domain.Stream, error) {
 	call := ys.service.Search.List([]string{"snippet"}).
 		ChannelId(channelID).
@@ -279,7 +281,7 @@ func extractThumbnail(thumbnails *youtube.ThumbnailDetails) *string {
 	return nil
 }
 
-// GetQuotaStatus 는 동작을 수행한다.
+// GetQuotaStatus: 현재 API 할당량 사용량, 잔여량, 초기화 예정 시간을 반환한다.
 func (ys *Service) GetQuotaStatus() (used int, remaining int, resetTime time.Time) {
 	ys.quotaMu.Lock()
 	defer ys.quotaMu.Unlock()
@@ -291,14 +293,14 @@ func (ys *Service) GetQuotaStatus() (used int, remaining int, resetTime time.Tim
 	return ys.quotaUsed, constants.YouTubeConfig.DailyQuotaLimit - ys.quotaUsed, ys.quotaReset
 }
 
-// IsQuotaAvailable 는 동작을 수행한다.
+// IsQuotaAvailable: 지정된 채널 수만큼 조회할 수 있는 API 할당량이 남아있는지 확인한다.
 func (ys *Service) IsQuotaAvailable(channelCount int) bool {
 	estimatedCost := channelCount * constants.YouTubeConfig.SearchQuotaCost
 	err := ys.checkQuota(estimatedCost)
 	return err == nil
 }
 
-// QuotaExceededError 는 타입이다.
+// QuotaExceededError: API 할당량 초과 시 발생하는 에러 구조체
 type QuotaExceededError struct {
 	Used      int
 	Limit     int
@@ -315,7 +317,7 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-// GetChannelStatistics 는 동작을 수행한다.
+// FetchChannelStats: 지정된 채널들의 통계(구독자 수, 조회수 등)를 조회한다.
 func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string) (map[string]*ChannelStats, error) {
 	if len(channelIDs) == 0 {
 		return make(map[string]*ChannelStats), nil
@@ -343,8 +345,8 @@ func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string
 		response, err := call.Context(ctx).Do()
 		if err != nil {
 			ys.logger.Error("Failed to fetch channel statistics",
-				zap.Int("batch_size", len(batch)),
-				zap.Error(err))
+				slog.Int("batch_size", len(batch)),
+				slog.Any("error", err))
 			continue
 		}
 
@@ -364,14 +366,14 @@ func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string
 	ys.consumeQuota(cost)
 
 	ys.logger.Info("Channel statistics fetched",
-		zap.Int("channels", len(channelIDs)),
-		zap.Int("results", len(result)),
-		zap.Int("quota_used", cost))
+		slog.Int("channels", len(channelIDs)),
+		slog.Int("results", len(result)),
+		slog.Int("quota_used", cost))
 
 	return result, nil
 }
 
-// GetRecentVideos 는 동작을 수행한다.
+// GetRecentVideos: 특정 채널의 최근 업로드된 비디오 목록을 조회한다.
 func (ys *Service) GetRecentVideos(ctx context.Context, channelID string, maxResults int64) ([]string, error) {
 	if err := ys.checkQuota(constants.YouTubeConfig.SearchQuotaCost); err != nil {
 		return nil, err
@@ -386,8 +388,8 @@ func (ys *Service) GetRecentVideos(ctx context.Context, channelID string, maxRes
 	response, err := call.Context(ctx).Do()
 	if err != nil {
 		ys.logger.Error("Failed to fetch recent videos",
-			zap.String("channel", channelID),
-			zap.Error(err))
+			slog.String("channel", channelID),
+			slog.Any("error", err))
 		return nil, fmt.Errorf("YouTube search error: %w", err)
 	}
 
@@ -401,13 +403,13 @@ func (ys *Service) GetRecentVideos(ctx context.Context, channelID string, maxRes
 	ys.consumeQuota(constants.YouTubeConfig.SearchQuotaCost)
 
 	ys.logger.Debug("Recent videos fetched",
-		zap.String("channel", channelID),
-		zap.Int("count", len(videoIDs)))
+		slog.String("channel", channelID),
+		slog.Int("count", len(videoIDs)))
 
 	return videoIDs, nil
 }
 
-// ChannelStats 는 타입이다.
+// ChannelStats: API로부터 조회된 단일 채널의 통계 정보
 type ChannelStats struct {
 	ChannelID       string
 	ChannelTitle    string

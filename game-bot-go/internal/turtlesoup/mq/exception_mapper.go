@@ -3,31 +3,32 @@ package mq
 import (
 	"errors"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
 	tsmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/messages"
 )
 
-// ErrorMapping 는 타입이다.
+// ErrorMapping: 에러 메시지 키와 포맷팅 파라미터를 포함하는 매핑 구조체
 type ErrorMapping struct {
 	Key    string
 	Params []messageprovider.Param
 }
 
-// GetErrorMapping 는 동작을 수행한다.
+// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 보여줄 적절한 메시지 매핑을 반환한다.
 func GetErrorMapping(err error) ErrorMapping {
 	var (
 		sessionNotFound  *tserrors.SessionNotFoundError
-		invalidQuestion  *tserrors.InvalidQuestionError
-		invalidAnswer    *tserrors.InvalidAnswerError
+		invalidQuestion  *cerrors.InvalidQuestionError
+		invalidAnswer    *cerrors.InvalidAnswerError
 		maxHints         *tserrors.MaxHintsReachedError
 		gameAlreadyStart *tserrors.GameAlreadyStartedError
 		gameSolved       *tserrors.GameAlreadySolvedError
 		puzzleGen        *tserrors.PuzzleGenerationError
-		accessDenied     *tserrors.AccessDeniedError
-		userBlocked      *tserrors.UserBlockedError
-		chatBlocked      *tserrors.ChatBlockedError
+		accessDenied     *cerrors.AccessDeniedError
+		userBlocked      *cerrors.UserBlockedError
+		chatBlocked      *cerrors.ChatBlockedError
 	)
 
 	switch {

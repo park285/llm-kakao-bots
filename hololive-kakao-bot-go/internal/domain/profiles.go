@@ -11,7 +11,7 @@ import (
 //go:embed data/official_profiles_raw/*.json
 var officialProfilesRawFS embed.FS
 
-// LoadProfiles 는 동작을 수행한다.
+// LoadProfiles: data/official_profiles_raw 디렉토리에 임베딩된 JSON 파일들을 읽어 멤버별 심층 프로필 정보를 로드한다.
 func LoadProfiles() (map[string]*TalentProfile, error) {
 	files, err := officialProfilesRawFS.ReadDir("data/official_profiles_raw")
 	if err != nil {

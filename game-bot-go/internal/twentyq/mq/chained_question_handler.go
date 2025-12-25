@@ -16,21 +16,21 @@ import (
 	qsvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/service"
 )
 
-// ChainedQuestionRiddleService 는 타입이다.
+// ChainedQuestionRiddleService: 체인 질문 처리에 필요한 RiddleService 인터페이스
 type ChainedQuestionRiddleService interface {
 	AnswerWithOutcome(ctx context.Context, chatID string, userID string, sender *string, question string, isChain bool) (qsvc.AnswerOutcome, error)
 	StatusSeparated(ctx context.Context, chatID string) (string, string, error)
 }
 
-// ChainedQuestionQueueCoordinator 는 타입이다.
+// ChainedQuestionQueueCoordinator: 체인 질문 처리에 필요한 큐 코디네이터 인터페이스
 type ChainedQuestionQueueCoordinator interface {
 	Enqueue(ctx context.Context, chatID string, msg qmodel.PendingMessage) (qredis.EnqueueResult, error)
 	SetChainSkipFlag(ctx context.Context, chatID string, userID string) error
 	CheckAndClearChainSkipFlag(ctx context.Context, chatID string, userID string) (bool, error)
 }
 
-// ChainedQuestionHandler 체인 질문 핸들러.
-// 쉼표로 구분된 여러 질문을 순차적으로 처리.
+// ChainedQuestionHandler: 사용자가 쉼표 등으로 구분하여 입력한 연속 질문(Chain Question)을 관리하는 핸들러.
+// 첫 번째 질문은 즉시 실행하고, 나머지는 백그라운드 큐에 배정하여 순차적으로 처리되도록 한다.
 type ChainedQuestionHandler struct {
 	riddleService    ChainedQuestionRiddleService
 	queueCoordinator ChainedQuestionQueueCoordinator
@@ -53,7 +53,8 @@ func NewChainedQuestionHandler(
 	}
 }
 
-// PrepareChainQueue 체인 질문 대기열 사전 준비 (큐잉 + 안내 메시지 반환).
+// PrepareChainQueue: 첫 번째 질문을 제외한 나머지 질문들을 Redis 대기열에 '배치(Batch)' 형태로 미리 등록(Enqueue)한다.
+// 또한 사용자에게 대기열에 등록되었음을 알리는 메시지를 생성하여 반환한다.
 func (h *ChainedQuestionHandler) PrepareChainQueue(
 	ctx context.Context,
 	chatID string,
@@ -105,7 +106,8 @@ func (h *ChainedQuestionHandler) PrepareChainQueue(
 		messageprovider.P("queueDetails", queueDetails.String())), nil
 }
 
-// Handle 체인 질문 처리 (첫 번째 질문 실행).
+// Handle: 연속 질문 중 첫 번째 질문을 즉시 실행하여 결과를 반환한다.
+// 이후 질문 진행 여부(조건)를 판단하고, 중단이 필요하면 스킵 플래그를 설정한다.
 func (h *ChainedQuestionHandler) Handle(
 	ctx context.Context,
 	chatID string,
@@ -150,7 +152,8 @@ func (h *ChainedQuestionHandler) Handle(
 	return outcome.Message, nil
 }
 
-// ProcessChainBatch 큐에서 꺼낸 체인 배치 처리.
+// ProcessChainBatch: 대기열에서 꺼낸 나머지 연속 질문들을 순차적으로 실행한다. (백그라운드 처리)
+// 실행 전 스킵 플래그를 확인하여, 이전 질문의 결과에 따라 중단 여부를 결정한다.
 func (h *ChainedQuestionHandler) ProcessChainBatch(
 	ctx context.Context,
 	chatID string,

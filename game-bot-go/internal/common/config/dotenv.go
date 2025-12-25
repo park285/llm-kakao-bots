@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// LoadDotenvIfPresent 는 동작을 수행한다.
+// LoadDotenvIfPresent: 지정된 경로들(기본값 .env)에 파일이 존재하면 환경 변수로 로드한다.
 func LoadDotenvIfPresent(paths ...string) error {
 	if len(paths) == 0 {
 		paths = []string{".env"}

@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
 )
 
 const logTextLimit = 100
@@ -47,7 +47,7 @@ func (g *McpInjectionGuard) IsMalicious(ctx context.Context, input string) (bool
 // ValidateOrThrow 는 동작을 수행한다.
 func (g *McpInjectionGuard) ValidateOrThrow(ctx context.Context, input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
-		return "", tserrors.MalformedInputError{Message: "empty input"}
+		return "", cerrors.MalformedInputError{Message: "empty input"}
 	}
 
 	malicious, err := g.IsMalicious(ctx, input)
@@ -56,7 +56,7 @@ func (g *McpInjectionGuard) ValidateOrThrow(ctx context.Context, input string) (
 	}
 	if malicious {
 		g.logger.Warn("injection_blocked", "input", truncateForLog(input))
-		return "", tserrors.InputInjectionError{Message: "potentially malicious input detected"}
+		return "", cerrors.InputInjectionError{Message: "potentially malicious input detected"}
 	}
 
 	return sanitize(input), nil

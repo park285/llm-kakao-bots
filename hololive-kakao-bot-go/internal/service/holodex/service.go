@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -24,7 +24,7 @@ import (
 
 const searchChannelsCacheKeyPrefix = "search_channels:"
 
-// ChannelRaw 는 타입이다.
+// ChannelRaw: Holodex API로부터 수신한 채널 정보의 Raw 데이터 구조체
 type ChannelRaw struct {
 	ID              string  `json:"id"`
 	Name            string  `json:"name"`
@@ -38,7 +38,7 @@ type ChannelRaw struct {
 	Group           *string `json:"group,omitempty"`
 }
 
-// StreamRaw 는 타입이다.
+// StreamRaw: Holodex API로부터 수신한 방송(스트림) 정보의 Raw 데이터 구조체
 type StreamRaw struct {
 	ID             string              `json:"id"`
 	Title          string              `json:"title"`
@@ -50,24 +50,25 @@ type StreamRaw struct {
 	Link           *string             `json:"link,omitempty"`
 	Thumbnail      *string             `json:"thumbnail,omitempty"`
 	TopicID        *string             `json:"topic_id,omitempty"`
-	Channel        *ChannelRaw  `json:"channel,omitempty"`
+	Channel        *ChannelRaw         `json:"channel,omitempty"`
 }
 
-// Service 는 타입이다.
+// Service: Holodex External API와 통신하여 채널 및 스트림 정보를 가져오는 클라이언트 서비스
+// 캐싱 및 스크래핑 폴백(Fallback) 기능을 포함한다.
 type Service struct {
 	requester Requester
 	cache     *cache.Service
 	scraper   *ScraperService
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
-// NewHolodexService 는 동작을 수행한다.
-func NewHolodexService(apiKeys []string, cache *cache.Service, scraper *ScraperService, logger *zap.Logger) (*Service, error) {
+// NewHolodexService: 새로운 Holodex API 서비스 인스턴스를 생성한다. (API Key 검증 포함)
+func NewHolodexService(apiKeys []string, cache *cache.Service, scraper *ScraperService, logger *slog.Logger) (*Service, error) {
 	if len(apiKeys) == 0 {
 		return nil, fmt.Errorf("at least one Holodex API key is required")
 	}
 
-	logger.Info("Holodex API key pool configured", zap.Int("active_keys", len(apiKeys)))
+	logger.Info("Holodex API key pool configured", slog.Int("active_keys", len(apiKeys)))
 
 	httpClient := &http.Client{
 		Timeout: constants.APIConfig.HolodexTimeout,
@@ -83,7 +84,7 @@ func NewHolodexService(apiKeys []string, cache *cache.Service, scraper *ScraperS
 	}, nil
 }
 
-// GetLiveStreams 는 동작을 수행한다.
+// GetLiveStreams: 현재 진행 중인('live') 모든 Hololive 스트림 목록을 조회한다. (캐시 적용)
 func (h *Service) GetLiveStreams(ctx context.Context) ([]*domain.Stream, error) {
 	cacheKey := "live_streams"
 
@@ -99,7 +100,7 @@ func (h *Service) GetLiveStreams(ctx context.Context) ([]*domain.Stream, error) 
 
 	body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
 	if err != nil {
-		h.logger.Error("Failed to get live streams", zap.Error(err))
+		h.logger.Error("Failed to get live streams", slog.Any("error", err))
 		return nil, fmt.Errorf("get live streams: %w", err)
 	}
 
@@ -116,7 +117,7 @@ func (h *Service) GetLiveStreams(ctx context.Context) ([]*domain.Stream, error) 
 	return filtered, nil
 }
 
-// GetUpcomingStreams 는 동작을 수행한다.
+// GetUpcomingStreams: 향후 예정된('upcoming') Hololive 스트림 목록을 조회한다. (최대 hours 시간까지, 캐시 적용)
 func (h *Service) GetUpcomingStreams(ctx context.Context, hours int) ([]*domain.Stream, error) {
 	cacheKey := fmt.Sprintf("upcoming_streams_%d", hours)
 
@@ -135,7 +136,7 @@ func (h *Service) GetUpcomingStreams(ctx context.Context, hours int) ([]*domain.
 
 	body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
 	if err != nil {
-		h.logger.Error("Failed to get upcoming streams", zap.Error(err))
+		h.logger.Error("Failed to get upcoming streams", slog.Any("error", err))
 		return nil, fmt.Errorf("get upcoming streams: %w", err)
 	}
 
@@ -153,7 +154,8 @@ func (h *Service) GetUpcomingStreams(ctx context.Context, hours int) ([]*domain.
 	return upcoming, nil
 }
 
-// GetChannelSchedule 는 동작을 수행한다.
+// GetChannelSchedule: 특정 채널의 방송 일정(예정된 방송)을 조회한다.
+// includeLive가 true이면 현재 진행 중인 방송도 포함한다.
 func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hours int, includeLive bool) ([]*domain.Stream, error) {
 	cacheKey := fmt.Sprintf("channel_schedule_%s_%d_%t", channelID, hours, includeLive)
 
@@ -198,15 +200,15 @@ func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hour
 		body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
 		if err != nil {
 			h.logger.Error("Failed to get channel schedule",
-				zap.String("channel_id", channelID),
-				zap.String("status", string(status)),
-				zap.Error(err),
+				slog.String("channel_id", channelID),
+				slog.String("status", string(status)),
+				slog.Any("error", err),
 			)
 
 			if h.shouldUseFallback(err) && h.scraper != nil {
 				h.logger.Warn("Using scraper fallback for channel schedule",
-					zap.String("channel_id", channelID),
-					zap.Error(err))
+					slog.String("channel_id", channelID),
+					slog.Any("error", err))
 
 				return h.scraper.FetchChannel(ctx, channelID)
 			}
@@ -247,7 +249,7 @@ func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hour
 	return result, nil
 }
 
-// SearchChannels 는 동작을 수행한다.
+// SearchChannels: 채널 이름 검색 쿼리를 통해 해당하는 Hololive 채널 목록을 조회한다.
 func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.Channel, error) {
 	cacheKey := buildSearchChannelsCacheKey(query)
 
@@ -264,7 +266,7 @@ func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.C
 
 	body, err := h.requester.DoRequest(ctx, "GET", "/channels", params)
 	if err != nil {
-		h.logger.Error("Failed to search channels", zap.String("query", query), zap.Error(err))
+		h.logger.Error("Failed to search channels", slog.String("query", query), slog.Any("error", err))
 		return nil, fmt.Errorf("search channels: %w", err)
 	}
 
@@ -276,8 +278,8 @@ func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.C
 	channels := h.mapChannelsResponse(rawChannels)
 
 	h.logger.Debug("Holodex API search results",
-		zap.String("query", query),
-		zap.Int("total_results", len(channels)),
+		slog.String("query", query),
+		slog.Int("total_results", len(channels)),
 	)
 
 	filtered := make([]*domain.Channel, 0, len(channels))
@@ -287,7 +289,7 @@ func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.C
 		}
 	}
 
-	h.logger.Debug("After HOLOSTARS filter", zap.Int("count", len(filtered)))
+	h.logger.Debug("After HOLOSTARS filter", slog.Int("count", len(filtered)))
 
 	_ = h.cache.Set(ctx, cacheKey, filtered, constants.CacheTTL.ChannelSearch)
 
@@ -304,7 +306,7 @@ func buildSearchChannelsCacheKey(query string) string {
 	return searchChannelsCacheKeyPrefix + hex.EncodeToString(sum[:])
 }
 
-// GetChannel 는 동작을 수행한다.
+// GetChannel: 채널 ID로 특정 채널의 상세 정보를 조회한다.
 func (h *Service) GetChannel(ctx context.Context, channelID string) (*domain.Channel, error) {
 	cacheKey := fmt.Sprintf("channel_%s", channelID)
 
@@ -319,7 +321,7 @@ func (h *Service) GetChannel(ctx context.Context, channelID string) (*domain.Cha
 		if stdErrors.As(err, &apiErr) {
 			return nil, nil
 		}
-		h.logger.Error("Failed to get channel", zap.String("channel_id", channelID), zap.Error(err))
+		h.logger.Error("Failed to get channel", slog.String("channel_id", channelID), slog.Any("error", err))
 		return nil, fmt.Errorf("get channel: %w", err)
 	}
 
@@ -376,8 +378,8 @@ func (h *Service) mapStreamResponse(raw *StreamRaw) *domain.Stream {
 	} else {
 		// ChannelID가 없으면 invalid 데이터로 간주
 		h.logger.Warn("Stream missing ChannelID - skipping",
-			zap.String("stream_id", raw.ID),
-			zap.String("title", raw.Title))
+			slog.String("stream_id", raw.ID),
+			slog.String("title", raw.Title))
 		return nil
 	}
 
@@ -387,8 +389,8 @@ func (h *Service) mapStreamResponse(raw *StreamRaw) *domain.Stream {
 	} else {
 		// ChannelName이 없어도 ChannelID가 있으면 허용
 		h.logger.Debug("Stream missing ChannelName, will use ChannelID",
-			zap.String("stream_id", raw.ID),
-			zap.String("channel_id", stream.ChannelID))
+			slog.String("stream_id", raw.ID),
+			slog.String("channel_id", stream.ChannelID))
 	}
 
 	if raw.StartScheduled != nil && *raw.StartScheduled != "" {
@@ -438,7 +440,7 @@ func (h *Service) filterHololiveStreams(streams []*domain.Stream) []*domain.Stre
 
 	for _, stream := range streams {
 		if stream.Channel == nil {
-			h.logger.Debug("Filtered out stream without channel info", zap.String("id", stream.ID))
+			h.logger.Debug("Filtered out stream without channel info", slog.String("id", stream.ID))
 			continue
 		}
 
@@ -450,14 +452,14 @@ func (h *Service) filterHololiveStreams(streams []*domain.Stream) []*domain.Stre
 				org = *channel.Org
 			}
 			h.logger.Debug("Filtered out non-Hololive stream",
-				zap.String("channel", stream.ChannelName),
-				zap.String("org", org),
+				slog.String("channel", stream.ChannelName),
+				slog.String("org", org),
 			)
 			continue
 		}
 
 		if h.isHolostarsChannel(channel) {
-			h.logger.Debug("Filtered out HOLOSTARS stream", zap.String("channel", stream.ChannelName))
+			h.logger.Debug("Filtered out HOLOSTARS stream", slog.String("channel", stream.ChannelName))
 			continue
 		}
 

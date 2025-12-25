@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
@@ -22,7 +22,7 @@ func (s *RiddleService) handleGuess(
 ) (string, qmodel.FiveScaleKo, error) {
 	guess = strings.TrimSpace(guess)
 	if guess == "" {
-		return "", qmodel.FiveScaleAlwaysNo, qerrors.InvalidQuestionError{Message: "empty guess"}
+		return "", qmodel.FiveScaleAlwaysNo, cerrors.InvalidQuestionError{Message: "empty guess"}
 	}
 
 	if normalizeForEquality(guess) == normalizeForEquality(secret.Target) {

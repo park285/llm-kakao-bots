@@ -6,10 +6,10 @@ import (
 	commonmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mq"
 )
 
-// StreamMessageHandler 는 타입이다.
+// StreamMessageHandler: commonmq.StreamMessageHandler alias
 type StreamMessageHandler = commonmq.StreamMessageHandler
 
-// NewStreamMessageHandler 는 동작을 수행한다.
+// NewStreamMessageHandler: 공통 스트림 핸들러를 바다거북 스프 서비스용으로 생성한다.
 func NewStreamMessageHandler(gameMessageService *GameMessageService, logger *slog.Logger) *StreamMessageHandler {
 	return commonmq.NewStreamMessageHandler(gameMessageService, logger)
 }

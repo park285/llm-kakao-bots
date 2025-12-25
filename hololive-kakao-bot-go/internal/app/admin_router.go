@@ -9,19 +9,20 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/server"
 )
 
-// ProvideAdminAddr 는 동작을 수행한다.
+// ProvideAdminAddr: 관리자 서버가 리슨할 주소를 반환한다.
 func ProvideAdminAddr(cfg *config.Config) string {
 	return fmt.Sprintf(":%d", cfg.Server.Port)
 }
 
-// ProvideAdminServer 는 동작을 수행한다.
+// ProvideAdminServer: 관리자용 HTTP 서버 인스턴스를 생성한다.
 func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 	return &http.Server{
 		Addr:              addr,
@@ -31,9 +32,9 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 	}
 }
 
-// ProvideAdminRouter 는 동작을 수행한다.
+// ProvideAdminRouter: 관리자 API 및 UI를 서빙하는 Gin 라우터를 설정하고 제공한다.
 func ProvideAdminRouter(
-	logger *zap.Logger,
+	logger *slog.Logger,
 	adminHandler *server.AdminHandler,
 	watchdogHandler *server.WatchdogProxyHandler,
 	sessions *server.ValkeySessionStore,
@@ -89,7 +90,7 @@ func ProvideAdminRouter(
 	logger.Info("Valkey session store initialized")
 
 	adminIPGuard := server.AdminIPAllowMiddleware(allowedCIDRs, logger)
-	logger.Info("Admin IP allowlist applied", zap.Int("cidr_count", len(allowedCIDRs)))
+	logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
 
 	// Public admin API routes (no auth required)
 	router.POST("/admin/api/login", adminIPGuard, adminHandler.HandleLogin)

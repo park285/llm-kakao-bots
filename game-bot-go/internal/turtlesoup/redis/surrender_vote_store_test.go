@@ -68,18 +68,29 @@ func TestSurrenderVoteStore_Approve(t *testing.T) {
 		EligiblePlayers: []string{"user1", "user2"},
 		Approvals:       []string{"user1"},
 	}
-	store.Save(ctx, chatID, vote)
+	if err := store.Save(ctx, chatID, vote); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
 
 	updated, err := store.Approve(ctx, chatID, "user2")
 	if err != nil {
 		t.Fatalf("approve failed: %v", err)
+	}
+	if updated == nil {
+		t.Fatal("expected vote, got nil")
 	}
 	if len(updated.Approvals) != 2 {
 		t.Errorf("expected 2 approvals, got %d", len(updated.Approvals))
 	}
 
 	// Persisted?
-	got, _ := store.Get(ctx, chatID)
+	got, err := store.Get(ctx, chatID)
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected vote, got nil")
+	}
 	if len(got.Approvals) != 2 {
 		t.Errorf("expected persistence, got %d", len(got.Approvals))
 	}

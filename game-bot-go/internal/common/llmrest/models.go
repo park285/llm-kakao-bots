@@ -1,12 +1,6 @@
 package llmrest
 
-import (
-	"fmt"
-
-	"github.com/goccy/go-json"
-)
-
-// ModelConfigResponse 는 타입이다.
+// ModelConfigResponse: LLM 모델 설정값 응답 구조체
 type ModelConfigResponse struct {
 	ModelDefault          string   `json:"model_default"`
 	ModelHints            *string  `json:"model_hints,omitempty"`
@@ -20,37 +14,37 @@ type ModelConfigResponse struct {
 	TransportMode         *string  `json:"transport_mode,omitempty"`
 }
 
-// SessionCreateRequest 는 타입이다.
+// SessionCreateRequest: 세션 생성 요청 파라미터
 type SessionCreateRequest struct {
 	SessionID *string `json:"session_id,omitempty"`
 	ChatID    *string `json:"chat_id,omitempty"`
 	Namespace *string `json:"namespace,omitempty"`
 }
 
-// SessionCreateResponse 는 타입이다.
+// SessionCreateResponse: 세션 생성 응답
 type SessionCreateResponse struct {
 	SessionID string `json:"session_id"`
 	Model     string `json:"model"`
 	Created   bool   `json:"created"`
 }
 
-// SessionEndResponse 는 타입이다.
+// SessionEndResponse: 세션 종료 응답
 type SessionEndResponse struct {
 	SessionID string `json:"session_id"`
 	Removed   bool   `json:"removed"`
 }
 
-// GuardRequest 는 타입이다.
+// GuardRequest: 악성 입력 감지 요청 파라미터
 type GuardRequest struct {
 	InputText string `json:"input_text"`
 }
 
-// GuardMaliciousResponse 는 타입이다.
+// GuardMaliciousResponse: 악성 입력 감지 결과 응답
 type GuardMaliciousResponse struct {
 	Malicious bool `json:"malicious"`
 }
 
-// UsageResponse 는 타입이다.
+// UsageResponse: 토큰 사용량 정보 (단건)
 type UsageResponse struct {
 	InputTokens     int     `json:"input_tokens"`
 	OutputTokens    int     `json:"output_tokens"`
@@ -59,7 +53,7 @@ type UsageResponse struct {
 	Model           *string `json:"model,omitempty"`
 }
 
-// DailyUsageResponse 는 타입이다.
+// DailyUsageResponse: 일별 토큰 사용량 집계 정보
 type DailyUsageResponse struct {
 	UsageDate       string  `json:"usage_date"`
 	InputTokens     int64   `json:"input_tokens"`
@@ -70,7 +64,7 @@ type DailyUsageResponse struct {
 	Model           *string `json:"model,omitempty"`
 }
 
-// UsageListResponse 는 타입이다.
+// UsageListResponse: 토큰 사용량 목록 응답
 type UsageListResponse struct {
 	Usages            []DailyUsageResponse `json:"usages"`
 	TotalInputTokens  int64                `json:"total_input_tokens"`
@@ -78,22 +72,4 @@ type UsageListResponse struct {
 	TotalTokens       int64                `json:"total_tokens"`
 	TotalRequestCount int64                `json:"total_request_count"`
 	Model             *string              `json:"model,omitempty"`
-}
-
-// LlmErrorResponse 는 타입이다.
-type LlmErrorResponse struct {
-	ErrorCode string         `json:"error_code"`
-	ErrorType string         `json:"error_type"`
-	Message   string         `json:"message"`
-	RequestID *string        `json:"request_id,omitempty"`
-	Details   map[string]any `json:"details,omitempty"`
-}
-
-// ParseLlmErrorResponse 는 동작을 수행한다.
-func ParseLlmErrorResponse(raw []byte) (*LlmErrorResponse, error) {
-	var res LlmErrorResponse
-	if err := json.Unmarshal(raw, &res); err != nil {
-		return nil, fmt.Errorf("unmarshal llm error response failed: %w", err)
-	}
-	return &res, nil
 }

@@ -9,16 +9,16 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
-// WrongGuessStore 는 타입이다.
+// WrongGuessStore: 사용자 및 세션별 오답 기록을 Redis에 저장하고 조회하는 저장소
 type WrongGuessStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewWrongGuessStore 는 동작을 수행한다.
+// NewWrongGuessStore: 새로운 WrongGuessStore 인스턴스를 생성한다.
 func NewWrongGuessStore(client valkey.Client, logger *slog.Logger) *WrongGuessStore {
 	return &WrongGuessStore{
 		client: client,
@@ -26,7 +26,7 @@ func NewWrongGuessStore(client valkey.Client, logger *slog.Logger) *WrongGuessSt
 	}
 }
 
-// Add 는 동작을 수행한다.
+// Add: 사용자 및 세션의 오답 기록을 추가한다.
 func (s *WrongGuessStore) Add(ctx context.Context, chatID string, userID string, guess string) error {
 	guess = strings.TrimSpace(guess)
 	if guess == "" {
@@ -46,13 +46,13 @@ func (s *WrongGuessStore) Add(ctx context.Context, chatID string, userID string,
 	results := s.client.DoMulti(ctx, saddSessionCmd, saddUserCmd, expireSessionCmd, expireUserCmd)
 	for _, r := range results {
 		if err := r.Error(); err != nil && !valkeyx.IsNil(err) {
-			return qerrors.RedisError{Operation: "wrong_guess_add", Err: err}
+			return cerrors.RedisError{Operation: "wrong_guess_add", Err: err}
 		}
 	}
 	return nil
 }
 
-// GetSessionWrongGuesses 는 동작을 수행한다.
+// GetSessionWrongGuesses: 현재 세션에서 발생한 모든 오답 목록을 조회한다.
 func (s *WrongGuessStore) GetSessionWrongGuesses(ctx context.Context, chatID string) ([]string, error) {
 	key := wrongGuessSessionKey(chatID)
 	cmd := s.client.B().Smembers().Key(key).Build()
@@ -61,12 +61,12 @@ func (s *WrongGuessStore) GetSessionWrongGuesses(ctx context.Context, chatID str
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, qerrors.RedisError{Operation: "wrong_guess_get_session", Err: err}
+		return nil, cerrors.RedisError{Operation: "wrong_guess_get_session", Err: err}
 	}
 	return values, nil
 }
 
-// GetUserWrongGuesses 는 동작을 수행한다.
+// GetUserWrongGuesses: 특정 사용자가 해당 세션에서 입력한 오답 목록을 조회한다.
 func (s *WrongGuessStore) GetUserWrongGuesses(ctx context.Context, chatID string, userID string) ([]string, error) {
 	key := wrongGuessUserKey(chatID, userID)
 	cmd := s.client.B().Smembers().Key(key).Build()
@@ -75,12 +75,12 @@ func (s *WrongGuessStore) GetUserWrongGuesses(ctx context.Context, chatID string
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, qerrors.RedisError{Operation: "wrong_guess_get_user", Err: err}
+		return nil, cerrors.RedisError{Operation: "wrong_guess_get_user", Err: err}
 	}
 	return values, nil
 }
 
-// GetUserWrongGuessCount 는 동작을 수행한다.
+// GetUserWrongGuessCount: 특정 사용자의 오답 횟수를 조회한다.
 func (s *WrongGuessStore) GetUserWrongGuessCount(ctx context.Context, chatID string, userID string) (int, error) {
 	key := wrongGuessUserKey(chatID, userID)
 	cmd := s.client.B().Scard().Key(key).Build()
@@ -89,7 +89,7 @@ func (s *WrongGuessStore) GetUserWrongGuessCount(ctx context.Context, chatID str
 		if valkeyx.IsNil(err) {
 			return 0, nil
 		}
-		return 0, qerrors.RedisError{Operation: "wrong_guess_count_user", Err: err}
+		return 0, cerrors.RedisError{Operation: "wrong_guess_count_user", Err: err}
 	}
 	if n < 0 {
 		return 0, nil
@@ -141,7 +141,7 @@ func (s *WrongGuessStore) GetUserWrongGuessCountBatch(ctx context.Context, chatI
 	return result, nil
 }
 
-// Delete 는 동작을 수행한다.
+// Delete: 세션 종료 시 오답 기록을 일괄 삭제한다.
 func (s *WrongGuessStore) Delete(ctx context.Context, chatID string, userIDs []string) error {
 	keys := make([]string, 0, 1+len(userIDs))
 	keys = append(keys, wrongGuessSessionKey(chatID))
@@ -155,7 +155,7 @@ func (s *WrongGuessStore) Delete(ctx context.Context, chatID string, userIDs []s
 
 	cmd := s.client.B().Del().Key(keys...).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "wrong_guess_delete", Err: err}
+		return cerrors.RedisError{Operation: "wrong_guess_delete", Err: err}
 	}
 	return nil
 }

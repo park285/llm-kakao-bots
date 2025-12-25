@@ -2,7 +2,7 @@ package domain
 
 import "time"
 
-// TimestampedStats 는 타입이다.
+// TimestampedStats: 특정 시점의 YouTube 채널 통계 (구독자, 비디오 수, 조회수)
 type TimestampedStats struct {
 	ChannelID       string    `json:"channel_id"`
 	MemberName      string    `json:"member_name"`
@@ -12,18 +12,21 @@ type TimestampedStats struct {
 	Timestamp       time.Time `json:"timestamp"`
 }
 
-// MilestoneType 는 타입이다.
+// MilestoneType: 달성한 마일스톤의 종류 (구독자 수, 비디오 수 등)
 type MilestoneType string
 
 // MilestoneType 상수 목록.
+// MilestoneType 상수 목록.
 const (
-	// MilestoneSubscribers 는 상수다.
+	// MilestoneSubscribers: 구독자 수 달성
 	MilestoneSubscribers MilestoneType = "subscribers"
-	MilestoneVideos      MilestoneType = "videos"
-	MilestoneViews       MilestoneType = "views"
+	// MilestoneVideos: 비디오 업로드 수 달성
+	MilestoneVideos MilestoneType = "videos"
+	// MilestoneViews: 총 조회수 달성
+	MilestoneViews MilestoneType = "views"
 )
 
-// Milestone 는 타입이다.
+// Milestone: 채널이 달성한 특정 성과(마일스톤) 정보
 type Milestone struct {
 	ChannelID  string        `json:"channel_id"`
 	MemberName string        `json:"member_name"`
@@ -33,7 +36,7 @@ type Milestone struct {
 	Notified   bool          `json:"notified"`
 }
 
-// StatsChange 는 타입이다.
+// StatsChange: 이전 시점 대비 통계 변화량 정보
 type StatsChange struct {
 	ChannelID        string            `json:"channel_id"`
 	MemberName       string            `json:"member_name"`
@@ -45,7 +48,7 @@ type StatsChange struct {
 	DetectedAt       time.Time         `json:"detected_at"`
 }
 
-// DailySummary 는 타입이다.
+// DailySummary: 일일 종합 통계 리포트 (변화량, 달성 마일스톤, 순위 등)
 type DailySummary struct {
 	Date               time.Time   `json:"date"`
 	TotalChanges       int         `json:"total_changes"`
@@ -55,7 +58,7 @@ type DailySummary struct {
 	TopUploaders       []RankEntry `json:"top_uploaders"`
 }
 
-// RankEntry 는 타입이다.
+// RankEntry: 순위 정보의 개별 항목 (채널명, 값, 순위)
 type RankEntry struct {
 	ChannelID          string `json:"channel_id"`
 	MemberName         string `json:"member_name"`
@@ -64,7 +67,7 @@ type RankEntry struct {
 	Rank               int    `json:"rank"`
 }
 
-// TrendData 는 타입이다.
+// TrendData: 특정 기간 동안의 성장 추세 정보
 type TrendData struct {
 	ChannelID        string    `json:"channel_id"`
 	MemberName       string    `json:"member_name"`

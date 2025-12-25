@@ -10,7 +10,7 @@ import (
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
 )
 
-// GameResult 는 타입이다.
+// GameResult: 게임 결과 타입 정의
 type GameResult string
 
 // GameResultCorrect 는 게임 결과 상수 목록이다.
@@ -25,7 +25,7 @@ const (
 	statsWorkerCount = 2   // 워커 수
 )
 
-// PlayerCompletionRecord 는 타입이다.
+// PlayerCompletionRecord: 플레이어별 완료 기록 구조체
 type PlayerCompletionRecord struct {
 	UserID          string
 	Sender          string
@@ -34,7 +34,7 @@ type PlayerCompletionRecord struct {
 	Target          *string
 }
 
-// GameCompletionRecord 는 타입이다.
+// GameCompletionRecord: 게임 전체 완료 기록 구조체
 type GameCompletionRecord struct {
 	SessionID          string
 	ChatID             string
@@ -46,7 +46,7 @@ type GameCompletionRecord struct {
 	CompletedAt        time.Time
 }
 
-// StatsRecorder 는 타입이다.
+// StatsRecorder: 게임 통계를 비동기 또는 동기로 기록하는 레코더
 type StatsRecorder struct {
 	repo   *qrepo.Repository
 	logger *slog.Logger
@@ -58,7 +58,7 @@ type StatsRecorder struct {
 	stopped         chan struct{}
 }
 
-// NewStatsRecorder 는 동작을 수행한다.
+// NewStatsRecorder: 새로운 StatsRecorder 인스턴스를 생성한다.
 func NewStatsRecorder(repo *qrepo.Repository, logger *slog.Logger) *StatsRecorder {
 	if repo == nil {
 		return nil
@@ -107,7 +107,7 @@ func (r *StatsRecorder) worker(id int) {
 	r.logger.Debug("stats_worker_stopped", "worker_id", id)
 }
 
-// RecordGameStart 는 동작을 수행한다.
+// RecordGameStart: 게임 시작 정보를 기록한다.
 func (r *StatsRecorder) RecordGameStart(ctx context.Context, chatID string, userID string) {
 	if r == nil || r.repo == nil {
 		return

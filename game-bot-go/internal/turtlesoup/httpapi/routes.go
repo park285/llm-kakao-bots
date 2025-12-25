@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	commonhttputil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httputil"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
@@ -278,18 +279,18 @@ func respondGameError(w http.ResponseWriter, err error, logEvent string, logger 
 	var sessionNotFound tserrors.SessionNotFoundError
 	var alreadyStarted tserrors.GameAlreadyStartedError
 	var maxHintsReached tserrors.MaxHintsReachedError
-	var invalidQuestion tserrors.InvalidQuestionError
-	var invalidAnswer tserrors.InvalidAnswerError
+	var invalidQuestion cerrors.InvalidQuestionError
+	var invalidAnswer cerrors.InvalidAnswerError
 	var notStarted tserrors.GameNotStartedError
 	var alreadySolved tserrors.GameAlreadySolvedError
 	var puzzleErr tserrors.PuzzleGenerationError
-	var redisErr tserrors.RedisError
-	var lockErr tserrors.LockError
-	var accessDenied tserrors.AccessDeniedError
-	var userBlocked tserrors.UserBlockedError
-	var chatBlocked tserrors.ChatBlockedError
-	var injectionErr tserrors.InputInjectionError
-	var malformedInput tserrors.MalformedInputError
+	var redisErr cerrors.RedisError
+	var lockErr cerrors.LockError
+	var accessDenied cerrors.AccessDeniedError
+	var userBlocked cerrors.UserBlockedError
+	var chatBlocked cerrors.ChatBlockedError
+	var injectionErr cerrors.InputInjectionError
+	var malformedInput cerrors.MalformedInputError
 
 	switch {
 	case errors.As(err, &sessionNotFound):

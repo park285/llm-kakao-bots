@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
 // ContainerInfo represents a container's status from watchdog.
@@ -46,11 +46,11 @@ type RestartResponse struct {
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
-	logger     *zap.Logger
+	logger     *slog.Logger
 }
 
 // NewClient creates a new watchdog API client.
-func NewClient(baseURL string, logger *zap.Logger) *Client {
+func NewClient(baseURL string, logger *slog.Logger) *Client {
 	return &Client{
 		baseURL: baseURL,
 		httpClient: &http.Client{
@@ -141,9 +141,9 @@ func (c *Client) RestartContainer(ctx context.Context, name, reason string, forc
 	req.Header.Set("Accept", "application/json")
 
 	c.logger.Info("Sending restart request to watchdog",
-		zap.String("container", name),
-		zap.String("reason", reason),
-		zap.Bool("force", force),
+		slog.String("container", name),
+		slog.String("reason", reason),
+		slog.Bool("force", force),
 	)
 
 	resp, err := c.httpClient.Do(req)

@@ -11,14 +11,14 @@ import (
 	tssvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/service"
 )
 
-// SurrenderHandler 는 타입이다.
+// SurrenderHandler: 항복 투표 및 처리 로직을 담당하는 핸들러
 type SurrenderHandler struct {
 	gameService *tssvc.GameService
 	voteService *tssvc.SurrenderVoteService
 	msgProvider *messageprovider.Provider
 }
 
-// NewSurrenderHandler 는 동작을 수행한다.
+// NewSurrenderHandler: 새로운 SurrenderHandler 인스턴스를 생성한다.
 func NewSurrenderHandler(gameService *tssvc.GameService, voteService *tssvc.SurrenderVoteService, msgProvider *messageprovider.Provider) *SurrenderHandler {
 	return &SurrenderHandler{
 		gameService: gameService,
@@ -27,7 +27,7 @@ func NewSurrenderHandler(gameService *tssvc.GameService, voteService *tssvc.Surr
 	}
 }
 
-// HandleConsensus 는 동작을 수행한다.
+// HandleConsensus: 항복 투표를 시작하거나 현재 진행 상황을 반환한다. (만장일치 시 즉시 항복 처리)
 func (h *SurrenderHandler) HandleConsensus(ctx context.Context, chatID string, userID string) (string, error) {
 	if err := h.voteService.RequireSession(ctx, chatID); err != nil {
 		return "", fmt.Errorf("require session failed: %w", err)
@@ -70,7 +70,7 @@ func (h *SurrenderHandler) HandleConsensus(ctx context.Context, chatID string, u
 	}
 }
 
-// HandleAgree 는 동작을 수행한다.
+// HandleAgree: 항복에 동의 투표를 하고 결과를 반환한다.
 func (h *SurrenderHandler) HandleAgree(ctx context.Context, chatID string, userID string) (string, error) {
 	if err := h.voteService.RequireSession(ctx, chatID); err != nil {
 		return "", fmt.Errorf("require session failed: %w", err)

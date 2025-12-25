@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -19,10 +19,10 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// Dependencies 는 타입이다.
+// Dependencies: 봇 실행에 필요한 모든 의존성을 담는 구조체 (Service Locator 패턴)
 type Dependencies struct {
 	Config           *config.Config
-	Logger           *zap.Logger
+	Logger           *slog.Logger
 	Client           iris.Client
 	MessageAdapter   *adapter.MessageAdapter
 	Formatter        *adapter.ResponseFormatter

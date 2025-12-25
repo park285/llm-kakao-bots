@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// ServerOptions 는 타입이다.
+// ServerOptions: HTTP 서버 설정 옵션
 type ServerOptions struct {
 	UseH2C            bool
 	ReadHeaderTimeout time.Duration
@@ -13,7 +13,7 @@ type ServerOptions struct {
 	MaxHeaderBytes    int
 }
 
-// NewServer 는 동작을 수행한다.
+// NewServer: 옵션에 따라 구성된 새로운 HTTP 서버 인스턴스를 생성한다.
 func NewServer(addr string, handler http.Handler, opts ServerOptions) *http.Server {
 	if handler == nil {
 		handler = http.NewServeMux()

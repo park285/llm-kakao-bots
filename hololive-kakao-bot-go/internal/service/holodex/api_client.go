@@ -11,27 +11,29 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
 	"golang.org/x/time/rate"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 	"github.com/kapu/hololive-kakao-bot-go/pkg/errors"
 )
 
-// Requester 는 타입이다.
+// Requester: HTTP 요청 수행 및 서킷 브레이커 상태 확인을 위한 인터페이스
 type Requester interface {
 	DoRequest(ctx context.Context, method, path string, params url.Values) ([]byte, error)
 	IsCircuitOpen() bool
 }
 
-// APIClient 는 타입이다.
+// APIClient: Holodex API 요청을 처리하는 클라이언트
+// API 키 로테이션, 서킷 브레이커, 속도 제한(Rate Limiting) 기능을 포함한다.
 type APIClient struct {
 	httpClient       *http.Client
 	apiKeys          []string
 	currentKeyIndex  int
 	keyMu            sync.Mutex
-	logger           *zap.Logger
+	logger           *slog.Logger
 	failureCount     int
 	failureMu        sync.Mutex
 	circuitOpenUntil *time.Time
@@ -39,8 +41,9 @@ type APIClient struct {
 	rateLimiter      *rate.Limiter // Rate limiter: 초당 10 요청
 }
 
-// NewHolodexAPIClient 는 동작을 수행한다.
-func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *zap.Logger) *APIClient {
+// NewHolodexAPIClient: 새로운 Holodex API 클라이언트를 생성하고 초기화한다.
+// 초당 10회 요청 제한(Rate Limit)이 기본 설정된다.
+func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *slog.Logger) *APIClient {
 	return &APIClient{
 		httpClient:  httpClient,
 		apiKeys:     apiKeys,
@@ -49,7 +52,8 @@ func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *zap.
 	}
 }
 
-// DoRequest 는 동작을 수행한다.
+// DoRequest: Holodex API에 요청을 보낸다.
+// Rate Limit 준수, 서킷 브레이커 확인, API 키 로테이션 및 재시도 로직을 수행한다.
 func (c *APIClient) DoRequest(ctx context.Context, method, path string, params url.Values) ([]byte, error) {
 	// Rate limit 체크
 	limiter := c.rateLimiter
@@ -109,7 +113,7 @@ func (c *APIClient) rejectIfCircuitOpen() error {
 	}
 	c.circuitMu.RUnlock()
 
-	c.logger.Warn("Circuit breaker is open", zap.Int64("retry_after_ms", remainingMs))
+	c.logger.Warn("Circuit breaker is open", slog.Int64("retry_after_ms", remainingMs))
 	return errors.NewAPIError("Circuit breaker open", 503, map[string]any{
 		"retry_after_ms": remainingMs,
 	})
@@ -168,9 +172,9 @@ func (c *APIClient) retryAfterNetworkFailure(err error, attempt, maxAttempts int
 	if attempt < maxAttempts-1 {
 		delay := c.computeDelay(attempt)
 		c.logger.Warn("Request failed, retrying",
-			zap.Error(err),
-			zap.Int("attempt", attempt+1),
-			zap.Duration("delay", delay),
+			slog.Any("error", err),
+			slog.Int("attempt", attempt+1),
+			slog.Duration("delay", delay),
 		)
 		time.Sleep(delay)
 		return true
@@ -183,8 +187,8 @@ func (c *APIClient) processHolodexResponse(status int, body []byte, reqURL strin
 	switch {
 	case status == 429 || status == 403:
 		c.logger.Warn("Rate limited, rotating key",
-			zap.Int("status", status),
-			zap.Int("attempt", attempt+1),
+			slog.Int("status", status),
+			slog.Int("attempt", attempt+1),
 		)
 		if attempt < maxAttempts-1 {
 			return nil, false, nil
@@ -207,8 +211,8 @@ func (c *APIClient) processHolodexResponse(status int, body []byte, reqURL strin
 func (c *APIClient) handleServerError(status, attempt, maxAttempts int) ([]byte, bool, error) {
 	count := c.incrementFailureCount()
 	c.logger.Warn("Server error",
-		zap.Int("status", status),
-		zap.Int("failure_count", count),
+		slog.Int("status", status),
+		slog.Int("failure_count", count),
 	)
 
 	if count >= constants.CircuitBreakerConfig.FailureThreshold {
@@ -225,7 +229,7 @@ func (c *APIClient) handleServerError(status, attempt, maxAttempts int) ([]byte,
 	return nil, true, errors.NewAPIError(fmt.Sprintf("Server error: %d", status), status, nil)
 }
 
-// IsCircuitOpen 는 동작을 수행한다.
+// IsCircuitOpen: 현재 서킷 브레이커가 열려있는지(요청 차단 상태인지) 확인한다.
 func (c *APIClient) IsCircuitOpen() bool {
 	c.circuitMu.RLock()
 	defer c.circuitMu.RUnlock()
@@ -254,8 +258,8 @@ func (c *APIClient) getNextAPIKey() string {
 	c.currentKeyIndex = (c.currentKeyIndex + 1) % len(c.apiKeys)
 
 	c.logger.Debug("Holodex API key selected",
-		zap.Int("index", index),
-		zap.Int("pool_size", len(c.apiKeys)),
+		slog.Int("index", index),
+		slog.Int("pool_size", len(c.apiKeys)),
 	)
 
 	return key
@@ -270,7 +274,7 @@ func (c *APIClient) openCircuit() {
 	c.failureCount = 0
 
 	c.logger.Error("Holodex circuit breaker opened",
-		zap.Duration("reset_timeout", constants.CircuitBreakerConfig.ResetTimeout),
+		slog.Duration("reset_timeout", constants.CircuitBreakerConfig.ResetTimeout),
 	)
 }
 

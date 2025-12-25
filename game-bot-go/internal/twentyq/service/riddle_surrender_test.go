@@ -13,7 +13,7 @@ func TestRiddleService_HandleSurrenderConsensus_StartsVote(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_surrender_vote_start"
+	chatID := env.chatID("surrender_vote_start")
 	userID := "user1"
 
 	if _, err := env.svc.Start(ctx, chatID, userID, []string{"사물"}); err != nil {
@@ -52,7 +52,7 @@ func TestRiddleService_HandleSurrenderAgree_CompletesAndClears(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_surrender_agree"
+	chatID := env.chatID("surrender_agree")
 	userID := "user1"
 	otherUser := "user2"
 
@@ -101,7 +101,7 @@ func TestRiddleService_Surrender_ClearsSession(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_surrender_direct"
+	chatID := env.chatID("surrender_direct")
 	userID := "user1"
 
 	if _, err := env.svc.Start(ctx, chatID, userID, []string{"사물"}); err != nil {
@@ -130,7 +130,7 @@ func TestRiddleService_HandleSurrenderConsensus_ExistingVote(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_surrender_vote_exists"
+	chatID := env.chatID("surrender_vote_exists")
 	userID := "user1"
 	otherUser := "user2"
 
@@ -171,7 +171,7 @@ func TestRiddleService_Surrender_HintBlock(t *testing.T) {
 	defer env.teardown()
 
 	ctx := context.Background()
-	chatID := "room_surrender_hint"
+	chatID := env.chatID("surrender_hint")
 	userID := "user1"
 
 	if _, err := env.svc.Start(ctx, chatID, userID, []string{"사물"}); err != nil {
