@@ -2,9 +2,8 @@ package server
 
 import (
 	"context"
-	"time"
-
 	"log/slog"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )

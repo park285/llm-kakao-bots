@@ -25,7 +25,11 @@ FROM alpine:${ALPINE_VERSION}
 
 RUN apk add --no-cache ca-certificates tzdata && \
     cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
-    echo "Asia/Seoul" > /etc/timezone
+    echo "Asia/Seoul" > /etc/timezone && \
+    cp /usr/share/zoneinfo/Asia/Seoul /tmp/Seoul && \
+    apk del --no-cache tzdata && \
+    mkdir -p /usr/share/zoneinfo/Asia && \
+    mv /tmp/Seoul /usr/share/zoneinfo/Asia/Seoul
 
 RUN addgroup -g 1000 appuser && \
     adduser -D -u 1000 -G appuser appuser

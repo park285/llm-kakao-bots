@@ -10,18 +10,20 @@ import (
 )
 
 type fileConfig struct {
-	Enabled             *bool     `json:"enabled"`
-	Containers          *[]string `json:"containers"`
-	IntervalSeconds     *int      `json:"intervalSeconds"`
-	MaxFailures         *int      `json:"maxFailures"`
-	GraceSeconds        *int      `json:"graceSeconds"`
-	CooldownSeconds     *int      `json:"cooldownSeconds"`
-	RestartTimeoutSec   *int      `json:"restartTimeoutSec"`
-	DockerSocket        *string   `json:"dockerSocket"`
-	UseEvents           *bool     `json:"useEvents"`
-	EventMinIntervalSec *int      `json:"eventMinIntervalSec"`
-	StatusReportSeconds *int      `json:"statusReportSeconds"`
-	VerboseLogging      *bool     `json:"verboseLogging"`
+	Enabled              *bool     `json:"enabled"`
+	Containers           *[]string `json:"containers"`
+	IntervalSeconds      *int      `json:"intervalSeconds"`
+	MaxFailures          *int      `json:"maxFailures"`
+	RetryChecks          *int      `json:"retryChecks"`
+	RetryIntervalSeconds *int      `json:"retryIntervalSeconds"`
+	GraceSeconds         *int      `json:"graceSeconds"`
+	CooldownSeconds      *int      `json:"cooldownSeconds"`
+	RestartTimeoutSec    *int      `json:"restartTimeoutSec"`
+	DockerSocket         *string   `json:"dockerSocket"`
+	UseEvents            *bool     `json:"useEvents"`
+	EventMinIntervalSec  *int      `json:"eventMinIntervalSec"`
+	StatusReportSeconds  *int      `json:"statusReportSeconds"`
+	VerboseLogging       *bool     `json:"verboseLogging"`
 }
 
 // LoadConfigWithSource 는 동작을 수행한다.
@@ -67,6 +69,12 @@ func mergeFileConfig(base Config, fc fileConfig) (Config, error) {
 	}
 	if fc.MaxFailures != nil {
 		out.MaxFailures = max(*fc.MaxFailures, 1)
+	}
+	if fc.RetryChecks != nil {
+		out.RetryChecks = max(*fc.RetryChecks, 1)
+	}
+	if fc.RetryIntervalSeconds != nil {
+		out.RetryIntervalSeconds = max(*fc.RetryIntervalSeconds, 1)
 	}
 	if fc.GraceSeconds != nil {
 		out.GraceSeconds = max(*fc.GraceSeconds, 0)

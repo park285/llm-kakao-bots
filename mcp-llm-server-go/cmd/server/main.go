@@ -41,6 +41,7 @@ func main() {
 	defer signal.Stop(signalCh)
 
 	select {
+	case err = <-serverErr:
 	case sig := <-signalCh:
 		app.Logger.Info("http_server_shutdown_signal", "signal", sig.String())
 
@@ -52,7 +53,6 @@ func main() {
 		}
 
 		err = <-serverErr
-	case err = <-serverErr:
 	}
 
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {

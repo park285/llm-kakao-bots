@@ -1,10 +1,9 @@
 package util
 
 import (
+	"log/slog"
 	"sync"
 	"time"
-
-	"log/slog"
 )
 
 // CircuitState: 서킷 브레이커의 상태 (닫힘, 열림, 반열림)

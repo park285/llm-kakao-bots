@@ -2,9 +2,8 @@ package app
 
 import (
 	"fmt"
-	"net"
-
 	"log/slog"
+	"net"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"

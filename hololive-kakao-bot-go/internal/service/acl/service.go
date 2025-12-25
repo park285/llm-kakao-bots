@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	stdErrors "errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"gorm.io/gorm"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"

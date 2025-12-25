@@ -5,11 +5,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"github.com/valkey-io/valkey-go"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
@@ -35,7 +34,7 @@ func NewValkeySessionStore(client valkey.Client, logger *slog.Logger) *ValkeySes
 }
 
 // CreateSession creates a new admin session and stores it in Valkey
-func (s *ValkeySessionStore) CreateSession() *Session {
+func (s *ValkeySessionStore) CreateSession(ctx context.Context) *Session {
 	sessionID := generateValkeySessionID()
 	now := time.Now()
 	session := &Session{
@@ -44,7 +43,10 @@ func (s *ValkeySessionStore) CreateSession() *Session {
 		ExpiresAt: now.Add(s.ttl),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	storeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 
 	key := sessionKeyPrefix + sessionID
@@ -58,7 +60,7 @@ func (s *ValkeySessionStore) CreateSession() *Session {
 
 	// Valkey에 저장 (TTL 설정)
 	cmd := s.client.B().Set().Key(key).Value(string(data)).ExSeconds(int64(s.ttl.Seconds())).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	if err := s.client.Do(storeCtx, cmd).Error(); err != nil {
 		s.logger.Error("Failed to store session in Valkey", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
 	} else {
 		s.logger.Debug("Session created in Valkey", slog.String("session_id", truncateSessionID(sessionID)), slog.Duration("ttl", s.ttl))

@@ -1,167 +1,139 @@
+// Package errors: Hololive 봇 서비스 전체에서 사용되는 에러 타입들을 정의한다.
+// game-bot-go의 에러 패턴과 동일한 표준 Go 에러 스타일을 따른다.
 package errors
 
 import "fmt"
 
-// Error codes
-const (
-	CodeBotError    = "BOT_ERROR"
-	CodeAPIError    = "API_ERROR"
-	CodeValidation  = "VALIDATION_ERROR"
-	CodeCache       = "CACHE_ERROR"
-	CodeService     = "SERVICE_ERROR"
-	CodeKeyRotation = "KEY_ROTATION_ERROR"
-)
-
-// BotError 는 타입이다.
-type BotError struct {
-	Message    string
-	Code       string
-	StatusCode int
-	Context    map[string]any
-	Cause      error
-}
-
-// ErrorCode 는 동작을 수행한다.
-func (e *BotError) ErrorCode() string {
-	if e == nil {
-		return ""
-	}
-	return e.Code
-}
-
-func (e *BotError) Error() string {
-	if e.Cause != nil {
-		return fmt.Sprintf("%s: %v", e.Message, e.Cause)
-	}
-	return e.Message
-}
-
-func (e *BotError) Unwrap() error {
-	return e.Cause
-}
-
-// NewBotError 는 동작을 수행한다.
-func NewBotError(message, code string, statusCode int, context map[string]any) *BotError {
-	return &BotError{
-		Message:    message,
-		Code:       code,
-		StatusCode: statusCode,
-		Context:    context,
-	}
-}
-
-// WithCause 는 동작을 수행한다.
-func (e *BotError) WithCause(cause error) *BotError {
-	e.Cause = cause
-	return e
-}
-
-// APIError 는 타입이다.
+// APIError: 외부 API 호출 중 발생한 에러 (Holodex, YouTube 등)
 type APIError struct {
-	*BotError
+	Operation  string // 수행 중이던 API 작업
+	StatusCode int    // HTTP 상태 코드 (0이면 네트워크 오류)
+	Err        error  // 원인 에러
 }
 
-// NewAPIError 는 동작을 수행한다.
+func (e APIError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("api error operation=%s status=%d", e.Operation, e.StatusCode)
+	}
+	return fmt.Sprintf("api error operation=%s status=%d: %v", e.Operation, e.StatusCode, e.Err)
+}
+
+func (e APIError) Unwrap() error { return e.Err }
+
+// NewAPIError: API 에러를 생성한다.
 func NewAPIError(message string, statusCode int, context map[string]any) *APIError {
+	op := message
+	if v, ok := context["operation"]; ok {
+		if opStr, ok := v.(string); ok {
+			op = opStr
+		}
+	}
 	return &APIError{
-		BotError: &BotError{
-			Message:    message,
-			Code:       CodeAPIError,
-			StatusCode: statusCode,
-			Context:    context,
-		},
+		Operation:  op,
+		StatusCode: statusCode,
 	}
 }
 
-// ValidationError 는 타입이다.
-type ValidationError struct {
-	*BotError
-	Field string
-	Value any
+// KeyRotationError: 모든 API 키가 사용 불가능할 때 발생하는 에러
+type KeyRotationError struct {
+	Operation  string
+	StatusCode int
 }
 
-// NewValidationError 는 동작을 수행한다.
-func NewValidationError(message, field string, value any) *ValidationError {
-	return &ValidationError{
-		BotError: &BotError{
-			Message:    message,
-			Code:       CodeValidation,
-			StatusCode: 400,
-			Context: map[string]any{
-				"field": field,
-				"value": value,
-			},
-		},
-		Field: field,
-		Value: value,
+func (e KeyRotationError) Error() string {
+	return fmt.Sprintf("key rotation exhausted operation=%s status=%d", e.Operation, e.StatusCode)
+}
+
+// NewKeyRotationError: 키 로테이션 에러를 생성한다.
+func NewKeyRotationError(message string, statusCode int, context map[string]any) *KeyRotationError {
+	op := message
+	if v, ok := context["url"]; ok {
+		if urlStr, ok := v.(string); ok {
+			op = urlStr
+		}
+	}
+	return &KeyRotationError{
+		Operation:  op,
+		StatusCode: statusCode,
 	}
 }
 
-// CacheError 는 타입이다.
+// CacheError: 캐시 작업 중 발생한 에러
 type CacheError struct {
-	*BotError
-	Operation string
-	Key       string
+	Operation string // get, set, delete 등
+	Key       string // 캐시 키
+	Err       error  // 원인 에러
 }
 
-// NewCacheError 는 동작을 수행한다.
+func (e CacheError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("cache error operation=%s key=%s", e.Operation, e.Key)
+	}
+	return fmt.Sprintf("cache error operation=%s key=%s: %v", e.Operation, e.Key, e.Err)
+}
+
+func (e CacheError) Unwrap() error { return e.Err }
+
+// NewCacheError: 캐시 에러를 생성한다.
 func NewCacheError(message, operation, key string, cause error) *CacheError {
 	return &CacheError{
-		BotError: &BotError{
-			Message:    message,
-			Code:       CodeCache,
-			StatusCode: 500,
-			Context: map[string]any{
-				"operation": operation,
-				"key":       key,
-			},
-			Cause: cause,
-		},
 		Operation: operation,
 		Key:       key,
+		Err:       cause,
 	}
 }
 
-// ServiceError 는 타입이다.
-type ServiceError struct {
-	*BotError
-	Service   string
-	Operation string
+// CircuitOpenError: 서킷 브레이커가 열려있을 때 발생하는 에러
+type CircuitOpenError struct {
+	RetryAfterMs int64
 }
 
-// NewServiceError 는 동작을 수행한다.
+func (e CircuitOpenError) Error() string {
+	return fmt.Sprintf("circuit breaker open retry_after_ms=%d", e.RetryAfterMs)
+}
+
+// ValidationError: 입력 검증 실패 에러
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e ValidationError) Error() string {
+	if e.Field == "" {
+		return e.Message
+	}
+	return fmt.Sprintf("validation error field=%s: %s", e.Field, e.Message)
+}
+
+// NewValidationError: 검증 에러를 생성한다.
+func NewValidationError(message, field string, value any) *ValidationError {
+	return &ValidationError{
+		Field:   field,
+		Message: message,
+	}
+}
+
+// ServiceError: 내부 서비스 로직 에러
+type ServiceError struct {
+	Service   string // 서비스 이름
+	Operation string // 작업 이름
+	Err       error  // 원인 에러
+}
+
+func (e ServiceError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("service error service=%s operation=%s", e.Service, e.Operation)
+	}
+	return fmt.Sprintf("service error service=%s operation=%s: %v", e.Service, e.Operation, e.Err)
+}
+
+func (e ServiceError) Unwrap() error { return e.Err }
+
+// NewServiceError: 서비스 에러를 생성한다.
 func NewServiceError(message, service, operation string, cause error) *ServiceError {
 	return &ServiceError{
-		BotError: &BotError{
-			Message:    message,
-			Code:       CodeService,
-			StatusCode: 500,
-			Context: map[string]any{
-				"service":   service,
-				"operation": operation,
-			},
-			Cause: cause,
-		},
 		Service:   service,
 		Operation: operation,
-	}
-}
-
-// KeyRotationError 는 타입이다.
-type KeyRotationError struct {
-	*APIError
-}
-
-// NewKeyRotationError 는 동작을 수행한다.
-func NewKeyRotationError(message string, statusCode int, context map[string]any) *KeyRotationError {
-	return &KeyRotationError{
-		APIError: &APIError{
-			BotError: &BotError{
-				Message:    message,
-				Code:       CodeKeyRotation,
-				StatusCode: statusCode,
-				Context:    context,
-			},
-		},
+		Err:       cause,
 	}
 }

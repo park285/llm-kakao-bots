@@ -1,11 +1,10 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/activity"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/watchdog"

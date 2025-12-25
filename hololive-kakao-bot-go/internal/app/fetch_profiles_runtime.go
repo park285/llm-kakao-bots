@@ -3,9 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"log/slog"
+	"net/http"
 )
 
 // FetchProfilesRuntime: 프로필 수집 작업을 실행하기 위한 런타임 환경

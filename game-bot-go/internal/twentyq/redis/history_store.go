@@ -8,8 +8,8 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
-	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 

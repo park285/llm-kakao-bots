@@ -8,9 +8,9 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
@@ -37,8 +37,8 @@ func (s *SessionStore) SaveGameState(ctx context.Context, state tsmodel.GameStat
 		return cerrors.RedisError{Operation: "marshal_game_state", Err: err}
 	}
 
-	cmd := s.client.B().Set().Key(key).Value(string(payload)).Ex(time.Duration(tsconfig.RedisSessionTTLSeconds) * time.Second).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	ttl := time.Duration(tsconfig.RedisSessionTTLSeconds) * time.Second
+	if err := valkeyx.SetStringEX(ctx, s.client, key, string(payload), ttl); err != nil {
 		return cerrors.RedisError{Operation: "save_game_state", Err: err}
 	}
 
@@ -51,13 +51,12 @@ func (s *SessionStore) SaveGameState(ctx context.Context, state tsmodel.GameStat
 func (s *SessionStore) LoadGameState(ctx context.Context, sessionID string) (*tsmodel.GameState, error) {
 	key := sessionKey(sessionID)
 
-	cmd := s.client.B().Get().Key(key).Build()
-	raw, err := s.client.Do(ctx, cmd).AsBytes()
+	raw, ok, err := valkeyx.GetBytes(ctx, s.client, key)
 	if err != nil {
-		if valkeyx.IsNil(err) {
-			return nil, nil
-		}
 		return nil, cerrors.RedisError{Operation: "load_game_state", Err: err}
+	}
+	if !ok {
+		return nil, nil
 	}
 
 	var state tsmodel.GameState
@@ -71,8 +70,7 @@ func (s *SessionStore) LoadGameState(ctx context.Context, sessionID string) (*ts
 func (s *SessionStore) DeleteSession(ctx context.Context, sessionID string) error {
 	key := sessionKey(sessionID)
 
-	cmd := s.client.B().Del().Key(key).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	if err := valkeyx.DeleteKeys(ctx, s.client, key); err != nil {
 		return cerrors.RedisError{Operation: "delete_session", Err: err}
 	}
 	s.logger.Debug("session_deleted", "session_id", sessionID)

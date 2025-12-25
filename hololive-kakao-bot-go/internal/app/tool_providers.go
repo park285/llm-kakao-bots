@@ -1,9 +1,8 @@
 package app
 
 import (
-	"net/http"
-
 	"log/slog"
+	"net/http"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )

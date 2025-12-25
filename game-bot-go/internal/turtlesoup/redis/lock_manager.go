@@ -215,7 +215,9 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 
 	holderCmd := m.client.B().Set().Key(holderKey).Value(holderValue).Ex(ttl).Build()
 	if err := m.client.Do(ctx, holderCmd).Error(); err != nil {
-		_ = m.release(context.Background(), sessionID, token)
+		releaseCtx, releaseCancel := context.WithTimeout(context.WithoutCancel(ctx), m.redisCallTimeout)
+		defer releaseCancel()
+		_ = m.release(releaseCtx, sessionID, token)
 		return false, cerrors.RedisError{Operation: "lock_set_holder", Err: err}
 	}
 

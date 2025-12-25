@@ -29,6 +29,15 @@ func TestStatsService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
 	repo := qrepo.New(db)
 	repo.AutoMigrate(context.Background())
 

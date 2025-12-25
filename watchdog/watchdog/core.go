@@ -37,18 +37,20 @@ type ContainerState struct {
 
 // Config holds the watchdog configuration.
 type Config struct {
-	Enabled             bool
-	Containers          []string
-	IntervalSeconds     int
-	MaxFailures         int
-	GraceSeconds        int
-	CooldownSeconds     int
-	RestartTimeoutSec   int
-	DockerSocket        string
-	UseEvents           bool
-	EventMinIntervalSec int
-	StatusReportSeconds int
-	VerboseLogging      bool
+	Enabled              bool
+	Containers           []string
+	IntervalSeconds      int
+	MaxFailures          int
+	RetryChecks          int
+	RetryIntervalSeconds int
+	GraceSeconds         int
+	CooldownSeconds      int
+	RestartTimeoutSec    int
+	DockerSocket         string
+	UseEvents            bool
+	EventMinIntervalSec  int
+	StatusReportSeconds  int
+	VerboseLogging       bool
 }
 
 // Watchdog monitors Docker containers and auto-recovers them.
@@ -179,18 +181,20 @@ func loadConfigFromEnv() Config {
 	}
 
 	return Config{
-		Enabled:             envBool("WATCHDOG_ENABLED", true),
-		Containers:          containers,
-		IntervalSeconds:     envInt("WATCHDOG_INTERVAL_SECONDS", 30, 1),
-		MaxFailures:         envInt("WATCHDOG_MAX_FAILURES", 1, 1),
-		GraceSeconds:        envInt("WATCHDOG_STARTUP_GRACE_SECONDS", 30, 0),
-		CooldownSeconds:     envInt("WATCHDOG_RESTART_COOLDOWN_SECONDS", 120, 0),
-		RestartTimeoutSec:   envInt("WATCHDOG_RESTART_TIMEOUT_SECONDS", 30, 5),
-		DockerSocket:        dockerSocket,
-		UseEvents:           envBool("WATCHDOG_USE_EVENTS", true),
-		EventMinIntervalSec: envInt("WATCHDOG_EVENT_MIN_INTERVAL_SECONDS", 1, 0),
-		StatusReportSeconds: envInt("WATCHDOG_STATUS_REPORT_SECONDS", 60, 0),
-		VerboseLogging:      envBool("WATCHDOG_VERBOSE", false),
+		Enabled:              envBool("WATCHDOG_ENABLED", true),
+		Containers:           containers,
+		IntervalSeconds:      envInt("WATCHDOG_INTERVAL_SECONDS", 30, 1),
+		MaxFailures:          envInt("WATCHDOG_MAX_FAILURES", 1, 1),
+		RetryChecks:          envInt("WATCHDOG_RETRY_CHECKS", 3, 1),
+		RetryIntervalSeconds: envInt("WATCHDOG_RETRY_INTERVAL_SECONDS", 5, 1),
+		GraceSeconds:         envInt("WATCHDOG_STARTUP_GRACE_SECONDS", 30, 0),
+		CooldownSeconds:      envInt("WATCHDOG_RESTART_COOLDOWN_SECONDS", 120, 0),
+		RestartTimeoutSec:    envInt("WATCHDOG_RESTART_TIMEOUT_SECONDS", 30, 5),
+		DockerSocket:         dockerSocket,
+		UseEvents:            envBool("WATCHDOG_USE_EVENTS", true),
+		EventMinIntervalSec:  envInt("WATCHDOG_EVENT_MIN_INTERVAL_SECONDS", 1, 0),
+		StatusReportSeconds:  envInt("WATCHDOG_STATUS_REPORT_SECONDS", 60, 0),
+		VerboseLogging:       envBool("WATCHDOG_VERBOSE", false),
 	}
 }
 
@@ -375,13 +379,91 @@ func (w *Watchdog) ProcessHealthCheck(ctx context.Context, state *ContainerState
 	failures := state.failures
 	state.mu.Unlock()
 
+	cfg := w.GetConfig()
 	w.logger.Warn("unhealthy",
 		"container", state.name,
 		"status", status,
 		"failures", failures,
-		"threshold", w.GetConfig().MaxFailures,
+		"threshold", cfg.MaxFailures,
 	)
-	w.MaybeRestart(ctx, state, now)
+
+	// 재확인 루프: 첫 실패 후 retryIntervalSeconds 간격으로 retryChecks회 재확인
+	// 도중에 healthy 감지 → 복구 처리 및 중단
+	// 전부 실패 → 재시작
+	if failures >= cfg.MaxFailures {
+		w.runRetryVerification(ctx, state)
+	}
+}
+
+// runRetryVerification 은 첫 실패 후 짧은 간격으로 재확인을 수행한다.
+// 재확인 중 healthy가 감지되면 복구 처리 후 중단하고,
+// 모든 재확인이 실패하면 MaybeRestart를 호출한다.
+func (w *Watchdog) runRetryVerification(ctx context.Context, state *ContainerState) {
+	cfg := w.GetConfig()
+	retryInterval := time.Duration(cfg.RetryIntervalSeconds) * time.Second
+
+	w.logger.Info("retry_verification_start",
+		"container", state.name,
+		"retry_checks", cfg.RetryChecks,
+		"retry_interval", retryInterval,
+	)
+
+	for i := 1; i <= cfg.RetryChecks; i++ {
+		select {
+		case <-ctx.Done():
+			w.logger.Info("retry_verification_cancelled", "container", state.name)
+			return
+		case <-time.After(retryInterval):
+		}
+
+		// 단일 컨테이너 상태 조회
+		listCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		summaries, err := w.ListTargetContainerSummaries(listCtx)
+		cancel()
+
+		if err != nil {
+			w.logger.Error("retry_check_failed", "container", state.name, "attempt", i, "err", err)
+			continue
+		}
+
+		summary := summaries[state.name]
+		healthy, status := w.CheckContainerHealthFromSummary(summary)
+
+		state.mu.Lock()
+		state.lastChecked = time.Now()
+		state.lastStatus = status
+		state.mu.Unlock()
+
+		if healthy {
+			// 복구 감지 → 실패 카운터 초기화 및 루프 중단
+			state.mu.Lock()
+			prevFailures := state.failures
+			state.failures = 0
+			state.mu.Unlock()
+
+			w.logger.Info("recover_during_retry",
+				"container", state.name,
+				"status", status,
+				"attempt", i,
+				"prev_failures", prevFailures,
+			)
+			return
+		}
+
+		w.logger.Warn("retry_still_unhealthy",
+			"container", state.name,
+			"status", status,
+			"attempt", i,
+			"max_attempts", cfg.RetryChecks,
+		)
+	}
+
+	// 모든 재확인 실패 → 재시작
+	w.logger.Warn("retry_verification_failed",
+		"container", state.name,
+		"retry_checks", cfg.RetryChecks,
+	)
+	w.MaybeRestart(ctx, state, time.Now())
 }
 
 // MaybeRestart restarts the container if failure threshold is reached.

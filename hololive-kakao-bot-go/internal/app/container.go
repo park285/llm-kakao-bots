@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"

@@ -7,9 +7,9 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/processinglock"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
 // ProcessingLockService: 채팅방 단위의 처리 중 상태를 관리하는 락 서비스 (common/processinglock 래퍼)

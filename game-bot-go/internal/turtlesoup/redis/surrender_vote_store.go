@@ -9,9 +9,9 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
@@ -33,13 +33,12 @@ func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *Surrender
 func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*tsmodel.SurrenderVote, error) {
 	key := voteKey(chatID)
 
-	cmd := s.client.B().Get().Key(key).Build()
-	raw, err := s.client.Do(ctx, cmd).AsBytes()
+	raw, ok, err := valkeyx.GetBytes(ctx, s.client, key)
 	if err != nil {
-		if valkeyx.IsNil(err) {
-			return nil, nil
-		}
 		return nil, cerrors.RedisError{Operation: "vote_get", Err: err}
+	}
+	if !ok {
+		return nil, nil
 	}
 
 	var vote tsmodel.SurrenderVote
@@ -58,8 +57,8 @@ func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote tsmod
 		return cerrors.RedisError{Operation: "vote_marshal", Err: err}
 	}
 
-	cmd := s.client.B().Set().Key(key).Value(string(raw)).Ex(time.Duration(tsconfig.RedisVoteTTLSeconds) * time.Second).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	ttl := time.Duration(tsconfig.RedisVoteTTLSeconds) * time.Second
+	if err := valkeyx.SetStringEX(ctx, s.client, key, string(raw), ttl); err != nil {
 		return cerrors.RedisError{Operation: "vote_save", Err: err}
 	}
 	s.logger.Debug("vote_saved", "chat_id", chatID, "approvals", len(vote.Approvals))
@@ -91,8 +90,7 @@ func (s *SurrenderVoteStore) Approve(ctx context.Context, chatID string, userID 
 func (s *SurrenderVoteStore) Clear(ctx context.Context, chatID string) error {
 	key := voteKey(chatID)
 
-	cmd := s.client.B().Del().Key(key).Build()
-	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+	if err := valkeyx.DeleteKeys(ctx, s.client, key); err != nil {
 		return cerrors.RedisError{Operation: "vote_clear", Err: err}
 	}
 	s.logger.Debug("vote_cleared", "chat_id", chatID)

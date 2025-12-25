@@ -7,16 +7,14 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
-	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/processinglock"
-	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
-	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/processinglock"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 )
 
 // ProcessingLockService: 게임 메시지 처리 중복 방지를 위한 분산 락 서비스
 type ProcessingLockService struct {
 	service *processinglock.Service
-	client  valkey.Client
 }
 
 // NewProcessingLockService: 새로운 ProcessingLockService 인스턴스를 생성한다.
@@ -28,7 +26,6 @@ func NewProcessingLockService(client valkey.Client, logger *slog.Logger) *Proces
 			processingKey,
 			time.Duration(qconfig.RedisProcessingTTLSeconds)*time.Second,
 		),
-		client: client,
 	}
 }
 
@@ -56,6 +53,3 @@ func (s *ProcessingLockService) IsProcessing(ctx context.Context, chatID string)
 	}
 	return processing, nil
 }
-
-// compile-time check
-var _ = valkeyx.IsNil

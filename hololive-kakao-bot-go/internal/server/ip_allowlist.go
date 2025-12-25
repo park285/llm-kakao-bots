@@ -2,12 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )

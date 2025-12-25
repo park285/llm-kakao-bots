@@ -45,6 +45,13 @@ type AdminConfig struct {
 	UserIDs []string
 }
 
+// StatsConfig: 통계 기록 관련 설정
+type StatsConfig struct {
+	WorkerCount        int
+	QueueSize          int
+	DropLogOnQueueFull bool
+}
+
 // Config: 전체 애플리케이션 설정 구조체
 type Config struct {
 	Server       ServerConfig
@@ -57,6 +64,7 @@ type Config struct {
 	Access       AccessConfig
 	Admin        AdminConfig
 	Log          LogConfig
+	Stats        StatsConfig
 }
 
 // LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드한다.
@@ -98,6 +106,10 @@ func LoadFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	stats, err := readStatsConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	return &Config{
 		Server:       server,
@@ -110,6 +122,28 @@ func LoadFromEnv() (*Config, error) {
 		Access:       access,
 		Admin:        admin,
 		Log:          log,
+		Stats:        stats,
+	}, nil
+}
+
+func readStatsConfig() (StatsConfig, error) {
+	workerCount, err := commonconfig.IntFromEnv("STATS_WORKER_COUNT", 2)
+	if err != nil {
+		return StatsConfig{}, fmt.Errorf("read STATS_WORKER_COUNT failed: %w", err)
+	}
+	queueSize, err := commonconfig.IntFromEnv("STATS_QUEUE_SIZE", 100)
+	if err != nil {
+		return StatsConfig{}, fmt.Errorf("read STATS_QUEUE_SIZE failed: %w", err)
+	}
+	dropLog, err := commonconfig.BoolFromEnv("STATS_DROP_LOG_ON_QUEUE_FULL", false)
+	if err != nil {
+		return StatsConfig{}, fmt.Errorf("read STATS_DROP_LOG_ON_QUEUE_FULL failed: %w", err)
+	}
+
+	return StatsConfig{
+		WorkerCount:        workerCount,
+		QueueSize:          queueSize,
+		DropLogOnQueueFull: dropLog,
 	}, nil
 }
 

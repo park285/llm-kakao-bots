@@ -45,7 +45,21 @@ func RunServer(ctx context.Context, adminCfg Config, w *watchdog.Watchdog, logge
 	})
 
 	router.Use(allowlist.middleware())
-	registerAdminAPIRoutes(router, w, logger)
+
+	var apiMiddlewares []gin.HandlerFunc
+	hasCFAccess := strings.TrimSpace(adminCfg.CFAccessTeamDomain) != "" || strings.TrimSpace(adminCfg.CFAccessAUD) != ""
+	if hasCFAccess {
+		verifier, err := newCFAccessVerifier(adminCfg, logger)
+		if err != nil {
+			return fmt.Errorf("cf access verifier init failed: %w", err)
+		}
+		apiMiddlewares = append(apiMiddlewares, verifier.middleware())
+		logger.Info("cf_access_enabled")
+	} else {
+		logger.Info("cf_access_disabled")
+	}
+
+	registerAdminAPIRoutes(router, w, logger, apiMiddlewares...)
 
 	// Serve Static Assets (SPA)
 	distFS, err := fs.Sub(uiDist, "dist")

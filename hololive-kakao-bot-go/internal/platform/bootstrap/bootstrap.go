@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-
 	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"

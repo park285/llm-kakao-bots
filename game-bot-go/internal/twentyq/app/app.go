@@ -321,8 +321,8 @@ func newTwentyQRepository(ctx context.Context, db *gorm.DB) (*qrepo.Repository, 
 	return repo, nil
 }
 
-func newTwentyQStatsRecorder(repo *qrepo.Repository, logger *slog.Logger) (*qsvc.StatsRecorder, func()) {
-	recorder := qsvc.NewStatsRecorder(repo, logger)
+func newTwentyQStatsRecorder(cfg *qconfig.Config, repo *qrepo.Repository, logger *slog.Logger) (*qsvc.StatsRecorder, func()) {
+	recorder := qsvc.NewStatsRecorder(repo, logger, cfg.Stats)
 	cleanup := func() {
 		if recorder != nil {
 			recorder.Shutdown()

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strings"
@@ -9,8 +10,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
@@ -41,6 +40,24 @@ func ProvideAdminRouter(
 	securityCfg *server.SecurityConfig,
 	allowedCIDRs []*net.IPNet,
 ) (*gin.Engine, error) {
+	router, err := newAdminRouter(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info("Valkey session store initialized")
+
+	adminIPGuard := server.AdminIPAllowMiddleware(allowedCIDRs, logger)
+	logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
+
+	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret)
+	registerAdminRoutes(router, adminIPGuard, adminAuth, adminHandler, watchdogHandler)
+	registerAdminUIRoutes(router)
+
+	return router, nil
+}
+
+func newAdminRouter(logger *slog.Logger) (*gin.Engine, error) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	if err := router.SetTrustedProxies(constants.ServerConfig.TrustedProxies); err != nil {
@@ -49,19 +66,26 @@ func ProvideAdminRouter(
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.Use(gin.Recovery())
 	router.Use(server.ZapLoggerMiddleware(logger, "/health")) // HTTP 접속 로깅 (/health 제외)
+	router.Use(cors.New(newAdminCORSConfig()))
+	router.Use(server.SecurityHeadersMiddleware())
+	router.Use(newAdminGzipMiddleware())
+	router.Use(newAdminStaticCacheMiddleware())
 
-	// CORS 설정 (React 개발 서버용)
+	registerAdminHealthRoutes(router)
+	return router, nil
+}
+
+func newAdminCORSConfig() cors.Config {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = constants.CORSConfig.AllowOrigins
 	corsConfig.AllowCredentials = true
 	corsConfig.AllowMethods = constants.CORSConfig.AllowMethods
 	corsConfig.AllowHeaders = constants.CORSConfig.AllowHeaders
-	router.Use(cors.New(corsConfig))
+	return corsConfig
+}
 
-	// 보안 헤더 미들웨어
-	router.Use(server.SecurityHeadersMiddleware())
-	// Gzip: 1KB 이상 또는 assets만 압축 (작은 응답에는 오버헤드 방지)
-	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithCustomShouldCompressFn(func(c *gin.Context) bool {
+func newAdminGzipMiddleware() gin.HandlerFunc {
+	return gzip.Gzip(gzip.DefaultCompression, gzip.WithCustomShouldCompressFn(func(c *gin.Context) bool {
 		// Static assets는 항상 압축
 		if strings.HasPrefix(c.Request.URL.Path, constants.AdminUIConfig.AssetsURLPrefix) {
 			return true
@@ -72,32 +96,37 @@ func ProvideAdminRouter(
 		}
 		// 기본적으로 압축 허용 (실제 Content-Length는 응답 후 결정됨)
 		return true
-	})))
+	}))
+}
 
-	// Static 파일 캐시 헤더 (assets 디렉토리)
-	router.Use(func(c *gin.Context) {
+func newAdminStaticCacheMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, constants.AdminUIConfig.AssetsURLPrefix) {
 			c.Header("Cache-Control", constants.AdminUIConfig.CacheControlAssets)
 		}
 		c.Next()
-	})
+	}
+}
 
+func registerAdminHealthRoutes(router *gin.Engine) {
 	// Health check endpoint (Gzip 비활성화 - 작은 응답)
 	router.GET("/health", func(c *gin.Context) {
 		c.Data(200, "application/json", []byte(`{"status":"ok"}`))
 	})
+}
 
-	logger.Info("Valkey session store initialized")
-
-	adminIPGuard := server.AdminIPAllowMiddleware(allowedCIDRs, logger)
-	logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
-
+func registerAdminRoutes(
+	router *gin.Engine,
+	adminIPGuard gin.HandlerFunc,
+	adminAuth gin.HandlerFunc,
+	adminHandler *server.AdminHandler,
+	watchdogHandler *server.WatchdogProxyHandler,
+) {
 	// Public admin API routes (no auth required)
 	router.POST("/admin/api/login", adminIPGuard, adminHandler.HandleLogin)
 	router.GET("/admin/api/logout", adminIPGuard, adminHandler.HandleLogout)
 
 	// Protected admin API routes (auth required)
-	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret)
 	adminAPI := router.Group("/admin/api", adminIPGuard, adminAuth)
 	adminAPI.GET("/members", adminHandler.GetMembers)
 	adminAPI.POST("/members", adminHandler.AddMember)
@@ -126,23 +155,26 @@ func ProvideAdminRouter(
 	adminAPI.GET("/watchdog/containers", watchdogHandler.GetContainers)
 	adminAPI.GET("/watchdog/targets", watchdogHandler.GetManagedTargets)
 	adminAPI.POST("/watchdog/containers/:name/restart", watchdogHandler.RestartContainer)
+}
 
+func registerAdminUIRoutes(router *gin.Engine) {
 	// Serve React SPA (프로덕션용 React 빌드)
 	router.Static(constants.AdminUIConfig.AssetsRoute, constants.AdminUIConfig.AssetsDir)
+
 	// HTML은 항상 최신 버전을 받도록 캐시 금지 (업데이트 시 구버전 HTML 캐싱으로 인한 chunk mismatch 방지)
 	router.GET("/", func(c *gin.Context) {
 		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlHTML)
 		c.File(constants.AdminUIConfig.IndexPath)
 	})
+
 	// Favicon 서빙 (NoRoute에 걸리지 않도록 명시적 처리)
 	router.GET(constants.AdminUIConfig.FaviconRoute, func(c *gin.Context) {
 		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlFavicon) // 24시간 캐시
 		c.File(constants.AdminUIConfig.FaviconPath)
 	})
+
 	router.NoRoute(func(c *gin.Context) {
 		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlHTML)
 		c.File(constants.AdminUIConfig.IndexPath)
 	})
-
-	return router, nil
 }

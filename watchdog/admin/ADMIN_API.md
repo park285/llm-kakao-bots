@@ -41,6 +41,10 @@ Timeouts:
 
 - 모든 `/admin/api/v1/*` 요청은 아래 헤더가 필요합니다.
   - `Cf-Access-Jwt-Assertion: <JWT>`
+- 내부 서비스 호출(예: 동일 Docker 네트워크 내)처럼 Cloudflare Access 헤더를 붙일 수 없는 경우,
+  `skip_auth=true` 쿼리를 붙이면 Cloudflare Access 검증을 생략할 수 있습니다.
+  - 예: `GET /admin/api/v1/targets?skip_auth=true`
+  - 단, 이 경우에도 `WATCHDOG_ADMIN_ALLOWED_IPS` IP allowlist는 그대로 적용됩니다.
 - 워치독은 아래 URL의 JWKS를 주기적으로 가져와 JWT 서명을 검증합니다.
   - `https://<TEAM_DOMAIN>/cdn-cgi/access/certs`
 - 검증 항목:

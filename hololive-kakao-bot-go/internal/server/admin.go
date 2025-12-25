@@ -3,14 +3,13 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
@@ -315,7 +314,7 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	h.rateLimiter.RecordSuccess(ip)
 
 	// 세션 생성 및 HMAC 서명
-	session := h.sessions.CreateSession()
+	session := h.sessions.CreateSession(c.Request.Context())
 	signedSessionID := SignSessionID(session.ID, h.securityCfg.SessionSecret)
 	SetSecureCookie(c, sessionCookieName, signedSessionID, 86400, h.securityCfg.ForceHTTPS)
 

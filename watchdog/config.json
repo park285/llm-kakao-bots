@@ -8,6 +8,8 @@
     "enabled": true,
     "intervalSeconds": 30,
     "maxFailures": 1,
+    "retryChecks": 3,
+    "retryIntervalSeconds": 5,
     "cooldownSeconds": 120,
     "restartTimeoutSec": 30,
     "useEvents": true,

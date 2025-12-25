@@ -3,7 +3,6 @@ package admin
 import (
 	"bytes"
 	"io"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,12 +38,4 @@ func noCacheHeaders(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.Header("Pragma", "no-cache")
 	c.Header("Expires", "0")
-}
-
-func allowOnlyGet(c *gin.Context) {
-	if c.Request.Method != http.MethodGet {
-		writeAPIError(c, http.StatusMethodNotAllowed, "method_not_allowed", "지원하지 않는 HTTP 메서드입니다.")
-		return
-	}
-	c.Next()
 }

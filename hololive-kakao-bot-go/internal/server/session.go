@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -10,7 +11,7 @@ const sessionCookieName = "admin_session"
 
 // SessionProvider 인터페이스 - 세션 저장소 공통 인터페이스
 type SessionProvider interface {
-	CreateSession() *Session
+	CreateSession(ctx context.Context) *Session
 	ValidateSession(sessionID string) bool
 	DeleteSession(sessionID string)
 }

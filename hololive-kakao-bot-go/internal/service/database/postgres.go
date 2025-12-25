@@ -4,13 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	_ "github.com/lib/pq" // PostgreSQL 드라이버 등록
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
-
-	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )

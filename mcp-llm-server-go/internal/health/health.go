@@ -27,13 +27,13 @@ type Response struct {
 }
 
 // Collect 는 헬스 상태를 수집한다.
-func Collect(cfg *config.Config, deepChecks bool) Response {
+func Collect(ctx context.Context, cfg *config.Config, deepChecks bool) Response {
 	components := make(map[string]Component)
 
 	appStatus := buildAppStatus()
 	components["app"] = appStatus
 
-	sessionStoreStatus := buildSessionStoreStatus(cfg, deepChecks)
+	sessionStoreStatus := buildSessionStoreStatus(ctx, cfg, deepChecks)
 	components["session_store"] = sessionStoreStatus
 
 	geminiStatus := buildGeminiStatus(cfg)
@@ -94,7 +94,7 @@ func buildGeminiStatus(cfg *config.Config) Component {
 	}
 }
 
-func buildSessionStoreStatus(cfg *config.Config, deepChecks bool) Component {
+func buildSessionStoreStatus(ctx context.Context, cfg *config.Config, deepChecks bool) Component {
 	reachability := false
 	backend := "memory"
 	storeEnabled := false
@@ -108,8 +108,11 @@ func buildSessionStoreStatus(cfg *config.Config, deepChecks bool) Component {
 		storeURL = cfg.SessionStore.URL
 		sessionTTL = cfg.Session.SessionTTLMinutes
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if storeEnabled && deepChecks {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		checkCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 		defer cancel()
 
 		store, err := session.NewStore(cfg)
@@ -117,12 +120,12 @@ func buildSessionStoreStatus(cfg *config.Config, deepChecks bool) Component {
 			sessionCountErr = err.Error()
 		} else {
 			defer store.Close()
-			if err := store.Ping(ctx); err != nil {
+			if err := store.Ping(checkCtx); err != nil {
 				sessionCountErr = err.Error()
 			} else {
 				reachability = true
 				backend = "valkey"
-				count, err := store.SessionCount(ctx)
+				count, err := store.SessionCount(checkCtx)
 				if err != nil {
 					sessionCountErr = err.Error()
 				} else {

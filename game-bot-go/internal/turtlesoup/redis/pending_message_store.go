@@ -9,9 +9,9 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/pending"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
@@ -29,7 +29,7 @@ type pendingMessagePayload struct {
 
 // NewPendingMessageStore: 새로운 PendingMessageStore 인스턴스를 생성한다.
 func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingMessageStore {
-	config := pending.DefaultConfig("pending:turtlesoup")
+	config := pending.DefaultConfig(pendingKeyPrefix())
 	return &PendingMessageStore{
 		store: pending.NewStore(client, logger, config),
 	}

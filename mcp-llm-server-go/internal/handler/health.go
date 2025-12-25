@@ -26,12 +26,12 @@ type ModelConfigResponse struct {
 // RegisterHealthRoutes 는 상태 확인 라우트를 등록한다.
 func RegisterHealthRoutes(router *gin.Engine, cfg *config.Config) {
 	router.GET("/health", func(c *gin.Context) {
-		payload := health.Collect(cfg, true)
+		payload := health.Collect(c.Request.Context(), cfg, true)
 		c.JSON(http.StatusOK, payload)
 	})
 
 	router.GET("/health/ready", func(c *gin.Context) {
-		payload := health.Collect(cfg, true)
+		payload := health.Collect(c.Request.Context(), cfg, true)
 		status := http.StatusOK
 		if payload.Status != "ok" {
 			status = http.StatusServiceUnavailable

@@ -62,7 +62,7 @@ type Message interface {
 
 // Config PendingMessageStore 설정.
 type Config struct {
-	// KeyPrefix Redis 키 프리픽스 (예: "pending:twentyq", "pending:turtlesoup").
+	// KeyPrefix Redis 키 프리픽스 (예: "20q:pending-messages", "turtle:pending").
 	KeyPrefix string
 	// MaxQueueSize 큐 최대 크기.
 	MaxQueueSize int
