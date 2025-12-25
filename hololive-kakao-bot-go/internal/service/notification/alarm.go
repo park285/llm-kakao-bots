@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/sourcegraph/conc/pool"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -21,8 +22,9 @@ import (
 
 // 알람 키 상수 목록.
 const (
-	// AlarmKeyPrefix 는 상수다.
-	AlarmKeyPrefix              = "alarm:"
+	// AlarmKeyPrefix: 알림 데이터 Redis 키 접두사
+	AlarmKeyPrefix = "alarm:"
+	// AlarmRegistryKey: 알림이 설정된 모든 사용자/채팅방 목록을 추적하는 Set 키
 	AlarmRegistryKey            = "alarm:registry"
 	AlarmChannelRegistryKey     = "alarm:channel_registry"
 	ChannelSubscribersKeyPrefix = "alarm:channel_subscribers:"
@@ -33,18 +35,18 @@ const (
 	NextStreamKeyPrefix         = "alarm:next_stream:"
 )
 
-// NotifiedData 는 타입이다.
+// NotifiedData: 알림 중복 발송 방지를 위해 기록하는 알림 이력 정보
 type NotifiedData struct {
 	StartScheduled string `json:"start_scheduled"`
 	NotifiedAt     string `json:"notified_at"`
 	MinutesUntil   int    `json:"minutes_until"`
 }
 
-// AlarmService 는 타입이다.
+// AlarmService: 방송 알림(Alarm)을 관리하고, 예정된 방송을 주기적으로 체크하여 알림을 발송하는 서비스
 type AlarmService struct {
 	cache           *cache.Service
 	holodex         *holodex.Service
-	logger          *zap.Logger
+	logger          *slog.Logger
 	targetMinutes   []int
 	baseConcurrency int  // 기본 동시성
 	maxConcurrency  int  // 최대 동시성
@@ -52,8 +54,8 @@ type AlarmService struct {
 	cacheMutex      sync.RWMutex
 }
 
-// NewAlarmService 는 동작을 수행한다.
-func NewAlarmService(cache *cache.Service, holodex *holodex.Service, logger *zap.Logger, advanceMinutes []int) *AlarmService {
+// NewAlarmService: 새로운 AlarmService 인스턴스를 생성하고 설정(목표 알림 시간 등)을 초기화한다.
+func NewAlarmService(cache *cache.Service, holodex *holodex.Service, logger *slog.Logger, advanceMinutes []int) *AlarmService {
 	targetMinutes := buildTargetMinutes(advanceMinutes)
 
 	return &AlarmService{
@@ -97,31 +99,31 @@ func buildTargetMinutes(advanceMinutes []int) []int {
 	return filtered
 }
 
-// AddAlarm 는 동작을 수행한다.
+// AddAlarm: 특정 채팅방(사용자)에 대해 특정 멤버(채널)의 방송 알림을 추가한다.
 func (as *AlarmService) AddAlarm(ctx context.Context, roomID, userID, channelID, memberName, roomName, userName string) (bool, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	added, err := as.cache.SAdd(ctx, alarmKey, []string{channelID})
 	if err != nil {
-		as.logger.Error("Failed to add alarm", zap.Error(err))
+		as.logger.Error("Failed to add alarm", slog.Any("error", err))
 		return false, fmt.Errorf("add alarm: %w", err)
 	}
 
 	registryKey := as.getRegistryKey(roomID, userID)
 	if _, err := as.cache.SAdd(ctx, AlarmRegistryKey, []string{registryKey}); err != nil {
-		as.logger.Warn("Failed to add to registry", zap.Error(err))
+		as.logger.Warn("Failed to add to registry", slog.Any("error", err))
 	}
 
 	channelSubsKey := as.channelSubscribersKey(channelID)
 	if _, err := as.cache.SAdd(ctx, channelSubsKey, []string{registryKey}); err != nil {
-		as.logger.Warn("Failed to add channel subscriber", zap.Error(err))
+		as.logger.Warn("Failed to add channel subscriber", slog.Any("error", err))
 	}
 
 	if _, err := as.cache.SAdd(ctx, AlarmChannelRegistryKey, []string{channelID}); err != nil {
-		as.logger.Warn("Failed to add to channel registry", zap.Error(err))
+		as.logger.Warn("Failed to add to channel registry", slog.Any("error", err))
 	}
 
 	if err := as.CacheMemberName(ctx, channelID, memberName); err != nil {
-		as.logger.Warn("Failed to cache member name", zap.Error(err))
+		as.logger.Warn("Failed to cache member name", slog.Any("error", err))
 	}
 
 	// 방/유저 이름 캐싱
@@ -133,23 +135,23 @@ func (as *AlarmService) AddAlarm(ctx context.Context, roomID, userID, channelID,
 	}
 
 	as.logger.Info("Alarm added",
-		zap.String("room_id", roomID),
-		zap.String("room_name", roomName),
-		zap.String("user_id", userID),
-		zap.String("user_name", userName),
-		zap.String("channel_id", channelID),
-		zap.String("member_name", memberName),
+		slog.String("room_id", roomID),
+		slog.String("room_name", roomName),
+		slog.String("user_id", userID),
+		slog.String("user_name", userName),
+		slog.String("channel_id", channelID),
+		slog.String("member_name", memberName),
 	)
 
 	return added > 0, nil
 }
 
-// RemoveAlarm 는 동작을 수행한다.
+// RemoveAlarm: 특정 채팅방(사용자)에서 특정 멤버(채널)의 방송 알림을 해제한다.
 func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channelID string) (bool, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	removed, err := as.cache.SRem(ctx, alarmKey, []string{channelID})
 	if err != nil {
-		as.logger.Error("Failed to remove alarm", zap.Error(err))
+		as.logger.Error("Failed to remove alarm", slog.Any("error", err))
 		return false, fmt.Errorf("remove alarm: %w", err)
 	}
 
@@ -157,12 +159,12 @@ func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channel
 	channelSubsKey := as.channelSubscribersKey(channelID)
 
 	if _, errSRem := as.cache.SRem(ctx, channelSubsKey, []string{registryKey}); errSRem != nil {
-		as.logger.Warn("Failed to remove from channel subscribers", zap.Error(errSRem))
+		as.logger.Warn("Failed to remove from channel subscribers", slog.Any("error", errSRem))
 	}
 
 	remainingSubs, err := as.cache.SMembers(ctx, channelSubsKey)
 	if err != nil {
-		as.logger.Warn("Failed to get remaining subscribers", zap.Error(err))
+		as.logger.Warn("Failed to get remaining subscribers", slog.Any("error", err))
 	}
 	if err == nil && len(remainingSubs) == 0 {
 		_, _ = as.cache.SRem(ctx, AlarmChannelRegistryKey, []string{channelID})
@@ -173,32 +175,32 @@ func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channel
 	if err == nil && len(remainingAlarms) == 0 {
 		_, _ = as.cache.SRem(ctx, AlarmRegistryKey, []string{registryKey})
 		as.logger.Info("User removed from registry (no alarms left)",
-			zap.String("room_id", roomID),
-			zap.String("user_id", userID),
+			slog.String("room_id", roomID),
+			slog.String("user_id", userID),
 		)
 	}
 
 	as.logger.Info("Alarm removed",
-		zap.String("room_id", roomID),
-		zap.String("user_id", userID),
-		zap.String("channel_id", channelID),
+		slog.String("room_id", roomID),
+		slog.String("user_id", userID),
+		slog.String("channel_id", channelID),
 	)
 
 	return removed > 0, nil
 }
 
-// GetUserAlarms 는 동작을 수행한다.
+// GetUserAlarms: 해당 사용자가 현재 구독 중인 모든 채널 ID 목록을 반환한다.
 func (as *AlarmService) GetUserAlarms(ctx context.Context, roomID, userID string) ([]string, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	channelIDs, err := as.cache.SMembers(ctx, alarmKey)
 	if err != nil {
-		as.logger.Error("Failed to get user alarms", zap.Error(err))
+		as.logger.Error("Failed to get user alarms", slog.Any("error", err))
 		return []string{}, fmt.Errorf("get user alarms: %w", err)
 	}
 	return channelIDs, nil
 }
 
-// ClearUserAlarms 는 동작을 수행한다.
+// ClearUserAlarms: 해당 사용자의 모든 알림 설정을 삭제(초기화)한다.
 func (as *AlarmService) ClearUserAlarms(ctx context.Context, roomID, userID string) (int, error) {
 	alarms, err := as.GetUserAlarms(ctx, roomID, userID)
 	if err != nil {
@@ -212,7 +214,7 @@ func (as *AlarmService) ClearUserAlarms(ctx context.Context, roomID, userID stri
 	alarmKey := as.getAlarmKey(roomID, userID)
 	removed, err := as.cache.SRem(ctx, alarmKey, alarms)
 	if err != nil {
-		as.logger.Error("Failed to clear user alarms", zap.Error(err))
+		as.logger.Error("Failed to clear user alarms", slog.Any("error", err))
 		return 0, fmt.Errorf("clear user alarms: %w", err)
 	}
 
@@ -232,19 +234,20 @@ func (as *AlarmService) ClearUserAlarms(ctx context.Context, roomID, userID stri
 	_, _ = as.cache.SRem(ctx, AlarmRegistryKey, []string{registryKey})
 
 	as.logger.Info("All alarms cleared",
-		zap.String("room_id", roomID),
-		zap.String("user_id", userID),
-		zap.Int("count", int(removed)),
+		slog.String("room_id", roomID),
+		slog.String("user_id", userID),
+		slog.Int("count", int(removed)),
 	)
 
 	return int(removed), nil
 }
 
-// CheckUpcomingStreams 는 동작을 수행한다.
+// CheckUpcomingStreams: 구독된 채널들의 예정 방송을 확인하고, 알림 조건(설정된 예고 시간)에 맞으면 알림 메시지를 생성한다.
+// Worker Pool을 사용하여 병렬로 채널 정보를 조회한다.
 func (as *AlarmService) CheckUpcomingStreams(ctx context.Context) ([]*domain.AlarmNotification, error) {
 	channelIDs, err := as.cache.SMembers(ctx, AlarmChannelRegistryKey)
 	if err != nil {
-		as.logger.Error("Failed to get channel registry", zap.Error(err))
+		as.logger.Error("Failed to get channel registry", slog.Any("error", err))
 		return nil, fmt.Errorf("check upcoming streams: %w", err)
 	}
 
@@ -256,8 +259,8 @@ func (as *AlarmService) CheckUpcomingStreams(ctx context.Context) ([]*domain.Ala
 	concurrency := as.calculateConcurrency(len(channelIDs))
 
 	as.logger.Debug("Alarm check starting",
-		zap.Int("channels", len(channelIDs)),
-		zap.Int("concurrency", concurrency),
+		slog.Int("channels", len(channelIDs)),
+		slog.Int("concurrency", concurrency),
 	)
 
 	p := pool.New().WithMaxGoroutines(concurrency)
@@ -296,15 +299,15 @@ func (as *AlarmService) CheckUpcomingStreams(ctx context.Context) ([]*domain.Ala
 		for _, stream := range upcomingStreams {
 			roomNotifs, err := as.createNotification(ctx, stream, result.channelID, result.subscribers)
 			if err != nil {
-				as.logger.Warn("Failed to create notification", zap.Error(err))
+				as.logger.Warn("Failed to create notification", slog.Any("error", err))
 				continue
 			}
 
 			if len(roomNotifs) > 0 {
 				as.logger.Info("Alarm notifications created",
-					zap.String("channel", stream.ChannelName),
-					zap.Int("minutes_until", roomNotifs[0].MinutesUntil),
-					zap.Int("rooms", len(roomNotifs)),
+					slog.String("channel", stream.ChannelName),
+					slog.Int("minutes_until", roomNotifs[0].MinutesUntil),
+					slog.Int("rooms", len(roomNotifs)),
 				)
 				notifications = append(notifications, roomNotifs...)
 			}
@@ -324,24 +327,24 @@ func (as *AlarmService) checkChannel(ctx context.Context, channelID string) *cha
 	channelSubsKey := as.channelSubscribersKey(channelID)
 	subscribers, err := as.cache.SMembers(ctx, channelSubsKey)
 	if err != nil {
-		as.logger.Warn("Failed to get subscribers", zap.String("channel_id", channelID), zap.Error(err))
+		as.logger.Warn("Failed to get subscribers", slog.String("channel_id", channelID), slog.Any("error", err))
 		return &channelCheckResult{channelID: channelID, subscribers: []string{}, streams: []*domain.Stream{}}
 	}
 
 	// 채널 구독자 수 로그 (필요시 활성화)
-	// as.logger.Info("Channel subscribers", zap.String("channel_id", channelID), zap.Int("count", len(subscribers)))
+	// as.logger.Info("Channel subscribers", slog.String("channel_id", channelID), slog.Int("count", len(subscribers)))
 
 	if len(subscribers) == 0 {
 		_, _ = as.cache.SRem(ctx, AlarmChannelRegistryKey, []string{channelID})
-		as.logger.Info("Channel removed from registry (no subscribers)", zap.String("channel_id", channelID))
+		as.logger.Info("Channel removed from registry (no subscribers)", slog.String("channel_id", channelID))
 		return &channelCheckResult{channelID: channelID, subscribers: []string{}, streams: []*domain.Stream{}}
 	}
 
 	streams, err := as.holodex.GetChannelSchedule(ctx, channelID, 24, true)
 	if err != nil {
 		as.logger.Warn("Failed to get channel schedule",
-			zap.String("channel_id", channelID),
-			zap.Error(err),
+			slog.String("channel_id", channelID),
+			slog.Any("error", err),
 		)
 		return &channelCheckResult{channelID: channelID, subscribers: subscribers, streams: []*domain.Stream{}}
 	}
@@ -425,9 +428,9 @@ func (as *AlarmService) createNotification(ctx context.Context, stream *domain.S
 	// 이미 알림을 보냈고 일정 변경이 없으면 중복 발송 방지
 	if scheduleChangeMsg == "" && as.isAlreadyNotified(ctx, stream.ID) {
 		as.logger.Debug("Skipping duplicate notification",
-			zap.String("stream_id", stream.ID),
-			zap.String("channel", stream.ChannelName),
-			zap.Int("minutes_until", minutesUntil),
+			slog.String("stream_id", stream.ID),
+			slog.String("channel", stream.ChannelName),
+			slog.Int("minutes_until", minutesUntil),
 		)
 		return []*domain.AlarmNotification{}, nil
 	}
@@ -447,7 +450,7 @@ func (as *AlarmService) createNotification(ctx context.Context, stream *domain.S
 
 	channel, err := as.holodex.GetChannel(ctx, channelID)
 	if err != nil || channel == nil {
-		as.logger.Warn("Failed to get channel", zap.String("channel_id", channelID), zap.Error(err))
+		as.logger.Warn("Failed to get channel", slog.String("channel_id", channelID), slog.Any("error", err))
 		return []*domain.AlarmNotification{}, nil
 	}
 
@@ -487,9 +490,9 @@ func (as *AlarmService) detectScheduleChange(ctx context.Context, stream *domain
 	}
 
 	as.logger.Info("Schedule changed, resetting notification",
-		zap.String("stream_id", stream.ID),
-		zap.String("old", notifiedData.StartScheduled),
-		zap.String("new", stream.StartScheduled.Format(time.RFC3339)))
+		slog.String("stream_id", stream.ID),
+		slog.String("old", notifiedData.StartScheduled),
+		slog.String("new", stream.StartScheduled.Format(time.RFC3339)))
 
 	return formatScheduleChangeMessage(savedTime, currentTime)
 }
@@ -524,7 +527,7 @@ func (as *AlarmService) validateAndGroupSubscribers(ctx context.Context, channel
 	for _, registryKey := range subscriberKeys {
 		parts := splitRegistryKey(registryKey)
 		if len(parts) != 2 {
-			as.logger.Warn("Invalid registry key", zap.String("key", registryKey))
+			as.logger.Warn("Invalid registry key", slog.String("key", registryKey))
 			keysToRemove = append(keysToRemove, registryKey)
 			continue
 		}
@@ -544,7 +547,7 @@ func (as *AlarmService) validateAndGroupSubscribers(ctx context.Context, channel
 	return usersByRoom, keysToRemove
 }
 
-// CacheMemberName 는 동작을 수행한다.
+// CacheMemberName: 채널 ID에 해당하는 멤버 이름을 Redis에 캐싱한다. (표시 이름 최적화)
 func (as *AlarmService) CacheMemberName(ctx context.Context, channelID, memberName string) error {
 	if err := as.cache.HSet(ctx, MemberNameKey, channelID, memberName); err != nil {
 		return fmt.Errorf("cache member name: %w", err)
@@ -552,7 +555,7 @@ func (as *AlarmService) CacheMemberName(ctx context.Context, channelID, memberNa
 	return nil
 }
 
-// GetMemberName 는 동작을 수행한다.
+// GetMemberName: 캐시된 멤버 이름을 조회한다. 없으면 빈 문자열을 반환한다.
 func (as *AlarmService) GetMemberName(ctx context.Context, channelID string) (string, error) {
 	name, err := as.cache.HGet(ctx, MemberNameKey, channelID)
 	if err != nil {
@@ -577,7 +580,7 @@ func (as *AlarmService) SetUserName(ctx context.Context, userID, userName string
 	return nil
 }
 
-// MarkAsNotified 는 동작을 수행한다.
+// MarkAsNotified: 해당 방송(streamID)에 대해 특정 시점(minutesUntil)의 알림을 발송했음을 기록한다.
 func (as *AlarmService) MarkAsNotified(ctx context.Context, streamID string, startScheduled time.Time, minutesUntil int) error {
 	notifiedKey := NotifiedKeyPrefix + streamID
 	notifiedData := NotifiedData{
@@ -588,8 +591,8 @@ func (as *AlarmService) MarkAsNotified(ctx context.Context, streamID string, sta
 
 	if err := as.cache.Set(ctx, notifiedKey, notifiedData, constants.CacheTTL.NotificationSent); err != nil {
 		as.logger.Warn("Failed to mark as notified",
-			zap.String("stream_id", streamID),
-			zap.Error(err),
+			slog.String("stream_id", streamID),
+			slog.Any("error", err),
 		)
 		return fmt.Errorf("mark as notified: %w", err)
 	}
@@ -605,7 +608,7 @@ func (as *AlarmService) isAlreadyNotified(ctx context.Context, streamID string) 
 	return err == nil && notifiedData.StartScheduled != ""
 }
 
-// GetNextStreamInfo 는 동작을 수행한다.
+// GetNextStreamInfo: 특정 채널의 다음 방송 정보(예정 또는 라이브)를 캐시에서 조회한다.
 func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string) (*domain.NextStreamInfo, error) {
 	as.cacheMutex.RLock()
 	defer as.cacheMutex.RUnlock()
@@ -614,8 +617,8 @@ func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string)
 	data, err := as.cache.HGetAll(ctx, key)
 	if err != nil {
 		as.logger.Error("Failed to get next stream info from cache",
-			zap.String("channel_id", channelID),
-			zap.Error(err),
+			slog.String("channel_id", channelID),
+			slog.Any("error", err),
 		)
 		return nil, fmt.Errorf("get next stream info: %w", err)
 	}
@@ -632,8 +635,8 @@ func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string)
 
 	if !info.Status.IsValid() {
 		as.logger.Warn("Unexpected cache status",
-			zap.String("channel_id", channelID),
-			zap.String("status", info.Status.String()),
+			slog.String("channel_id", channelID),
+			slog.String("status", info.Status.String()),
 		)
 		return nil, nil
 	}
@@ -643,9 +646,9 @@ func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string)
 		scheduledDate, err := time.Parse(time.RFC3339, startScheduledStr)
 		if err != nil {
 			as.logger.Error("Failed to parse scheduled time",
-				zap.String("channel_id", channelID),
-				zap.String("start_scheduled", startScheduledStr),
-				zap.Error(err),
+				slog.String("channel_id", channelID),
+				slog.String("start_scheduled", startScheduledStr),
+				slog.Any("error", err),
 			)
 			return nil, nil
 		}
@@ -655,10 +658,10 @@ func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string)
 	if info.Status.IsUpcoming() {
 		if startScheduledStr == "" || info.Title == "" || info.VideoID == "" || info.StartScheduled == nil {
 			as.logger.Error("Incomplete cache data for upcoming stream",
-				zap.String("channel_id", channelID),
-				zap.Bool("has_title", info.Title != ""),
-				zap.Bool("has_start", startScheduledStr != ""),
-				zap.Bool("has_video_id", info.VideoID != ""),
+				slog.String("channel_id", channelID),
+				slog.Bool("has_title", info.Title != ""),
+				slog.Bool("has_start", startScheduledStr != ""),
+				slog.Bool("has_video_id", info.VideoID != ""),
 			)
 			return nil, nil
 		}
@@ -669,7 +672,7 @@ func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string)
 
 func (as *AlarmService) refreshNextStreamCache(ctx context.Context, channelID string, streams []*domain.Stream) {
 	if err := as.writeNextStreamCache(ctx, channelID, streams); err != nil {
-		as.logger.Warn("Failed to update next stream cache", zap.String("channel_id", channelID), zap.Error(err))
+		as.logger.Warn("Failed to update next stream cache", slog.String("channel_id", channelID), slog.Any("error", err))
 	}
 }
 
@@ -702,7 +705,7 @@ func (as *AlarmService) cacheLiveStream(ctx context.Context, key string, stream 
 	}
 
 	if err := as.cache.HMSet(ctx, key, fields); err != nil {
-		as.logger.Error("Failed to cache live stream", zap.String("stream_id", stream.ID), zap.Error(err))
+		as.logger.Error("Failed to cache live stream", slog.String("stream_id", stream.ID), slog.Any("error", err))
 		return fmt.Errorf("cache live stream: %w", err)
 	}
 
@@ -719,7 +722,7 @@ func (as *AlarmService) cacheUpcomingStream(ctx context.Context, key string, str
 	}
 
 	if err := as.cache.HMSet(ctx, key, fields); err != nil {
-		as.logger.Error("Failed to cache upcoming stream", zap.String("stream_id", stream.ID), zap.Error(err))
+		as.logger.Error("Failed to cache upcoming stream", slog.String("stream_id", stream.ID), slog.Any("error", err))
 		return fmt.Errorf("cache upcoming stream: %w", err)
 	}
 
@@ -729,7 +732,7 @@ func (as *AlarmService) cacheUpcomingStream(ctx context.Context, key string, str
 
 func (as *AlarmService) cacheStatus(ctx context.Context, key, status string) error {
 	if err := as.cache.HMSet(ctx, key, map[string]interface{}{"status": status}); err != nil {
-		as.logger.Error("Failed to set cache status", zap.String("status", status), zap.Error(err))
+		as.logger.Error("Failed to set cache status", slog.String("status", status), slog.Any("error", err))
 		return fmt.Errorf("cache status: %w", err)
 	}
 
@@ -819,7 +822,7 @@ func (as *AlarmService) calculateConcurrency(channelCount int) int {
 	return optimal
 }
 
-// AlarmEntry 는 타입이다.
+// AlarmEntry: 관리자 대시보드 표시용 알림 정보 구조체
 type AlarmEntry struct {
 	RoomID     string `json:"roomId"`
 	RoomName   string `json:"roomName"`

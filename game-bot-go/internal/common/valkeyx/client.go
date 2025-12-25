@@ -12,7 +12,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 )
 
-// Config 는 Valkey 클라이언트 설정이다.
+// Config: Valkey 클라이언트 연결에 필요한 설정 정보를 담고 있다.
 type Config struct {
 	Addr         string
 	Username     string
@@ -25,15 +25,15 @@ type Config struct {
 	PoolSize     int
 	MinIdleConns int
 
-	// DisableCache 는 클라이언트 사이드 캐싱 비활성화 여부다.
-	// 테스트(miniredis)에서는 true로 설정해야 한다.
+	// DisableCache: 클라이언트 사이드 캐싱(Client Side Caching) 기능을 비활성화할지 여부.
+	// 일반적으로 로컬 테스트 환경이나 miniredis 사용 시 true로 설정한다.
 	DisableCache bool
 
-	// UseTLS 는 TLS 사용 여부다.
+	// UseTLS: TLS(SSL) 연결 사용 여부.
 	UseTLS bool
 }
 
-// NewClient 는 Valkey 클라이언트를 생성한다.
+// NewClient: 주어진 설정을 바탕으로 Valkey 클라이언트 인스턴스를 생성하고 초기화한다.
 func NewClient(cfg Config) (valkey.Client, error) {
 	addr := strings.TrimSpace(cfg.Addr)
 	if addr == "" {
@@ -74,7 +74,7 @@ func NewClient(cfg Config) (valkey.Client, error) {
 	return client, nil
 }
 
-// Ping 는 Valkey 연결을 확인한다.
+// Ping: Valkey 서버와의 연결 상태를 점검한다. (PING 명령 전송)
 func Ping(ctx context.Context, client valkey.Client) error {
 	if client == nil {
 		return errors.New("valkey client is nil")
@@ -86,14 +86,14 @@ func Ping(ctx context.Context, client valkey.Client) error {
 	return nil
 }
 
-// IsNil 은 Valkey nil 오류인지 확인한다.
-// 래핑된 에러도 언래핑하여 체크한다.
+// IsNil: 발생한 에러가 Valkey nil(키가 없음) 에러인지 확인한다.
+// 에러 래핑을 고려하여 언래핑 후 검사를 수행한다.
 func IsNil(err error) bool {
 	if valkey.IsValkeyNil(err) {
 		return true
 	}
 	// fmt.Errorf("%w", err)로 래핑된 경우 언래핑하여 체크
-	var unwrapped error = err
+	unwrapped := err
 	for unwrapped != nil {
 		if valkey.IsValkeyNil(unwrapped) {
 			return true
@@ -103,7 +103,7 @@ func IsNil(err error) bool {
 	return false
 }
 
-// Close 는 Valkey 클라이언트를 닫는다.
+// Close: Valkey 클라이언트 연결을 안전하게 종료한다.
 func Close(client valkey.Client) {
 	if client != nil {
 		client.Close()

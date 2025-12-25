@@ -4,12 +4,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/parser"
 )
 
-// CommandParser 는 타입이다.
+// CommandParser: 사용자 입력을 파싱하여 실행 가능한 명령어로 변환하는 파서
 type CommandParser struct {
-	prefix        string
-	escapedPrefix string
+	parser.BaseParser
 
 	helpRe      *regexp.Regexp
 	startRe     *regexp.Regexp
@@ -22,38 +23,28 @@ type CommandParser struct {
 	askRe       *regexp.Regexp
 }
 
-// NewCommandParser 는 동작을 수행한다.
+// NewCommandParser: 주어진 접두사(prefix)를 사용하는 새로운 CommandParser를 생성한다.
 func NewCommandParser(prefix string) *CommandParser {
-	p := strings.TrimSpace(prefix)
-	if p == "" {
-		p = "/스프"
-	}
-	escapedPrefix := regexp.QuoteMeta(p)
-	parser := &CommandParser{
-		prefix:        p,
-		escapedPrefix: escapedPrefix,
-	}
+	base := parser.NewBaseParser(prefix, "/스프")
+	p := &CommandParser{BaseParser: base}
 
-	parser.helpRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:도움|help)?$`)
-	parser.startRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:시작|start)(?:\s+(\S+))?$`)
-	parser.hintRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:힌트|hint)$`)
-	parser.problemRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:문제|제시문|problem)$`)
-	parser.surrenderRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:포기|surrender)$`)
-	parser.agreeRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:동의|agree)$`)
-	parser.summaryRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:정리|summary)$`)
-	parser.answerRe = regexp.MustCompile("^" + escapedPrefix + `\s*(?:정답|answer)\s+(.+)$`)
-	parser.askRe = regexp.MustCompile("^" + escapedPrefix + `\s+(.+)$`)
+	p.helpRe = p.BuildPattern(`\s*(?:도움|help)?$`)
+	p.startRe = p.BuildPattern(`\s*(?:시작|start)(?:\s+(\S+))?$`)
+	p.hintRe = p.BuildPattern(`\s*(?:힌트|hint)$`)
+	p.problemRe = p.BuildPattern(`\s*(?:문제|제시문|problem)$`)
+	p.surrenderRe = p.BuildPattern(`\s*(?:포기|surrender)$`)
+	p.agreeRe = p.BuildPattern(`\s*(?:동의|agree)$`)
+	p.summaryRe = p.BuildPattern(`\s*(?:정리|summary)$`)
+	p.answerRe = p.BuildPattern(`\s*(?:정답|answer)\s+(.+)$`)
+	p.askRe = p.BuildPattern(`\s+(.+)$`)
 
-	return parser
+	return p
 }
 
-// Parse 는 동작을 수행한다.
+// Parse: 입력된 메시지 문자열을 파싱하여 Command 객체로 반환한다.
 func (p *CommandParser) Parse(message string) *Command {
-	text := strings.TrimSpace(message)
+	text := p.TrimMessage(message)
 	if text == "" {
-		return nil
-	}
-	if !strings.HasPrefix(text, p.prefix) {
 		return nil
 	}
 
@@ -89,7 +80,7 @@ func (p *CommandParser) Parse(message string) *Command {
 }
 
 func (p *CommandParser) parseHelp(text string) *Command {
-	if p.helpRe.MatchString(text) {
+	if parser.MatchSimple(p.helpRe, text) {
 		return &Command{Kind: CommandHelp}
 	}
 	return nil
@@ -120,46 +111,42 @@ func (p *CommandParser) parseStart(text string) *Command {
 }
 
 func (p *CommandParser) parseHint(text string) *Command {
-	if p.hintRe.MatchString(text) {
+	if parser.MatchSimple(p.hintRe, text) {
 		return &Command{Kind: CommandHint}
 	}
 	return nil
 }
 
 func (p *CommandParser) parseProblem(text string) *Command {
-	if p.problemRe.MatchString(text) {
+	if parser.MatchSimple(p.problemRe, text) {
 		return &Command{Kind: CommandProblem}
 	}
 	return nil
 }
 
 func (p *CommandParser) parseSurrender(text string) *Command {
-	if p.surrenderRe.MatchString(text) {
+	if parser.MatchSimple(p.surrenderRe, text) {
 		return &Command{Kind: CommandSurrender}
 	}
 	return nil
 }
 
 func (p *CommandParser) parseAgree(text string) *Command {
-	if p.agreeRe.MatchString(text) {
+	if parser.MatchSimple(p.agreeRe, text) {
 		return &Command{Kind: CommandAgree}
 	}
 	return nil
 }
 
 func (p *CommandParser) parseSummary(text string) *Command {
-	if p.summaryRe.MatchString(text) {
+	if parser.MatchSimple(p.summaryRe, text) {
 		return &Command{Kind: CommandSummary}
 	}
 	return nil
 }
 
 func (p *CommandParser) parseAnswer(text string) *Command {
-	m := p.answerRe.FindStringSubmatch(text)
-	if len(m) < 2 {
-		return nil
-	}
-	answer := strings.TrimSpace(m[1])
+	answer := parser.ExtractFirstGroup(p.answerRe, text)
 	if answer == "" {
 		return nil
 	}
@@ -167,11 +154,7 @@ func (p *CommandParser) parseAnswer(text string) *Command {
 }
 
 func (p *CommandParser) parseAsk(text string) *Command {
-	m := p.askRe.FindStringSubmatch(text)
-	if len(m) < 2 {
-		return nil
-	}
-	question := strings.TrimSpace(m[1])
+	question := parser.ExtractFirstGroup(p.askRe, text)
 	if question == "" {
 		return nil
 	}

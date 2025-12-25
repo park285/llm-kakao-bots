@@ -4,22 +4,23 @@ import (
 	"context"
 	"errors"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 )
 
-// ErrorMapping 는 타입이다.
+// ErrorMapping: 사용자에게 보여줄 에러 메시지 키와 포맷팅 파라미터를 담는 구조체
 type ErrorMapping struct {
 	Key    string
 	Params []messageprovider.Param
 }
 
-// GetErrorMapping 는 동작을 수행한다.
+// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 전달할 적절한 메시지 키와 파라미터를 매핑하여 반환한다.
 func GetErrorMapping(err error, commandPrefix string) ErrorMapping {
 	var (
 		sessionNotFound qerrors.SessionNotFoundError
-		invalidQuestion qerrors.InvalidQuestionError
+		invalidQuestion cerrors.InvalidQuestionError
 		duplicate       qerrors.DuplicateQuestionError
 		hintLimit       qerrors.HintLimitExceededError
 		hintNA          qerrors.HintNotAvailableError

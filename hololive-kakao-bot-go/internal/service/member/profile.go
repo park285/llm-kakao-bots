@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
@@ -17,10 +17,11 @@ const (
 	maxPromptDataEntries      = 10
 )
 
-// ProfileService 는 타입이다.
+// ProfileService: 탤런트 상세 프로필 정보를 관리하는 서비스
+// 로컬 파일에서 데이터를 로드하고, 번역 정보를 관리하며 캐싱을 지원한다.
 type ProfileService struct {
 	cache         *cache.Service
-	logger        *zap.Logger
+	logger        *slog.Logger
 	membersData   domain.MemberDataProvider
 	profiles      map[string]*domain.TalentProfile // slug -> profile
 	translations  map[string]*domain.Translated
@@ -28,13 +29,14 @@ type ProfileService struct {
 	channelToSlug map[string]string
 }
 
-// NewProfileService 는 동작을 수행한다.
-func NewProfileService(cache *cache.Service, membersData domain.MemberDataProvider, logger *zap.Logger) (*ProfileService, error) {
+// NewProfileService: 프로필 데이터와 번역 데이터를 로드하여 서비스 인스턴스를 초기화한다.
+// 검색 최적화를 위한 인덱싱 작업도 수행한다.
+func NewProfileService(cache *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) (*ProfileService, error) {
 	if membersData == nil {
 		return nil, fmt.Errorf("members data is nil")
 	}
 	if logger == nil {
-		logger = zap.NewNop()
+		logger = slog.Default()
 	}
 
 	profiles, err := domain.LoadProfiles()
@@ -83,16 +85,16 @@ func NewProfileService(cache *cache.Service, membersData domain.MemberDataProvid
 	}
 
 	logger.Info("ProfileService initialized",
-		zap.Int("profiles", len(service.profiles)),
-		zap.Int("translated_profiles", len(service.translations)),
-		zap.Int("index_english", len(service.englishToSlug)),
-		zap.Int("index_channel", len(service.channelToSlug)),
+		slog.Int("profiles", len(service.profiles)),
+		slog.Int("translated_profiles", len(service.translations)),
+		slog.Int("index_english", len(service.englishToSlug)),
+		slog.Int("index_channel", len(service.channelToSlug)),
 	)
 
 	return service, nil
 }
 
-// GetWithTranslation 는 동작을 수행한다.
+// GetWithTranslation: 영문 이름으로 프로필을 조회하고, 번역된 정보가 있다면 함께 반환한다.
 func (s *ProfileService) GetWithTranslation(ctx context.Context, englishName string) (*domain.TalentProfile, *domain.Translated, error) {
 	if util.TrimSpace(englishName) == "" {
 		return nil, nil, fmt.Errorf("멤버 이름이 필요합니다")
@@ -111,7 +113,7 @@ func (s *ProfileService) GetWithTranslation(ctx context.Context, englishName str
 	return profile, translated, nil
 }
 
-// GetByEnglish 는 동작을 수행한다.
+// GetByEnglish: 영문 이름(정규화됨)으로 원본 프로필 정보를 조회한다.
 func (s *ProfileService) GetByEnglish(englishName string) (*domain.TalentProfile, error) {
 	if profile, ok := s.byEnglish(englishName); ok {
 		return profile, nil
@@ -119,7 +121,7 @@ func (s *ProfileService) GetByEnglish(englishName string) (*domain.TalentProfile
 	return nil, fmt.Errorf("'%s' 멤버의 공식 프로필 정보를 찾을 수 없습니다", englishName)
 }
 
-// GetByChannel 는 동작을 수행한다.
+// GetByChannel: 채널 ID로 원본 프로필 정보를 조회한다.
 func (s *ProfileService) GetByChannel(channelID string) (*domain.TalentProfile, error) {
 	if channelID == "" {
 		return nil, fmt.Errorf("channel id is empty")
@@ -175,8 +177,8 @@ func (s *ProfileService) getTranslated(ctx context.Context, raw *domain.TalentPr
 		if s.cache != nil && cloned != nil {
 			if err := s.cache.Set(ctx, cacheKey, cloned, 0); err != nil {
 				s.logger.Warn("Failed to cache translated profile",
-					zap.String("slug", raw.Slug),
-					zap.Error(err),
+					slog.String("slug", raw.Slug),
+					slog.Any("error", err),
 				)
 			}
 		}
@@ -194,8 +196,8 @@ func (s *ProfileService) getTranslated(ctx context.Context, raw *domain.TalentPr
 	if s.cache != nil {
 		if err := s.cache.Set(ctx, cacheKey, fallback, 0); err != nil {
 			s.logger.Warn("Failed to cache fallback translated profile",
-				zap.String("slug", raw.Slug),
-				zap.Error(err),
+				slog.String("slug", raw.Slug),
+				slog.Any("error", err),
 			)
 		}
 	}
@@ -218,7 +220,7 @@ func convertToTranslatedRows(entries []domain.TalentProfileEntry) []domain.Trans
 	return rows
 }
 
-// PreloadTranslations 는 동작을 수행한다.
+// PreloadTranslations: 모든 번역 데이터를 캐시에 미리 적재하여 조회 성능을 높인다.
 func (s *ProfileService) PreloadTranslations(ctx context.Context) {
 	if s == nil || s.cache == nil || len(s.translations) == 0 {
 		return
@@ -231,8 +233,8 @@ func (s *ProfileService) PreloadTranslations(ctx context.Context) {
 		}
 		if err := s.cache.Set(ctx, fmt.Sprintf(cacheKeyProfileTranslated, translationLocale, slug), profile, 0); err != nil {
 			s.logger.Warn("Failed to preload translated profile",
-				zap.String("slug", slug),
-				zap.Error(err),
+				slog.String("slug", slug),
+				slog.Any("error", err),
 			)
 			continue
 		}
@@ -241,7 +243,7 @@ func (s *ProfileService) PreloadTranslations(ctx context.Context) {
 
 	if written > 0 {
 		s.logger.Info("Preloaded translated profiles",
-			zap.Int("count", written))
+			slog.Int("count", written))
 	}
 }
 

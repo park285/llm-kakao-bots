@@ -11,13 +11,13 @@ import (
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
-// MessageQueueNotifier 는 타입이다.
+// MessageQueueNotifier: 메시지 큐 처리 상태(대기, 재시도, 실패 등)를 사용자에게 알리는 역할
 type MessageQueueNotifier struct {
 	provider *messageprovider.Provider
 	logger   *slog.Logger
 }
 
-// NewMessageQueueNotifier 는 동작을 수행한다.
+// NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성한다.
 func NewMessageQueueNotifier(provider *messageprovider.Provider, logger *slog.Logger) *MessageQueueNotifier {
 	return &MessageQueueNotifier{
 		provider: provider,
@@ -25,7 +25,7 @@ func NewMessageQueueNotifier(provider *messageprovider.Provider, logger *slog.Lo
 	}
 }
 
-// NotifyProcessingStart 는 동작을 수행한다.
+// NotifyProcessingStart: 메시지 처리가 시작됨을 알리는 메시지를 전송한다.
 func (n *MessageQueueNotifier) NotifyProcessingStart(
 	_ context.Context,
 	chatID string,
@@ -37,7 +37,7 @@ func (n *MessageQueueNotifier) NotifyProcessingStart(
 	return emit(mqmsg.NewWaiting(chatID, notifyText, pending.ThreadID))
 }
 
-// NotifyRetry 는 동작을 수행한다.
+// NotifyRetry: 메시지 처리가 지연되어 재시도 중임을 알리는 메시지를 전송한다.
 func (n *MessageQueueNotifier) NotifyRetry(
 	_ context.Context,
 	chatID string,
@@ -49,7 +49,7 @@ func (n *MessageQueueNotifier) NotifyRetry(
 	return emit(mqmsg.NewWaiting(chatID, retryText, pending.ThreadID))
 }
 
-// NotifyDuplicate 는 동작을 수행한다.
+// NotifyDuplicate: 중복된 요청임을 알리는 메시지를 전송한다.
 func (n *MessageQueueNotifier) NotifyDuplicate(
 	_ context.Context,
 	chatID string,
@@ -61,7 +61,7 @@ func (n *MessageQueueNotifier) NotifyDuplicate(
 	return emit(mqmsg.NewWaiting(chatID, dupText, pending.ThreadID))
 }
 
-// NotifyFailed 는 동작을 수행한다.
+// NotifyFailed: 큐잉된 메시지 처리가 최종 실패했음을 알리는 메시지를 전송한다.
 func (n *MessageQueueNotifier) NotifyFailed(
 	_ context.Context,
 	chatID string,
@@ -73,7 +73,7 @@ func (n *MessageQueueNotifier) NotifyFailed(
 	return emit(mqmsg.NewError(chatID, failedText, pending.ThreadID))
 }
 
-// NotifyError 는 동작을 수행한다.
+// NotifyError: 처리 중 발생한 에러 내용을 사용자에게 알리는 메시지를 전송한다.
 func (n *MessageQueueNotifier) NotifyError(
 	_ context.Context,
 	chatID string,

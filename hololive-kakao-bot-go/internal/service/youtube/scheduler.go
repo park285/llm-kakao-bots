@@ -6,20 +6,20 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// Scheduler 는 타입이다.
+// Scheduler: YouTube 데이터 수집(통계, 영상 등) 작업을 주기적으로 실행하는 스케줄러
 type Scheduler struct {
 	youtube      *Service
 	cache        *cache.Service
 	statsRepo    *StatsRepository
 	membersData  domain.MemberDataProvider
-	logger       *zap.Logger
+	logger       *slog.Logger
 	ticker       *time.Ticker
 	stopCh       chan struct{}
 	currentBatch int
@@ -34,8 +34,8 @@ const (
 	totalDailyQuota  = 6000
 )
 
-// NewYouTubeScheduler 는 동작을 수행한다.
-func NewYouTubeScheduler(youtube *Service, cache *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *zap.Logger) *Scheduler {
+// NewScheduler: YouTube 데이터 수집 스케줄러를 생성한다.
+func NewScheduler(youtube *Service, cache *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
 	return &Scheduler{
 		youtube:      youtube,
 		cache:        cache,
@@ -47,14 +47,14 @@ func NewYouTubeScheduler(youtube *Service, cache *cache.Service, statsRepo *Stat
 	}
 }
 
-// Start 는 동작을 수행한다.
+// Start: 스케줄러를 시작하여 주기적인 작업을 등록한다.
 func (ys *Scheduler) Start(ctx context.Context) {
 	ys.ticker = time.NewTicker(schedulerInterval)
 
 	ys.logger.Info("YouTube quota building scheduler started",
-		zap.Duration("interval", schedulerInterval),
-		zap.Int("channels_per_batch", channelsPerBatch),
-		zap.Int("daily_quota_target", totalDailyQuota))
+		slog.Duration("interval", schedulerInterval),
+		slog.Int("channels_per_batch", channelsPerBatch),
+		slog.Int("daily_quota_target", totalDailyQuota))
 
 	go func() {
 		for {
@@ -72,7 +72,7 @@ func (ys *Scheduler) Start(ctx context.Context) {
 	}()
 }
 
-// Stop 는 동작을 수행한다.
+// Stop: 스케줄러를 중지한다.
 func (ys *Scheduler) Stop() {
 	if ys.ticker != nil {
 		ys.ticker.Stop()
@@ -87,8 +87,8 @@ func (ys *Scheduler) runBatch(ctx context.Context) {
 	ys.batchMu.Unlock()
 
 	ys.logger.Info("Running YouTube quota building batch",
-		zap.Int("batch", batchNum),
-		zap.Int("total_batches", batchesPerDay))
+		slog.Int("batch", batchNum),
+		slog.Int("total_batches", batchesPerDay))
 
 	go ys.trackAllSubscribers(ctx)
 
@@ -99,12 +99,12 @@ func (ys *Scheduler) trackAllSubscribers(ctx context.Context) {
 	channelIDs, channelToMember := ys.buildChannelMaps()
 
 	ys.logger.Info("Tracking all member subscribers",
-		zap.Int("channels", len(channelIDs)),
-		zap.Int("quota_cost", len(channelIDs)))
+		slog.Int("channels", len(channelIDs)),
+		slog.Int("quota_cost", len(channelIDs)))
 
 	stats, err := ys.youtube.GetChannelStatistics(ctx, channelIDs)
 	if err != nil {
-		ys.logger.Error("Failed to track subscribers", zap.Error(err))
+		ys.logger.Error("Failed to track subscribers", slog.Any("error", err))
 		return
 	}
 
@@ -124,9 +124,9 @@ func (ys *Scheduler) trackAllSubscribers(ctx context.Context) {
 	}
 
 	ys.logger.Info("Subscriber tracking completed",
-		zap.Int("tracked", len(stats)),
-		zap.Int("changes", totalChanges),
-		zap.Int("milestones", totalMilestones))
+		slog.Int("tracked", len(stats)),
+		slog.Int("changes", totalChanges),
+		slog.Int("milestones", totalMilestones))
 }
 
 // 멤버 데이터에서 채널 ID 리스트와 채널-멤버 맵 생성
@@ -177,14 +177,14 @@ func (ys *Scheduler) processMilestones(ctx context.Context, channelID string, me
 
 		if err := ys.statsRepo.SaveMilestone(ctx, milestoneRecord); err != nil {
 			ys.logger.Error("Failed to save milestone",
-				zap.String("member", member.Name),
-				zap.Uint64("value", milestone),
-				zap.Error(err))
+				slog.String("member", member.Name),
+				slog.Any("value", milestone),
+				slog.Any("error", err))
 		} else {
 			achieved++
 			ys.logger.Info("Milestone achieved",
-				zap.String("member", member.Name),
-				zap.Uint64("subscribers", milestone))
+				slog.String("member", member.Name),
+				slog.Any("subscribers", milestone))
 		}
 	}
 	return achieved
@@ -195,16 +195,16 @@ func (ys *Scheduler) processChannelStats(ctx context.Context, channelID string, 
 	prevStats, err := ys.statsRepo.GetLatestStats(ctx, channelID)
 	if err != nil {
 		ys.logger.Warn("Failed to get previous stats",
-			zap.String("channel", channelID),
-			zap.Error(err))
+			slog.String("channel", channelID),
+			slog.Any("error", err))
 	}
 
 	timestampedStats := createTimestampedStats(channelID, member, currentStats, now)
 
 	if err := ys.statsRepo.SaveStats(ctx, timestampedStats); err != nil {
 		ys.logger.Error("Failed to save stats",
-			zap.String("channel", channelID),
-			zap.Error(err))
+			slog.String("channel", channelID),
+			slog.Any("error", err))
 		return 0, 0
 	}
 
@@ -225,8 +225,8 @@ func (ys *Scheduler) processChannelStats(ctx context.Context, channelID string, 
 
 			if err := ys.statsRepo.RecordChange(ctx, change); err != nil {
 				ys.logger.Error("Failed to record change",
-					zap.String("member", member.Name),
-					zap.Error(err))
+					slog.String("member", member.Name),
+					slog.Any("error", err))
 			} else {
 				changesDetected = 1
 			}
@@ -244,14 +244,14 @@ func (ys *Scheduler) fetchRecentVideosRotation(ctx context.Context, batchNum int
 
 	if len(channels) == 0 {
 		ys.logger.Info("Skipping recent videos batch: no channels configured",
-			zap.Int("batch", batchNum))
+			slog.Int("batch", batchNum))
 		return
 	}
 
 	ys.logger.Info("Fetching recent videos for batch",
-		zap.Int("batch", batchNum),
-		zap.Int("channels", len(channels)),
-		zap.Int("quota_cost", len(channels)*100))
+		slog.Int("batch", batchNum),
+		slog.Int("channels", len(channels)),
+		slog.Int("quota_cost", len(channels)*100))
 
 	successCount := 0
 	errorCount := 0
@@ -260,8 +260,8 @@ func (ys *Scheduler) fetchRecentVideosRotation(ctx context.Context, batchNum int
 		videos, err := ys.youtube.GetRecentVideos(ctx, channelID, 10)
 		if err != nil {
 			ys.logger.Warn("Failed to fetch recent videos",
-				zap.String("channel", channelID),
-				zap.Error(err))
+				slog.String("channel", channelID),
+				slog.Any("error", err))
 			errorCount++
 			continue
 		}
@@ -270,16 +270,16 @@ func (ys *Scheduler) fetchRecentVideosRotation(ctx context.Context, batchNum int
 		_ = ys.cache.Set(ctx, cacheKey, videos, 24*time.Hour)
 
 		ys.logger.Debug("Recent videos fetched",
-			zap.String("channel", channelID),
-			zap.Int("videos", len(videos)))
+			slog.String("channel", channelID),
+			slog.Int("videos", len(videos)))
 
 		successCount++
 	}
 
 	ys.logger.Info("Recent videos batch completed",
-		zap.Int("batch", batchNum),
-		zap.Int("success", successCount),
-		zap.Int("errors", errorCount))
+		slog.Int("batch", batchNum),
+		slog.Int("success", successCount),
+		slog.Int("errors", errorCount))
 }
 
 func (ys *Scheduler) getRotatingBatch(batchNum int, size int) []string {
@@ -303,10 +303,10 @@ func (ys *Scheduler) getRotatingBatch(batchNum int, size int) []string {
 	batch := make([]string, 0, size)
 	batch = append(batch, allChannels[start:]...)
 	batch = append(batch, allChannels[0:end-total]...)
-
 	return batch
 }
 
+// CheckMilestones: (내부용) 구독자 수 마일스톤 달성 여부를 확인하고 기록한다.
 func (ys *Scheduler) checkMilestones(prevCount, currentCount uint64) []uint64 {
 	milestones := []uint64{
 		100000,   // 10만
@@ -333,7 +333,7 @@ func (ys *Scheduler) checkMilestones(prevCount, currentCount uint64) []uint64 {
 	return achieved
 }
 
-// SendMilestoneAlerts 는 동작을 수행한다.
+// SendMilestoneAlerts: 감지된 중요 통계 변화(마일스톤 등)에 대해 채팅방에 알림 메시지를 전송한다.
 func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(room, message string) error, rooms []string) error {
 	changes, err := ys.statsRepo.GetUnnotifiedChanges(ctx, 50)
 	if err != nil {
@@ -345,15 +345,15 @@ func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(r
 	}
 
 	ys.logger.Debug("Processing stats changes for notifications",
-		zap.Int("changes", len(changes)))
+		slog.Int("changes", len(changes)))
 
 	sentCount := 0
 	for _, change := range changes {
 		if !ys.isSignificantChange(change) {
 			if err := ys.statsRepo.MarkChangeNotified(ctx, change.ChannelID, change.DetectedAt); err != nil {
 				ys.logger.Warn("Failed to mark change notified",
-					zap.String("channel", change.ChannelID),
-					zap.Error(err))
+					slog.String("channel", change.ChannelID),
+					slog.Any("error", err))
 			}
 			continue
 		}
@@ -366,17 +366,17 @@ func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(r
 		for _, room := range rooms {
 			if err := sendMessage(room, message); err != nil {
 				ys.logger.Error("Failed to send milestone notification",
-					zap.String("room", room),
-					zap.String("member", change.MemberName),
-					zap.Error(err))
+					slog.String("room", room),
+					slog.String("member", change.MemberName),
+					slog.Any("error", err))
 				continue
 			}
 		}
 
 		if err := ys.statsRepo.MarkChangeNotified(ctx, change.ChannelID, change.DetectedAt); err != nil {
 			ys.logger.Warn("Failed to mark change notified",
-				zap.String("channel", change.ChannelID),
-				zap.Error(err))
+				slog.String("channel", change.ChannelID),
+				slog.Any("error", err))
 		} else {
 			sentCount++
 		}
@@ -384,7 +384,7 @@ func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(r
 
 	if sentCount > 0 {
 		ys.logger.Info("Milestone notifications sent",
-			zap.Int("sent", sentCount))
+			slog.Int("sent", sentCount))
 	}
 
 	return nil

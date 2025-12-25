@@ -4,10 +4,10 @@ import (
 	commonmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mq"
 )
 
-// ReplyPublisher 는 타입이다.
+// ReplyPublisher: commonmq.ReplyPublisher alias
 type ReplyPublisher = commonmq.ReplyPublisher
 
-// NewReplyPublisher 는 동작을 수행한다.
+// NewReplyPublisher: 새로운 ReplyPublisher 인스턴스를 생성한다.
 func NewReplyPublisher(publisher *commonmq.StreamPublisher) *ReplyPublisher {
 	return commonmq.NewReplyPublisher(publisher)
 }

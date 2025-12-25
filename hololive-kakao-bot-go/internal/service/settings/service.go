@@ -6,24 +6,24 @@ import (
 	"os"
 	"sync"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
-// Settings 는 타입이다.
+// Settings: 봇의 동적 설정을 담는 구조체 (예: 알림 전송 시점)
 type Settings struct {
 	AlarmAdvanceMinutes int `json:"alarmAdvanceMinutes"`
 }
 
-// Service 는 타입이다.
+// Service: 설정 파일을 로드하고 관리하며, 변경 시 파일에 실시간으로 반영하는 서비스
 type Service struct {
 	filePath string
-	logger   *zap.Logger
+	logger   *slog.Logger
 	mu       sync.RWMutex
 	cache    *Settings
 }
 
-// NewSettingsService 는 동작을 수행한다.
-func NewSettingsService(filePath string, logger *zap.Logger) *Service {
+// NewSettingsService: 지정된 파일 경로에서 설정을 로드하여 서비스 인스턴스를 생성한다.
+func NewSettingsService(filePath string, logger *slog.Logger) *Service {
 	s := &Service{
 		filePath: filePath,
 		logger:   logger,
@@ -45,14 +45,14 @@ func (s *Service) load() {
 	_ = json.NewDecoder(f).Decode(s.cache)
 }
 
-// Get 는 동작을 수행한다.
+// Get: 현재 메모리에 캐시된 설정 값을 조회한다. (Thread-safe)
 func (s *Service) Get() Settings {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return *s.cache
 }
 
-// Update 는 동작을 수행한다.
+// Update: 설정을 업데이트하고 파일에 즉시 영구 저장한다.
 func (s *Service) Update(newSettings Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

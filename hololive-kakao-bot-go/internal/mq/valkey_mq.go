@@ -10,14 +10,15 @@ import (
 
 	"github.com/sourcegraph/conc/pool"
 	"github.com/valkey-io/valkey-go"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/iris"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 )
 
-// ValkeyMQConfig 는 타입이다.
+// ValkeyMQConfig: Redis(Valkey) 스트림 기반 메시지 큐 연결 설정
 type ValkeyMQConfig struct {
 	Host          string
 	Port          int
@@ -29,37 +30,60 @@ type ValkeyMQConfig struct {
 }
 
 // newValkeyClient: 공통 Valkey 클라이언트 생성 로직
-func newValkeyClient(host string, port int, password string, logger *zap.Logger) (valkey.Client, error) {
+func newValkeyClient(host string, port int, password string, logger *slog.Logger) (valkey.Client, error) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 
-	client, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress:       []string{addr},
-		Password:          password,
-		SelectDB:          0,
-		ConnWriteTimeout:  constants.MQConfig.ConnWriteTimeout,
-		BlockingPoolSize:  constants.MQConfig.BlockingPoolSize,
-		PipelineMultiplex: constants.MQConfig.PipelineMultiplex,
-		Dialer:            net.Dialer{Timeout: constants.MQConfig.DialTimeout},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create valkey client: %w", err)
+	maxAttempts := constants.MQConfig.InitRetryCount
+	if maxAttempts < 1 {
+		maxAttempts = 1
 	}
 
-	return client, nil
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		client, err := valkey.NewClient(valkey.ClientOption{
+			InitAddress:       []string{addr},
+			Password:          password,
+			SelectDB:          0,
+			ConnWriteTimeout:  constants.MQConfig.ConnWriteTimeout,
+			BlockingPoolSize:  constants.MQConfig.BlockingPoolSize,
+			PipelineMultiplex: constants.MQConfig.PipelineMultiplex,
+			Dialer:            net.Dialer{Timeout: constants.MQConfig.DialTimeout},
+		})
+		if err == nil {
+			return client, nil
+		}
+
+		lastErr = err
+		if logger != nil {
+			logger.Warn("MQ_CLIENT_INIT_RETRY",
+				slog.String("addr", addr),
+				slog.Int("attempt", attempt),
+				slog.Int("max_attempts", maxAttempts),
+				slog.Any("error", err),
+			)
+		}
+
+		if attempt < maxAttempts {
+			time.Sleep(constants.MQConfig.RetryDelay)
+		}
+	}
+
+	return nil, fmt.Errorf("failed to create valkey client after retries: %w", lastErr)
 }
 
-// ValkeyMQClient 는 타입이다.
+// ValkeyMQClient: 메시지 큐에 메시지를 발행(Publish)하는 클라이언트
+// Iris 서버로 보낼 응답 메시지를 Redis Stream에 적재한다.
 type ValkeyMQClient struct {
 	cfg    ValkeyMQConfig
 	client valkey.Client
-	logger *zap.Logger
+	logger *slog.Logger
 }
 
-// NewValkeyMQClient 는 동작을 수행한다.
-func NewValkeyMQClient(cfg ValkeyMQConfig, logger *zap.Logger) *ValkeyMQClient {
+// NewValkeyMQClient: 새로운 ValkeyMQClient 인스턴스를 생성하고 연결을 초기화한다.
+func NewValkeyMQClient(cfg ValkeyMQConfig, logger *slog.Logger) *ValkeyMQClient {
 	client, err := newValkeyClient(cfg.Host, cfg.Port, cfg.Password, logger)
 	if err != nil {
-		logger.Error("Failed to create MQ client", zap.Error(err))
+		logger.Error("Failed to create MQ client", slog.Any("error", err))
 		return nil
 	}
 
@@ -70,7 +94,7 @@ func NewValkeyMQClient(cfg ValkeyMQConfig, logger *zap.Logger) *ValkeyMQClient {
 	}
 }
 
-// SendMessage 는 동작을 수행한다.
+// SendMessage: 지정된 채팅방으로 보낼 텍스트 메시지를 Redis Stream에 추가(발행)한다.
 func (c *ValkeyMQClient) SendMessage(ctx context.Context, room, message string) error {
 	streamKey := constants.MQConfig.ReplyStreamKey
 
@@ -84,60 +108,61 @@ func (c *ValkeyMQClient) SendMessage(ctx context.Context, room, message string) 
 
 	if err := c.client.Do(ctx, cmd).Error(); err != nil {
 		c.logger.Error("MQ_REPLY_ERROR",
-			zap.String("stream", streamKey),
-			zap.String("room", room),
-			zap.Error(err),
+			slog.String("stream", streamKey),
+			slog.String("room", room),
+			slog.Any("error", err),
 		)
 		return fmt.Errorf("failed to publish reply to message queue: %w", err)
 	}
 
 	c.logger.Info("MQ_REPLY_PUBLISHED",
-		zap.String("stream", streamKey),
-		zap.String("room", room),
+		slog.String("stream", streamKey),
+		slog.String("room", room),
 	)
 
 	return nil
 }
 
-// SendImage 는 동작을 수행한다.
+// SendImage: 지정된 채팅방으로 보낼 이미지 메시지를 발행한다. (현재 로그만 남기고 스킵)
 func (c *ValkeyMQClient) SendImage(ctx context.Context, room, imageBase64 string) error {
 	c.logger.Info("MQ_SEND_IMAGE_SKIPPED",
-		zap.String("room", room),
+		slog.String("room", room),
 	)
 	return nil
 }
 
-// Ping 는 동작을 수행한다.
+// Ping: Redis 서버와의 연결 상태를 점검한다.
 func (c *ValkeyMQClient) Ping(ctx context.Context) bool {
 	return c.client.Do(ctx, c.client.B().Ping().Build()).Error() == nil
 }
 
-// GetConfig 는 동작을 수행한다.
+// GetConfig: 현재 설정 정보를 반환한다. (인터페이스 준수용, 빈 설정 반환)
 func (c *ValkeyMQClient) GetConfig(ctx context.Context) (*iris.Config, error) {
 	return &iris.Config{}, nil
 }
 
-// Decrypt 는 동작을 수행한다.
+// Decrypt: 암호화된 데이터를 복호화한다. (현재 로직 없음, Pass-through)
 func (c *ValkeyMQClient) Decrypt(ctx context.Context, data string) (string, error) {
 	return data, nil
 }
 
-// MessageHandler 는 타입이다.
+// MessageHandler: 큐에서 수신한 메시지를 실제로 처리(Bot 비즈니스 로직 호출)하는 인터페이스
 type MessageHandler interface {
 	HandleMessage(ctx context.Context, msg *iris.Message)
 }
 
-// ValkeyMQConsumer 는 타입이다.
+// ValkeyMQConsumer: Redis 스트림을 구독하고 메시지를 수신하여 처리하는 컨슈머
+// Worker Pool을 사용하여 병렬 처리를 지원하며, Consumer Group을 통해 로드 밸런싱을 수행한다.
 type ValkeyMQConsumer struct {
 	cfg    ValkeyMQConfig
 	client valkey.Client
-	logger *zap.Logger
+	logger *slog.Logger
 	bot    MessageHandler
 	cache  *cache.Service
 }
 
-// NewValkeyMQConsumer 는 동작을 수행한다.
-func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *zap.Logger, handler MessageHandler, cacheService *cache.Service) *ValkeyMQConsumer {
+// NewValkeyMQConsumer: 새로운 ValkeyMQConsumer 인스턴스를 생성한다.
+func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *slog.Logger, handler MessageHandler, cacheService *cache.Service) *ValkeyMQConsumer {
 	// Worker count 기본값
 	if cfg.WorkerCount == 0 {
 		cfg.WorkerCount = constants.MQConfig.WorkerCount
@@ -145,7 +170,7 @@ func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *zap.Logger, handler Message
 
 	client, err := newValkeyClient(cfg.Host, cfg.Port, cfg.Password, logger)
 	if err != nil {
-		logger.Error("Failed to create MQ consumer", zap.Error(err))
+		logger.Error("Failed to create MQ consumer", slog.Any("error", err))
 		return nil
 	}
 
@@ -158,7 +183,7 @@ func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *zap.Logger, handler Message
 	}
 }
 
-// Start 는 동작을 수행한다.
+// Start: 별도의 고루틴에서 메시지 수신 루프(run)를 시작한다.
 func (c *ValkeyMQConsumer) Start(ctx context.Context) {
 	go c.run(ctx)
 }
@@ -177,7 +202,7 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			c.logger.Info("MQ_CONSUMER_STOPPED",
-				zap.String("stream", streamKey),
+				slog.String("stream", streamKey),
 			)
 			return
 		default:
@@ -204,8 +229,8 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 			// Parent context가 취소되었으면 graceful shutdown
 			if ctx.Err() != nil {
 				c.logger.Info("MQ_CONSUMER_STOPPING",
-					zap.String("stream", streamKey),
-					zap.String("reason", "parent context canceled"),
+					slog.String("stream", streamKey),
+					slog.String("reason", "parent context canceled"),
 				)
 				return
 			}
@@ -213,9 +238,9 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 			// NOGROUP 에러 감지 시 consumer group 자동 재생성
 			if isNogroupErr(resp.Error()) {
 				c.logger.Warn("MQ_NOGROUP_DETECTED",
-					zap.String("stream", streamKey),
-					zap.String("group", group),
-					zap.Error(resp.Error()),
+					slog.String("stream", streamKey),
+					slog.String("group", group),
+					slog.Any("error", resp.Error()),
 				)
 				c.ensureGroup(ctx, streamKey, group)
 				time.Sleep(constants.MQConfig.RetryDelay)
@@ -225,16 +250,16 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 			// Read context timeout/canceled: 연결 지연 또는 일시적 문제
 			if errors.Is(resp.Error(), context.Canceled) || errors.Is(resp.Error(), context.DeadlineExceeded) {
 				c.logger.Warn("MQ_READ_TIMEOUT",
-					zap.String("stream", streamKey),
-					zap.Duration("timeout", readTimeout),
+					slog.String("stream", streamKey),
+					slog.Duration("timeout", readTimeout),
 				)
 				continue
 			}
 
 			// 실제 오류만 ERROR로 로깅
 			c.logger.Error("MQ_READ_ERROR",
-				zap.String("stream", streamKey),
-				zap.Error(resp.Error()),
+				slog.String("stream", streamKey),
+				slog.Any("error", resp.Error()),
 			)
 			time.Sleep(constants.MQConfig.RetryDelay)
 			continue
@@ -244,7 +269,7 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 		streams, err := resp.AsXRead()
 		if err != nil {
 			if !valkey.IsValkeyNil(err) {
-				c.logger.Warn("MQ_PARSE_ERROR", zap.Error(err))
+				c.logger.Warn("MQ_PARSE_ERROR", slog.Any("error", err))
 			}
 			continue
 		}
@@ -270,16 +295,16 @@ func (c *ValkeyMQConsumer) ensureGroup(ctx context.Context, streamKey, group str
 
 	if err != nil && !isBusyGroupErr(err) {
 		c.logger.Warn("MQ_GROUP_CREATE_FAILED",
-			zap.String("stream", streamKey),
-			zap.String("group", group),
-			zap.Error(err),
+			slog.String("stream", streamKey),
+			slog.String("group", group),
+			slog.Any("error", err),
 		)
 		return
 	}
 
 	c.logger.Info("MQ_GROUP_READY",
-		zap.String("stream", streamKey),
-		zap.String("group", group),
+		slog.String("stream", streamKey),
+		slog.String("group", group),
 	)
 }
 
@@ -309,8 +334,8 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 
 	if text == "" || room == "" {
 		c.logger.Warn("MQ_MESSAGE_SKIPPED",
-			zap.String("stream", streamKey),
-			zap.String("id", msg.ID),
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
 		)
 		_ = c.ackMessage(ctx, streamKey, group, msg.ID)
 		return
@@ -334,26 +359,26 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	shouldProcess, err := resp.AsInt64()
 	if err != nil {
 		c.logger.Error("MQ_IDEMPOTENCY_CHECK_FAILED",
-			zap.String("stream", streamKey),
-			zap.String("id", msg.ID),
-			zap.Error(err),
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
+			slog.Any("error", err),
 		)
 		return
 	}
 
 	if shouldProcess == 0 {
 		c.logger.Debug("MQ_MESSAGE_ALREADY_PROCESSED",
-			zap.String("stream", streamKey),
-			zap.String("id", msg.ID),
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
 		)
 		return
 	}
 
 	c.logger.Info("MQ_MESSAGE_RECEIVED",
-		zap.String("stream", streamKey),
-		zap.String("id", msg.ID),
-		zap.String("room", room),
-		zap.String("sender", sender),
+		slog.String("stream", streamKey),
+		slog.String("id", msg.ID),
+		slog.String("room", room),
+		slog.String("sender", sender),
 	)
 
 	var senderPtr *string
@@ -385,9 +410,9 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 
 	if err := c.client.Do(ctx, completeCmd).Error(); err != nil {
 		c.logger.Error("MQ_COMPLETE_PROCESSING_FAILED",
-			zap.String("stream", streamKey),
-			zap.String("id", msg.ID),
-			zap.Error(err),
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
+			slog.Any("error", err),
 		)
 	}
 }

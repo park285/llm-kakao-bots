@@ -6,29 +6,29 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// DenialReason 는 타입이다.
+// DenialReason: 접근 거부 사유 열거형
 type DenialReason int
 
 // DenialReason 상수 목록.
 const (
-	// DenialReasonNone 는 상수다.
+	// DenialReasonNone: 거부되지 않음 (허용)
 	DenialReasonNone DenialReason = iota
 	DenialReasonUserBlocked
 	DenialReasonChatBlocked
 	DenialReasonAccessDenied
 )
 
-// AccessControl 는 타입이다.
+// AccessControl: 설정 기반의 사용자/채팅방 접근 제어 관리자
 type AccessControl struct {
 	cfg commonconfig.AccessConfig
 }
 
-// New 는 동작을 수행한다.
+// New: 새로운 AccessControl 인스턴스를 생성한다.
 func New(cfg commonconfig.AccessConfig) *AccessControl {
 	return &AccessControl{cfg: cfg}
 }
 
-// DenialReason 는 동작을 수행한다.
+// DenialReason: 사용자 및 채팅방의 접근 거부 사유를 반환한다. (허용 시 DenialReasonNone)
 func (a *AccessControl) DenialReason(userID string, chatID string) DenialReason {
 	if a == nil {
 		return DenialReasonNone

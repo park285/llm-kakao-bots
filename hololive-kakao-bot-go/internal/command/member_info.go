@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -61,8 +61,8 @@ func (c *MemberInfoCommand) Execute(ctx context.Context, cmdCtx *domain.CommandC
 	rawProfile, translated, err := c.Deps().OfficialProfiles.GetWithTranslation(ctx, member.Name)
 	if err != nil {
 		c.log().Error("Failed to load member profile",
-			zap.String("member", member.Name),
-			zap.Error(err),
+			slog.String("member", member.Name),
+			slog.Any("error", err),
 		)
 		return c.Deps().SendError(ctx, cmdCtx.Room, fmt.Sprintf(adapter.ErrMemberProfileLoadFailed, member.Name))
 	}
@@ -115,8 +115,8 @@ func (c *MemberInfoCommand) resolveMember(ctx context.Context, channelID, englis
 	channel, err := c.Deps().Matcher.FindBestMatch(ctx, trimmed)
 	if err != nil {
 		c.log().Warn("Member match failed",
-			zap.String("query", trimmed),
-			zap.Error(err),
+			slog.String("query", trimmed),
+			slog.Any("error", err),
 		)
 		return nil
 	}
@@ -127,11 +127,11 @@ func (c *MemberInfoCommand) resolveMember(ctx context.Context, channelID, englis
 	return provider.FindMemberByChannelID(channel.ID)
 }
 
-func (c *MemberInfoCommand) log() *zap.Logger {
+func (c *MemberInfoCommand) log() *slog.Logger {
 	if c.Deps() != nil && c.Deps().Logger != nil {
 		return c.Deps().Logger
 	}
-	return zap.NewNop()
+	return slog.Default()
 }
 
 func getStringParam(params map[string]any, key string) string {
@@ -278,8 +278,8 @@ func (c *MemberInfoCommand) memberGroups(ctx context.Context, member *domain.Mem
 	profile, translated, err := c.Deps().OfficialProfiles.GetWithTranslation(ctx, member.Name)
 	if err != nil {
 		c.log().Debug("Failed to load profile for directory",
-			zap.String("member", member.Name),
-			zap.Error(err),
+			slog.String("member", member.Name),
+			slog.Any("error", err),
 		)
 		return nil
 	}

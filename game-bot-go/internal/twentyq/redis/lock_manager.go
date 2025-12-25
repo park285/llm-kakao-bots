@@ -13,9 +13,9 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	qassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/assets"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
-	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 )
 
 type lockMode int
@@ -36,7 +36,7 @@ func (m lockMode) String() string {
 	}
 }
 
-// LockManager 는 타입이다.
+// LockManager: Redis Lua 스크립트를 활용하여 읽기/쓰기 분산 락을 관리하는 컴포넌트
 type LockManager struct {
 	client valkey.Client
 	logger *slog.Logger
@@ -52,7 +52,7 @@ type LockManager struct {
 	redisCallTimeout time.Duration
 }
 
-// NewLockManager 는 동작을 수행한다.
+// NewLockManager: 새로운 LockManager 인스턴스를 생성하고 Redis 클라이언트를 설정한다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	return &LockManager{
 		client:           client,
@@ -130,7 +130,7 @@ func (m *LockManager) clearScriptCache() {
 	m.renewWriteSHA = ""
 }
 
-// TryAcquireSharedLock 는 동작을 수행한다.
+// TryAcquireSharedLock: 공유 락(읽기 락 성격) 획득을 시도한다. (1회 시도, SET NX 사용)
 func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, ttlSeconds int64) (bool, error) {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {
@@ -146,12 +146,12 @@ func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, 
 		if strings.Contains(err.Error(), "nil") {
 			return false, nil
 		}
-		return false, qerrors.RedisError{Operation: "shared_lock_acquire", Err: err}
+		return false, cerrors.RedisError{Operation: "shared_lock_acquire", Err: err}
 	}
 	return true, nil
 }
 
-// ReleaseSharedLock 는 동작을 수행한다.
+// ReleaseSharedLock: 공유 락을 해제한다. (DEL 사용)
 func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) error {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {
@@ -159,17 +159,17 @@ func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) err
 	}
 	cmd := m.client.B().Del().Key(lockKey).Build()
 	if err := m.client.Do(ctx, cmd).Error(); err != nil {
-		return qerrors.RedisError{Operation: "shared_lock_release", Err: err}
+		return cerrors.RedisError{Operation: "shared_lock_release", Err: err}
 	}
 	return nil
 }
 
-// WithLock 는 동작을 수행한다.
+// WithLock: 배타적 락(Write Lock)을 획득한 상태에서 작업을 수행한다. (재진입 가능, Context Scope)
 func (m *LockManager) WithLock(ctx context.Context, chatID string, holderName *string, block func(ctx context.Context) error) error {
 	return m.withRWLock(ctx, chatID, holderName, lockModeWrite, block)
 }
 
-// WithReadLock 는 동작을 수행한다.
+// WithReadLock: 공유 락(Read Lock)을 획득한 상태에서 작업을 수행한다. (재진입 가능, Context Scope)
 func (m *LockManager) WithReadLock(ctx context.Context, chatID string, holderName *string, block func(ctx context.Context) error) error {
 	return m.withRWLock(ctx, chatID, holderName, lockModeRead, block)
 }
@@ -204,8 +204,8 @@ func (m *LockManager) withRWLock(ctx context.Context, chatID string, holderName 
 		return acquireErr
 	}
 	if !acquired {
-		return qerrors.LockError{
-			ChatID:      chatID,
+		return cerrors.LockError{
+			SessionID:   chatID,
 			HolderName:  holderName,
 			Description: "failed to acquire lock after retries",
 		}
@@ -248,8 +248,8 @@ func (m *LockManager) handleReentry(
 			return true, block(ctx)
 		}
 		if scope.isHeld(readKey) {
-			return true, qerrors.LockError{
-				ChatID:      chatID,
+			return true, cerrors.LockError{
+				SessionID:   chatID,
 				HolderName:  holderName,
 				Description: "write lock requested while read lock held",
 			}
@@ -319,7 +319,7 @@ func (m *LockManager) acquire(ctx context.Context, chatID string, mode lockMode,
 				m.clearScriptCache()
 				return m.acquire(ctx, chatID, mode, token, ttlMillis)
 			}
-			return false, qerrors.RedisError{Operation: "lock_acquire_write", Err: err}
+			return false, cerrors.RedisError{Operation: "lock_acquire_write", Err: err}
 		}
 		return n == 1, nil
 	case lockModeRead:
@@ -330,7 +330,7 @@ func (m *LockManager) acquire(ctx context.Context, chatID string, mode lockMode,
 				m.clearScriptCache()
 				return m.acquire(ctx, chatID, mode, token, ttlMillis)
 			}
-			return false, qerrors.RedisError{Operation: "lock_acquire_read", Err: err}
+			return false, cerrors.RedisError{Operation: "lock_acquire_read", Err: err}
 		}
 		return n == 1, nil
 	default:
@@ -406,7 +406,7 @@ func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, t
 				m.clearScriptCache()
 				return m.renew(ctx, chatID, mode, token, ttlMillis)
 			}
-			return false, qerrors.RedisError{Operation: "lock_renew_write", Err: err}
+			return false, cerrors.RedisError{Operation: "lock_renew_write", Err: err}
 		}
 		return n == 1, nil
 	case lockModeRead:
@@ -417,7 +417,7 @@ func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, t
 				m.clearScriptCache()
 				return m.renew(ctx, chatID, mode, token, ttlMillis)
 			}
-			return false, qerrors.RedisError{Operation: "lock_renew_read", Err: err}
+			return false, cerrors.RedisError{Operation: "lock_renew_read", Err: err}
 		}
 		return n == 1, nil
 	default:
@@ -442,7 +442,7 @@ func (m *LockManager) release(ctx context.Context, chatID string, mode lockMode,
 				m.clearScriptCache()
 				return m.release(ctx, chatID, mode, token, ttlMillis)
 			}
-			return qerrors.RedisError{Operation: "lock_release_write", Err: err}
+			return cerrors.RedisError{Operation: "lock_release_write", Err: err}
 		}
 		return nil
 	case lockModeRead:
@@ -452,7 +452,7 @@ func (m *LockManager) release(ctx context.Context, chatID string, mode lockMode,
 				m.clearScriptCache()
 				return m.release(ctx, chatID, mode, token, ttlMillis)
 			}
-			return qerrors.RedisError{Operation: "lock_release_read", Err: err}
+			return cerrors.RedisError{Operation: "lock_release_read", Err: err}
 		}
 		return nil
 	default:

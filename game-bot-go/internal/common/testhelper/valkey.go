@@ -3,6 +3,7 @@ package testhelper
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,8 +55,16 @@ func CleanupTestKeys(t *testing.T, client valkey.Client, prefix string) {
 	}
 	ctx := context.Background()
 
+	pattern := prefix + "*"
+	if t != nil {
+		testPrefix := UniqueTestPrefix(t)
+		if !strings.Contains(prefix, testPrefix) && strings.HasSuffix(prefix, ":") {
+			pattern = prefix + "*" + testPrefix + "*"
+		}
+	}
+
 	// KEYS 명령으로 패턴 매칭 후 삭제
-	keys, err := client.Do(ctx, client.B().Keys().Pattern(prefix+"*").Build()).AsStrSlice()
+	keys, err := client.Do(ctx, client.B().Keys().Pattern(pattern).Build()).AsStrSlice()
 	if err != nil {
 		if t != nil {
 			t.Logf("warning: failed to get keys for cleanup: %v", err)

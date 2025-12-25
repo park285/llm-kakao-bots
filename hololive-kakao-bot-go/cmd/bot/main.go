@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"go.uber.org/zap"
+	"log/slog"
+	"os"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -20,23 +20,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger, err := util.NewLogger(cfg.Logging.Level, cfg.Logging.File)
+	// slog 기반 로거 초기화 (파일 로깅 포함)
+	logger, err := util.EnableFileLoggingWithLevel(util.LogConfig{
+		Dir:        cfg.Logging.Dir,
+		MaxSizeMB:  cfg.Logging.MaxSizeMB,
+		MaxBackups: cfg.Logging.MaxBackups,
+		MaxAgeDays: cfg.Logging.MaxAgeDays,
+		Compress:   cfg.Logging.Compress,
+	}, "bot.log", cfg.Logging.Level)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Hololive KakaoTalk Bot starting...",
-		zap.String("version", cfg.Version),
-		zap.String("log_level", cfg.Logging.Level),
+		slog.String("version", cfg.Version),
+		slog.String("log_level", cfg.Logging.Level),
 	)
 
 	buildCtx, buildCancel := context.WithTimeout(context.Background(), constants.AppTimeout.Build)
 	runtime, err := app.BuildRuntime(buildCtx, cfg, logger)
 	buildCancel()
 	if err != nil {
-		logger.Error("Failed to assemble application services", zap.Error(err))
+		logger.Error("Failed to assemble application services", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer runtime.Close()

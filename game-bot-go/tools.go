@@ -3,6 +3,6 @@
 package tools
 
 import (
-	_ "github.com/google/wire/cmd/wire"
+	 "github.com/google/wire/cmd/wire"
 )
 

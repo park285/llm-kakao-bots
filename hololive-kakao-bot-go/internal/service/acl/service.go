@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"sync"
 
-	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
@@ -21,34 +22,35 @@ const (
 	aclRoomsKey    = "acl:rooms"
 )
 
-// Settings 는 DB 모델이다.
+// Settings: ACL 설정을 저장하기 위한 GORM 모델 (key-value 형태)
 type Settings struct {
 	ID    uint   `gorm:"primaryKey"`
 	Key   string `gorm:"uniqueIndex;size:64"`
 	Value string `gorm:"type:text"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: ACL 설정 테이블의 이름을 반환한다. ("acl_settings")
 func (Settings) TableName() string {
 	return "acl_settings"
 }
 
-// Room 는 DB 모델이다.
+// Room: ACL이 적용된 허용된 방 목록을 저장하기 위한 GORM 모델
 type Room struct {
 	ID     uint   `gorm:"primaryKey"`
 	RoomID string `gorm:"uniqueIndex;size:64"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: ACL 방 목록 테이블의 이름을 반환한다. ("acl_rooms")
 func (Room) TableName() string {
 	return "acl_rooms"
 }
 
-// Service 는 Valkey + PostgreSQL 영구화 서비스다.
+// Service: 접근 제어 목록(ACL)을 관리하는 서비스
+// PostgreSQL을 영구 저장소로 사용하고, 성능을 위해 인메모리 및 Valkey 캐시를 활용한다.
 type Service struct {
 	db     *gorm.DB
 	cache  *cache.Service
-	logger *zap.Logger
+	logger *slog.Logger
 
 	// 메모리 캐시 (빠른 조회용)
 	mu      sync.RWMutex
@@ -86,7 +88,7 @@ func createTablesIfNotExist(db *gorm.DB) error {
 func NewACLService(
 	postgres *database.PostgresService,
 	cacheSvc *cache.Service,
-	logger *zap.Logger,
+	logger *slog.Logger,
 	defaultEnabled bool,
 	defaultRooms []string,
 ) (*Service, error) {
@@ -107,7 +109,7 @@ func NewACLService(
 
 	// 시작 시 로드 (PostgreSQL → 메모리/Valkey)
 	if err := svc.loadFromDatabase(context.Background(), defaultEnabled, defaultRooms); err != nil {
-		logger.Warn("Failed to load ACL from database, using defaults", zap.Error(err))
+		logger.Warn("Failed to load ACL from database, using defaults", slog.Any("error", err))
 		svc.enabled = defaultEnabled
 		for _, r := range defaultRooms {
 			svc.rooms[r] = struct{}{}
@@ -115,8 +117,8 @@ func NewACLService(
 	}
 
 	logger.Info("ACL service initialized",
-		zap.Bool("enabled", svc.enabled),
-		zap.Int("rooms", len(svc.rooms)),
+		slog.Bool("enabled", svc.enabled),
+		slog.Int("rooms", len(svc.rooms)),
 	)
 
 	return svc, nil
@@ -240,7 +242,7 @@ func (s *Service) SetEnabled(ctx context.Context, enabled bool) error {
 	s.syncToValkey(ctx)
 
 	s.logger.Info("ACL enabled status updated",
-		zap.Bool("enabled", enabled),
+		slog.Bool("enabled", enabled),
 	)
 
 	return nil
@@ -275,7 +277,7 @@ func (s *Service) AddRoom(ctx context.Context, room string) (bool, error) {
 	s.syncToValkey(ctx)
 
 	s.logger.Info("Room added to ACL whitelist",
-		zap.String("room", room),
+		slog.String("room", room),
 	)
 
 	return true, nil
@@ -310,7 +312,7 @@ func (s *Service) RemoveRoom(ctx context.Context, room string) (bool, error) {
 	s.syncToValkey(ctx)
 
 	s.logger.Info("Room removed from ACL whitelist",
-		zap.String("room", room),
+		slog.String("room", room),
 	)
 
 	return true, nil

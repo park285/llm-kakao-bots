@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
@@ -104,7 +105,7 @@ type AnswerQuestionResult struct {
 // AskQuestion 는 동작을 수행한다.
 func (s *GameService) AskQuestion(ctx context.Context, sessionID string, question string) (tsmodel.GameState, AnswerQuestionResult, error) {
 	if !isValidQuestion(question) {
-		return tsmodel.GameState{}, AnswerQuestionResult{}, tserrors.InvalidQuestionError{Message: "invalid question format"}
+		return tsmodel.GameState{}, AnswerQuestionResult{}, cerrors.InvalidQuestionError{Message: "invalid question format"}
 	}
 
 	sanitizedQuestion, err := s.injectionGuard.ValidateOrThrow(ctx, question)
@@ -178,7 +179,7 @@ func (s *GameService) AskQuestion(ctx context.Context, sessionID string, questio
 // SubmitSolution 는 동작을 수행한다.
 func (s *GameService) SubmitSolution(ctx context.Context, sessionID string, playerAnswer string) (tsmodel.GameState, tsmodel.ValidationResult, error) {
 	if !isValidAnswer(playerAnswer) {
-		return tsmodel.GameState{}, "", tserrors.InvalidAnswerError{Message: "invalid answer format"}
+		return tsmodel.GameState{}, "", cerrors.InvalidAnswerError{Message: "invalid answer format"}
 	}
 
 	sanitizedAnswer, err := s.injectionGuard.ValidateOrThrow(ctx, playerAnswer)

@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -17,13 +18,13 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// ScraperService 는 타입이다.
+// ScraperService: Holodex API 실패 시 백업으로 홀로라이브 공식 스케줄 페이지를 크롤링하는 서비스
 type ScraperService struct {
 	httpClient    *http.Client
 	cache         *cache.Service
 	membersData   domain.MemberDataProvider
 	memberNameMap map[string]string // memberName -> channelID
-	logger        *zap.Logger
+	logger        *slog.Logger
 	baseURL       string
 }
 
@@ -31,8 +32,9 @@ const (
 	scraperChannelCacheKeyPrefix = "scraper:channel:"
 )
 
-// NewScraperService 는 동작을 수행한다.
-func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvider, logger *zap.Logger) *ScraperService {
+// NewScraperService: 새로운 ScraperService 인스턴스를 생성한다.
+// 멤버 정보와 매핑 데이터를 초기화하여 크롤링 데이터 파싱에 활용한다.
+func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) *ScraperService {
 	nameMap := make(map[string]string)
 
 	for _, member := range membersData.GetAllMembers() {
@@ -53,8 +55,8 @@ func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvid
 	}
 
 	logger.Info("Scraper initialized with member matching",
-		zap.Int("members", len(membersData.GetAllMembers())),
-		zap.Int("name_mappings", len(nameMap)))
+		slog.Int("members", len(membersData.GetAllMembers())),
+		slog.Int("name_mappings", len(nameMap)))
 
 	return &ScraperService{
 		httpClient: &http.Client{
@@ -68,17 +70,17 @@ func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvid
 	}
 }
 
-// FetchChannel 는 동작을 수행한다.
+// FetchChannel: 특정 채널의 방송 일정을 공식 홈페이지에서 크롤링하여 가져온다. (캐시 우선 확인)
 func (s *ScraperService) FetchChannel(ctx context.Context, channelID string) ([]*domain.Stream, error) {
 	cacheKey := scraperChannelCacheKeyPrefix + channelID
 	if cached, found := s.cache.GetStreams(ctx, cacheKey); found {
-		s.logger.Debug("Scraper cache hit", zap.String("channel", channelID))
+		s.logger.Debug("Scraper cache hit", slog.String("channel", channelID))
 		return cached, nil
 	}
 
 	s.logger.Info("Fetching from official schedule (FALLBACK MODE)",
-		zap.String("channel", channelID),
-		zap.String("url", s.baseURL))
+		slog.String("channel", channelID),
+		slog.String("url", s.baseURL))
 
 	allStreams, err := s.fetchAllStreams(ctx)
 	if err != nil {
@@ -95,13 +97,13 @@ func (s *ScraperService) FetchChannel(ctx context.Context, channelID string) ([]
 	s.cache.SetStreams(ctx, cacheKey, channelStreams, constants.OfficialScheduleConfig.CacheExpiry)
 
 	s.logger.Info("Scraper completed",
-		zap.String("channel", channelID),
-		zap.Int("streams", len(channelStreams)))
+		slog.String("channel", channelID),
+		slog.Int("streams", len(channelStreams)))
 
 	return channelStreams, nil
 }
 
-// FetchAllStreams 는 동작을 수행한다.
+// FetchAllStreams: 전체 방송 일정을 공식 홈페이지에서 크롤링하여 가져온다.
 func (s *ScraperService) FetchAllStreams(ctx context.Context) ([]*domain.Stream, error) {
 	return s.fetchAllStreams(ctx)
 }
@@ -139,7 +141,7 @@ func (s *ScraperService) fetchAllStreams(ctx context.Context) ([]*domain.Stream,
 			dateText := util.TrimSpace(dateHeader.Text())
 			dateText = strings.Split(dateText, "(")[0]
 			currentDate = util.TrimSpace(dateText)
-			s.logger.Debug("Found date section", zap.String("date", currentDate))
+			s.logger.Debug("Found date section", slog.String("date", currentDate))
 			return
 		}
 
@@ -148,8 +150,8 @@ func (s *ScraperService) fetchAllStreams(ctx context.Context) ([]*domain.Stream,
 			if err != nil {
 				parseErrors++
 				s.logger.Debug("Failed to parse stream element",
-					zap.String("date", currentDate),
-					zap.Error(err))
+					slog.String("date", currentDate),
+					slog.Any("error", err))
 				return
 			}
 
@@ -168,13 +170,13 @@ func (s *ScraperService) fetchAllStreams(ctx context.Context) ([]*domain.Stream,
 
 	if parseErrors > len(streams)/2 {
 		s.logger.Warn("High parse error rate detected",
-			zap.Int("successes", len(streams)),
-			zap.Int("errors", parseErrors))
+			slog.Int("successes", len(streams)),
+			slog.Int("errors", parseErrors))
 	}
 
 	s.logger.Info("Scraper fetched all streams",
-		zap.Int("total", len(streams)),
-		zap.Int("parse_errors", parseErrors))
+		slog.Int("total", len(streams)),
+		slog.Int("parse_errors", parseErrors))
 
 	return streams, nil
 }
@@ -205,9 +207,9 @@ func (s *ScraperService) parseStreamElement(sel *goquery.Selection, currentDate 
 	startTime, err := s.parseDatetimeWithContext(currentDate, timeText)
 	if err != nil {
 		s.logger.Debug("Failed to parse datetime",
-			zap.String("date", currentDate),
-			zap.String("time", timeText),
-			zap.Error(err))
+			slog.String("date", currentDate),
+			slog.String("time", timeText),
+			slog.Any("error", err))
 	}
 
 	thumbnailURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
@@ -215,8 +217,8 @@ func (s *ScraperService) parseStreamElement(sel *goquery.Selection, currentDate 
 	channelID := s.matchMemberToChannel(memberName)
 	if channelID == "" {
 		s.logger.Debug("Could not match member name to channel ID",
-			zap.String("member_name", memberName),
-			zap.String("video_id", videoID))
+			slog.String("member_name", memberName),
+			slog.String("video_id", videoID))
 	}
 
 	stream := &domain.Stream{
@@ -246,9 +248,9 @@ func (s *ScraperService) matchMemberToChannel(memberName string) string {
 	for name, channelID := range s.memberNameMap {
 		if strings.Contains(name, normalized) || strings.Contains(normalized, name) {
 			s.logger.Debug("Matched member via partial match",
-				zap.String("scraped", memberName),
-				zap.String("matched", name),
-				zap.String("channel_id", channelID))
+				slog.String("scraped", memberName),
+				slog.String("matched", name),
+				slog.String("channel_id", channelID))
 			return channelID
 		}
 	}
@@ -321,13 +323,13 @@ func (s *ScraperService) extractMemberFromOnClick(onclick string) string {
 	return onclick[startIdx : startIdx+endIdx]
 }
 
-// ValidateStructure 는 동작을 수행한다.
+// ValidateStructure: 공식 홈페이지의 HTML 구조가 변경되었는지 확인한다. (정상 파싱 여부 테스트)
 func (s *ScraperService) ValidateStructure(ctx context.Context) error {
 	_, err := s.fetchAllStreams(ctx)
 	return err
 }
 
-// StructureChangedError 는 타입이다.
+// StructureChangedError: 웹사이트 구조 변경으로 인해 파싱 실패 비율이 높을 때 발생하는 에러
 type StructureChangedError struct {
 	Message     string
 	ParseErrors int
@@ -337,7 +339,7 @@ func (e *StructureChangedError) Error() string {
 	return fmt.Sprintf("%s (parse errors: %d)", e.Message, e.ParseErrors)
 }
 
-// IsStructureError 는 동작을 수행한다.
+// IsStructureError: 에러가 HTML 구조 변경으로 인한 것인지 확인한다.
 func IsStructureError(err error) bool {
 	structureChangedError := &StructureChangedError{}
 	ok := errors.As(err, &structureChangedError)

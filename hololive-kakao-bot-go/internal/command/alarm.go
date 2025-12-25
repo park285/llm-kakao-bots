@@ -4,33 +4,33 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 )
 
-// AlarmCommand 는 타입이다.
+// AlarmCommand: 알람 설정 및 관리를 담당하는 커맨드 핸들러
 type AlarmCommand struct {
 	BaseCommand
 }
 
-// NewAlarmCommand 는 동작을 수행한다.
+// NewAlarmCommand: 알람 관리 커맨드 핸들러를 생성한다.
 func NewAlarmCommand(deps *Dependencies) *AlarmCommand {
 	return &AlarmCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name 는 동작을 수행한다.
+// Name: 커맨드의 이름("alarm")을 반환한다.
 func (c *AlarmCommand) Name() string {
 	return "alarm"
 }
 
-// Description 는 동작을 수행한다.
+// Description: 커맨드에 대한 설명을 반환한다.
 func (c *AlarmCommand) Description() string {
 	return "방송 알람 관리"
 }
 
-// Execute 는 동작을 수행한다.
+// Execute: 알람 추가, 삭제, 목록 조회 등의 작업을 수행한다.
 func (c *AlarmCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {
 		return err
@@ -59,10 +59,10 @@ func (c *AlarmCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContex
 		subCmd, _ := params["sub_command"].(string)
 		memberName, _ := params["member"].(string)
 		c.Deps().Logger.Info("Invalid alarm command received",
-			zap.String("room", cmdCtx.Room),
-			zap.String("sender", cmdCtx.Sender),
-			zap.String("sub_command", subCmd),
-			zap.String("member", memberName),
+			slog.String("room", cmdCtx.Room),
+			slog.String("sender", cmdCtx.Sender),
+			slog.String("sub_command", subCmd),
+			slog.String("member", memberName),
 		)
 		return c.Deps().SendError(ctx, cmdCtx.Room, c.Deps().Formatter.InvalidAlarmUsage())
 	default:
@@ -88,7 +88,7 @@ func (c *AlarmCommand) handleAdd(ctx context.Context, cmdCtx *domain.CommandCont
 		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrAlarmNeedMemberNameAdd)
 	}
 
-	c.Deps().Logger.Info("Alarm add requested", zap.String("member", memberName))
+	c.Deps().Logger.Info("Alarm add requested", slog.String("member", memberName))
 
 	channel, err := FindActiveMemberOrError(ctx, c.Deps(), cmdCtx.Room, memberName)
 	if err != nil {
@@ -106,8 +106,8 @@ func (c *AlarmCommand) handleAdd(ctx context.Context, cmdCtx *domain.CommandCont
 	)
 	if err != nil {
 		c.Deps().Logger.Error("Failed to add alarm",
-			zap.String("channel", channel.Name),
-			zap.Error(err),
+			slog.String("channel", channel.Name),
+			slog.Any("error", err),
 		)
 		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrAlarmAddFailed)
 	}
@@ -124,7 +124,7 @@ func (c *AlarmCommand) handleRemove(ctx context.Context, cmdCtx *domain.CommandC
 		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrAlarmNeedMemberNameRemove)
 	}
 
-	c.Deps().Logger.Info("Alarm remove requested", zap.String("member", memberName))
+	c.Deps().Logger.Info("Alarm remove requested", slog.String("member", memberName))
 
 	channel, err := FindActiveMemberOrError(ctx, c.Deps(), cmdCtx.Room, memberName)
 	if err != nil {
@@ -134,8 +134,8 @@ func (c *AlarmCommand) handleRemove(ctx context.Context, cmdCtx *domain.CommandC
 	removed, err := c.Deps().Alarm.RemoveAlarm(ctx, cmdCtx.Room, cmdCtx.UserID, channel.ID)
 	if err != nil {
 		c.Deps().Logger.Error("Failed to remove alarm",
-			zap.String("channel", channel.Name),
-			zap.Error(err),
+			slog.String("channel", channel.Name),
+			slog.Any("error", err),
 		)
 		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrAlarmRemoveFailed)
 	}
@@ -170,7 +170,7 @@ func (c *AlarmCommand) handleList(ctx context.Context, cmdCtx *domain.CommandCon
 func (c *AlarmCommand) handleClear(ctx context.Context, cmdCtx *domain.CommandContext) error {
 	count, err := c.Deps().Alarm.ClearUserAlarms(ctx, cmdCtx.Room, cmdCtx.UserID)
 	if err != nil {
-		c.Deps().Logger.Error("Failed to clear alarms", zap.Error(err))
+		c.Deps().Logger.Error("Failed to clear alarms", slog.Any("error", err))
 		return c.Deps().SendError(ctx, cmdCtx.Room, adapter.ErrAlarmClearFailed)
 	}
 

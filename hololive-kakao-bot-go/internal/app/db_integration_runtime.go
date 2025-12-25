@@ -4,34 +4,34 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
 )
 
-// DBIntegrationRuntime 는 타입이다.
+// DBIntegrationRuntime: DB 통합 테스트 및 실행을 위한 런타임 환경 (Repository, Cache, Adapter 포함)
 type DBIntegrationRuntime struct {
-	Logger           *zap.Logger
-	Repository *member.Repository
-	Cache      *member.Cache
-	MemberAdapter    *member.ServiceAdapter
+	Logger        *slog.Logger
+	Repository    *member.Repository
+	Cache         *member.Cache
+	MemberAdapter *member.ServiceAdapter
 
 	cleanup func()
 }
 
-// Close 는 동작을 수행한다.
+// Close: 런타임 리소스를 정리하고 연결을 해제한다.
 func (r *DBIntegrationRuntime) Close() {
 	if r != nil && r.cleanup != nil {
 		r.cleanup()
 	}
 }
 
-// BuildDBIntegrationRuntime 는 동작을 수행한다.
+// BuildDBIntegrationRuntime: PostgreSQL 설정을 기반으로 DB 통합 런타임 환경을 구축한다.
 func BuildDBIntegrationRuntime(
 	ctx context.Context,
 	pgCfg config.PostgresConfig,
-	logger *zap.Logger,
+	logger *slog.Logger,
 ) (*DBIntegrationRuntime, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger must not be nil")

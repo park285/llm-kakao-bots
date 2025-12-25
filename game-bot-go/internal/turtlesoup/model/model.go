@@ -9,15 +9,15 @@ import (
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 )
 
-// PuzzleCategory 는 타입이다.
+// PuzzleCategory: 퍼즐 카테고리 타입
 type PuzzleCategory string
 
 const (
-	// PuzzleCategoryMystery 는 상수다.
+	// PuzzleCategoryMystery: 기본 미스터리 카테고리
 	PuzzleCategoryMystery PuzzleCategory = "MYSTERY"
 )
 
-// ParsePuzzleCategory 는 동작을 수행한다.
+// ParsePuzzleCategory: 문자열을 PuzzleCategory로 변환한다.
 func ParsePuzzleCategory(input string) PuzzleCategory {
 	normalized := strings.TrimSpace(input)
 	if normalized == "" {
@@ -32,7 +32,7 @@ func ParsePuzzleCategory(input string) PuzzleCategory {
 	}
 }
 
-// Puzzle 는 타입이다.
+// Puzzle: 바다거북 스푸 게임의 문제(시나리오)와 정답(해설)을 담고 있는 구조체
 type Puzzle struct {
 	Title      string         `json:"title"`
 	Scenario   string         `json:"scenario"`
@@ -43,13 +43,13 @@ type Puzzle struct {
 	CreatedAt  time.Time      `json:"createdAt"`
 }
 
-// HistoryEntry 는 타입이다.
+// HistoryEntry: 질문/답변 기록 항목
 type HistoryEntry struct {
 	Question string `json:"question"`
 	Answer   string `json:"answer"`
 }
 
-// GameState 는 타입이다.
+// GameState: 특정 채팅방의 게임 진행 상황(퍼즐 정보, 질문 카운트, 이력, 플레이어 목록 등)을 저장하는 상태 객체
 type GameState struct {
 	SessionID string `json:"sessionId"`
 	UserID    string `json:"userId"`
@@ -67,7 +67,7 @@ type GameState struct {
 	LastActivityAt time.Time `json:"lastActivityAt"`
 }
 
-// NewInitialState 는 동작을 수행한다.
+// NewInitialState: 새로운 게임 상태를 초기화한다.
 func NewInitialState(sessionID string, userID string, chatID string, puzzle Puzzle) GameState {
 	now := time.Now()
 	return GameState{
@@ -81,7 +81,7 @@ func NewInitialState(sessionID string, userID string, chatID string, puzzle Puzz
 	}
 }
 
-// UseHint 는 동작을 수행한다.
+// UseHint: 힌트를 사용하고 상태를 업데이트한다. (Immutable)
 func (s GameState) UseHint(hintContent string) GameState {
 	now := time.Now()
 	nextHints := append(slices.Clone(s.HintContents), hintContent)
@@ -92,7 +92,7 @@ func (s GameState) UseHint(hintContent string) GameState {
 	})
 }
 
-// AddPlayer 는 동작을 수행한다.
+// AddPlayer: 참여자를 목록에 추가하고 상태를 업데이트한다. (Immutable)
 func (s GameState) AddPlayer(playerID string) GameState {
 	now := time.Now()
 	if slices.Contains(s.Players, playerID) {
@@ -105,7 +105,7 @@ func (s GameState) AddPlayer(playerID string) GameState {
 	})
 }
 
-// MarkSolved 는 동작을 수행한다.
+// MarkSolved: 게임을 해결됨 상태로 변경한다. (Immutable)
 func (s GameState) MarkSolved() GameState {
 	now := time.Now()
 	return s.copyWith(func(next *GameState) {
@@ -114,7 +114,7 @@ func (s GameState) MarkSolved() GameState {
 	})
 }
 
-// UpdateActivity 는 동작을 수행한다.
+// UpdateActivity: 마지막 활동 시간을 현재로 갱신한다. (Immutable)
 func (s GameState) UpdateActivity() GameState {
 	now := time.Now()
 	return s.copyWith(func(next *GameState) {
@@ -128,18 +128,18 @@ func (s GameState) copyWith(mut func(*GameState)) GameState {
 	return next
 }
 
-// ValidationResult 는 타입이다.
+// ValidationResult: 사용자의 정답 시도에 대한 AI의 판정 결과 (예, 아니오, 근접함 등)
 type ValidationResult string
 
 // ValidationResult 상수 목록.
 const (
-	// ValidationYes 는 상수다.
+	// ValidationYes: 정답
 	ValidationYes   ValidationResult = "YES"
 	ValidationClose ValidationResult = "CLOSE"
 	ValidationNo    ValidationResult = "NO"
 )
 
-// ParseValidationResult 는 동작을 수행한다.
+// ParseValidationResult: 문자열을 ValidationResult로 변환한다.
 func ParseValidationResult(input string) (ValidationResult, error) {
 	upper := strings.ToUpper(strings.TrimSpace(input))
 	switch ValidationResult(upper) {
@@ -150,13 +150,13 @@ func ParseValidationResult(input string) (ValidationResult, error) {
 	}
 }
 
-// IsCorrect 는 동작을 수행한다.
+// IsCorrect: 정답 여부를 반환한다.
 func (r ValidationResult) IsCorrect() bool { return r == ValidationYes }
 
-// IsClose 는 동작을 수행한다.
+// IsClose: 정답에 근접했는지 여부를 반환한다.
 func (r ValidationResult) IsClose() bool { return r == ValidationClose }
 
-// AnswerResult 는 타입이다.
+// AnswerResult: 정답 제출 후의 상세 결과 (판정, 힌트 사용 내역, 설명 포함)
 type AnswerResult struct {
 	Result        ValidationResult
 	QuestionCount int
@@ -166,20 +166,20 @@ type AnswerResult struct {
 	Explanation   string
 }
 
-// IsCorrect 는 동작을 수행한다.
+// IsCorrect: 정답 여부를 반환한다.
 func (r AnswerResult) IsCorrect() bool { return r.Result.IsCorrect() }
 
-// IsClose 는 동작을 수행한다.
+// IsClose: 정답에 근접했는지 여부를 반환한다.
 func (r AnswerResult) IsClose() bool { return r.Result.IsClose() }
 
-// SurrenderResult 는 타입이다.
+// SurrenderResult: 게임 포기(항복) 시 공개되는 정답과 해석 정보
 type SurrenderResult struct {
 	Solution  string
 	HintsUsed []string
 }
 
-// SurrenderVote 는 타입이다.
+// SurrenderVote: domainmodels.SurrenderVote alias
 type SurrenderVote = domainmodels.SurrenderVote
 
-// PendingMessage 는 타입이다.
+// PendingMessage: domainmodels.PendingMessage alias
 type PendingMessage = domainmodels.PendingMessage

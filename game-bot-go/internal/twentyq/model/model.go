@@ -6,7 +6,7 @@ import (
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 )
 
-// RiddleSecret 는 타입이다.
+// RiddleSecret: 스무고개 게임의 정답 및 메타데이터를 담고 있는 구조체 (Redis 세션에 저장됨)
 type RiddleSecret struct {
 	Target      string `json:"target"`
 	Category    string `json:"category"`
@@ -14,7 +14,7 @@ type RiddleSecret struct {
 	Description string `json:"description,omitempty"`
 }
 
-// QuestionHistory 는 타입이다.
+// QuestionHistory: 사용자의 질문과 그에 대한 AI의 답변 기록
 type QuestionHistory struct {
 	QuestionNumber   int     `json:"questionNumber"`
 	Question         string  `json:"question"`
@@ -24,13 +24,13 @@ type QuestionHistory struct {
 	UserID           *string `json:"userId,omitempty"`
 }
 
-// HintHistory 는 타입이다.
+// HintHistory: 게임 중 제공된 힌트의 기록
 type HintHistory struct {
 	HintNumber int    `json:"hintNumber"`
 	Content    string `json:"content"`
 }
 
-// RiddleStatusResponse 는 타입이다.
+// RiddleStatusResponse: 현재 게임의 진행 상황(질문/답변 내역, 힌트, 설정 등)을 클라이언트에 전달하기 위한 응답 구조체
 type RiddleStatusResponse struct {
 	QuestionCount    int               `json:"questionCount"`
 	Questions        []QuestionHistory `json:"questions"`
@@ -40,22 +40,22 @@ type RiddleStatusResponse struct {
 	SelectedCategory *string           `json:"selectedCategory,omitempty"`
 }
 
-// PlayerInfo 는 타입이다.
+// PlayerInfo: 게임 참여자 정보 (ID, 닉네임)
 type PlayerInfo struct {
 	UserID string `json:"userId"`
 	Sender string `json:"sender"`
 }
 
-// PendingMessage 는 타입이다.
+// PendingMessage: pending.Message 타입 재정의
 type PendingMessage = domainmodels.PendingMessage
 
-// SurrenderVote 는 타입이다.
+// SurrenderVote: surrender.Vote 타입 재정의
 type SurrenderVote = domainmodels.SurrenderVote
 
-// FiveScaleKo 는 타입이다.
+// FiveScaleKo: 5단계 긍정/부정 답변 타입
 type FiveScaleKo int
 
-// FiveScaleAlwaysYes 는 5단계 응답 상수 목록이다.
+// FiveScaleAlwaysYes 등: 5단계 응답 상수
 const (
 	FiveScaleAlwaysYes FiveScaleKo = iota
 	FiveScaleMostlyYes
@@ -72,7 +72,8 @@ var fiveScaleTokenToValue = map[string]FiveScaleKo{
 	"이해할 수 없는 질문입니다": FiveScaleInvalid,
 }
 
-// ParseFiveScaleKo 는 동작을 수행한다.
+// ParseFiveScaleKo: AI의 답변 문자열을 분석하여 FiveScaleKo 열거형 값으로 변환한다.
+// 문장 부호 제거 및 정규화를 수행한 후 매핑한다.
 func ParseFiveScaleKo(raw string) (*FiveScaleKo, bool) {
 	cleaned := strings.TrimSpace(raw)
 	if cleaned == "" {
@@ -100,7 +101,7 @@ func ParseFiveScaleKo(raw string) (*FiveScaleKo, bool) {
 	return &value, true
 }
 
-// FiveScaleToken 는 동작을 수행한다.
+// FiveScaleToken: FiveScaleKo 열거형 값을 해당하는 한국어 토큰 문자열로 변환한다.
 func FiveScaleToken(value FiveScaleKo) string {
 	for token, v := range fiveScaleTokenToValue {
 		if v == value {
@@ -110,7 +111,7 @@ func FiveScaleToken(value FiveScaleKo) string {
 	return ""
 }
 
-// ChainCondition 체인 질문 실행 조건.
+// ChainCondition: 체인 질문(연속 질문)의 실행 조건을 정의하는 열거형
 type ChainCondition int
 
 const (
@@ -120,7 +121,7 @@ const (
 	ChainConditionIfTrue
 )
 
-// ShouldContinue 주어진 응답 스케일에 따라 체인 질문 계속 여부 결정.
+// ShouldContinue: 이전 질문의 답변(scale)에 따라 체인 질문을 계속 진행할지 여부를 결정한다.
 func (c ChainCondition) ShouldContinue(scale FiveScaleKo) bool {
 	switch c {
 	case ChainConditionAlways:

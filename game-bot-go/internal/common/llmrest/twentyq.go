@@ -2,20 +2,20 @@ package llmrest
 
 import "context"
 
-// TwentyQHintsRequest 는 타입이다.
+// TwentyQHintsRequest: 스무고개 힌트 생성 요청 파라미터
 type TwentyQHintsRequest struct {
 	Target   string         `json:"target"`
 	Category string         `json:"category"`
 	Details  map[string]any `json:"details,omitempty"`
 }
 
-// TwentyQHintsResponse 는 타입이다.
+// TwentyQHintsResponse: 스무고개 힌트 생성 응답
 type TwentyQHintsResponse struct {
 	Hints            []string `json:"hints"`
 	ThoughtSignature *string  `json:"thought_signature,omitempty"`
 }
 
-// TwentyQAnswerRequest 는 타입이다.
+// TwentyQAnswerRequest: 스무고개 질문 답변 요청 파라미터
 type TwentyQAnswerRequest struct {
 	SessionID *string        `json:"session_id,omitempty"`
 	ChatID    *string        `json:"chat_id,omitempty"`
@@ -26,49 +26,49 @@ type TwentyQAnswerRequest struct {
 	Details   map[string]any `json:"details,omitempty"`
 }
 
-// TwentyQAnswerResponse 는 타입이다.
+// TwentyQAnswerResponse: 스무고개 질문 답변 응답
 type TwentyQAnswerResponse struct {
 	Scale            *string `json:"scale,omitempty"`
 	RawText          string  `json:"raw_text"`
 	ThoughtSignature *string `json:"thought_signature,omitempty"`
 }
 
-// TwentyQVerifyRequest 는 타입이다.
+// TwentyQVerifyRequest: 정답 추측 검증 요청 파라미터
 type TwentyQVerifyRequest struct {
 	Target string `json:"target"`
 	Guess  string `json:"guess"`
 }
 
-// TwentyQVerifyResponse 는 타입이다.
+// TwentyQVerifyResponse: 정답 추측 검증 응답
 type TwentyQVerifyResponse struct {
 	Result  *string `json:"result,omitempty"`
 	RawText string  `json:"raw_text"`
 }
 
-// TwentyQNormalizeRequest 는 타입이다.
+// TwentyQNormalizeRequest: 질문 정규화 요청 파라미터
 type TwentyQNormalizeRequest struct {
 	Question string `json:"question"`
 }
 
-// TwentyQNormalizeResponse 는 타입이다.
+// TwentyQNormalizeResponse: 질문 정규화 응답
 type TwentyQNormalizeResponse struct {
 	Normalized string `json:"normalized"`
 	Original   string `json:"original"`
 }
 
-// TwentyQSynonymRequest 는 타입이다.
+// TwentyQSynonymRequest: 동의어 확인 요청 파라미터
 type TwentyQSynonymRequest struct {
 	Target string `json:"target"`
 	Guess  string `json:"guess"`
 }
 
-// TwentyQSynonymResponse 는 타입이다.
+// TwentyQSynonymResponse: 동의어 확인 응답
 type TwentyQSynonymResponse struct {
 	Result  *string `json:"result,omitempty"`
 	RawText string  `json:"raw_text"`
 }
 
-// TwentyQGenerateHints 는 동작을 수행한다.
+// TwentyQGenerateHints: 힌트를 생성 요청을 전송한다.
 func (c *Client) TwentyQGenerateHints(ctx context.Context, target string, category string, details map[string]any) (*TwentyQHintsResponse, error) {
 	req := TwentyQHintsRequest{Target: target, Category: category, Details: details}
 	var out TwentyQHintsResponse
@@ -78,7 +78,7 @@ func (c *Client) TwentyQGenerateHints(ctx context.Context, target string, catego
 	return &out, nil
 }
 
-// TwentyQAnswerQuestion 는 동작을 수행한다.
+// TwentyQAnswerQuestion: 질문에 대한 답변 요청을 전송한다.
 func (c *Client) TwentyQAnswerQuestion(
 	ctx context.Context,
 	chatID string,
@@ -104,7 +104,7 @@ func (c *Client) TwentyQAnswerQuestion(
 	return &out, nil
 }
 
-// TwentyQVerifyGuess 는 동작을 수행한다.
+// TwentyQVerifyGuess: 정답 추측 검증 요청을 전송한다.
 func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess string) (*TwentyQVerifyResponse, error) {
 	req := TwentyQVerifyRequest{Target: target, Guess: guess}
 	var out TwentyQVerifyResponse
@@ -114,7 +114,7 @@ func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess st
 	return &out, nil
 }
 
-// TwentyQNormalizeQuestion 는 동작을 수행한다.
+// TwentyQNormalizeQuestion: 질문 정규화 요청을 전송한다.
 func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) (*TwentyQNormalizeResponse, error) {
 	req := TwentyQNormalizeRequest{Question: question}
 	var out TwentyQNormalizeResponse
@@ -124,7 +124,7 @@ func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) 
 	return &out, nil
 }
 
-// TwentyQCheckSynonym 는 동작을 수행한다.
+// TwentyQCheckSynonym: 동의어 여부 확인 요청을 전송한다.
 func (c *Client) TwentyQCheckSynonym(ctx context.Context, target string, guess string) (*TwentyQSynonymResponse, error) {
 	req := TwentyQSynonymRequest{Target: target, Guess: guess}
 	var out TwentyQSynonymResponse

@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-	"go.uber.org/zap"
+	"log/slog"
 )
 
 // BaseCommand 는 모든 커맨드가 공통으로 가지는 기본 의존성과 검증 로직을 제공한다.
@@ -28,7 +28,7 @@ func (b *BaseCommand) EnsureBaseDeps() error {
 	}
 
 	if b.deps.Logger == nil {
-		b.deps.Logger = zap.NewNop()
+		b.deps.Logger = slog.Default()
 	}
 
 	return nil

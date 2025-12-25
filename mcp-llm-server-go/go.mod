@@ -11,6 +11,7 @@ require (
 	github.com/google/wire v0.7.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lmittmann/tint v1.1.2
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/valkey-io/valkey-go v1.0.69
 	golang.org/x/net v0.48.0
 	golang.org/x/sync v0.19.0

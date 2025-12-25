@@ -14,10 +14,10 @@ import (
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 )
 
-// CommandExecutor 는 타입이다.
+// CommandExecutor: 대기열에서 꺼낸 메시지(명령어)를 실제로 수행하는 함수 타입 정의 (예: GameCommandHandler.ProcessCommand)
 type CommandExecutor func(ctx context.Context, chatID string, pending tsmodel.PendingMessage, emit func(mqmsg.OutboundMessage) error) error
 
-// MessageQueueProcessor 는 타입이다.
+// MessageQueueProcessor: Redis 대기열 기반의 메시지 순차 처리 및 흐름 제어(락, 알림, 재시도 등)를 담당하는 프로세서
 type MessageQueueProcessor struct {
 	queueCoordinator      *MessageQueueCoordinator
 	lockManager           *tsredis.LockManager
@@ -28,7 +28,7 @@ type MessageQueueProcessor struct {
 	logger                *slog.Logger
 }
 
-// NewMessageQueueProcessor 는 동작을 수행한다.
+// NewMessageQueueProcessor: MessageQueueProcessor 인스턴스를 생성하고 필요한 종속성을 주입한다.
 func NewMessageQueueProcessor(
 	queueCoordinator *MessageQueueCoordinator,
 	lockManager *tsredis.LockManager,
@@ -49,7 +49,7 @@ func NewMessageQueueProcessor(
 	}
 }
 
-// EnqueueAndNotify 는 동작을 수행한다.
+// EnqueueAndNotify: 처리 불가능한 메시지를 대기열에 추가하고, 사용자에게 대기 상태 알림 메시지(순번 등)를 전송한다.
 func (p *MessageQueueProcessor) EnqueueAndNotify(
 	ctx context.Context,
 	chatID string,
@@ -116,7 +116,8 @@ func (p *MessageQueueProcessor) buildQueueMessage(
 	}
 }
 
-// ProcessQueuedMessages 는 동작을 수행한다.
+// ProcessQueuedMessages: 해당 채팅방의 대기열에 쌓인 메시지들을 하나씩 꺼내어 순차적으로 처리한다.
+// 무한 루프 방지를 위해 최대 반복 횟수 제한(MQMaxQueueIterations)을 둔다.
 func (p *MessageQueueProcessor) ProcessQueuedMessages(ctx context.Context, chatID string, emit func(mqmsg.OutboundMessage) error) {
 	iterations := 0
 	for iterations < tsconfig.MQMaxQueueIterations {

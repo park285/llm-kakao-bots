@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
-	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
 // CachedInjectionGuard 는 타입이다.
@@ -98,7 +98,7 @@ func (g *CachedInjectionGuard) IsMalicious(ctx context.Context, input string) (b
 // ValidateOrThrow 는 동작을 수행한다.
 func (g *CachedInjectionGuard) ValidateOrThrow(ctx context.Context, input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
-		return "", tserrors.MalformedInputError{Message: "empty input"}
+		return "", cerrors.MalformedInputError{Message: "empty input"}
 	}
 
 	malicious, err := g.IsMalicious(ctx, input)
@@ -109,7 +109,7 @@ func (g *CachedInjectionGuard) ValidateOrThrow(ctx context.Context, input string
 		if g != nil && g.logger != nil {
 			g.logger.Warn("injection_blocked", "input", truncateForLog(input))
 		}
-		return "", tserrors.InputInjectionError{Message: "potentially malicious input detected"}
+		return "", cerrors.InputInjectionError{Message: "potentially malicious input detected"}
 	}
 
 	return sanitize(input), nil

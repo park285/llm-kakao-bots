@@ -2,7 +2,7 @@ package util
 
 import "fmt"
 
-// Max 는 동작을 수행한다.
+// Max: 두 정수 중 더 큰 값을 반환한다.
 func Max(a, b int) int {
 	if a > b {
 		return a
@@ -10,7 +10,7 @@ func Max(a, b int) int {
 	return b
 }
 
-// Min 는 동작을 수행한다.
+// Min: 두 정수 중 더 작은 값을 반환한다.
 func Min(a, b int) int {
 	if a < b {
 		return a
@@ -18,7 +18,7 @@ func Min(a, b int) int {
 	return b
 }
 
-// Unique 는 동작을 수행한다.
+// Unique: 정수 슬라이스에서 중복된 값을 제거하여 유니크한 값만 남긴다.
 func Unique(nums []int) []int {
 	seen := make(map[int]struct{})
 	result := make([]int, 0, len(nums))

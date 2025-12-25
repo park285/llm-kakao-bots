@@ -12,7 +12,7 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// HandleSurrenderConsensus 는 동작을 수행한다.
+// HandleSurrenderConsensus: 항복 투표를 시작하거나 상황을 확인한다.
 func (s *RiddleService) HandleSurrenderConsensus(ctx context.Context, chatID string, userID string) (string, error) {
 	holderName := userID
 	out := ""
@@ -116,7 +116,7 @@ func (s *RiddleService) HandleSurrenderConsensus(ctx context.Context, chatID str
 	return out, nil
 }
 
-// HandleSurrenderAgree 는 동작을 수행한다.
+// HandleSurrenderAgree: 항복 투표에 동의한다. 조건 충족 시 즉시 항복 처리.
 func (s *RiddleService) HandleSurrenderAgree(ctx context.Context, chatID string, userID string) (string, error) {
 	holderName := userID
 	out := ""
@@ -183,7 +183,7 @@ func (s *RiddleService) HandleSurrenderAgree(ctx context.Context, chatID string,
 	return out, nil
 }
 
-// HandleSurrenderReject 는 동작을 수행한다.
+// HandleSurrenderReject: 항복 투표 거부를 처리한다 (현재 미지원).
 func (s *RiddleService) HandleSurrenderReject(ctx context.Context, chatID string, userID string) (string, error) {
 	if _, err := s.sessionStore.GetSecret(ctx, chatID); err != nil {
 		return "", fmt.Errorf("secret get failed: %w", err)

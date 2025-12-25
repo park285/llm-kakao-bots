@@ -12,14 +12,15 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
-	"go.uber.org/zap"
+
+	"log/slog"
 )
 
 // Injectors from wire.go:
 
 // InitializeBotDependencies - Wire가 의존성 그래프를 분석하여 생성 코드 생성
 // wire gen 명령으로 wire_gen.go 파일이 자동 생성됨
-func InitializeBotDependencies(ctx context.Context, cfg *config.Config, logger *zap.Logger) (*bot.Dependencies, func(), error) {
+func InitializeBotDependencies(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*bot.Dependencies, func(), error) {
 	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
 	irisClient := ProvideIrisClient(valkeyMQConfig, logger)
 	messageStack := ProvideMessageStack(cfg)
@@ -79,7 +80,7 @@ func InitializeBotDependencies(ctx context.Context, cfg *config.Config, logger *
 }
 
 // InitializeBotRuntime - cmd/bot 런타임 (Bot + MQ + Admin API 구성요소)
-func InitializeBotRuntime(ctx context.Context, cfg *config.Config, logger *zap.Logger) (*BotRuntime, func(), error) {
+func InitializeBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*BotRuntime, func(), error) {
 	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
 	irisClient := ProvideIrisClient(valkeyMQConfig, logger)
 	messageStack := ProvideMessageStack(cfg)
@@ -171,7 +172,7 @@ func InitializeBotRuntime(ctx context.Context, cfg *config.Config, logger *zap.L
 		Logger:            logger,
 		Bot:               botBot,
 		MQConsumer:        valkeyMQConsumer,
-		Scheduler:  youTubeScheduler,
+		Scheduler:         youTubeScheduler,
 		AdminHandler:      adminHandler,
 		Sessions:          valkeySessionStore,
 		SecurityConfig:    securityConfig,
@@ -187,7 +188,7 @@ func InitializeBotRuntime(ctx context.Context, cfg *config.Config, logger *zap.L
 }
 
 // InitializeWarmMemberCache - cmd/tools/warm_member_cache 전용
-func InitializeWarmMemberCache(ctx context.Context, cfg *config.Config, logger *zap.Logger) (*member.Cache, func(), error) {
+func InitializeWarmMemberCache(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*member.Cache, func(), error) {
 	postgresConfig := ProvidePostgresConfig(cfg)
 	databaseResources, cleanup, err := ProvideDatabaseResources(postgresConfig, logger)
 	if err != nil {
@@ -215,7 +216,7 @@ func InitializeWarmMemberCache(ctx context.Context, cfg *config.Config, logger *
 }
 
 // InitializeDBIntegrationRuntime - cmd/test_db_integration 전용
-func InitializeDBIntegrationRuntime(ctx context.Context, pgCfg config.PostgresConfig, logger *zap.Logger) (*DBIntegrationRuntime, func(), error) {
+func InitializeDBIntegrationRuntime(ctx context.Context, pgCfg config.PostgresConfig, logger *slog.Logger) (*DBIntegrationRuntime, func(), error) {
 	databaseResources, cleanup, err := ProvideDatabaseResources(pgCfg, logger)
 	if err != nil {
 		return nil, nil, err
@@ -229,10 +230,10 @@ func InitializeDBIntegrationRuntime(ctx context.Context, pgCfg config.PostgresCo
 	}
 	memberServiceAdapter := ProvideMemberServiceAdapter(memberCache)
 	dbIntegrationRuntime := &DBIntegrationRuntime{
-		Logger:           logger,
-		Repository: memberRepository,
-		Cache:      memberCache,
-		MemberAdapter:    memberServiceAdapter,
+		Logger:        logger,
+		Repository:    memberRepository,
+		Cache:         memberCache,
+		MemberAdapter: memberServiceAdapter,
 	}
 	return dbIntegrationRuntime, func() {
 		cleanup()

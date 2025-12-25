@@ -8,27 +8,28 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 )
 
-// LiveCommand 는 타입이다.
+// LiveCommand: 현재 방송 중인 라이브 스트림 목록을 조회하고 보여주는 명령어
 type LiveCommand struct {
 	BaseCommand
 }
 
-// NewLiveCommand 는 동작을 수행한다.
+// NewLiveCommand: LiveCommand 인스턴스를 생성한다.
 func NewLiveCommand(deps *Dependencies) *LiveCommand {
 	return &LiveCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name 는 동작을 수행한다.
+// Name: 명령어의 고유 식별자('live')를 반환한다.
 func (c *LiveCommand) Name() string {
 	return "live"
 }
 
-// Description 는 동작을 수행한다.
+// Description: 명령어에 대한 사용자용 설명('현재 방송 중인 스트림 목록')을 반환한다.
 func (c *LiveCommand) Description() string {
 	return "현재 방송 중인 스트림 목록"
 }
 
-// Execute 는 동작을 수행한다.
+// Execute: Holodex API를 통해 현재 진행 중인 방송을 조회하고, 결과를 포맷팅하여 채팅방에 전송한다.
+// 특정 멤버 이름이 파라미터로 주어진 경우, 해당 멤버의 방송만 필터링한다.
 func (c *LiveCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {
 		return err

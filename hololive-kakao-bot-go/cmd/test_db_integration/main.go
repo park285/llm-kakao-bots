@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -14,11 +16,7 @@ import (
 )
 
 func main() {
-	logger, err := util.NewLogger("info", "")
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-	defer func() { _ = logger.Sync() }()
+	logger := util.NewLoggerWithLevel("info")
 
 	log.Println("=== PostgreSQL Member Data Integration Test ===")
 	log.Println()
@@ -135,3 +133,6 @@ func envOrDefaultInt(key string, fallback int) int {
 	}
 	return parsed
 }
+
+// 린터 경고 억제: 사용된 인터페이스
+var _ = slog.Default

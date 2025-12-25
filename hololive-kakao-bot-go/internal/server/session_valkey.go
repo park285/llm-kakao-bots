@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/valkey-io/valkey-go"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
@@ -20,12 +21,12 @@ const (
 // ValkeySessionStore 는 Valkey 기반 세션 저장소로 서버 재기동 시에도 세션을 유지한다.
 type ValkeySessionStore struct {
 	client valkey.Client
-	logger *zap.Logger
+	logger *slog.Logger
 	ttl    time.Duration
 }
 
 // NewValkeySessionStore creates a new Valkey-based session store
-func NewValkeySessionStore(client valkey.Client, logger *zap.Logger) *ValkeySessionStore {
+func NewValkeySessionStore(client valkey.Client, logger *slog.Logger) *ValkeySessionStore {
 	return &ValkeySessionStore{
 		client: client,
 		logger: logger,
@@ -51,16 +52,16 @@ func (s *ValkeySessionStore) CreateSession() *Session {
 	// 세션 데이터를 JSON으로 직렬화
 	data, err := json.Marshal(session)
 	if err != nil {
-		s.logger.Error("Failed to marshal session", zap.Error(err))
+		s.logger.Error("Failed to marshal session", slog.Any("error", err))
 		return session
 	}
 
 	// Valkey에 저장 (TTL 설정)
 	cmd := s.client.B().Set().Key(key).Value(string(data)).ExSeconds(int64(s.ttl.Seconds())).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
-		s.logger.Error("Failed to store session in Valkey", zap.String("session_id", truncateSessionID(sessionID)), zap.Error(err))
+		s.logger.Error("Failed to store session in Valkey", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
 	} else {
-		s.logger.Debug("Session created in Valkey", zap.String("session_id", truncateSessionID(sessionID)), zap.Duration("ttl", s.ttl))
+		s.logger.Debug("Session created in Valkey", slog.String("session_id", truncateSessionID(sessionID)), slog.Duration("ttl", s.ttl))
 	}
 
 	return session
@@ -78,19 +79,19 @@ func (s *ValkeySessionStore) ValidateSession(sessionID string) bool {
 		return false // 세션 없음
 	}
 	if resp.Error() != nil {
-		s.logger.Error("Failed to validate session", zap.String("session_id", truncateSessionID(sessionID)), zap.Error(resp.Error()))
+		s.logger.Error("Failed to validate session", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", resp.Error()))
 		return false
 	}
 
 	value, err := resp.ToString()
 	if err != nil {
-		s.logger.Error("Failed to read session value", zap.String("session_id", truncateSessionID(sessionID)), zap.Error(err))
+		s.logger.Error("Failed to read session value", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
 		return false
 	}
 
 	var session Session
 	if err := json.Unmarshal([]byte(value), &session); err != nil {
-		s.logger.Error("Failed to unmarshal session", zap.String("session_id", truncateSessionID(sessionID)), zap.Error(err))
+		s.logger.Error("Failed to unmarshal session", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
 		return false
 	}
 
@@ -111,9 +112,9 @@ func (s *ValkeySessionStore) DeleteSession(sessionID string) {
 	key := sessionKeyPrefix + sessionID
 
 	if err := s.client.Do(ctx, s.client.B().Del().Key(key).Build()).Error(); err != nil {
-		s.logger.Error("Failed to delete session", zap.String("session_id", truncateSessionID(sessionID)), zap.Error(err))
+		s.logger.Error("Failed to delete session", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
 	} else {
-		s.logger.Debug("Session deleted from Valkey", zap.String("session_id", truncateSessionID(sessionID)))
+		s.logger.Debug("Session deleted from Valkey", slog.String("session_id", truncateSessionID(sessionID)))
 	}
 }
 

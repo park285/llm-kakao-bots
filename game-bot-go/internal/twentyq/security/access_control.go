@@ -7,17 +7,18 @@ import (
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 )
 
-// AccessControl 는 타입이다.
+// AccessControl: 20고개 게임에 대한 사용자 및 채팅방 접근 제어 관리자
 type AccessControl struct {
 	control *accesscontrol.AccessControl
 }
 
-// NewAccessControl 는 동작을 수행한다.
+// NewAccessControl: 새로운 AccessControl 인스턴스를 생성한다.
 func NewAccessControl(cfg qconfig.AccessConfig) *AccessControl {
 	return &AccessControl{control: accesscontrol.New(cfg)}
 }
 
-// GetDenialReason 는 동작을 수행한다.
+// GetDenialReason: 접근 거부 사유에 따른 오류 메시지를 반환한다.
+// 접근이 허용된 경우 nil을 반환한다.
 func (a *AccessControl) GetDenialReason(userID string, chatID string) *string {
 	switch a.control.DenialReason(userID, chatID) {
 	case accesscontrol.DenialReasonUserBlocked:

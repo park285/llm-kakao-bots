@@ -23,6 +23,8 @@ func newTestStore(t *testing.T) (*Store, valkey.Client) {
 	config.QueueTTLSeconds = 60
 	config.StaleThresholdMS = 1000 // 1초
 
+	testhelper.CleanupTestKeys(t, client, config.KeyPrefix+":")
+
 	store := NewStore(client, logger, config)
 	return store, client
 }

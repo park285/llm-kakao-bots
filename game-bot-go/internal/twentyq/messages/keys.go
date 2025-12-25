@@ -1,6 +1,6 @@
 package messages
 
-// StartWaiting 는 시작 관련 메시지 키 상수 목록이다.
+// StartWaiting: 게임 시작 프로세스 관련 메시지 키
 const (
 	StartWaiting                = "start.waiting"
 	StartReady                  = "start.ready"
@@ -10,13 +10,13 @@ const (
 	StartInvalidCategoryWarning = "start.invalid_category_warning"
 )
 
-// HintWaiting 는 힌트 관련 메시지 키 상수 목록이다.
+// HintWaiting: 힌트 생성 및 제공 관련 메시지 키
 const (
 	HintWaiting   = "hint.waiting"
 	HintGenerated = "hint.generated"
 )
 
-// StatusHeaderWithCategory 는 상태 메시지 키 상수 목록이다.
+// StatusHeaderWithCategory: 게임 상태(Status) 출력 시 사용되는 헤더 및 포맷 관련 메시지 키
 const (
 	StatusHeaderWithCategory = "status.header_with_category"
 	StatusHeaderNoCategory   = "status.header_no_category"
@@ -26,7 +26,7 @@ const (
 	StatusChainSuffix        = "status.chain_suffix"
 )
 
-// VoteStart 는 투표 메시지 키 상수 목록이다.
+// VoteStart: 항복 투표(Surrender Vote) 관련 메시지 키
 const (
 	VoteStart              = "vote.start"
 	VoteInProgress         = "vote.in_progress"
@@ -38,12 +38,12 @@ const (
 	VoteRejectNotSupported = "vote.reject_not_supported"
 )
 
-// ProcessingWaiting 는 처리 대기 메시지 키 상수 목록이다.
+// ProcessingWaiting: 일반적인 처리 대기 안내 메시지 키
 const (
 	ProcessingWaiting = "processing.waiting"
 )
 
-// LockRequestInProgress 는 락/큐 메시지 키 상수 목록이다.
+// LockRequestInProgress: 분산 락, 대기열(Queue) 상태 알림 관련 메시지 키
 const (
 	LockRequestInProgress = "lock.request_in_progress"
 	LockMessageQueued     = "lock.message_queued"
@@ -57,7 +57,7 @@ const (
 	QueueEmpty          = "queue.empty"
 )
 
-// AnswerSuccess 는 정답/힌트 메시지 키 상수 목록이다.
+// AnswerSuccess: 정답 확인 및 오답/근접 정답 처리 관련 메시지 키
 const (
 	AnswerSuccess           = "answer.success"
 	AnswerCorrectDefault    = "answer.correct_default"
@@ -69,7 +69,7 @@ const (
 	AnswerWrongGuessSection = "answer.wrong_guess_section"
 )
 
-// SurrenderResult 는 surrender 메시지 키 상수 목록이다.
+// SurrenderResult: 항복 결과 안내 관련 메시지 키
 const (
 	SurrenderResult          = "surrender.result"
 	SurrenderHintBlockHeader = "surrender.hint_block_header"
@@ -77,12 +77,12 @@ const (
 	SurrenderCategoryLine    = "surrender.category_line"
 )
 
-// HelpMessage 는 도움말 메시지 키 상수 목록이다.
+// HelpMessage: 도움말 출력 메시지 키
 const (
 	HelpMessage = "help.message"
 )
 
-// ModelInfoFetchFailed 는 모델 정보 메시지 키 상수 목록이다.
+// ModelInfoFetchFailed: 사용 중인 AI 모델 정보 및 상태 조회 관련 메시지 키
 const (
 	ModelInfoFetchFailed = "model_info.fetch_failed"
 	ModelInfoHeader      = "model_info.header"
@@ -96,17 +96,17 @@ const (
 	ModelInfoTransport   = "model_info.transport"
 )
 
-// HealthAlive 는 헬스체크 메시지 키 상수 목록이다.
+// HealthAlive: 헬스체크 응답 메시지 키
 const (
 	HealthAlive = "health.alive"
 )
 
-// UserAnonymous 는 사용자 표시 메시지 키 상수 목록이다.
+// UserAnonymous: 사용자 이름이 없을 때 대체할 텍스트 키
 const (
 	UserAnonymous = "user.anonymous"
 )
 
-// ErrorNoSession 는 에러 메시지 키 상수 목록이다.
+// ErrorNoSession: 각종 에러 상황에 대한 메시지 키
 const (
 	ErrorNoSession         = "error.no_session"
 	ErrorNoSessionShort    = "error.no_session_short"
@@ -124,7 +124,7 @@ const (
 	ErrorNoPermission      = "error.no_permission"
 )
 
-// 전적 조회 관련 메시지 키.
+// StatsNotFound: 전적 조회 관련 메시지 키
 const (
 	StatsNotFound     = "stats.not_found"
 	StatsUserNotFound = "stats.user_not_found"
@@ -149,13 +149,13 @@ const (
 	StatsCategoryNoBest   = "stats.category.no_best"
 )
 
-// 관리자 명령어 관련 메시지 키.
+// AdminForceEndPrefix: 관리자 전용 명령어 관련 메시지 키
 const (
 	AdminForceEndPrefix  = "admin.force_end_prefix"
 	AdminClearAllSuccess = "admin.clear_all_success"
 )
 
-// 사용량 조회 관련 메시지 키.
+// UsageFetchFailed: 토큰 사용량 조회 및 표시 관련 메시지 키
 const (
 	UsageFetchFailed        = "usage.fetch_failed"
 	UsageFetchFailedWeekly  = "usage.fetch_failed_weekly"
@@ -177,7 +177,7 @@ const (
 	UsageLabelExchangeRate  = "usage.label_exchange_rate"
 )
 
-// 체인 질문 관련 메시지 키.
+// ChainQueueItem: 체인 질문 처리 관련 메시지 키
 const (
 	ChainQueueItem       = "chain.queue_item"
 	ChainConditionNotMet = "chain.condition_not_met"

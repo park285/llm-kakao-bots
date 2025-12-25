@@ -11,8 +11,8 @@ services:
   # Storage & Infrastructure
   # ==========================================
   postgres:
-    image: postgres:16-alpine
-    container_name: twentyq-postgres
+    image: postgres:18-alpine
+    container_name: llm-postgres
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME:-twentyq}
@@ -22,14 +22,21 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-data-v18:/var/lib/postgresql/data
       - ./backups:/backups
+      - ./hololive-kakao-bot-go/scripts/init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -41,14 +48,22 @@ services:
     volumes:
       - valkey-cache-data:/data
     command: >
-      valkey-server --appendonly yes --appendfsync everysec --save "" --maxmemory 384mb --maxmemory-policy allkeys-lfu --loglevel notice
+      valkey-server  --appendonly yes  --appendfsync everysec  --save ""  --maxmemory 384mb  --maxmemory-policy allkeys-lfu  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+    sysctls:
+      - net.core.somaxconn=1024
     restart: always
     healthcheck:
       test: [ "CMD", "valkey-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -61,14 +76,22 @@ services:
       - valkey-mq-data:/data
       - ./logs:/var/log/valkey-mq
     command: >
-      valkey-server --port 1833 --appendonly yes --appendfsync everysec --no-appendfsync-on-rewrite yes --maxmemory 192mb --maxmemory-policy noeviction --loglevel notice
+      valkey-server  --port 1833  --appendonly yes  --appendfsync everysec  --no-appendfsync-on-rewrite yes  --maxmemory 192mb  --maxmemory-policy noeviction  --loglevel notice --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+    sysctls:
+      - net.core.somaxconn=1024
     restart: always
     healthcheck:
       test: [ "CMD", "valkey-cli", "-p", "1833", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -109,8 +132,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4096m
+          memory: 1G
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -162,11 +187,16 @@ services:
       retries: 1
       start_period: 10s
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
   turtle-soup-bot:
     image: game-bot-go:prod
+    build:
+      context: ./game-bot-go
+      dockerfile: Dockerfile.prod
     container_name: turtle-soup-bot
     restart: always
     env_file:
@@ -175,10 +205,10 @@ services:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 8082
       LLM_REST_BASE_URL: http://mcp-llm-server:40527
-      REDIS_HOST: valkey-cache
-      REDIS_PORT: 6379
-      VALKEY_MQ_HOST: valkey-mq
-      VALKEY_MQ_PORT: 1833
+      CACHE_HOST: valkey-cache
+      CACHE_PORT: 6379
+      MQ_HOST: valkey-mq
+      MQ_PORT: 1833
       LOG_DIR: /app/logs
       GOMEMLIMIT: "450MiB"
     deploy:
@@ -204,6 +234,8 @@ services:
       retries: 1
       start_period: 10s
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -219,28 +251,41 @@ services:
       GOGC: "60"
       MQ_HOST: valkey-mq
       MQ_PORT: 1833
-      CACHE_HOST: holo-valkey
+      CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
-      POSTGRES_HOST: holo-postgres
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_DB: hololive
+      POSTGRES_USER: ${DB_USER:-twentyq_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       SERVER_PORT: 30001
       LOG_FILE: logs/hololive-bot.log
+      GOMEMLIMIT: "450MiB"
     volumes:
       - ./logs:/app/logs
     ports:
       - "30001:30001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey-cache:
+        condition: service_healthy
+      valkey-mq:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 512MiB
     healthcheck:
       test: [ "CMD-SHELL", "wget -q --spider -T 5 http://localhost:30001/health || exit 1" ]
       interval: 30s
       timeout: 5s
       retries: 3
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
@@ -273,12 +318,18 @@ services:
       - ./watchdog/config.json:/app/config.json
     ports:
       - "127.0.0.1:30002:30002"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     networks:
       - llm-bot-net
 
 volumes:
-  pg-data:
+  pg-data-v18:
   valkey-cache-data:
   valkey-mq-data:
 

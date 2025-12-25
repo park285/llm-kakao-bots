@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
+
 	"google.golang.org/api/youtube/v3"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 )
 
-// StatsService 는 타입이다.
+// StatsService: 상위 수준의 통계 서비스로, Repository와 YouTube Service를 조합하여 통계 데이터를 제공한다.
 type StatsService struct {
 	oauth     *OAuthService
 	cache     *cache.Service
 	statsRepo *StatsRepository
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
 const (
@@ -25,7 +26,7 @@ const (
 	channelStatsCacheTTL    = 10 * time.Minute
 )
 
-// ChannelStatistics 는 타입이다.
+// ChannelStatistics: 채널의 구독자 수, 비디오 수, 조회 수 정보를 담는 구조체 (변화량 포함)
 type ChannelStatistics struct {
 	ChannelID        string
 	SubscriberCount  uint64
@@ -34,8 +35,8 @@ type ChannelStatistics struct {
 	ViewCount        uint64
 }
 
-// NewYouTubeStatsService 는 동작을 수행한다.
-func NewYouTubeStatsService(oauth *OAuthService, cache *cache.Service, statsRepo *StatsRepository, logger *zap.Logger) *StatsService {
+// NewStatsService: 통계 서비스 인스턴스를 생성한다.
+func NewStatsService(oauth *OAuthService, cache *cache.Service, statsRepo *StatsRepository, logger *slog.Logger) *StatsService {
 	return &StatsService{
 		oauth:     oauth,
 		cache:     cache,
@@ -52,7 +53,7 @@ func (ys *StatsService) loadMemberLookup(ctx context.Context) map[string]string 
 
 	memberMap, err := ys.cache.GetAllMembers(ctx)
 	if err != nil {
-		ys.logger.Warn("Failed to fetch member cache", zap.Error(err))
+		ys.logger.Warn("Failed to fetch member cache", slog.Any("error", err))
 		return nil
 	}
 
@@ -83,8 +84,8 @@ func (ys *StatsService) loadPreviousStats(ctx context.Context, channelID string)
 			return dbPrev
 		}
 		ys.logger.Warn("Failed to load previous stats",
-			zap.String("channel", channelID),
-			zap.Error(err))
+			slog.String("channel", channelID),
+			slog.Any("error", err))
 	}
 
 	return nil
@@ -125,8 +126,8 @@ func (ys *StatsService) saveCurrentStats(ctx context.Context, item *youtube.Chan
 	if ys.statsRepo != nil {
 		if err := ys.statsRepo.SaveStats(ctx, currentStats); err != nil {
 			ys.logger.Warn("Failed to persist current stats snapshot",
-				zap.String("channel", item.Id),
-				zap.Error(err))
+				slog.String("channel", item.Id),
+				slog.Any("error", err))
 		}
 	}
 
@@ -154,7 +155,7 @@ func (ys *StatsService) processBatchItem(ctx context.Context, item *youtube.Chan
 	return channelStat
 }
 
-// GetChannelStatisticsBatch 는 동작을 수행한다.
+// GetChannelStatisticsBatch: 여러 채널의 통계를 배치(최대 50개)로 조회한다. (OAuth 인증 필요)
 func (ys *StatsService) GetChannelStatisticsBatch(ctx context.Context, channelIDs []string) ([]*ChannelStatistics, error) {
 	if ys.oauth == nil || !ys.oauth.IsAuthorized() {
 		return nil, fmt.Errorf("YouTube OAuth not authorized")
@@ -181,8 +182,8 @@ func (ys *StatsService) GetChannelStatisticsBatch(ctx context.Context, channelID
 		resp, err := call.Context(ctx).Do()
 		if err != nil {
 			ys.logger.Error("Failed to get channel statistics",
-				zap.Int("batch_size", len(batch)),
-				zap.Error(err))
+				slog.Int("batch_size", len(batch)),
+				slog.Any("error", err))
 			continue
 		}
 
@@ -195,7 +196,7 @@ func (ys *StatsService) GetChannelStatisticsBatch(ctx context.Context, channelID
 	return stats, nil
 }
 
-// GetRecentVideos 는 동작을 수행한다.
+// GetRecentVideos: 채널의 최근 업로드 비디오를 검색한다. (OAuth 인증 필요)
 func (ys *StatsService) GetRecentVideos(ctx context.Context, channelID string, maxResults int64) ([]*youtube.SearchResult, error) {
 	if ys.oauth == nil || !ys.oauth.IsAuthorized() {
 		return nil, fmt.Errorf("YouTube OAuth not authorized")

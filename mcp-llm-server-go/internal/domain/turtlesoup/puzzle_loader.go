@@ -135,7 +135,7 @@ func (l *PuzzleLoader) reloadLocked() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("glob puzzles: %w", err)
 	}
-	slices.SortFunc(paths, func(a, b string) int { return cmp.Compare(a, b) })
+	slices.SortFunc(paths, cmp.Compare)
 
 	combined := make([]PuzzlePreset, 0)
 	for _, path := range paths {

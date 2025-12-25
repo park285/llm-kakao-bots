@@ -12,7 +12,7 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// Status 는 동작을 수행한다.
+// Status: 현재 게임 진행 상황을 문자열 하나로 합쳐서 반환한다.
 func (s *RiddleService) Status(ctx context.Context, chatID string) (string, error) {
 	main, hint, err := s.StatusSeparated(ctx, chatID)
 	if err != nil {
@@ -24,7 +24,7 @@ func (s *RiddleService) Status(ctx context.Context, chatID string) (string, erro
 	return main + "\n" + hint, nil
 }
 
-// StatusSeparated 는 동작을 수행한다.
+// StatusSeparated: 게임 진행 상황을 메인 정보와 힌트 정보로 분리하여 반환한다.
 func (s *RiddleService) StatusSeparated(ctx context.Context, chatID string) (string, string, error) {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {

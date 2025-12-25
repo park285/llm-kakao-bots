@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/sourcegraph/conc/pool"
-	"go.uber.org/zap"
+
+	"log/slog"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
@@ -22,11 +23,12 @@ const (
 	allChannelIDsKey       = "channel_ids"
 )
 
-// Cache 는 타입이다.
+// Cache: 멤버 정보를 인메모리(Local) 및 Redis(Valkey)에 이중 캐싱하여 관리하는 서비스
+// DB 부하를 줄이고 빠른 조회를 지원하며, 워밍업(Warm-up) 기능을 제공한다.
 type Cache struct {
 	repo   *Repository
 	cache  *cache.Service
-	logger *zap.Logger
+	logger *slog.Logger
 
 	// In-memory caches
 	byChannelID sync.Map // map[string]*domain.Member
@@ -42,7 +44,7 @@ type Cache struct {
 	warmUpMaxGoroutines int
 }
 
-// CacheConfig 는 타입이다.
+// CacheConfig: 멤버 캐시 설정을 위한 구조체 (TTL, 워밍업 옵션 등)
 type CacheConfig struct {
 	ValkeyTTL           time.Duration
 	WarmUp              bool // Load all members into memory on startup
@@ -50,8 +52,9 @@ type CacheConfig struct {
 	WarmUpMaxGoroutines int
 }
 
-// NewMemberCache 는 동작을 수행한다.
-func NewMemberCache(ctx context.Context, repo *Repository, cacheService *cache.Service, logger *zap.Logger, cfg CacheConfig) (*Cache, error) {
+// NewMemberCache: 새로운 멤버 캐시 서비스 인스턴스를 생성하고 초기화한다.
+// 설정에 따라 생성 시점에 자동으로 캐시 워밍업을 수행할 수 있다.
+func NewMemberCache(ctx context.Context, repo *Repository, cacheService *cache.Service, logger *slog.Logger, cfg CacheConfig) (*Cache, error) {
 	if cfg.ValkeyTTL == 0 {
 		cfg.ValkeyTTL = constants.MemberCacheDefaults.ValkeyTTL
 	}
@@ -76,7 +79,7 @@ func NewMemberCache(ctx context.Context, repo *Repository, cacheService *cache.S
 	// Warm up cache if enabled
 	if cfg.WarmUp {
 		if err := mc.WarmUpCache(ctx); err != nil {
-			logger.Warn("Failed to warm up member cache", zap.Error(err))
+			logger.Warn("Failed to warm up member cache", slog.Any("error", err))
 		}
 	}
 
@@ -87,7 +90,8 @@ func (c *Cache) cacheEnabled() bool {
 	return c != nil && c.cache != nil
 }
 
-// WarmUpCache 는 동작을 수행한다.
+// WarmUpCache: DB에서 모든 멤버 정보를 로드하여 Redis 및 인메모리 캐시에 적재한다.
+// 병렬 처리를 통해 대량의 데이터도 빠르게 처리한다.
 func (c *Cache) WarmUpCache(ctx context.Context) error {
 	members, err := c.repo.GetAllMembers(ctx)
 	if err != nil {
@@ -117,8 +121,8 @@ func (c *Cache) WarmUpCache(ctx context.Context) error {
 	}
 
 	c.logger.Info("Member cache warmed up",
-		zap.Int("total_members", len(members)),
-		zap.Int("chunks", len(chunks)),
+		slog.Int("total_members", len(members)),
+		slog.Int("chunks", len(chunks)),
 	)
 
 	return nil
@@ -149,12 +153,12 @@ func (c *Cache) cacheChunk(ctx context.Context, members []*domain.Member) {
 	// MSet으로 배치 저장
 	if err := c.cache.MSet(ctx, pairs, c.cacheTTL); err != nil {
 		c.logger.Warn("Failed to batch cache members",
-			zap.Int("count", len(members)),
-			zap.Error(err))
+			slog.Int("count", len(members)),
+			slog.Any("error", err))
 	}
 }
 
-// GetByChannelID 는 동작을 수행한다.
+// GetByChannelID: 채널 ID로 멤버 정보를 조회한다. (1. 인메모리 -> 2. Redis -> 3. DB 순서로 확인)
 func (c *Cache) GetByChannelID(ctx context.Context, channelID string) (*domain.Member, error) {
 	// 인메모리 캐시 먼저 확인
 	if val, ok := c.byChannelID.Load(channelID); ok {
@@ -187,7 +191,7 @@ func (c *Cache) GetByChannelID(ctx context.Context, channelID string) (*domain.M
 	return dbMember, nil
 }
 
-// GetByName 는 동작을 수행한다.
+// GetByName: 멤버 이름으로 정보를 조회한다. (1. 인메모리 -> 2. Redis -> 3. DB 순서로 확인)
 func (c *Cache) GetByName(ctx context.Context, name string) (*domain.Member, error) {
 	// 인메모리 캐시 먼저 확인
 	if val, ok := c.byName.Load(name); ok {
@@ -217,7 +221,8 @@ func (c *Cache) GetByName(ctx context.Context, name string) (*domain.Member, err
 	return dbMember, nil
 }
 
-// FindByAlias 는 동작을 수행한다.
+// FindByAlias: 멤버 별명으로 정보를 조회한다. (Redis -> DB 순서)
+// 별명 조회 성공 시 해당 멤버 정보를 캐시에 등록한다.
 func (c *Cache) FindByAlias(ctx context.Context, alias string) (*domain.Member, error) {
 	if c.cacheEnabled() {
 		// Valkey 캐시 확인
@@ -254,7 +259,7 @@ func (c *Cache) FindByAlias(ctx context.Context, alias string) (*domain.Member, 
 	return dbMember, nil
 }
 
-// GetAllChannelIDs 는 동작을 수행한다.
+// GetAllChannelIDs: 모든 멤버의 채널 ID 목록을 반환한다. (인메모리 캐싱됨)
 func (c *Cache) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	if val, ok := c.allMembers.Load(allChannelIDsKey); ok {
 		return val.([]string), nil
@@ -285,8 +290,8 @@ func (c *Cache) cacheMember(ctx context.Context, member *domain.Member) {
 		channelKey := memberChannelKeyPrefix + member.ChannelID
 		if err := c.cache.Set(ctx, channelKey, member, c.cacheTTL); err != nil {
 			c.logger.Warn("Failed to cache member by channel ID",
-				zap.String("channel_id", member.ChannelID),
-				zap.Error(err),
+				slog.String("channel_id", member.ChannelID),
+				slog.Any("error", err),
 			)
 		}
 	}
@@ -294,13 +299,13 @@ func (c *Cache) cacheMember(ctx context.Context, member *domain.Member) {
 	nameKey := memberNameKeyPrefix + member.Name
 	if err := c.cache.Set(ctx, nameKey, member, c.cacheTTL); err != nil {
 		c.logger.Warn("Failed to cache member by name",
-			zap.String("member", member.Name),
-			zap.Error(err),
+			slog.String("member", member.Name),
+			slog.Any("error", err),
 		)
 	}
 }
 
-// InvalidateAll 는 동작을 수행한다.
+// InvalidateAll: 모든 멤버 관련 캐시(인메모리 및 Redis)를 무효화(삭제)한다.
 func (c *Cache) InvalidateAll(ctx context.Context) error {
 	// 인메모리 캐시 클리어
 	c.byChannelID = sync.Map{}
@@ -308,7 +313,7 @@ func (c *Cache) InvalidateAll(ctx context.Context) error {
 	c.allMembers = sync.Map{}
 
 	if !c.cacheEnabled() {
-		c.logger.Info("Member cache invalidated", zap.Int("keys_deleted", 0))
+		c.logger.Info("Member cache invalidated", slog.Int("keys_deleted", 0))
 		return nil
 	}
 
@@ -323,11 +328,11 @@ func (c *Cache) InvalidateAll(ctx context.Context) error {
 		}
 	}
 
-	c.logger.Info("Member cache invalidated", zap.Int("keys_deleted", len(keys)))
+	c.logger.Info("Member cache invalidated", slog.Int("keys_deleted", len(keys)))
 	return nil
 }
 
-// Refresh 는 동작을 수행한다.
+// Refresh: 캐시를 전체 무효화한 후 다시 워밍업을 수행한다.
 func (c *Cache) Refresh(ctx context.Context) error {
 	if err := c.InvalidateAll(ctx); err != nil {
 		return err
@@ -338,20 +343,20 @@ func (c *Cache) Refresh(ctx context.Context) error {
 // InvalidateAliasCache invalidates Valkey cache for specific alias
 func (c *Cache) InvalidateAliasCache(ctx context.Context, alias string) error {
 	if !c.cacheEnabled() {
-		c.logger.Info("Alias cache invalidated", zap.String("alias", alias))
+		c.logger.Info("Alias cache invalidated", slog.String("alias", alias))
 		return nil
 	}
 
 	aliasKey := memberAliasKeyPrefix + alias
 	if err := c.cache.Del(ctx, aliasKey); err != nil {
 		c.logger.Warn("Failed to invalidate alias cache",
-			zap.String("alias", alias),
-			zap.Error(err),
+			slog.String("alias", alias),
+			slog.Any("error", err),
 		)
 		return fmt.Errorf("failed to invalidate alias cache: %w", err)
 	}
 
-	c.logger.Info("Alias cache invalidated", zap.String("alias", alias))
+	c.logger.Info("Alias cache invalidated", slog.String("alias", alias))
 	return nil
 }
 

@@ -18,7 +18,7 @@ type GameSession struct {
 	CreatedAt        time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: game_sessions 테이블 이름 반환
 func (GameSession) TableName() string { return "game_sessions" }
 
 // GameLog 게임 로그 (참여자별 기록).
@@ -39,10 +39,10 @@ type GameLog struct {
 	CreatedAt       time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: game_logs 테이블 이름 반환
 func (GameLog) TableName() string { return "game_logs" }
 
-// UserStats 는 타입이다.
+// UserStats: 사용자 통계 집계 테이블 모델
 type UserStats struct {
 	ID                   string     `gorm:"column:id;primaryKey"`
 	ChatID               string     `gorm:"column:chat_id;not null;index"`
@@ -64,10 +64,10 @@ type UserStats struct {
 	Version              int64      `gorm:"column:version;not null;default:0"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: user_stats 테이블 이름 반환
 func (UserStats) TableName() string { return "user_stats" }
 
-// UserNicknameMap 는 타입이다.
+// UserNicknameMap: 사용자 닉네임 매핑 테이블 모델
 type UserNicknameMap struct {
 	ID         uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	ChatID     string    `gorm:"column:chat_id;not null;uniqueIndex:idx_user_nickname_map_chat_user"`
@@ -77,5 +77,5 @@ type UserNicknameMap struct {
 	CreatedAt  time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName 는 동작을 수행한다.
+// TableName: user_nickname_map 테이블 이름 반환
 func (UserNicknameMap) TableName() string { return "user_nickname_map" }
