@@ -209,6 +209,13 @@ func readValkeyMQConfig() (ValkeyMQConfig, error) {
 		},
 		StreamKeyKeys:      []string{"MQ_STREAM_KEY", "VALKEY_MQ_STREAM_KEY"},
 		ReplyStreamKeyKeys: []string{"MQ_REPLY_STREAM_KEY", "VALKEY_MQ_REPLY_STREAM_KEY"},
+		BatchSizeKeys:      []string{"MQ_BATCH_SIZE", "VALKEY_MQ_BATCH_SIZE"},
+		BlockTimeoutMillisKeys: []string{
+			"MQ_READ_TIMEOUT_MS",
+			"VALKEY_MQ_READ_TIMEOUT_MS",
+		},
+		ConcurrencyKeys:  []string{"MQ_CONCURRENCY", "VALKEY_MQ_CONCURRENCY"},
+		StreamMaxLenKeys: []string{"MQ_STREAM_MAX_LEN", "VALKEY_MQ_STREAM_MAX_LEN"},
 
 		DefaultHost:          "localhost",
 		DefaultPort:          1833,
@@ -222,6 +229,10 @@ func readValkeyMQConfig() (ValkeyMQConfig, error) {
 		DefaultResetConsumerGroupOnStartup: false,
 		DefaultStreamKey:                   DefaultInboundStreamKey,
 		DefaultReplyStreamKey:              DefaultOutboundStreamKey,
+		DefaultBatchSize:                   commonconfig.MQBatchSize,
+		DefaultBlockTimeoutMillis:          commonconfig.MQReadTimeoutMS,
+		DefaultConcurrency:                 commonconfig.MQConsumerConcurrency,
+		DefaultStreamMaxLen:                commonconfig.MQStreamMaxLen,
 	})
 	if err != nil {
 		return ValkeyMQConfig{}, fmt.Errorf("read valkey mq config failed: %w", err)
