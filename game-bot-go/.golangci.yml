@@ -126,6 +126,9 @@ linters:
       - linters:
           - contextcheck
         text: 'Non-inherited new context'
+      - linters:
+          - contextcheck
+        text: 'should pass the context parameter'
 
       - linters:
           - gocyclo
