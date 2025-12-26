@@ -46,14 +46,14 @@ func (w *Watchdog) reloadConfigFromFileUnlocked(ctx context.Context) (ReloadResu
 	}
 
 	var fc fileConfig
-	if err := json.Unmarshal(raw, &fc); err != nil {
-		return ReloadResult{}, fmt.Errorf("config file json parse failed: %w", err)
+	if unmarshalErr := json.Unmarshal(raw, &fc); unmarshalErr != nil {
+		return ReloadResult{}, fmt.Errorf("config file json parse failed: %w", unmarshalErr)
 	}
 
 	base := loadConfigFromEnv()
-	next, err := mergeFileConfig(base, fc)
-	if err != nil {
-		return ReloadResult{}, err
+	next, mergeErr := mergeFileConfig(base, fc)
+	if mergeErr != nil {
+		return ReloadResult{}, mergeErr
 	}
 
 	applied, requiresRestart := w.applyRuntimeConfig(next)
@@ -90,30 +90,47 @@ func (w *Watchdog) applyRuntimeConfig(next Config) ([]string, []string) {
 
 	old := w.cfg
 	applied := make([]string, 0, 8)
+	requiresRestart := checkImmutableFields(old, &next)
+
+	applied = append(applied, w.applySimpleFields(old, next)...)
+	applied = append(applied, w.applyContainersList(old, next)...)
+
+	if old.UseEvents != next.UseEvents {
+		w.cfg.UseEvents = next.UseEvents
+		applied = append(applied, "useEvents")
+	}
+
+	w.configSource = "file"
+	return applied, requiresRestart
+}
+
+func checkImmutableFields(old Config, next *Config) []string {
 	requiresRestart := make([]string, 0, 4)
 
-	// Docker socket change cannot be applied at runtime.
 	if strings.TrimSpace(old.DockerSocket) != strings.TrimSpace(next.DockerSocket) {
 		requiresRestart = append(requiresRestart, "dockerSocket")
 		next.DockerSocket = old.DockerSocket
 	}
 
-	// GraceSeconds is only used at startup.
 	if old.GraceSeconds != next.GraceSeconds {
 		requiresRestart = append(requiresRestart, "graceSeconds")
 		next.GraceSeconds = old.GraceSeconds
 	}
 
-	// UseEvents requires goroutine restart if toggled from OFF to ON.
 	if !old.UseEvents && next.UseEvents {
 		requiresRestart = append(requiresRestart, "useEvents")
 	}
+
+	return requiresRestart
+}
+
+func (w *Watchdog) applySimpleFields(old, next Config) []string {
+	applied := make([]string, 0, 10)
 
 	if old.Enabled != next.Enabled {
 		w.cfg.Enabled = next.Enabled
 		applied = append(applied, "enabled")
 	}
-
 	if old.IntervalSeconds != next.IntervalSeconds {
 		w.cfg.IntervalSeconds = next.IntervalSeconds
 		applied = append(applied, "intervalSeconds")
@@ -156,37 +173,33 @@ func (w *Watchdog) applyRuntimeConfig(next Config) ([]string, []string) {
 		applied = append(applied, "verboseLogging")
 	}
 
-	// Container list can be applied at runtime (event listener filter update requires restart though, handled by main/events?)
-	// Actually main.go handles event listener restart? No, main.go just runs it.
-	// `applyRuntimeConfig` updates `w.states`.
-	if !reflect.DeepEqual(old.Containers, next.Containers) {
-		newStates := make(map[string]*ContainerState, len(next.Containers))
-		newSet := make(map[string]struct{}, len(next.Containers))
-		newFilters := make(client.Filters)
-		for _, name := range next.Containers {
-			if name == "" {
-				continue
-			}
-			if existing, ok := w.states[name]; ok {
-				newStates[name] = existing
-			} else {
-				newStates[name] = &ContainerState{name: name}
-			}
-			newSet[name] = struct{}{}
-			newFilters = newFilters.Add("name", name)
+	return applied
+}
+
+func (w *Watchdog) applyContainersList(old, next Config) []string {
+	if reflect.DeepEqual(old.Containers, next.Containers) {
+		return nil
+	}
+
+	newStates := make(map[string]*ContainerState, len(next.Containers))
+	newSet := make(map[string]struct{}, len(next.Containers))
+	newFilters := make(client.Filters)
+	for _, name := range next.Containers {
+		if name == "" {
+			continue
 		}
-		w.states = newStates
-		w.targetSet = newSet
-		w.listFilters = newFilters
-		w.cfg.Containers = next.Containers
-		applied = append(applied, "containers")
+		if existing, ok := w.states[name]; ok {
+			newStates[name] = existing
+		} else {
+			newStates[name] = &ContainerState{name: name}
+		}
+		newSet[name] = struct{}{}
+		newFilters = newFilters.Add("name", name)
 	}
+	w.states = newStates
+	w.targetSet = newSet
+	w.listFilters = newFilters
+	w.cfg.Containers = next.Containers
 
-	if old.UseEvents != next.UseEvents {
-		w.cfg.UseEvents = next.UseEvents
-		applied = append(applied, "useEvents")
-	}
-
-	w.configSource = "file"
-	return applied, requiresRestart
+	return []string{"containers"}
 }

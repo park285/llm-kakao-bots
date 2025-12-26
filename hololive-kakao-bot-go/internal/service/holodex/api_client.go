@@ -2,6 +2,7 @@ package holodex
 
 import (
 	"context"
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -40,6 +41,8 @@ type APIClient struct {
 	rateLimiter      *rate.Limiter // Rate limiter: 초당 10 요청
 }
 
+var errNoAPIKeys = stdErrors.New("no Holodex API keys configured")
+
 // NewHolodexAPIClient: 새로운 Holodex API 클라이언트를 생성하고 초기화한다.
 // 초당 10회 요청 제한(Rate Limit)이 기본 설정된다.
 func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *slog.Logger) *APIClient {
@@ -70,7 +73,7 @@ func (c *APIClient) DoRequest(ctx context.Context, method, path string, params u
 
 	totalKeys := len(c.apiKeys)
 	if totalKeys == 0 {
-		return nil, fmt.Errorf("no Holodex API keys configured")
+		return nil, errNoAPIKeys
 	}
 
 	maxAttempts := util.Min(totalKeys+constants.RetryConfig.MaxAttempts, 10)
@@ -150,8 +153,8 @@ func (c *APIClient) buildRequestURL(path string, params url.Values) string {
 	return reqURL
 }
 
-func (c *APIClient) newRequest(ctx context.Context, method, url string, apiKey string) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, http.NoBody)
+func (c *APIClient) newRequest(ctx context.Context, method, reqURL string, apiKey string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

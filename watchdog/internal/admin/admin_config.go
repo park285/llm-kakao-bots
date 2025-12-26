@@ -186,7 +186,7 @@ func normalizeCFAccessTeamDomain(raw string) string {
 	value = strings.TrimPrefix(value, "http://")
 	value = strings.TrimSuffix(value, "/")
 	if !strings.Contains(value, ".") {
-		value = value + ".cloudflareaccess.com"
+		value += ".cloudflareaccess.com"
 	}
 	return value
 }

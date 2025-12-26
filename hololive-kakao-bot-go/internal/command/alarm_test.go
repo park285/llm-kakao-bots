@@ -37,8 +37,8 @@ func TestAlarmCommand_InvalidAction(t *testing.T) {
 	}
 
 	ctx := &domain.CommandContext{
-		Room:   "room-1",
-		Sender: "user-1",
+		Room:     "room-1",
+		UserName: "user-1",
 	}
 
 	if err := cmd.Execute(context.Background(), ctx, params); err != nil {

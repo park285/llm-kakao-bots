@@ -18,7 +18,7 @@ type WatchdogProxyHandler struct {
 }
 
 // NewWatchdogProxyHandler creates a new watchdog proxy handler.
-func NewWatchdogProxyHandler(watchdogURL, internalToken string, logger *slog.Logger, activity *activity.Logger) *WatchdogProxyHandler {
+func NewWatchdogProxyHandler(watchdogURL, internalToken string, logger *slog.Logger, activityLogger *activity.Logger) *WatchdogProxyHandler {
 	var client *watchdog.Client
 	if internalToken != "" {
 		client = watchdog.NewClientWithToken(watchdogURL, internalToken, logger)
@@ -28,7 +28,7 @@ func NewWatchdogProxyHandler(watchdogURL, internalToken string, logger *slog.Log
 	return &WatchdogProxyHandler{
 		client:   client,
 		logger:   logger,
-		activity: activity,
+		activity: activityLogger,
 	}
 }
 

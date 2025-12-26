@@ -104,8 +104,6 @@ linters:
         - filepathJoin
         - hugeParam
         - emptyStringTest
-        - builtinShadow
-        - importShadow
 
     funlen:
       lines: 100
@@ -118,7 +116,10 @@ linters:
         - name: package-comments
           disabled: true
 
-    wrapcheck: {}
+    wrapcheck:
+      ignore-package-globs:
+        - github.com/valkey-io/valkey-go
+        - github.com/valkey-io/valkey-go/*
 
   exclusions:
     rules:

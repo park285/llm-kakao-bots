@@ -3,9 +3,8 @@ package admin
 import (
 	"log/slog"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/gin-gonic/gin"
+	watchdog "llm-watchdog/internal/core"
 )
 
 // 요청 타입 정의

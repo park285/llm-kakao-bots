@@ -59,7 +59,7 @@ func (c *AlarmCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContex
 		memberName, _ := params["member"].(string)
 		c.Deps().Logger.Info("Invalid alarm command received",
 			slog.String("room", cmdCtx.Room),
-			slog.String("sender", cmdCtx.Sender),
+			slog.String("sender", cmdCtx.UserName),
 			slog.String("sub_command", subCmd),
 			slog.String("member", memberName),
 		)

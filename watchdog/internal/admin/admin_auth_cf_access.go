@@ -75,7 +75,7 @@ func (k jwkKey) publicKey() (crypto.PublicKey, error) {
 		return cert.PublicKey, nil
 	}
 
-	if strings.ToUpper(k.Kty) != "RSA" {
+	if !strings.EqualFold(k.Kty, "RSA") {
 		return nil, fmt.Errorf("unsupported kty: %s", k.Kty)
 	}
 	if k.N == "" || k.E == "" {
@@ -161,8 +161,8 @@ func (v *cfAccessVerifier) refreshKeys(ctx context.Context) error {
 		return fmt.Errorf("fetch certs failed: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			v.logger.Warn("cf_access_jwks_resp_body_close_failed", "err", err)
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			v.logger.Warn("cf_access_jwks_resp_body_close_failed", "err", closeErr)
 		}
 	}()
 

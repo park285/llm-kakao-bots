@@ -66,11 +66,6 @@ func LoggerMiddleware(logger *slog.Logger, skipPaths ...string) gin.HandlerFunc 
 	}
 }
 
-// ZapLoggerMiddleware: 호환성용 별칭 (deprecated)
-func ZapLoggerMiddleware(logger *slog.Logger, skipPaths ...string) gin.HandlerFunc {
-	return LoggerMiddleware(logger, skipPaths...)
-}
-
 // truncateUA: User-Agent를 적절한 길이로 자름 (로그 가독성)
 func truncateUA(ua string) string {
 	const maxLen = 80

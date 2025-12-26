@@ -41,7 +41,7 @@ services:
       - llm-bot-net
 
   valkey-cache:
-    image: valkey/valkey:9-alpine
+    image: valkey/valkey:9.0.1-alpine3.23
     container_name: valkey-cache
     ports:
       - "6379:6379"
@@ -68,7 +68,7 @@ services:
       - llm-bot-net
 
   valkey-mq:
-    image: valkey/valkey:9-alpine
+    image: valkey/valkey:9.0.1-alpine3.23
     container_name: valkey-mq
     ports:
       - "1833:1833"

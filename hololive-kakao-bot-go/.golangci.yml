@@ -113,8 +113,6 @@ linters:
         - filepathJoin
         - hugeParam
         - emptyStringTest
-        - builtinShadow
-        - importShadow  # 파라미터명이 패키지명과 같아도 가독성상 명확
 
     funlen:
       lines: 100  # 적절한 함수 길이 제한
@@ -128,7 +126,9 @@ linters:
           disabled: true
 
     wrapcheck:
-      # 외부 패키지 에러는 항상 wrapping (전체 적용)*
+      ignore-package-globs:
+        - github.com/valkey-io/valkey-go
+        - github.com/valkey-io/valkey-go/*
 
   exclusions:
     rules:

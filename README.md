@@ -2,7 +2,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.25.5-00ADD8?logo=go)](https://go.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?logo=postgresql)](https://www.postgresql.org/)
-[![Valkey](https://img.shields.io/badge/Valkey-9.0-DC382D?logo=redis)](https://valkey.io/)
+[![Valkey](https://img.shields.io/badge/Valkey-9.0.1-DC382D?logo=redis)](https://valkey.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스입니다.
@@ -13,8 +13,8 @@ LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스�
 |------|------|------|
 | **언어** | Go | 1.25.5 |
 | **AI** | Google Gemini API | go-genai SDK |
-| **메시지큐** | Valkey Streams | 9.0-alpine |
-| **캐시** | Valkey (AOF) | 9.0-alpine |
+| **메시지큐** | Valkey Streams | 9.0.1-alpine3.23 |
+| **캐시** | Valkey (AOF) | 9.0.1-alpine3.23 |
 | **데이터베이스** | PostgreSQL | 18-alpine |
 | **HTTP** | h2c (HTTP/2 Cleartext) | - |
 
@@ -53,6 +53,12 @@ llm/
 │   └── Dockerfile
 │
 ├── watchdog/                 # 컨테이너 헬스체크 모니터
+│   ├── cmd/
+│   │   └── watchdog/         # 엔트리포인트
+│   ├── internal/
+│   │   ├── core/             # watchdog 코어 로직
+│   │   └── admin/            # Admin API 서버
+│   ├── admin-ui/             # React Admin UI
 │   └── Dockerfile
 │
 ├── docker-compose.prod.yml   # 프로덕션 스택
@@ -180,6 +186,8 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 | `HTTP_RATE_LIMIT_RPM` | 분당 요청 제한 | (비활성화) |
 | `GUARD_ENABLED` | 인젝션 가드 | `true` |
 | `GUARD_THRESHOLD` | 가드 임계값 | `0.85` |
+| `WATCHDOG_INTERNAL_SERVICE_TOKEN` | Watchdog 내부 서비스 인증 토큰 | (필수) |
+| `WATCHDOG_SKIP_AUTH_MODE` | 인증 우회 모드 | `token_only` |
 
 ### 세션/캐시 설정
 
@@ -279,11 +287,13 @@ go tool cover -html=coverage.out
 | 패키지 | 설명 |
 |--------|------|
 | `valkeyx` | Valkey 클라이언트, 키 빌더 |
+| `lockutil` | 분산 락 유틸리티 |
 | `parser` | 명령어 파서 기반 클래스 |
 | `httputil` | JSON 응답, HTTP 상수 |
 | `config` | 공통 상수 (TTL, 타임아웃 등) |
 | `textutil` | 텍스트 청킹 유틸리티 |
 | `llmrest` | LLM 서버 REST 클라이언트 |
+| `errors` | 공통 에러 타입 |
 
 ## 운영 가이드
 
@@ -357,4 +367,4 @@ docker exec valkey-mq valkey-cli -p 1833 ping
 
 ---
 
-**Last Updated**: 2025-12-25
+**Last Updated**: 2025-12-26

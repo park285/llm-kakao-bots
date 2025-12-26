@@ -31,7 +31,7 @@ type Service struct {
 }
 
 // NewService: YouTube 서비스 인스턴스를 생성한다.
-func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service, logger *slog.Logger) (*Service, error) {
+func NewYouTubeService(ctx context.Context, apiKey string, cacheSvc *cache.Service, logger *slog.Logger) (*Service, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("YouTube API key is required")
 	}
@@ -43,7 +43,7 @@ func NewYouTubeService(ctx context.Context, apiKey string, cache *cache.Service,
 
 	ys := &Service{
 		service:    service,
-		cache:      cache,
+		cache:      cacheSvc,
 		logger:     logger,
 		quotaUsed:  0,
 		quotaReset: getNextQuotaReset(),
@@ -188,19 +188,19 @@ func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) 
 
 	ys.consumeQuota(actualCost)
 
-	errors := make([]error, 0)
+	errs := make([]error, 0)
 	for err := range errChan {
-		errors = append(errors, err)
+		errs = append(errs, err)
 	}
 
-	if len(errors) > 0 {
+	if len(errs) > 0 {
 		ys.logger.Warn("Some YouTube API calls failed",
-			slog.Int("failures", len(errors)),
-			slog.Int("successes", len(channelIDs)-len(errors)))
+			slog.Int("failures", len(errs)),
+			slog.Int("successes", len(channelIDs)-len(errs)))
 	}
 
-	if len(allStreams) == 0 && len(errors) > 0 {
-		return nil, fmt.Errorf("all YouTube API calls failed: %d errors", len(errors))
+	if len(allStreams) == 0 && len(errs) > 0 {
+		return nil, fmt.Errorf("all YouTube API calls failed: %d errors", len(errs))
 	}
 
 	ys.cache.SetStreams(ctx, cacheKey, allStreams, constants.YouTubeConfig.CacheExpiration)

@@ -167,8 +167,8 @@ func ProvideMemberServiceAdapter(memberCache *member.Cache) *member.ServiceAdapt
 }
 
 // ProvideMembersData - 도메인 인터페이스로 바인딩
-func ProvideMembersData(adapter *member.ServiceAdapter) domain.MemberDataProvider {
-	return adapter
+func ProvideMembersData(adapterSvc *member.ServiceAdapter) domain.MemberDataProvider {
+	return adapterSvc
 }
 
 // ----------------------------------------------------------------------------
@@ -227,11 +227,11 @@ func ProvideMemberMatcher(
 	ctx context.Context,
 	membersData domain.MemberDataProvider,
 	cacheSvc *cache.Service,
-	holodex *holodex.Service,
+	holodexSvc *holodex.Service,
 	logger *slog.Logger,
 ) *matcher.MemberMatcher {
 	// selector는 nil (Gemini AI 채널 선택 미사용)
-	return matcher.NewMemberMatcher(ctx, membersData, cacheSvc, holodex, nil, logger)
+	return matcher.NewMemberMatcher(ctx, membersData, cacheSvc, holodexSvc, nil, logger)
 }
 
 // ----------------------------------------------------------------------------
@@ -242,10 +242,10 @@ func ProvideMemberMatcher(
 func ProvideAlarmService(
 	cfg *config.Config,
 	cacheSvc *cache.Service,
-	holodex *holodex.Service,
+	holodexSvc *holodex.Service,
 	logger *slog.Logger,
 ) *notification.AlarmService {
-	return notification.NewAlarmService(cacheSvc, holodex, logger, cfg.Notification.AdvanceMinutes)
+	return notification.NewAlarmService(cacheSvc, holodexSvc, logger, cfg.Notification.AdvanceMinutes)
 }
 
 // ----------------------------------------------------------------------------
@@ -372,7 +372,7 @@ func ProvideBotDependencies(
 	postgres *database.PostgresService,
 	memberRepo *member.Repository,
 	memberCache *member.Cache,
-	holodex *holodex.Service,
+	holodexSvc *holodex.Service,
 	profiles *member.ProfileService,
 	alarm *notification.AlarmService,
 	memberMatcher *matcher.MemberMatcher,
@@ -392,7 +392,7 @@ func ProvideBotDependencies(
 		Postgres:         postgres,
 		MemberRepo:       memberRepo,
 		MemberCache:      memberCache,
-		Holodex:          holodex,
+		Holodex:          holodexSvc,
 		Profiles:         profiles,
 		Alarm:            alarm,
 		Matcher:          memberMatcher,

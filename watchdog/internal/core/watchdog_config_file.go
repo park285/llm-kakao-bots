@@ -41,13 +41,13 @@ func LoadConfigWithSource(logger *slog.Logger) (Config, string, string, error) {
 	}
 
 	var fc fileConfig
-	if err := json.Unmarshal(raw, &fc); err != nil {
-		return Config{}, "", path, fmt.Errorf("config file json parse failed: %w", err)
+	if unmarshalErr := json.Unmarshal(raw, &fc); unmarshalErr != nil {
+		return Config{}, "", path, fmt.Errorf("config file json parse failed: %w", unmarshalErr)
 	}
 
-	merged, err := mergeFileConfig(cfg, fc)
-	if err != nil {
-		return Config{}, "", path, err
+	merged, mergeErr := mergeFileConfig(cfg, fc)
+	if mergeErr != nil {
+		return Config{}, "", path, mergeErr
 	}
 
 	logger.Info("watchdog_config_loaded", "source", "file", "path", path)

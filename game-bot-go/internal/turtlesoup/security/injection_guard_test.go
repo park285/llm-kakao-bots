@@ -2,6 +2,7 @@ package security
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,8 @@ import (
 	"testing"
 
 	json "github.com/goccy/go-json"
+
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 )
 
@@ -86,7 +89,8 @@ func TestMcpInjectionGuard_ValidateOrThrow(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for malicious input")
 	}
-	if !strings.Contains(err.Error(), "malicious") {
-		t.Errorf("unexpected error message: %v", err)
+	var injectionErr cerrors.InputInjectionError
+	if !errors.As(err, &injectionErr) {
+		t.Fatalf("expected InputInjectionError, got: %v", err)
 	}
 }

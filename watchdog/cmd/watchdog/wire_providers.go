@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/moby/moby/client"
+	watchdog "llm-watchdog/internal/core"
 )
 
 // WatchdogConfigMeta 는 타입이다.
