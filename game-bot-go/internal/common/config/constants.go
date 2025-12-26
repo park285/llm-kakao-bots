@@ -18,6 +18,8 @@ const (
 	MQBatchSize = 5
 	// MQReadTimeoutMS: 메시지 큐 읽기 타임아웃(ms)
 	MQReadTimeoutMS = 5000
+	// MQConsumerConcurrency: 메시지 큐 소비 동시성
+	MQConsumerConcurrency = 5
 	// MQStreamMaxLen: 스트림 최대 길이
 	MQStreamMaxLen = 1000
 	// QueueMaxDequeueIterations: 큐에서 최대 디큐 반복 횟수

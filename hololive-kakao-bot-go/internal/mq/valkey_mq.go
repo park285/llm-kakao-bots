@@ -25,6 +25,8 @@ type ValkeyMQConfig struct {
 	StreamKey     string
 	ConsumerGroup string
 	ConsumerName  string
+	ReadCount     int64
+	BlockTimeout  time.Duration
 	WorkerCount   int // Worker pool 크기
 }
 
@@ -192,6 +194,14 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 	streamKey := c.cfg.StreamKey
 	group := c.cfg.ConsumerGroup
 	consumer := c.cfg.ConsumerName
+	readCount := c.cfg.ReadCount
+	if readCount <= 0 {
+		readCount = constants.MQConfig.ReadCount
+	}
+	blockTimeout := c.cfg.BlockTimeout
+	if blockTimeout <= 0 {
+		blockTimeout = constants.MQConfig.BlockTimeout
+	}
 
 	c.ensureGroup(ctx, streamKey, group)
 
@@ -211,16 +221,16 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 		// XREADGROUP으로 메시지 읽기 (별도 timeout context 사용)
 		cmd := c.client.B().Xreadgroup().
 			Group(group, consumer).
-			Count(constants.MQConfig.ReadCount).
-			Block(constants.MQConfig.BlockTimeout.Milliseconds()). // 블록 타임아웃
+			Count(readCount).
+			Block(blockTimeout.Milliseconds()). // 블록 타임아웃
 			Streams().
 			Key(streamKey).
 			Id(">").
 			Build()
 
-		// 별도 timeout context: parent context 취소와 분리
-		// BlockTimeout + 2초 여유를 두어 Block 완료 후 응답 처리 시간 확보
-		readTimeout := constants.MQConfig.BlockTimeout + 2*time.Second
+			// 별도 timeout context: parent context 취소와 분리
+			// BlockTimeout + 2초 여유를 두어 Block 완료 후 응답 처리 시간 확보
+		readTimeout := blockTimeout + 2*time.Second
 		readCtx, readCancel := context.WithTimeout(context.WithoutCancel(ctx), readTimeout)
 		resp := c.client.Do(readCtx, cmd)
 		readCancel()

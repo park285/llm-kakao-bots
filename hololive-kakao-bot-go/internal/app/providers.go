@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
@@ -80,6 +81,9 @@ func ProvideValkeyMQConfig(cfg *config.Config) mq.ValkeyMQConfig {
 		StreamKey:     cfg.ValkeyMQ.StreamKey,
 		ConsumerGroup: cfg.ValkeyMQ.ConsumerGroup,
 		ConsumerName:  cfg.ValkeyMQ.ConsumerName,
+		ReadCount:     int64(cfg.ValkeyMQ.ReadCount),
+		BlockTimeout:  time.Duration(cfg.ValkeyMQ.BlockTimeoutSeconds) * time.Second,
+		WorkerCount:   cfg.ValkeyMQ.WorkerCount,
 	}
 }
 

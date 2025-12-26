@@ -55,6 +55,11 @@ type ValkeyMQConfig struct {
 	ResetConsumerGroupOnStartup bool
 	StreamKey                   string
 	ReplyStreamKey              string
+
+	BatchSize    int64
+	BlockTimeout time.Duration
+	Concurrency  int
+	StreamMaxLen int64
 }
 
 // AccessConfig 는 타입이다.
