@@ -193,55 +193,64 @@ func (w *Watchdog) startRestart(ctx context.Context, state *ContainerState, by s
 		Result:      "initiated",
 	})
 
-	go func() {
-		defer state.restartInProgress.Store(false)
-
-		restartTimeout := time.Duration(cfg.RestartTimeoutSec+10) * time.Second
-		restartCtx, cancel := context.WithTimeout(w.GetRootContext(), restartTimeout)
-		defer cancel()
-
-		started := time.Now()
-		w.logger.Warn("restart_initiated", "container", state.name, "by", by)
-
-		err := w.RestartContainer(restartCtx, state.name)
-		elapsed := time.Since(started).Round(time.Millisecond)
-		if err != nil {
-			w.logger.Error("restart_failed", "container", state.name, "by", by, "elapsed", elapsed, "err", err)
-			state.mu.Lock()
-			state.lastRestartResult = "failed"
-			state.lastRestartError = err.Error()
-			state.mu.Unlock()
-			w.appendEvent(Event{
-				Action:      "restart",
-				Container:   state.name,
-				By:          by,
-				RequestedBy: requestedBy,
-				Reason:      reason,
-				Result:      "failed",
-				Error:       err.Error(),
-			})
-			return
-		}
-
-		w.logger.Info("restart_ok", "container", state.name, "by", by, "elapsed", elapsed)
-		state.mu.Lock()
-		state.failures = 0
-		state.lastRestartResult = "ok"
-		state.lastRestartError = ""
-		if cfg.CooldownSeconds > 0 {
-			state.cooldownUntil = time.Now().Add(time.Duration(cfg.CooldownSeconds) * time.Second)
-		}
-		state.mu.Unlock()
-
-		w.appendEvent(Event{
-			Action:      "restart",
-			Container:   state.name,
-			By:          by,
-			RequestedBy: requestedBy,
-			Reason:      reason,
-			Result:      "ok",
-		})
-	}()
-
+	go w.executeRestart(state, cfg, by, reason, requestedBy)
 	return true, "accepted", nil
+}
+
+func (w *Watchdog) executeRestart(state *ContainerState, cfg Config, by, reason, requestedBy string) {
+	defer state.restartInProgress.Store(false)
+
+	restartTimeout := time.Duration(cfg.RestartTimeoutSec+10) * time.Second
+	restartCtx, cancel := context.WithTimeout(w.GetRootContext(), restartTimeout)
+	defer cancel()
+
+	started := time.Now()
+	w.logger.Warn("restart_initiated", "container", state.name, "by", by)
+
+	err := w.RestartContainer(restartCtx, state.name)
+	elapsed := time.Since(started).Round(time.Millisecond)
+
+	if err != nil {
+		w.handleRestartFailure(state, by, reason, requestedBy, elapsed, err)
+		return
+	}
+	w.handleRestartSuccess(state, cfg, by, reason, requestedBy, elapsed)
+}
+
+func (w *Watchdog) handleRestartFailure(state *ContainerState, by, reason, requestedBy string, elapsed time.Duration, err error) {
+	w.logger.Error("restart_failed", "container", state.name, "by", by, "elapsed", elapsed, "err", err)
+	state.mu.Lock()
+	state.lastRestartResult = "failed"
+	state.lastRestartError = err.Error()
+	state.mu.Unlock()
+	w.appendEvent(Event{
+		Action:      "restart",
+		Container:   state.name,
+		By:          by,
+		RequestedBy: requestedBy,
+		Reason:      reason,
+		Result:      "failed",
+		Error:       err.Error(),
+	})
+}
+
+func (w *Watchdog) handleRestartSuccess(state *ContainerState, cfg Config, by, reason, requestedBy string, elapsed time.Duration) {
+	w.logger.Info("restart_ok", "container", state.name, "by", by, "elapsed", elapsed)
+	state.mu.Lock()
+	state.failures = 0
+	state.lastRestartResult = "ok"
+	state.lastRestartError = ""
+	if cfg.CooldownSeconds > 0 {
+		state.cooldownUntil = time.Now().Add(time.Duration(cfg.CooldownSeconds) * time.Second)
+	}
+	state.mu.Unlock()
+
+	w.appendEvent(Event{
+		Action:      "restart",
+		Container:   state.name,
+		By:          by,
+		RequestedBy: requestedBy,
+		Reason:      reason,
+		Result:      "ok",
+	})
 }

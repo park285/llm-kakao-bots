@@ -2,9 +2,9 @@ package holodex
 
 import (
 	"context"
+	stdErrors "errors"
 	"net/http"
 	"reflect"
-	"strings"
 	"testing"
 
 	"log/slog"
@@ -47,9 +47,7 @@ func TestHolodexAPIClientDoRequestNoKeys(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error when no API keys configured")
 	}
-
-	const expectedMsg = "no Holodex API keys configured"
-	if !strings.Contains(err.Error(), expectedMsg) {
+	if !stdErrors.Is(err, errNoAPIKeys) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

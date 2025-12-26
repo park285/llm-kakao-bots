@@ -4,7 +4,6 @@ run:
   timeout: 5m
   tests: true
 
-# v2: linters + formatters are configured separately.
 linters:
   default: none
   enable:
@@ -120,12 +119,31 @@ linters:
       ignore-package-globs:
         - github.com/valkey-io/valkey-go
         - github.com/valkey-io/valkey-go/*
+        - github.com/moby/moby/client
+        - github.com/moby/moby/client/*
+        - github.com/golang-jwt/jwt/v5
+        - github.com/golang-jwt/jwt/v5/*
+        - io
+        - os
+        - bufio
+        - bytes
+        - context
+        - encoding/json
+        - fmt
 
   exclusions:
     rules:
       - linters:
           - contextcheck
         text: 'Non-inherited new context'
+
+      - linters:
+          - contextcheck
+        path: internal/admin/
+
+      - linters:
+          - contextcheck
+        path: internal/core/
 
       - linters:
           - gocyclo
@@ -184,12 +202,12 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/park285/llm-kakao-bots/game-bot-go)
+        - prefix(github.com/park285/llm-kakao-bots/watchdog)
       custom-order: true
 
     goimports:
       local-prefixes:
-        - github.com/park285/llm-kakao-bots/game-bot-go
+        - github.com/park285/llm-kakao-bots/watchdog
 
   exclusions:
     paths:

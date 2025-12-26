@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/gin-gonic/gin"
+	watchdog "llm-watchdog/internal/core"
 )
 
 // registerDockerHandlers Docker 및 이벤트 관련 핸들러 등록
@@ -72,8 +71,8 @@ func handleContainerLogs(w *watchdog.Watchdog, logger *slog.Logger) gin.HandlerF
 			return
 		}
 		defer func() {
-			if err := reader.Close(); err != nil {
-				logger.Warn("docker_logs_reader_close_failed", "err", err, "container", name, "admin_email", getAdminEmail(c))
+			if closeErr := reader.Close(); closeErr != nil {
+				logger.Warn("docker_logs_reader_close_failed", "err", closeErr, "container", name, "admin_email", getAdminEmail(c))
 			}
 		}()
 
@@ -112,8 +111,8 @@ func handleContainerLogsStream(w *watchdog.Watchdog, logger *slog.Logger) gin.Ha
 			return
 		}
 		defer func() {
-			if err := reader.Close(); err != nil {
-				logger.Warn("docker_logs_reader_close_failed", "err", err, "container", name, "admin_email", adminEmail)
+			if closeErr := reader.Close(); closeErr != nil {
+				logger.Warn("docker_logs_reader_close_failed", "err", closeErr, "container", name, "admin_email", adminEmail)
 			}
 		}()
 

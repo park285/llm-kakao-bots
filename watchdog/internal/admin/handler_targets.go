@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/gin-gonic/gin"
+	watchdog "llm-watchdog/internal/core"
 )
 
 // registerTargetHandlers 컨테이너 타겟 관련 핸들러 등록

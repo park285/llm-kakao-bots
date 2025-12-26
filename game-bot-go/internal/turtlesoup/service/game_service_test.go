@@ -400,7 +400,8 @@ func TestGameService_IsMalicious(t *testing.T) {
 		t.Error("expected error for malicious question")
 	}
 	var injectionErr cerrors.InputInjectionError
-	if !strings.Contains(err.Error(), "malicious") && !errors.As(err, &injectionErr) {
+	if !errors.As(err, &injectionErr) {
+		t.Fatalf("expected InputInjectionError, got: %v", err)
 	}
 
 	_, _, err = env.svc.SubmitSolution(ctx, sessionID, "Bad answer")

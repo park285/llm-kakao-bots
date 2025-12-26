@@ -12,13 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"llm-watchdog/admin"
-	"llm-watchdog/watchdog"
-
 	"github.com/lmittmann/tint"
 	"github.com/moby/moby/client"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"llm-watchdog/internal/admin"
+	watchdog "llm-watchdog/internal/core"
 )
 
 func isLegacyWatchdogLog(path string) bool {
@@ -144,8 +143,8 @@ func main() {
 		os.Exit(2)
 	}
 	defer func() {
-		if err := runtime.DockerClient.Close(); err != nil {
-			logger.Warn("docker_client_close_failed", "err", err)
+		if closeErr := runtime.DockerClient.Close(); closeErr != nil {
+			logger.Warn("docker_client_close_failed", "err", closeErr)
 		}
 	}()
 

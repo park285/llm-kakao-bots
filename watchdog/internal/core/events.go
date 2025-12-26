@@ -53,9 +53,8 @@ func (w *Watchdog) HandleDockerEvent(ctx context.Context, event events.Message) 
 		if w.GetConfig().VerboseLogging {
 			w.logger.Info("event", "container", containerName, "action", "health_status:healthy")
 		}
-		prevFailures := 0
 		state.mu.Lock()
-		prevFailures = state.failures
+		prevFailures := state.failures
 		state.failures = 0
 		state.mu.Unlock()
 		if prevFailures > 0 {

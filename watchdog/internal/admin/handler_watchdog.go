@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/gin-gonic/gin"
+	watchdog "llm-watchdog/internal/core"
 )
 
 // registerWatchdogHandlers watchdog 상태 및 설정 관련 핸들러 등록

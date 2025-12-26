@@ -62,7 +62,7 @@ type Service struct {
 }
 
 // NewHolodexService: 새로운 Holodex API 서비스 인스턴스를 생성한다. (API Key 검증 포함)
-func NewHolodexService(apiKeys []string, cache *cache.Service, scraper *ScraperService, logger *slog.Logger) (*Service, error) {
+func NewHolodexService(apiKeys []string, cacheSvc *cache.Service, scraper *ScraperService, logger *slog.Logger) (*Service, error) {
 	if len(apiKeys) == 0 {
 		return nil, fmt.Errorf("at least one Holodex API key is required")
 	}
@@ -77,7 +77,7 @@ func NewHolodexService(apiKeys []string, cache *cache.Service, scraper *ScraperS
 
 	return &Service{
 		requester: requester,
-		cache:     cache,
+		cache:     cacheSvc,
 		scraper:   scraper,
 		logger:    logger,
 	}, nil

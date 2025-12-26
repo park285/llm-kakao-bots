@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 	"gorm.io/gorm"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
@@ -748,8 +750,9 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for malicious input")
 	}
-	if !strings.Contains(err.Error(), "guard blocked") {
-		// qerrors.InvalidQuestionError message
+	var invalidErr cerrors.InvalidQuestionError
+	if !errors.As(err, &invalidErr) {
+		t.Fatalf("expected InvalidQuestionError, got: %v", err)
 	}
 }
 

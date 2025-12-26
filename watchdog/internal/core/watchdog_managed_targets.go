@@ -113,14 +113,14 @@ func updateConfigFileContainers(path string, containerName string, managed bool)
 	}
 
 	doc := make(map[string]json.RawMessage)
-	if err := json.Unmarshal(trimmed, &doc); err != nil {
-		return nil, fmt.Errorf("config file json parse failed: %w", err)
+	if unmarshalErr := json.Unmarshal(trimmed, &doc); unmarshalErr != nil {
+		return nil, fmt.Errorf("config file json parse failed: %w", unmarshalErr)
 	}
 
 	var containers []string
 	if rawContainers, ok := doc["containers"]; ok {
-		if err := json.Unmarshal(rawContainers, &containers); err != nil {
-			return nil, fmt.Errorf("config file containers parse failed: %w", err)
+		if parseErr := json.Unmarshal(rawContainers, &containers); parseErr != nil {
+			return nil, fmt.Errorf("config file containers parse failed: %w", parseErr)
 		}
 	}
 	containers = normalizeContainers(containers)
@@ -145,7 +145,7 @@ func updateConfigFileContainers(path string, containerName string, managed bool)
 
 	values := make(map[string]any, len(doc))
 	for k, v := range doc {
-		values[k] = json.RawMessage(v)
+		values[k] = v
 	}
 
 	pretty, err := json.MarshalIndent(orderedMap(values), "", "  ")

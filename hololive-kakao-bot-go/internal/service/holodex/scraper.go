@@ -33,7 +33,7 @@ const (
 
 // NewScraperService: 새로운 ScraperService 인스턴스를 생성한다.
 // 멤버 정보와 매핑 데이터를 초기화하여 크롤링 데이터 파싱에 활용한다.
-func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) *ScraperService {
+func NewScraperService(cacheSvc *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) *ScraperService {
 	nameMap := make(map[string]string)
 
 	for _, member := range membersData.GetAllMembers() {
@@ -61,7 +61,7 @@ func NewScraperService(cache *cache.Service, membersData domain.MemberDataProvid
 		httpClient: &http.Client{
 			Timeout: constants.OfficialScheduleConfig.Timeout,
 		},
-		cache:         cache,
+		cache:         cacheSvc,
 		membersData:   membersData,
 		memberNameMap: nameMap,
 		logger:        logger,

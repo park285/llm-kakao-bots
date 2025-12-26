@@ -7,7 +7,7 @@
 package main
 
 import (
-	"llm-watchdog/watchdog"
+	watchdog "llm-watchdog/internal/core"
 	"log/slog"
 )
 

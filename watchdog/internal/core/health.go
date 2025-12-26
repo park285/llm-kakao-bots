@@ -100,7 +100,7 @@ func (w *Watchdog) ProcessHealthCheck(ctx context.Context, state *ContainerState
 	state.mu.Lock()
 	if state.monitoringPaused {
 		state.lastChecked = now
-		status := ""
+		var status string
 		switch {
 		case summary == nil:
 			status = "paused_not_found"
@@ -181,7 +181,7 @@ func (w *Watchdog) runRetryVerification(ctx context.Context, state *ContainerSta
 	for i := 1; i <= cfg.RetryChecks; i++ {
 		select {
 		case <-ctx.Done():
-			w.logger.Info("retry_verification_cancelled", "container", state.name)
+			w.logger.Info("retry_verification_canceled", "container", state.name)
 			return
 		case <-time.After(retryInterval):
 		}

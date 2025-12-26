@@ -34,10 +34,10 @@ const (
 )
 
 // NewScheduler: YouTube 데이터 수집 스케줄러를 생성한다.
-func NewScheduler(youtube *Service, cache *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
+func NewScheduler(youtubeSvc *Service, cacheSvc *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
 	return &Scheduler{
-		youtube:      youtube,
-		cache:        cache,
+		youtube:      youtubeSvc,
+		cache:        cacheSvc,
 		statsRepo:    statsRepo,
 		membersData:  membersData,
 		logger:       logger,

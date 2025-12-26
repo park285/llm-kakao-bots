@@ -10,11 +10,10 @@ import (
 	"net/http"
 	"strings"
 
-	"llm-watchdog/watchdog"
-
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	watchdog "llm-watchdog/internal/core"
 )
 
 //go:embed dist/*
@@ -34,11 +33,23 @@ func RunServer(ctx context.Context, adminCfg Config, w *watchdog.Watchdog, logge
 		return fmt.Errorf("WATCHDOG_ADMIN_ALLOWED_IPS is required")
 	}
 
+	router := setupRouter(adminCfg, w, logger, allowlist)
+	setupStaticAssets(router, logger)
+
+	handler := http.Handler(router)
+	if adminCfg.UseH2C {
+		handler = h2c.NewHandler(handler, &http2.Server{})
+	}
+
+	server := buildHTTPServer(adminCfg, handler)
+	return runServerLifecycle(ctx, server, adminCfg, logger)
+}
+
+func setupRouter(adminCfg Config, w *watchdog.Watchdog, logger *slog.Logger, allowlist *ipAllowlist) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
 
-	// /health 는 인증 없이 제공 (k8s/docker 헬스체크)
 	router.GET("/health", func(c *gin.Context) {
 		noCacheHeaders(c)
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -49,53 +60,50 @@ func RunServer(ctx context.Context, adminCfg Config, w *watchdog.Watchdog, logge
 	var apiMiddlewares []gin.HandlerFunc
 	hasCFAccess := strings.TrimSpace(adminCfg.CFAccessTeamDomain) != "" || strings.TrimSpace(adminCfg.CFAccessAUD) != ""
 	if hasCFAccess {
-		verifier, err := newCFAccessVerifier(adminCfg, logger)
-		if err != nil {
-			return fmt.Errorf("cf access verifier init failed: %w", err)
+		verifier, verifierErr := newCFAccessVerifier(adminCfg, logger)
+		if verifierErr == nil {
+			apiMiddlewares = append(apiMiddlewares, verifier.middleware())
+			logger.Info("cf_access_enabled")
+		} else {
+			logger.Error("cf_access_verifier_init_failed", "err", verifierErr)
 		}
-		apiMiddlewares = append(apiMiddlewares, verifier.middleware())
-		logger.Info("cf_access_enabled")
 	} else {
 		logger.Debug("cf_access_disabled")
 	}
 
 	registerAdminAPIRoutes(router, w, logger, apiMiddlewares...)
+	return router
+}
 
-	// Serve Static Assets (SPA)
+func setupStaticAssets(router *gin.Engine, logger *slog.Logger) {
 	distFS, err := fs.Sub(uiDist, "dist")
 	if err != nil {
 		logger.Error("dist_fs_sub_failed", "err", err)
-	} else {
-		// 루트 요청은 디렉터리로 처리하여 index.html 리다이렉트 루프를 피함
-		router.GET("/", func(c *gin.Context) {
-			c.FileFromFS("/", http.FS(distFS))
-		})
-
-		router.NoRoute(func(c *gin.Context) {
-			path := c.Request.URL.Path
-			// If path starts with /admin/api, but not handled, return 404 JSON
-			if strings.HasPrefix(path, "/admin/api") {
-				c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
-				return
-			}
-
-			// Try to serve static file
-			cleanPath := strings.TrimPrefix(path, "/")
-			if _, err := distFS.Open(cleanPath); err == nil {
-				c.FileFromFS(cleanPath, http.FS(distFS))
-				return
-			}
-
-			// React Router fallback: 디렉터리로 처리해 index.html 리다이렉트 루프를 피함
-			c.FileFromFS("/", http.FS(distFS))
-		})
+		return
 	}
 
-	handler := http.Handler(router)
-	if adminCfg.UseH2C {
-		handler = h2c.NewHandler(handler, &http2.Server{})
-	}
+	router.GET("/", func(c *gin.Context) {
+		c.FileFromFS("/", http.FS(distFS))
+	})
 
+	router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/admin/api") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
+			return
+		}
+
+		cleanPath := strings.TrimPrefix(path, "/")
+		if _, err := distFS.Open(cleanPath); err == nil {
+			c.FileFromFS(cleanPath, http.FS(distFS))
+			return
+		}
+
+		c.FileFromFS("/", http.FS(distFS))
+	})
+}
+
+func buildHTTPServer(adminCfg Config, handler http.Handler) *http.Server {
 	server := &http.Server{
 		Addr:              adminCfg.Addr,
 		Handler:           handler,
@@ -106,7 +114,10 @@ func RunServer(ctx context.Context, adminCfg Config, w *watchdog.Watchdog, logge
 		server.ReadTimeout = adminCfg.ReadTimeout
 		server.WriteTimeout = adminCfg.WriteTimeout
 	}
+	return server
+}
 
+func runServerLifecycle(ctx context.Context, server *http.Server, adminCfg Config, logger *slog.Logger) error {
 	errCh := make(chan error, 1)
 	go func() {
 		logger.Info("admin_server_start", "addr", adminCfg.Addr, "h2c", adminCfg.UseH2C)

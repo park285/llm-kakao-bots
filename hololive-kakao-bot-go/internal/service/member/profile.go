@@ -30,7 +30,7 @@ type ProfileService struct {
 
 // NewProfileService: 프로필 데이터와 번역 데이터를 로드하여 서비스 인스턴스를 초기화한다.
 // 검색 최적화를 위한 인덱싱 작업도 수행한다.
-func NewProfileService(cache *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) (*ProfileService, error) {
+func NewProfileService(cacheSvc *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) (*ProfileService, error) {
 	if membersData == nil {
 		return nil, fmt.Errorf("members data is nil")
 	}
@@ -49,7 +49,7 @@ func NewProfileService(cache *cache.Service, membersData domain.MemberDataProvid
 	}
 
 	service := &ProfileService{
-		cache:         cache,
+		cache:         cacheSvc,
 		logger:        logger,
 		membersData:   membersData,
 		profiles:      profiles,

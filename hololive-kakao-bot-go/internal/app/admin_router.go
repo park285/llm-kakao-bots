@@ -65,7 +65,7 @@ func newAdminRouter(logger *slog.Logger) (*gin.Engine, error) {
 	}
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.Use(gin.Recovery())
-	router.Use(server.ZapLoggerMiddleware(logger, "/health")) // HTTP 접속 로깅 (/health 제외)
+	router.Use(server.LoggerMiddleware(logger, "/health")) // HTTP 접속 로깅 (/health 제외)
 	router.Use(cors.New(newAdminCORSConfig()))
 	router.Use(server.SecurityHeadersMiddleware())
 	router.Use(newAdminGzipMiddleware())

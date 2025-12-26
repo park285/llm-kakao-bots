@@ -11,12 +11,12 @@ import (
 )
 
 // NewAlarmService: 새로운 AlarmService 인스턴스를 생성하고 설정(목표 알림 시간 등)을 초기화한다.
-func NewAlarmService(cache *cache.Service, holodex *holodex.Service, logger *slog.Logger, advanceMinutes []int) *AlarmService {
+func NewAlarmService(cacheSvc *cache.Service, holodexSvc *holodex.Service, logger *slog.Logger, advanceMinutes []int) *AlarmService {
 	targetMinutes := buildTargetMinutes(advanceMinutes)
 
 	return &AlarmService{
-		cache:           cache,
-		holodex:         holodex,
+		cache:           cacheSvc,
+		holodex:         holodexSvc,
 		logger:          logger,
 		targetMinutes:   targetMinutes,
 		baseConcurrency: 15,   // 최소 동시성

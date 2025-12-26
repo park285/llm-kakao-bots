@@ -3,9 +3,8 @@
 package main
 
 import (
+	watchdog "llm-watchdog/internal/core"
 	"log/slog"
-
-	"llm-watchdog/watchdog"
 
 	"github.com/google/wire"
 )

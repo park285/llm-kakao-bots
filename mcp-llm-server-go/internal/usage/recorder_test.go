@@ -1,6 +1,8 @@
 package usage
 
 import (
+	"fmt"
+	"net"
 	"testing"
 	"time"
 )
@@ -49,5 +51,51 @@ func TestIsPowerOfTwo(t *testing.T) {
 	}
 	if isPowerOfTwo(3) || isPowerOfTwo(0) {
 		t.Fatalf("unexpected power of two")
+	}
+}
+
+func TestShouldFallbackToLocalhost(t *testing.T) {
+	if shouldFallbackToLocalhost(nil, "postgres") {
+		t.Fatalf("expected false for nil error")
+	}
+	if shouldFallbackToLocalhost(fmt.Errorf("no such host"), "") {
+		t.Fatalf("expected false for empty host")
+	}
+	if shouldFallbackToLocalhost(fmt.Errorf("no such host"), "localhost") {
+		t.Fatalf("expected false for localhost")
+	}
+
+	dnsErr := &net.DNSError{Name: "postgres"}
+	if !shouldFallbackToLocalhost(dnsErr, "postgres") {
+		t.Fatalf("expected fallback for dns error")
+	}
+	if !shouldFallbackToLocalhost(fmt.Errorf("wrapped: %w", dnsErr), "postgres") {
+		t.Fatalf("expected fallback for wrapped dns error")
+	}
+	if shouldFallbackToLocalhost(dnsErr, "example") {
+		t.Fatalf("expected false for non-postgres host")
+	}
+
+	if !shouldFallbackToLocalhost(fmt.Errorf("lookup postgres: no such host"), "postgres") {
+		t.Fatalf("expected fallback for lookup failure")
+	}
+	if shouldFallbackToLocalhost(fmt.Errorf("no such host"), "postgres") {
+		t.Fatalf("expected false when host name missing in error")
+	}
+}
+
+func TestTodayDate(t *testing.T) {
+	now := time.Now().In(time.Local)
+	got := todayDate()
+	if got.Location() != time.Local {
+		t.Fatalf("unexpected location: %v", got.Location())
+	}
+	if got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 || got.Nanosecond() != 0 {
+		t.Fatalf("expected midnight, got: %v", got)
+	}
+
+	expected := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	if !got.Equal(expected) && !got.Equal(expected.Add(24*time.Hour)) {
+		t.Fatalf("unexpected date: %v", got)
 	}
 }
