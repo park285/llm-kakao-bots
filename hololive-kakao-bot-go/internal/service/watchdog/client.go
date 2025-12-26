@@ -43,9 +43,10 @@ type RestartResponse struct {
 
 // Client is a client for the watchdog admin API.
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
-	logger     *slog.Logger
+	baseURL       string
+	internalToken string
+	httpClient    *http.Client
+	logger        *slog.Logger
 }
 
 // NewClient creates a new watchdog API client.
@@ -59,15 +60,35 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 	}
 }
 
+// NewClientWithToken creates a new watchdog API client with internal service token.
+func NewClientWithToken(baseURL, internalToken string, logger *slog.Logger) *Client {
+	return &Client{
+		baseURL:       baseURL,
+		internalToken: internalToken,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		logger: logger,
+	}
+}
+
+// setAuthHeaders adds authentication headers to the request.
+func (c *Client) setAuthHeaders(req *http.Request) {
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Service-Token", c.internalToken)
+	}
+}
+
 // GetContainers fetches the list of all containers.
 func (c *Client) GetContainers(ctx context.Context) (*ContainersResponse, error) {
-	url := c.baseURL + "/admin/api/v1/docker/containers?skip_auth=true"
+	url := c.baseURL + "/admin/api/v1/docker/containers"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	c.setAuthHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -90,13 +111,14 @@ func (c *Client) GetContainers(ctx context.Context) (*ContainersResponse, error)
 
 // GetManagedTargets fetches the list of managed targets.
 func (c *Client) GetManagedTargets(ctx context.Context) ([]ContainerInfo, error) {
-	url := c.baseURL + "/admin/api/v1/targets?skip_auth=true"
+	url := c.baseURL + "/admin/api/v1/targets"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	c.setAuthHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -121,7 +143,7 @@ func (c *Client) GetManagedTargets(ctx context.Context) ([]ContainerInfo, error)
 
 // RestartContainer sends a restart request to the watchdog.
 func (c *Client) RestartContainer(ctx context.Context, name, reason string, force bool) (*RestartResponse, error) {
-	url := c.baseURL + "/admin/api/v1/targets/" + name + "/restart?skip_auth=true"
+	url := c.baseURL + "/admin/api/v1/targets/" + name + "/restart"
 
 	body := map[string]any{
 		"reason": reason,
@@ -138,6 +160,7 @@ func (c *Client) RestartContainer(ctx context.Context, name, reason string, forc
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	c.setAuthHeaders(req)
 
 	c.logger.Info("Sending restart request to watchdog",
 		slog.String("container", name),

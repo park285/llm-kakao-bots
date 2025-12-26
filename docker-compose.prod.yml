@@ -261,6 +261,8 @@ services:
       SERVER_PORT: 30001
       LOG_FILE: logs/hololive-bot.log
       GOMEMLIMIT: "450MiB"
+      WATCHDOG_URL: "http://llm-watchdog:30002"
+      WATCHDOG_INTERNAL_SERVICE_TOKEN: "${WATCHDOG_INTERNAL_SERVICE_TOKEN}"
     volumes:
       - ./logs:/app/logs
     ports:
@@ -311,6 +313,8 @@ services:
       WATCHDOG_ADMIN_ENABLED: "${WATCHDOG_ADMIN_ENABLED:-true}"
       WATCHDOG_ADMIN_ADDR: "0.0.0.0:30002"
       WATCHDOG_ADMIN_ALLOWED_IPS: "${WATCHDOG_ADMIN_ALLOWED_IPS},172.16.0.0/12"
+      WATCHDOG_INTERNAL_SERVICE_TOKEN: "${WATCHDOG_INTERNAL_SERVICE_TOKEN}"
+      WATCHDOG_SKIP_AUTH_MODE: "${WATCHDOG_SKIP_AUTH_MODE:-token_only}"
       LOG_DIR: "/app/logs"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

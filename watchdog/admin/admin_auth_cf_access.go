@@ -36,6 +36,8 @@ type cfAccessVerifier struct {
 
 	// internalToken 은 내부 서비스 간 인증에 사용되는 토큰이다.
 	internalToken string
+	// skipAuthMode 는 skip_auth 쿼리 파라미터의 허용 범위이다.
+	skipAuthMode SkipAuthMode
 
 	cacheTTL   time.Duration
 	httpClient *http.Client
@@ -125,11 +127,13 @@ func newCFAccessVerifier(adminCfg Config, logger *slog.Logger) (*cfAccessVerifie
 	}
 
 	v := &cfAccessVerifier{
-		certsURL:     fmt.Sprintf("https://%s/cdn-cgi/access/certs", teamDomain),
-		expectedIss:  fmt.Sprintf("https://%s", teamDomain),
-		expectedAUD:  adminCfg.CFAccessAUD,
-		allowedEmail: allowed,
-		cacheTTL:     10 * time.Minute,
+		certsURL:      fmt.Sprintf("https://%s/cdn-cgi/access/certs", teamDomain),
+		expectedIss:   fmt.Sprintf("https://%s", teamDomain),
+		expectedAUD:   adminCfg.CFAccessAUD,
+		allowedEmail:  allowed,
+		internalToken: adminCfg.InternalServiceToken,
+		skipAuthMode:  adminCfg.SkipAuthMode,
+		cacheTTL:      10 * time.Minute,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -250,11 +254,67 @@ func (v *cfAccessVerifier) parseAndValidate(tokenString string) (*cfAccessClaims
 
 func (v *cfAccessVerifier) middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if strings.EqualFold(strings.TrimSpace(c.Query("skip_auth")), "true") {
-			c.Next()
-			return
+		// 1. Internal Service Token 검증 (가장 우선)
+		// X-Internal-Service-Token 헤더가 설정되어 있고 일치하면 CF Access 우회
+		if v.internalToken != "" {
+			authHeader := strings.TrimSpace(c.GetHeader("X-Internal-Service-Token"))
+			if authHeader != "" && authHeader == v.internalToken {
+				c.Set("admin_email", "internal:service")
+				c.Set("auth_method", "internal_token")
+				c.Next()
+				return
+			}
 		}
 
+		// 2. skip_auth 쿼리 파라미터 검증 (SkipAuthMode에 따라 처리)
+		if strings.EqualFold(strings.TrimSpace(c.Query("skip_auth")), "true") {
+			clientIP, ok := clientIPFromRequest(c)
+			if !ok {
+				writeAPIError(c, http.StatusForbidden, "ip_unknown", "클라이언트 IP를 확인할 수 없습니다.")
+				return
+			}
+
+			switch v.skipAuthMode {
+			case SkipAuthDisabled:
+				// skip_auth 완전 비활성화, CF Access 검증 필수
+				v.logger.Warn("skip_auth_rejected", "reason", "disabled", "client_ip", clientIP.String())
+				// CF Access 검증으로 진행 (아래 로직으로 fall through)
+
+			case SkipAuthTokenOnly:
+				// 토큰 없이 skip_auth만 사용하는 것은 거부
+				writeAPIError(c, http.StatusUnauthorized, "token_required",
+					"skip_auth를 사용하려면 X-Internal-Service-Token 헤더가 필요합니다.")
+				return
+
+			case SkipAuthDockerNetwork:
+				// Docker 네트워크 IP에서만 허용
+				if IsDockerNetworkIP(clientIP) {
+					c.Set("admin_email", "internal:docker:"+clientIP.String())
+					c.Set("auth_method", "skip_auth_docker")
+					c.Next()
+					return
+				}
+				v.logger.Warn("skip_auth_rejected", "reason", "not_docker_network", "client_ip", clientIP.String())
+				writeAPIError(c, http.StatusForbidden, "docker_network_only",
+					"skip_auth는 Docker 네트워크에서만 허용됩니다.")
+				return
+
+			case SkipAuthLocalOnly:
+				// localhost에서만 허용
+				if IsLocalhostIP(clientIP) {
+					c.Set("admin_email", "internal:localhost")
+					c.Set("auth_method", "skip_auth_local")
+					c.Next()
+					return
+				}
+				v.logger.Warn("skip_auth_rejected", "reason", "not_localhost", "client_ip", clientIP.String())
+				writeAPIError(c, http.StatusForbidden, "localhost_only",
+					"skip_auth는 localhost에서만 허용됩니다.")
+				return
+			}
+		}
+
+		// 3. CF Access JWT 검증 (기본 인증 경로)
 		tokenString := strings.TrimSpace(c.GetHeader(cfAccessJWTHeader))
 		if tokenString == "" {
 			writeAPIError(c, http.StatusUnauthorized, "missing_token", "Cf-Access-Jwt-Assertion 헤더가 필요합니다.")
@@ -290,6 +350,7 @@ func (v *cfAccessVerifier) middleware() gin.HandlerFunc {
 		}
 
 		c.Set("admin_email", claims.Email)
+		c.Set("auth_method", "cf_access")
 		c.Next()
 	}
 }

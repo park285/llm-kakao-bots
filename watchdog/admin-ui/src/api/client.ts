@@ -1,19 +1,28 @@
-import { ApiResponse, ContainerInfo, ContainerStatus, DockerState, TargetStatus } from '../types';
+import { ApiResponse, ContainerInfo, ContainerStatus, DockerState, EventsResponse, TargetStatus } from '../types';
 
 const API_BASE = '/admin/api/v1';
+
+// 개발 환경인지 확인 (Vite 환경변수 사용)
+const isDevelopment = import.meta.env.DEV;
 
 type TargetsResponse = { generatedAt: string; targets: TargetStatus[] };
 
 // Helper to handle API responses
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const headers = new Headers(options?.headers);
-    // Development mode: skip CF Access auth
-    const separator = endpoint.includes('?') ? '&' : '?';
-    const devEndpoint = `${endpoint}${separator}skip_auth=true`;
 
-    const res = await fetch(`${API_BASE}${devEndpoint}`, {
+    // 개발 모드에서만 skip_auth 사용 (로컬 개발 시)
+    // 프로덕션에서는 CF Access가 JWT 토큰을 자동으로 주입
+    let finalEndpoint = endpoint;
+    if (isDevelopment) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        finalEndpoint = `${endpoint}${separator}skip_auth=true`;
+    }
+
+    const res = await fetch(`${API_BASE}${finalEndpoint}`, {
         ...options,
         headers,
+        credentials: 'include', // CF Access 쿠키 포함
     });
 
     if (!res.ok) {
@@ -157,7 +166,11 @@ export async function resumeMonitoring(name: string): Promise<void> {
 }
 
 export async function getContainerLogs(name: string, tail = 200): Promise<string> {
-    const res = await fetch(`${API_BASE}/targets/${name}/logs?tail=${tail}&timestamps=true&skip_auth=true`);
+    let url = `${API_BASE}/targets/${name}/logs?tail=${tail}&timestamps=true`;
+    if (isDevelopment) {
+        url += '&skip_auth=true';
+    }
+    const res = await fetch(url, { credentials: 'include' });
     if (!res.ok) {
         throw new Error(`Failed to fetch logs: ${res.status}`);
     }
@@ -165,7 +178,11 @@ export async function getContainerLogs(name: string, tail = 200): Promise<string
 }
 
 export function getLogStreamUrl(name: string, tail = 200): string {
-    return `${API_BASE}/targets/${name}/logs/stream?tail=${tail}&skip_auth=true`;
+    let url = `${API_BASE}/targets/${name}/logs/stream?tail=${tail}`;
+    if (isDevelopment) {
+        url += '&skip_auth=true';
+    }
+    return url;
 }
 
 export async function getTargetDetails(name: string): Promise<ContainerInfo> {
@@ -173,8 +190,8 @@ export async function getTargetDetails(name: string): Promise<ContainerInfo> {
     return buildContainerInfoFromTarget(data);
 }
 
-export async function getEvents(limit = 200): Promise<{ events: any[] }> {
-    return request(`/events?limit=${limit}`);
+export async function getEvents(limit = 200): Promise<EventsResponse> {
+    return request<EventsResponse>(`/events?limit=${limit}`);
 }
 
 // Fetch a specific container's details.

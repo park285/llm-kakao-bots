@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getWatchdogStatus, reloadConfig, triggerCheckNow, setWatchdogEnabled, WatchdogStatus } from '@/api/client';
 import { Loader2, RotateCcw, Monitor, Zap, CheckCircle, XCircle, Clock, Server, Activity, FileJson, Power } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -12,7 +12,7 @@ export function SettingsPage() {
     const [checking, setChecking] = useState(false);
     const { addToast } = useToast();
 
-    async function loadStatus() {
+    const loadStatus = useCallback(async () => {
         try {
             const data = await getWatchdogStatus();
             setStatus(data);
@@ -21,13 +21,13 @@ export function SettingsPage() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [addToast]);
 
     useEffect(function load() {
-        loadStatus();
-        const interval = setInterval(loadStatus, 10000);
+        void loadStatus();
+        const interval = setInterval(() => { void loadStatus(); }, 10000);
         return function cleanup() { clearInterval(interval); };
-    }, []);
+    }, [loadStatus]);
 
     async function handleReload() {
         if (!confirm('설정 파일을 다시 로드하시겠습니까? 현재 런타임 설정이 파일 내용으로 교체됩니다.')) return;

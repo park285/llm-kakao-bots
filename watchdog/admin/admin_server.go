@@ -56,7 +56,7 @@ func RunServer(ctx context.Context, adminCfg Config, w *watchdog.Watchdog, logge
 		apiMiddlewares = append(apiMiddlewares, verifier.middleware())
 		logger.Info("cf_access_enabled")
 	} else {
-		logger.Info("cf_access_disabled")
+		logger.Debug("cf_access_disabled")
 	}
 
 	registerAdminAPIRoutes(router, w, logger, apiMiddlewares...)

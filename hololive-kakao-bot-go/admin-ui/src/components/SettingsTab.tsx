@@ -51,9 +51,8 @@ const SettingsTab = () => {
     })
 
     const restartMutation = useMutation({
-        mutationFn: async (containerName: string) => {
-            return watchdogApi.restartContainer(containerName, 'Admin dashboard restart')
-        },
+        mutationFn: (containerName: string) =>
+            watchdogApi.restartContainer(containerName, 'Admin dashboard restart'),
         onSuccess: (_, containerName) => {
             setRestartingContainer(null)
             toast.success(
@@ -105,7 +104,7 @@ const SettingsTab = () => {
     }
 
     // 주요 컨테이너만 필터링 (Managed + Watchdog + 핵심 인프라)
-    const filteredContainers = containersData?.containers?.filter((c: WatchdogContainer) =>
+    const filteredContainers = containersData?.containers.filter((c: WatchdogContainer) =>
         c.managed ||
         c.name.includes('watchdog') ||
         c.name === 'valkey-mq' ||
@@ -314,7 +313,7 @@ const SettingsTab = () => {
                                         <span className="text-slate-300 pointer-events-none shrink-0">•</span>
 
                                         <span className="truncate text-slate-400 font-medium" title={container.image}>
-                                            {(container.image ?? '').split(':')[0]?.split('/').pop() ?? 'unknown'}
+                                            {container.image.split(':')[0].split('/').pop() ?? 'unknown'}
                                         </span>
                                     </div>
                                 </div>
