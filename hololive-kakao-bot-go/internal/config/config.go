@@ -39,12 +39,15 @@ type IrisConfig struct {
 
 // ValkeyMQConfig: Redis(Valkey) 기반 메시지 큐 통신 설정
 type ValkeyMQConfig struct {
-	Host          string
-	Port          int
-	Password      string
-	StreamKey     string
-	ConsumerGroup string
-	ConsumerName  string
+	Host                string
+	Port                int
+	Password            string
+	StreamKey           string
+	ConsumerGroup       string
+	ConsumerName        string
+	ReadCount           int
+	BlockTimeoutSeconds int
+	WorkerCount         int
 }
 
 // ServerConfig: 관리자용 웹 대시보드 및 API 서버 설정
@@ -238,6 +241,12 @@ func Load() (*Config, error) {
 			StreamKey:     getEnv("MQ_STREAM_KEY", "kakao:hololive"),
 			ConsumerGroup: getEnv("MQ_CONSUMER_GROUP", "hololive-bot-group"),
 			ConsumerName:  getEnv("MQ_CONSUMER_NAME", "consumer-1"),
+			ReadCount:     getEnvInt("MQ_READ_COUNT", int(constants.MQConfig.ReadCount)),
+			BlockTimeoutSeconds: getEnvInt(
+				"MQ_BLOCK_TIMEOUT_SECONDS",
+				int(constants.MQConfig.BlockTimeout.Seconds()),
+			),
+			WorkerCount: getEnvInt("MQ_WORKER_COUNT", constants.MQConfig.WorkerCount),
 		},
 		Server: ServerConfig{
 			Port:            getEnvInt("SERVER_PORT", 30001),

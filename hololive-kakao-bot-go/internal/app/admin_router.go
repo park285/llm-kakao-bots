@@ -35,14 +35,14 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 
 // ProvideAdminRouter: 관리자 API 및 UI를 서빙하는 Gin 라우터를 설정하고 제공한다.
 func ProvideAdminRouter(
-	_ context.Context,
+	ctx context.Context,
 	logger *slog.Logger,
 	adminHandler *server.AdminHandler,
 	sessions *server.ValkeySessionStore,
 	securityCfg *server.SecurityConfig,
 	allowedCIDRs []*net.IPNet,
 ) (*gin.Engine, error) {
-	router, err := newAdminRouter(logger)
+	router, err := newAdminRouter(ctx, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func ProvideAdminRouter(
 	return router, nil
 }
 
-func newAdminRouter(logger *slog.Logger) (*gin.Engine, error) {
+func newAdminRouter(ctx context.Context, logger *slog.Logger) (*gin.Engine, error) {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	if err := router.SetTrustedProxies(constants.ServerConfig.TrustedProxies); err != nil {
@@ -67,7 +67,7 @@ func newAdminRouter(logger *slog.Logger) (*gin.Engine, error) {
 	}
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.Use(gin.Recovery())
-	router.Use(server.LoggerMiddleware(logger, "/health")) // HTTP 접속 로깅 (/health 제외)
+	router.Use(server.LoggerMiddleware(ctx, logger, "/health")) // HTTP 접속 로깅 (/health 제외)
 	router.Use(cors.New(newAdminCORSConfig()))
 	router.Use(server.SecurityHeadersMiddleware())
 	router.Use(newAdminGzipMiddleware())

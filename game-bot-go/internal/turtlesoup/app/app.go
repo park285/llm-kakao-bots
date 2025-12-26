@@ -104,7 +104,7 @@ func newTurtleSoupReplyPublisher(cfg *tsconfig.Config, mqValkey di.MQValkeyClien
 		mqValkey.Client,
 		logger,
 		cfg.Valkey.ReplyStreamKey,
-		int64(tsconfig.MQStreamMaxLen),
+		cfg.Valkey.StreamMaxLen,
 	)
 }
 
@@ -115,9 +115,9 @@ func newTurtleSoupStreamConsumer(cfg *tsconfig.Config, mqValkey di.MQValkeyClien
 		cfg.Valkey.StreamKey,
 		cfg.Valkey.ConsumerGroup,
 		cfg.Valkey.ConsumerName,
-		int64(tsconfig.MQBatchSize),
-		time.Duration(tsconfig.MQReadTimeoutMS)*time.Millisecond,
-		5,
+		cfg.Valkey.BatchSize,
+		cfg.Valkey.BlockTimeout,
+		cfg.Valkey.Concurrency,
 		cfg.Valkey.ResetConsumerGroupOnStartup,
 	)
 }

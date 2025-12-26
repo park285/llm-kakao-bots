@@ -119,7 +119,7 @@ func newTwentyQReplyPublisher(cfg *qconfig.Config, mqValkey di.MQValkeyClient, l
 		mqValkey.Client,
 		logger,
 		cfg.Valkey.ReplyStreamKey,
-		int64(qconfig.MQStreamMaxLen),
+		cfg.Valkey.StreamMaxLen,
 	)
 }
 
@@ -130,9 +130,9 @@ func newTwentyQStreamConsumer(cfg *qconfig.Config, mqValkey di.MQValkeyClient, l
 		cfg.Valkey.StreamKey,
 		cfg.Valkey.ConsumerGroup,
 		cfg.Valkey.ConsumerName,
-		int64(qconfig.MQBatchSize),
-		time.Duration(qconfig.MQReadTimeoutMS)*time.Millisecond,
-		5,
+		cfg.Valkey.BatchSize,
+		cfg.Valkey.BlockTimeout,
+		cfg.Valkey.Concurrency,
 		cfg.Valkey.ResetConsumerGroupOnStartup,
 	)
 }

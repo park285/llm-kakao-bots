@@ -9,7 +9,7 @@ import (
 )
 
 // LoggerMiddleware: slog 기반 HTTP 접속 로깅 미들웨어 (고성능 최적화)
-func LoggerMiddleware(logger *slog.Logger, skipPaths ...string) gin.HandlerFunc {
+func LoggerMiddleware(ctx context.Context, logger *slog.Logger, skipPaths ...string) gin.HandlerFunc {
 	// 스킵 경로를 맵으로 변환 (O(1) 조회)
 	skipMap := make(map[string]bool, len(skipPaths))
 	for _, path := range skipPaths {
@@ -40,7 +40,7 @@ func LoggerMiddleware(logger *slog.Logger, skipPaths ...string) gin.HandlerFunc 
 		}
 
 		// 효율화: 해당 레벨이 활성화 상태인지 먼저 확인
-		if !logger.Enabled(c.Request.Context(), level) {
+		if !logger.Enabled(ctx, level) {
 			return
 		}
 
@@ -62,7 +62,7 @@ func LoggerMiddleware(logger *slog.Logger, skipPaths ...string) gin.HandlerFunc 
 			attrs = append(attrs, slog.Duration("latency", latency))
 		}
 
-		logger.LogAttrs(c.Request.Context(), level, "HTTP", attrs...)
+		logger.LogAttrs(ctx, level, "HTTP", attrs...)
 	}
 }
 
