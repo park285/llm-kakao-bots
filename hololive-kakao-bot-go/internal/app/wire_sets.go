@@ -92,7 +92,6 @@ var RuntimeSet = wire.NewSet(
 	ProvideSecurityConfig,
 	ProvideAdminCredentials,
 	ProvideAdminHandler,
-	ProvideWatchdogProxyHandler,
 	ProvideAdminAllowedCIDRs,
 	ProvideAdminServer,
 	ProvideAdminRouter,

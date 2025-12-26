@@ -158,6 +158,7 @@ func buildConfig() *Config {
 			ConnMaxIdleTimeMinutes:               getEnvNonNegativeInt("DB_CONN_MAX_IDLE_TIME_MINUTES", 10),
 			UsageBatchEnabled:                    getEnvBool("DB_USAGE_BATCH_ENABLED", false),
 			UsageBatchFlushIntervalSeconds:       max(1, getEnvNonNegativeInt("DB_USAGE_BATCH_FLUSH_INTERVAL_SECONDS", 1)),
+			UsageBatchFlushTimeoutSeconds:        max(1, getEnvNonNegativeInt("DB_USAGE_BATCH_FLUSH_TIMEOUT_SECONDS", 5)),
 			UsageBatchMaxPendingRequests:         max(1, getEnvNonNegativeInt("DB_USAGE_BATCH_MAX_PENDING_REQUESTS", 50)),
 			UsageBatchMaxBackoffSeconds:          getEnvNonNegativeInt("DB_USAGE_BATCH_MAX_BACKOFF_SECONDS", 60),
 			UsageBatchErrorLogMaxIntervalSeconds: getEnvNonNegativeInt("DB_USAGE_BATCH_ERROR_LOG_MAX_INTERVAL_SECONDS", 60),

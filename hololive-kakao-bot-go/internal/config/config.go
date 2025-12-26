@@ -18,20 +18,18 @@ const maxHolodexAPIKeySlots = 5
 
 // Config: 홀로라이브 봇의 전체 동작에 필요한 설정을 담는 구조체
 type Config struct {
-	Iris                  IrisConfig
-	ValkeyMQ              ValkeyMQConfig
-	Server                ServerConfig
-	Kakao                 KakaoConfig
-	Holodex               HolodexConfig
-	YouTube               YouTubeConfig
-	Valkey                ValkeyConfig
-	Postgres              PostgresConfig
-	Notification          NotificationConfig
-	Logging               LoggingConfig
-	Bot                   BotConfig
-	Version               string
-	WatchdogURL           string // Watchdog API 프록시용
-	WatchdogInternalToken string // Watchdog Internal Service Token
+	Iris         IrisConfig
+	ValkeyMQ     ValkeyMQConfig
+	Server       ServerConfig
+	Kakao        KakaoConfig
+	Holodex      HolodexConfig
+	YouTube      YouTubeConfig
+	Valkey       ValkeyConfig
+	Postgres     PostgresConfig
+	Notification NotificationConfig
+	Logging      LoggingConfig
+	Bot          BotConfig
+	Version      string
 }
 
 // IrisConfig: Iris 웹훅 서버 연결 및 메시지 전송 관련 설정
@@ -289,9 +287,7 @@ func Load() (*Config, error) {
 			Prefix:   getEnv("BOT_PREFIX", "!"),
 			SelfUser: util.TrimSpace(getEnv("BOT_SELF_USER", "iris")),
 		},
-		Version:               util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
-		WatchdogURL:           getEnv("WATCHDOG_URL", "http://llm-watchdog:30002"),
-		WatchdogInternalToken: getEnv("WATCHDOG_INTERNAL_SERVICE_TOKEN", ""),
+		Version: util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
 	}
 
 	if err := cfg.Validate(); err != nil {

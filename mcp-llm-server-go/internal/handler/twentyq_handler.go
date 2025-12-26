@@ -28,7 +28,7 @@ type TwentyQHandler struct {
 func NewTwentyQHandler(
 	cfg *config.Config,
 	client *gemini.Client,
-	guard *guard.InjectionGuard,
+	injectionGuard *guard.InjectionGuard,
 	store *session.Store,
 	prompts *twentyq.Prompts,
 	logger *slog.Logger,
@@ -36,7 +36,7 @@ func NewTwentyQHandler(
 	return &TwentyQHandler{
 		cfg:     cfg,
 		client:  client,
-		guard:   guard,
+		guard:   injectionGuard,
 		store:   store,
 		prompts: prompts,
 		logger:  logger,

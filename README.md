@@ -52,15 +52,6 @@ llm/
 │   │   └── repository/       # 데이터 접근
 │   └── Dockerfile
 │
-├── watchdog/                 # 컨테이너 헬스체크 모니터
-│   ├── cmd/
-│   │   └── watchdog/         # 엔트리포인트
-│   ├── internal/
-│   │   ├── core/             # watchdog 코어 로직
-│   │   └── admin/            # Admin API 서버
-│   ├── admin-ui/             # React Admin UI
-│   └── Dockerfile
-│
 ├── docker-compose.prod.yml   # 프로덕션 스택
 ├── .env                      # 환경 변수 (SSOT)
 ├── logs/                     # 로그 디렉터리
@@ -77,7 +68,7 @@ llm/
 | `twentyq-bot` | twentyq-bot | 30081 | 512MB | 스무고개 게임 봇 |
 | `turtle-soup-bot` | turtle-soup-bot | 30082 | 512MB | 바다거북수프 게임 봇 |
 | `hololive-bot` | hololive-kakao-bot-go | 30001 | 512MB | 홀로라이브 정보 봇 |
-| `llm-watchdog` | llm-watchdog | 30002 | 512MB | 컨테이너 모니터링 |
+| `deunhealth` | deunhealth | - | 32MB | 컨테이너 헬스 모니터링 |
 
 ### 인프라 서비스
 
@@ -86,6 +77,52 @@ llm/
 | `postgres` | llm-postgres | 5432 | 512MB | 통합 PostgreSQL |
 | `valkey-cache` | valkey-cache | 6379 | 512MB | 세션/캐시 (AOF) |
 | `valkey-mq` | valkey-mq | 1833 | 256MB | Streams 메시지큐 |
+
+### DeUnhealth (컨테이너 헬스 모니터)
+
+[qdm12/deunhealth](https://github.com/qdm12/deunhealth) - Go 기반의 경량 헬스 모니터입니다.
+
+**특징:**
+- **Docker Events 스트림 방식**: 폴링 대신 실시간 이벤트 감지 → 즉시 반응
+- **네트워크 격리**: `network_mode: none`으로 외부 접근 차단 (보안 강화)
+- **라벨 기반 모니터링**: 명시적으로 라벨이 지정된 컨테이너만 모니터링
+
+**동작 원리:**
+1. Docker 소켓을 통해 컨테이너 이벤트 구독
+2. `HEALTHCHECK` 실패로 `unhealthy` 상태 전환 시 즉시 감지
+3. 해당 컨테이너 자동 재시작
+
+**현재 설정 (`docker-compose.prod.yml`):**
+
+```yaml
+deunhealth:
+  image: qmcgaw/deunhealth:latest
+  container_name: deunhealth
+  restart: always
+  network_mode: none
+  environment:
+    TZ: Asia/Seoul
+    LOG_LEVEL: info
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+**모니터링 대상 설정 (라벨 필수):**
+
+```yaml
+# 각 서비스에 라벨 추가
+mcp-llm-server:
+  labels:
+    deunhealth.restart.on.unhealthy: "true"
+
+postgres:
+  labels:
+    deunhealth.restart.on.unhealthy: "true"
+```
+
+**현재 모니터링 대상:**
+- `mcp-llm-server`, `twentyq-bot`, `turtle-soup-bot`, `hololive-kakao-bot-go`
+- `llm-postgres`, `valkey-cache`, `valkey-mq`
 
 ## API 엔드포인트
 
@@ -186,8 +223,6 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 | `HTTP_RATE_LIMIT_RPM` | 분당 요청 제한 | (비활성화) |
 | `GUARD_ENABLED` | 인젝션 가드 | `true` |
 | `GUARD_THRESHOLD` | 가드 임계값 | `0.85` |
-| `WATCHDOG_INTERNAL_SERVICE_TOKEN` | Watchdog 내부 서비스 인증 토큰 | (필수) |
-| `WATCHDOG_SKIP_AUTH_MODE` | 인증 우회 모드 | `token_only` |
 
 ### 세션/캐시 설정
 
@@ -238,15 +273,11 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 │    :6379     │    │  Gemini API   │    │      :5432         │
 │ (AOF 영속화)  │    │  (External)   │    │                    │
 └──────────────┘    └───────────────┘    └────────────────────┘
-        ▲                                          ▲
-        │                                          │
-        └──────────────┬───────────────────────────┘
-                       │
-              ┌────────┴────────┐
-              │    Watchdog     │
-              │     :30002      │
-              │ (헬스체크/재시작) │
-              └─────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│  DeUnhealth (qmcgaw/deunhealth) - 헬스체크 실패 시 자동 재시작   │
+│  Docker Events 스트림 → unhealthy 즉시 감지 → container restart │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ## 개발 가이드

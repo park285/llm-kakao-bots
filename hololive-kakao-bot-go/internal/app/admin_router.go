@@ -35,7 +35,6 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 func ProvideAdminRouter(
 	logger *slog.Logger,
 	adminHandler *server.AdminHandler,
-	watchdogHandler *server.WatchdogProxyHandler,
 	sessions *server.ValkeySessionStore,
 	securityCfg *server.SecurityConfig,
 	allowedCIDRs []*net.IPNet,
@@ -51,7 +50,7 @@ func ProvideAdminRouter(
 	logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
 
 	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret)
-	registerAdminRoutes(router, adminIPGuard, adminAuth, adminHandler, watchdogHandler)
+	registerAdminRoutes(router, adminIPGuard, adminAuth, adminHandler)
 	registerAdminUIRoutes(router)
 
 	return router, nil
@@ -120,7 +119,6 @@ func registerAdminRoutes(
 	adminIPGuard gin.HandlerFunc,
 	adminAuth gin.HandlerFunc,
 	adminHandler *server.AdminHandler,
-	watchdogHandler *server.WatchdogProxyHandler,
 ) {
 	// Public admin API routes (no auth required)
 	router.POST("/admin/api/login", adminIPGuard, adminHandler.HandleLogin)
@@ -149,12 +147,6 @@ func registerAdminRoutes(
 	adminAPI.GET("/logs", adminHandler.GetLogs)
 	adminAPI.GET("/settings", adminHandler.GetSettings)
 	adminAPI.POST("/settings", adminHandler.UpdateSettings)
-
-	// Watchdog 프록시 라우트 (컨테이너 관리)
-	adminAPI.GET("/watchdog/health", watchdogHandler.CheckHealth)
-	adminAPI.GET("/watchdog/containers", watchdogHandler.GetContainers)
-	adminAPI.GET("/watchdog/targets", watchdogHandler.GetManagedTargets)
-	adminAPI.POST("/watchdog/containers/:name/restart", watchdogHandler.RestartContainer)
 }
 
 func registerAdminUIRoutes(router *gin.Engine) {

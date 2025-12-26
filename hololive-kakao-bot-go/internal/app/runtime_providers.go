@@ -125,15 +125,6 @@ func ProvideAdminAllowedCIDRs(cfg *config.Config) ([]*net.IPNet, error) {
 	return allowed, nil
 }
 
-// ProvideWatchdogProxyHandler - Watchdog API 프록시 핸들러 생성
-func ProvideWatchdogProxyHandler(cfg *config.Config, logger *slog.Logger, activityLogger *activity.Logger) *server.WatchdogProxyHandler {
-	watchdogURL := cfg.WatchdogURL
-	if watchdogURL == "" {
-		watchdogURL = "http://llm-watchdog:30002" // Docker 네트워크 기본값
-	}
-	return server.NewWatchdogProxyHandler(watchdogURL, cfg.WatchdogInternalToken, logger, activityLogger)
-}
-
 // ProvideYouTubeService: YouTube 서비스 인스턴스를 제공한다.
 func ProvideYouTubeService(ytStack *YouTubeStack) *youtube.Service {
 	return ytStack.Service

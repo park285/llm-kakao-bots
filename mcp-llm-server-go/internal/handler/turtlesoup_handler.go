@@ -39,7 +39,7 @@ type TurtleSoupHandler struct {
 func NewTurtleSoupHandler(
 	cfg *config.Config,
 	client LLMClient,
-	guard *guard.InjectionGuard,
+	injectionGuard *guard.InjectionGuard,
 	store *session.Store,
 	prompts *turtlesoup.Prompts,
 	loader *turtlesoup.PuzzleLoader,
@@ -48,7 +48,7 @@ func NewTurtleSoupHandler(
 	return &TurtleSoupHandler{
 		cfg:     cfg,
 		client:  client,
-		guard:   guard,
+		guard:   injectionGuard,
 		store:   store,
 		prompts: prompts,
 		loader:  loader,
@@ -104,8 +104,8 @@ func (h *TurtleSoupHandler) resolveSession(
 	}
 
 	pairs := countQAPairs(history)
-	context := shared.BuildRecentQAHistoryContext(history, "[이전 질문/답변 기록]", h.cfg.Session.HistoryMaxPairs)
-	return effectiveSessionID, context, pairs, history, nil
+	historyContext := shared.BuildRecentQAHistoryContext(history, "[이전 질문/답변 기록]", h.cfg.Session.HistoryMaxPairs)
+	return effectiveSessionID, historyContext, pairs, history, nil
 }
 
 func (h *TurtleSoupHandler) appendHistory(ctx context.Context, sessionID string, question string, answer string) error {

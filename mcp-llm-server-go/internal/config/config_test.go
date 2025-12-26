@@ -114,6 +114,22 @@ func TestDatabaseConfigDSN(t *testing.T) {
 	}
 }
 
+func TestBuildConfigUsageBatchFlushTimeoutSeconds(t *testing.T) {
+	t.Setenv("DB_USAGE_BATCH_FLUSH_TIMEOUT_SECONDS", "12")
+	cfg := buildConfig()
+	if cfg.Database.UsageBatchFlushTimeoutSeconds != 12 {
+		t.Fatalf("unexpected UsageBatchFlushTimeoutSeconds: %d", cfg.Database.UsageBatchFlushTimeoutSeconds)
+	}
+}
+
+func TestBuildConfigUsageBatchFlushTimeoutSecondsDefault(t *testing.T) {
+	t.Setenv("DB_USAGE_BATCH_FLUSH_TIMEOUT_SECONDS", "")
+	cfg := buildConfig()
+	if cfg.Database.UsageBatchFlushTimeoutSeconds != 5 {
+		t.Fatalf("unexpected default UsageBatchFlushTimeoutSeconds: %d", cfg.Database.UsageBatchFlushTimeoutSeconds)
+	}
+}
+
 func TestConfigValidateSuccess(t *testing.T) {
 	cfg := &Config{
 		Gemini: GeminiConfig{DefaultModel: "gemini-3-test"},

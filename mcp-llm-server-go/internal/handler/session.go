@@ -20,10 +20,10 @@ type SessionHandler struct {
 }
 
 // NewSessionHandler 세션 핸들러 생성
-func NewSessionHandler(manager *session.Manager, guard *guard.InjectionGuard, logger *slog.Logger) *SessionHandler {
+func NewSessionHandler(manager *session.Manager, injectionGuard *guard.InjectionGuard, logger *slog.Logger) *SessionHandler {
 	return &SessionHandler{
 		manager: manager,
-		guard:   guard,
+		guard:   injectionGuard,
 		logger:  logger,
 	}
 }

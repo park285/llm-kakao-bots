@@ -14,6 +14,8 @@ services:
     image: postgres:18-alpine
     container_name: llm-postgres
     restart: always
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     environment:
       POSTGRES_DB: ${DB_NAME:-twentyq}
       POSTGRES_USER: ${DB_USER:-twentyq_app}
@@ -43,6 +45,8 @@ services:
   valkey-cache:
     image: valkey/valkey:9.0.1-alpine3.23
     container_name: valkey-cache
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     ports:
       - "6379:6379"
     volumes:
@@ -70,6 +74,8 @@ services:
   valkey-mq:
     image: valkey/valkey:9.0.1-alpine3.23
     container_name: valkey-mq
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     ports:
       - "1833:1833"
     volumes:
@@ -104,6 +110,8 @@ services:
       dockerfile: Dockerfile.prod
     container_name: mcp-llm-server
     restart: always
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     env_file:
       - ./.env
     environment:
@@ -149,6 +157,8 @@ services:
       dockerfile: Dockerfile.prod
     container_name: twentyq-bot
     restart: always
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     env_file:
       - ./.env
     environment:
@@ -199,6 +209,8 @@ services:
       dockerfile: Dockerfile.prod
     container_name: turtle-soup-bot
     restart: always
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     env_file:
       - ./.env
     environment:
@@ -244,7 +256,9 @@ services:
       context: ./hololive-kakao-bot-go
       dockerfile: Dockerfile
     container_name: hololive-kakao-bot-go
-    restart: unless-stopped
+    restart: always
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
     env_file:
       - ./hololive-kakao-bot-go/.env
     environment:
@@ -261,8 +275,6 @@ services:
       SERVER_PORT: 30001
       LOG_FILE: logs/hololive-bot.log
       GOMEMLIMIT: "450MiB"
-      WATCHDOG_URL: "http://llm-watchdog:30002"
-      WATCHDOG_INTERNAL_SERVICE_TOKEN: "${WATCHDOG_INTERNAL_SERVICE_TOKEN}"
     volumes:
       - ./logs:/app/logs
     ports:
@@ -279,7 +291,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512MiB
+          memory: 512m
     healthcheck:
       test: [ "CMD-SHELL", "wget -q --spider -T 5 http://localhost:30001/health || exit 1" ]
       interval: 30s
@@ -292,45 +304,25 @@ services:
       - llm-bot-net
 
   # ==========================================
-  # External Watchdog (Docker API)
+  # Container Health Monitor (DeUnhealth)
   # ==========================================
-  llm-watchdog:
-    build:
-      context: ./watchdog
-    container_name: llm-watchdog
+  deunhealth:
+    image: qmcgaw/deunhealth:latest
+    container_name: deunhealth
     restart: always
+    network_mode: none
     environment:
-      WATCHDOG_ENABLED: "${WATCHDOG_ENABLED:-true}"
-      WATCHDOG_CONFIG_PATH: "/app/config.json"
-      WATCHDOG_DOCKER_SOCKET: "/var/run/docker.sock"
-      WATCHDOG_INTERVAL_SECONDS: "${WATCHDOG_INTERVAL_SECONDS:-30}"
-      WATCHDOG_MAX_FAILURES: "${WATCHDOG_MAX_FAILURES:-1}"
-      WATCHDOG_STARTUP_GRACE_SECONDS: "${WATCHDOG_STARTUP_GRACE_SECONDS:-30}"
-      WATCHDOG_RESTART_COOLDOWN_SECONDS: "${WATCHDOG_RESTART_COOLDOWN_SECONDS:-120}"
-      WATCHDOG_RESTART_TIMEOUT_SECONDS: "${WATCHDOG_RESTART_TIMEOUT_SECONDS:-30}"
-      WATCHDOG_USE_EVENTS: "${WATCHDOG_USE_EVENTS:-true}"
-      WATCHDOG_STATUS_REPORT_SECONDS: "${WATCHDOG_STATUS_REPORT_SECONDS:-0}"
-      WATCHDOG_ADMIN_ENABLED: "${WATCHDOG_ADMIN_ENABLED:-true}"
-      WATCHDOG_ADMIN_ADDR: "0.0.0.0:30002"
-      WATCHDOG_ADMIN_ALLOWED_IPS: "${WATCHDOG_ADMIN_ALLOWED_IPS},172.16.0.0/12"
-      WATCHDOG_INTERNAL_SERVICE_TOKEN: "${WATCHDOG_INTERNAL_SERVICE_TOKEN}"
-      WATCHDOG_SKIP_AUTH_MODE: "${WATCHDOG_SKIP_AUTH_MODE:-token_only}"
-      LOG_DIR: "/app/logs"
+      TZ: Asia/Seoul
+      LOG_LEVEL: info
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./logs:/app/logs
-      - ./watchdog/config.json:/app/config.json
-    ports:
-      - "127.0.0.1:30002:30002"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 32m
     logging: *default-logging
     security_opt:
       - no-new-privileges:true
-    networks:
-      - llm-bot-net
 
 volumes:
   pg-data-v18:

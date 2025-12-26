@@ -27,8 +27,8 @@ type GuardHandler struct {
 }
 
 // NewGuardHandler 는 가드 핸들러를 생성한다.
-func NewGuardHandler(guard *guard.InjectionGuard) *GuardHandler {
-	return &GuardHandler{guard: guard}
+func NewGuardHandler(injectionGuard *guard.InjectionGuard) *GuardHandler {
+	return &GuardHandler{guard: injectionGuard}
 }
 
 // RegisterRoutes 는 가드 라우트를 등록한다.

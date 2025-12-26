@@ -149,6 +149,7 @@ type DatabaseConfig struct {
 	ConnMaxIdleTimeMinutes               int
 	UsageBatchEnabled                    bool
 	UsageBatchFlushIntervalSeconds       int
+	UsageBatchFlushTimeoutSeconds        int
 	UsageBatchMaxPendingRequests         int
 	UsageBatchMaxBackoffSeconds          int
 	UsageBatchErrorLogMaxIntervalSeconds int

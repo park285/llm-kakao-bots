@@ -41,10 +41,10 @@ ENV GOGC=200 \
     GOMEMLIMIT=450MiB \
     GIN_MODE=release
 
-EXPOSE 8081 8082
+EXPOSE 30081 30082
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://127.0.0.1:8081/health || wget -q --spider http://127.0.0.1:8082/health || exit 1
+    CMD wget -q --spider http://127.0.0.1:30081/health || wget -q --spider http://127.0.0.1:30082/health || exit 1
 
 USER appuser
 
