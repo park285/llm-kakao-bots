@@ -66,6 +66,22 @@ func NewClient(cfg Config) (valkey.Client, error) {
 		opts.Dialer.Timeout = cfg.DialTimeout
 	}
 
+	// PoolSize/MinIdleConns는 BlockingPool 설정으로 매핑한다.
+	if cfg.PoolSize > 0 {
+		opts.BlockingPoolSize = cfg.PoolSize
+	}
+	if cfg.MinIdleConns > 0 {
+		opts.BlockingPoolMinSize = cfg.MinIdleConns
+	}
+
+	connTimeout := cfg.ReadTimeout
+	if cfg.WriteTimeout > connTimeout {
+		connTimeout = cfg.WriteTimeout
+	}
+	if connTimeout > 0 {
+		opts.ConnWriteTimeout = connTimeout
+	}
+
 	client, err := valkey.NewClient(opts)
 	if err != nil {
 		return nil, fmt.Errorf("create valkey client failed: %w", err)
