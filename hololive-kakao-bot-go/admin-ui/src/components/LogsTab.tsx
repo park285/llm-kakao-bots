@@ -3,8 +3,38 @@ import { logsApi } from '../api'
 import { ScrollText, RefreshCw, AlertTriangle, Shield, Activity, ChevronDown, ChevronRight, Server } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
+import type { LogEntry } from '../types'
 
-const LogItem = ({ log }: { log: any }) => {
+const formatDetailValue = (value: unknown): string => {
+    if (value === null) return 'null'
+    if (value === undefined) return 'undefined'
+
+    switch (typeof value) {
+        case 'string':
+            return value
+        case 'number':
+        case 'boolean':
+        case 'bigint':
+            return String(value)
+        case 'symbol':
+            return value.toString()
+        case 'function':
+            return '[function]'
+        case 'object':
+            if (value instanceof Date) {
+                return value.toISOString()
+            }
+            try {
+                return JSON.stringify(value)
+            } catch {
+                return '[unserializable]'
+            }
+        default:
+            return ''
+    }
+}
+
+const LogItem = ({ log }: { log: LogEntry }) => {
     const [expanded, setExpanded] = useState(false)
 
     const getTypeConfig = (type: string) => {
@@ -15,7 +45,8 @@ const LogItem = ({ log }: { log: any }) => {
     }
 
     const { icon: Icon, color, border } = getTypeConfig(log.type)
-    const hasDetails = log.details && Object.keys(log.details).length > 0
+    const details = log.details ?? {}
+    const hasDetails = Object.keys(details).length > 0
 
     return (
         <div className="group text-sm bg-white border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
@@ -24,7 +55,10 @@ const LogItem = ({ log }: { log: any }) => {
                     "grid grid-cols-[140px_1fr] md:grid-cols-[150px_140px_1fr] items-start gap-4 p-3 cursor-pointer",
                     expanded && "bg-slate-50"
                 )}
-                onClick={() => hasDetails && setExpanded(!expanded)}
+                onClick={() => {
+                    if (!hasDetails) return
+                    setExpanded((prev) => !prev)
+                }}
             >
                 {/* 1. Time */}
                 <div className="font-mono text-xs text-slate-400 pt-0.5">
@@ -65,11 +99,11 @@ const LogItem = ({ log }: { log: any }) => {
                     <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 text-xs font-mono overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <tbody>
-                                {Object.entries(log.details).map(([key, value]) => (
+                                {Object.entries(details).map(([key, value]) => (
                                     <tr key={key} className="border-b border-slate-200/50 last:border-0">
                                         <td className="py-1 pr-4 text-slate-500 font-semibold align-top whitespace-nowrap">{key}</td>
                                         <td className="py-1 text-slate-700 break-all">
-                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                            {formatDetailValue(value)}
                                         </td>
                                     </tr>
                                 ))}
@@ -101,7 +135,7 @@ const LogsTab = () => {
                         <div>
                             <h3 className="text-lg font-bold text-slate-800">System Logs</h3>
                             <p className="text-xs text-slate-500">
-                                최근 {logsData?.logs?.length ?? 0}개의 활동 로그
+                                최근 {logsData?.logs.length ?? 0}개의 활동 로그
                             </p>
                         </div>
                     </div>
@@ -137,7 +171,7 @@ const LogsTab = () => {
                                 <div>Activity</div>
                             </div>
                             {[...(logsData.logs)].reverse().map((log, idx) => (
-                                <LogItem key={`${log.timestamp}-${idx}`} log={log} />
+                                <LogItem key={`${log.timestamp}-${String(idx)}`} log={log} />
                             ))}
                         </div>
                     )}

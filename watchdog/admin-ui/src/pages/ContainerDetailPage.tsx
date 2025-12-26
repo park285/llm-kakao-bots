@@ -3,18 +3,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { getTargetDetails, restartContainer, startContainer, stopContainer, pauseMonitoring, resumeMonitoring } from '@/api/client';
 import { ContainerInfo } from '@/types';
 import { LogViewer } from '@/components/LogViewer';
-import { cn, getStatusColor } from '@/utils';
+import { cn } from '@/utils';
+import { ContainerActions } from '@/components/ContainerActions';
+import { ContainerHeader } from '@/components/ContainerHeader';
 import {
-    ArrowLeft,
-    Play,
-    Square,
-    RefreshCw,
-    Box,
     Loader2,
     AlertCircle,
     Clock,
-    Pause,
-    CirclePlay,
     ShieldCheck,
     ShieldOff,
     Activity
@@ -150,50 +145,12 @@ export function ContainerDetailPage() {
     }
 
     const status = container.status || 'unknown';
-    const statusClasses = getStatusColor(status);
     const isPaused = container.monitoringPaused ?? false;
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col md:flex-row md:items-center justify-between gap-4"
-            >
-                <div className="flex items-center gap-4">
-                    <Link
-                        to="/containers"
-                        className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                        <ArrowLeft size={20} className="text-slate-600" />
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-                            <Box size={24} />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-800">{container.name}</h1>
-                            <p className="text-xs text-slate-400 font-mono">{container.id}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Status badges */}
-                <div className="flex items-center gap-2">
-                    <div className={cn("px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 border", statusClasses)}>
-                        {status === 'running' && <Play size={14} className="fill-current" />}
-                        {status === 'dead' && <AlertCircle size={14} />}
-                        {status.toUpperCase()}
-                    </div>
-                    {isPaused && (
-                        <div className="px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 border bg-amber-50 text-amber-600 border-amber-200">
-                            <Pause size={14} />
-                            MONITORING PAUSED
-                        </div>
-                    )}
-                </div>
-            </motion.div>
+            <ContainerHeader container={container} isPaused={isPaused} />
 
             {/* Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -265,65 +222,16 @@ export function ContainerDetailPage() {
             )}
 
             {/* Control Actions */}
-            <div className="flex flex-wrap gap-3">
-                <button
-                    onClick={handleStart}
-                    disabled={actionLoading !== null || container.status === 'running'}
-                    className={cn(
-                        "px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer",
-                        container.status === 'running'
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : "bg-emerald-500 text-white hover:bg-emerald-600"
-                    )}
-                >
-                    {actionLoading === 'start' ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                    Start
-                </button>
-                <button
-                    onClick={handleStop}
-                    disabled={actionLoading !== null || container.status !== 'running'}
-                    className={cn(
-                        "px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer",
-                        container.status !== 'running'
-                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : "bg-rose-500 text-white hover:bg-rose-600"
-                    )}
-                >
-                    {actionLoading === 'stop' ? <Loader2 size={16} className="animate-spin" /> : <Square size={16} />}
-                    Stop
-                </button>
-                <button
-                    onClick={handleRestart}
-                    disabled={actionLoading !== null}
-                    className="px-4 py-2 rounded-lg bg-sky-500 text-white hover:bg-sky-600 font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                    {actionLoading === 'restart' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                    Restart
-                </button>
-
-                {/* Monitoring control */}
-                <div className="border-l border-slate-200 pl-3 ml-1">
-                    {isPaused ? (
-                        <button
-                            onClick={handleResumeMonitoring}
-                            disabled={actionLoading !== null}
-                            className="px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer"
-                        >
-                            {actionLoading === 'resume' ? <Loader2 size={16} className="animate-spin" /> : <CirclePlay size={16} />}
-                            Resume Monitoring
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handlePauseMonitoring}
-                            disabled={actionLoading !== null}
-                            className="px-4 py-2 rounded-lg bg-slate-500 text-white hover:bg-slate-600 font-medium text-sm flex items-center gap-2 transition-colors cursor-pointer"
-                        >
-                            {actionLoading === 'pause' ? <Loader2 size={16} className="animate-spin" /> : <Pause size={16} />}
-                            Pause Monitoring
-                        </button>
-                    )}
-                </div>
-            </div>
+            <ContainerActions
+                status={status}
+                isPaused={isPaused}
+                actionLoading={actionLoading}
+                onStart={handleStart}
+                onStop={handleStop}
+                onRestart={handleRestart}
+                onPauseMonitoring={handlePauseMonitoring}
+                onResumeMonitoring={handleResumeMonitoring}
+            />
 
             {/* Logs */}
             <div>

@@ -32,19 +32,32 @@ Timeouts:
   - Access는 통과했더라도, 이 allowlist가 설정되면 해당 이메일만 허용합니다.
   - 구분자: 공백/쉼표 (예: `a@x.com,b@y.com`)
 
-### 1.3 워치독 설정 리로드(옵션)
+### 1.3 내부 서비스 인증
+
+- `WATCHDOG_INTERNAL_SERVICE_TOKEN` (string, optional)
+  - Docker 네트워크 내 서비스 간 인증에 사용되는 토큰
+  - `X-Internal-Service-Token` 헤더로 전달
+  - 설정 시 CF Access 인증을 우회할 수 있음
+
+- `WATCHDOG_SKIP_AUTH_MODE` (string, default: `token_only`)
+  - `skip_auth=true` 쿼리 파라미터의 허용 범위를 제어
+  - 값:
+    - `disabled`: skip_auth 완전 비활성화 (프로덕션 권장)
+    - `token_only`: X-Internal-Service-Token 헤더 필수 (기본값)
+    - `docker_network`: Docker 네트워크 IP (172.x, 10.x, 192.168.x)에서만 허용
+    - `local_only`: localhost (127.0.0.1, ::1)에서만 허용
+
+### 1.4 워치독 설정 리로드(옵션)
 
 - `WATCHDOG_CONFIG_PATH` (string, optional): JSON 설정 파일 경로
   - 설정되면 **기동 시에도** 파일을 읽어 ENV 기본값 위에 덮어씁니다.
 
 ## 2. 인증 방식
 
+### 2.1 Cloudflare Access (기본)
+
 - 모든 `/admin/api/v1/*` 요청은 아래 헤더가 필요합니다.
   - `Cf-Access-Jwt-Assertion: <JWT>`
-- 내부 서비스 호출(예: 동일 Docker 네트워크 내)처럼 Cloudflare Access 헤더를 붙일 수 없는 경우,
-  `skip_auth=true` 쿼리를 붙이면 Cloudflare Access 검증을 생략할 수 있습니다.
-  - 예: `GET /admin/api/v1/targets?skip_auth=true`
-  - 단, 이 경우에도 `WATCHDOG_ADMIN_ALLOWED_IPS` IP allowlist는 그대로 적용됩니다.
 - 워치독은 아래 URL의 JWKS를 주기적으로 가져와 JWT 서명을 검증합니다.
   - `https://<TEAM_DOMAIN>/cdn-cgi/access/certs`
 - 검증 항목:
@@ -52,6 +65,23 @@ Timeouts:
   - `aud` = `WATCHDOG_ADMIN_CF_ACCESS_AUD`
   - `iss` = `https://<TEAM_DOMAIN>`
   - `email` claim 존재 (없으면 거부)
+
+### 2.2 Internal Service Token (서비스 간 호출)
+
+- Docker 네트워크 내 서비스 간 호출 시 사용
+- 요청 헤더에 `X-Internal-Service-Token: <TOKEN>` 추가
+- `WATCHDOG_INTERNAL_SERVICE_TOKEN` 환경변수와 일치하면 인증 성공
+- 예시:
+  ```bash
+  curl -H "X-Internal-Service-Token: your-secret-token" \
+       http://watchdog:30002/admin/api/v1/targets
+  ```
+
+### 2.3 skip_auth (레거시/개발용, 권장하지 않음)
+
+- `skip_auth=true` 쿼리 파라미터는 `WATCHDOG_SKIP_AUTH_MODE`에 따라 동작합니다.
+- **주의**: 프로덕션에서는 `disabled` 또는 `token_only` 모드를 권장합니다.
+- 모든 경우에 `WATCHDOG_ADMIN_ALLOWED_IPS` IP allowlist는 적용됩니다.
 
 ## 3. 공통 응답/에러
 

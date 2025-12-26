@@ -6,7 +6,7 @@ import { ExternalLink, Calendar, PlayCircle } from 'lucide-react'
 // Features: Caching, Resizing, WebP Conversion, Compression
 const getOptimizedThumbnail = (url?: string, width = 480) => {
     if (!url) return undefined;
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&q=80&output=webp`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${String(width)}&q=80&output=webp`;
 }
 
 const StreamsTab = () => {

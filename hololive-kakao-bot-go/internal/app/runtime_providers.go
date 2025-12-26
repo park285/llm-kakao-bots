@@ -131,7 +131,7 @@ func ProvideWatchdogProxyHandler(cfg *config.Config, logger *slog.Logger, activi
 	if watchdogURL == "" {
 		watchdogURL = "http://llm-watchdog:30002" // Docker 네트워크 기본값
 	}
-	return server.NewWatchdogProxyHandler(watchdogURL, logger, activity)
+	return server.NewWatchdogProxyHandler(watchdogURL, cfg.WatchdogInternalToken, logger, activity)
 }
 
 // ProvideYouTubeService: YouTube 서비스 인스턴스를 제공한다.
