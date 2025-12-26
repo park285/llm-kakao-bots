@@ -70,7 +70,7 @@ type LLMHandler struct {
 func NewLLMHandler(
 	cfg *config.Config,
 	client *gemini.Client,
-	guard *guard.InjectionGuard,
+	injectionGuard *guard.InjectionGuard,
 	metricsStore *metrics.Store,
 	usageRepo *usage.Repository,
 	logger *slog.Logger,
@@ -78,7 +78,7 @@ func NewLLMHandler(
 	return &LLMHandler{
 		cfg:       cfg,
 		client:    client,
-		guard:     guard,
+		guard:     injectionGuard,
 		metrics:   metricsStore,
 		usageRepo: usageRepo,
 		logger:    logger,
@@ -178,14 +178,14 @@ func (h *LLMHandler) handleStructured(c *gin.Context) {
 }
 
 func (h *LLMHandler) handleUsage(c *gin.Context) {
-	usage := h.metrics.UsageTotals()
+	usageTotals := h.metrics.UsageTotals()
 	model := h.cfg.Gemini.DefaultModel
 
 	c.JSON(http.StatusOK, UsageResponse{
-		InputTokens:     int64(usage.InputTokens),
-		OutputTokens:    int64(usage.OutputTokens),
-		TotalTokens:     int64(usage.TotalTokens),
-		ReasoningTokens: int64(usage.ReasoningTokens),
+		InputTokens:     int64(usageTotals.InputTokens),
+		OutputTokens:    int64(usageTotals.OutputTokens),
+		TotalTokens:     int64(usageTotals.TotalTokens),
+		ReasoningTokens: int64(usageTotals.ReasoningTokens),
 		Model:           model,
 	})
 }
@@ -196,7 +196,7 @@ func (h *LLMHandler) handleUsageTotal(c *gin.Context) {
 		return
 	}
 
-	usage, err := h.usageRepo.GetTotalUsage(c.Request.Context(), 30)
+	totalUsage, err := h.usageRepo.GetTotalUsage(c.Request.Context(), 30)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
@@ -205,10 +205,10 @@ func (h *LLMHandler) handleUsageTotal(c *gin.Context) {
 
 	model := h.cfg.Gemini.DefaultModel
 	c.JSON(http.StatusOK, UsageResponse{
-		InputTokens:     usage.InputTokens,
-		OutputTokens:    usage.OutputTokens,
-		TotalTokens:     usage.TotalTokens(),
-		ReasoningTokens: usage.ReasoningTokens,
+		InputTokens:     totalUsage.InputTokens,
+		OutputTokens:    totalUsage.OutputTokens,
+		TotalTokens:     totalUsage.TotalTokens(),
+		ReasoningTokens: totalUsage.ReasoningTokens,
 		Model:           model,
 	})
 }

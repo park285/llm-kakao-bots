@@ -134,7 +134,7 @@ func FromError(err error) *Error {
 		return NewValidationError(err)
 	}
 
-	return NewInternalError(err.Error())
+	return NewInternalError("Internal server error")
 }
 
 // NewInternalError 는 내부 오류를 생성한다.

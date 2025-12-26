@@ -29,6 +29,7 @@ func NewRecorder(cfg *config.Config, repo *Repository, logger *slog.Logger) *Rec
 			logger.Info(
 				"usage_db_batch_enabled",
 				"flush_interval_seconds", cfg.Database.UsageBatchFlushIntervalSeconds,
+				"flush_timeout_seconds", cfg.Database.UsageBatchFlushTimeoutSeconds,
 				"max_pending_requests", cfg.Database.UsageBatchMaxPendingRequests,
 				"max_backoff_seconds", cfg.Database.UsageBatchMaxBackoffSeconds,
 				"error_log_max_interval_seconds", cfg.Database.UsageBatchErrorLogMaxIntervalSeconds,

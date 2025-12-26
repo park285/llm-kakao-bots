@@ -224,7 +224,7 @@ func (r *Repository) getDB(ctx context.Context) (*gorm.DB, error) {
 		return nil, fmt.Errorf("open usage db: %w", err)
 	}
 
-	if schemaErr := ensureUsageSchema(db); schemaErr != nil {
+	if schemaErr := ensureUsageSchema(ctx, db); schemaErr != nil {
 		return nil, fmt.Errorf("prepare usage db: %w", schemaErr)
 	}
 
@@ -251,12 +251,16 @@ func (r *Repository) getDB(ctx context.Context) (*gorm.DB, error) {
 	return db, nil
 }
 
-func ensureUsageSchema(db *gorm.DB) error {
+func ensureUsageSchema(ctx context.Context, db *gorm.DB) error {
 	if db == nil {
 		return errors.New("db is nil")
 	}
 
-	if err := db.Exec(`
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	if err := db.WithContext(ctx).Exec(`
 			CREATE TABLE IF NOT EXISTS token_usage (
 				id BIGSERIAL PRIMARY KEY,
 				usage_date DATE NOT NULL,
@@ -270,7 +274,7 @@ func ensureUsageSchema(db *gorm.DB) error {
 		return fmt.Errorf("create token_usage table: %w", err)
 	}
 
-	if err := db.Exec(`
+	if err := db.WithContext(ctx).Exec(`
 			CREATE UNIQUE INDEX IF NOT EXISTS idx_token_usage_usage_date
 			ON token_usage (usage_date)
 		`).Error; err != nil {

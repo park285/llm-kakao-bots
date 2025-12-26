@@ -17,11 +17,14 @@ type usageDelta struct {
 	requestCount    int64
 }
 
+const defaultFlushTimeout = 5 * time.Second
+
 // batcher 는 토큰 사용량을 배치로 DB에 플러시한다.
 type batcher struct {
 	repo                     *Repository
 	logger                   *slog.Logger
 	flushInterval            time.Duration
+	flushTimeout             time.Duration
 	maxPendingRequests       int
 	maxBackoff               time.Duration
 	errorLogMaxInterval      time.Duration
@@ -54,10 +57,18 @@ func newBatcher(cfg *config.Config, repo *Repository, logger *slog.Logger) *batc
 	if maxPending <= 0 {
 		maxPending = 1
 	}
+	flushTimeout := defaultFlushTimeout
+	if cfg.Database.UsageBatchFlushTimeoutSeconds > 0 {
+		flushTimeout = time.Duration(cfg.Database.UsageBatchFlushTimeoutSeconds) * time.Second
+	}
+	if flushTimeout <= 0 {
+		flushTimeout = interval
+	}
 	return &batcher{
 		repo:                repo,
 		logger:              logger,
 		flushInterval:       interval,
+		flushTimeout:        flushTimeout,
 		maxPendingRequests:  maxPending,
 		maxBackoff:          maxBackoff,
 		errorLogMaxInterval: time.Duration(cfg.Database.UsageBatchErrorLogMaxIntervalSeconds) * time.Second,
@@ -174,14 +185,20 @@ func (b *batcher) applySnapshot(snapshot map[time.Time]usageDelta, isShutdown bo
 	hadFailure := false
 	var firstErr error
 	for date, delta := range snapshot {
+		ctx := context.Background()
+		cancel := func() {}
+		if b.flushTimeout > 0 {
+			ctx, cancel = context.WithTimeout(ctx, b.flushTimeout)
+		}
 		err := b.repo.RecordUsage(
-			context.Background(),
+			ctx,
 			delta.inputTokens,
 			delta.outputTokens,
 			delta.reasoningTokens,
 			delta.requestCount,
 			date,
 		)
+		cancel()
 		if err != nil {
 			hadFailure = true
 			if firstErr == nil {

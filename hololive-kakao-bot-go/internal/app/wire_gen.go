@@ -158,8 +158,7 @@ func InitializeBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.
 		cleanup()
 		return nil, nil, err
 	}
-	watchdogProxyHandler := ProvideWatchdogProxyHandler(cfg, logger, activityLogger)
-	engine, err := ProvideAdminRouter(logger, adminHandler, watchdogProxyHandler, valkeySessionStore, securityConfig, v2)
+	engine, err := ProvideAdminRouter(logger, adminHandler, valkeySessionStore, securityConfig, v2)
 	if err != nil {
 		cleanup2()
 		cleanup()

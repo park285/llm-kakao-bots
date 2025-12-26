@@ -70,9 +70,9 @@ func (c *Client) Chat(ctx context.Context, req Request) (string, string, error) 
 		return "", model, err
 	}
 
-	usage := extractUsage(response)
-	c.metrics.RecordSuccess(time.Since(start), usage)
-	c.recordUsage(ctx, usage)
+	usageStats := extractUsage(response)
+	c.metrics.RecordSuccess(time.Since(start), usageStats)
+	c.recordUsage(ctx, usageStats)
 	return response.Text(), model, nil
 }
 
@@ -88,16 +88,16 @@ func (c *Client) ChatWithUsage(ctx context.Context, req Request) (llm.ChatResult
 	textParts, thoughtParts := extractParts(response)
 	text := strings.Join(textParts, "")
 	reasoning := strings.Join(thoughtParts, "\n")
-	usage := extractUsage(response)
+	usageStats := extractUsage(response)
 	result := llm.ChatResult{
 		Text:         text,
-		Usage:        usage,
+		Usage:        usageStats,
 		Reasoning:    reasoning,
 		HasReasoning: reasoning != "",
 	}
 
-	c.metrics.RecordSuccess(time.Since(start), usage)
-	c.recordUsage(ctx, usage)
+	c.metrics.RecordSuccess(time.Since(start), usageStats)
+	c.recordUsage(ctx, usageStats)
 	return result, model, nil
 }
 
@@ -110,9 +110,9 @@ func (c *Client) Structured(ctx context.Context, req Request, schema map[string]
 		return nil, model, err
 	}
 
-	usage := extractUsage(response)
-	c.metrics.RecordSuccess(time.Since(start), usage)
-	c.recordUsage(ctx, usage)
+	usageStats := extractUsage(response)
+	c.metrics.RecordSuccess(time.Since(start), usageStats)
+	c.recordUsage(ctx, usageStats)
 
 	payload := response.Text()
 	if strings.TrimSpace(payload) == "" {
@@ -127,11 +127,11 @@ func (c *Client) Structured(ctx context.Context, req Request, schema map[string]
 	return parsed, model, nil
 }
 
-func (c *Client) recordUsage(ctx context.Context, usage llm.Usage) {
+func (c *Client) recordUsage(ctx context.Context, usageStats llm.Usage) {
 	if c.usageRecorder == nil {
 		return
 	}
-	c.usageRecorder.Record(ctx, int64(usage.InputTokens), int64(usage.OutputTokens), int64(usage.ReasoningTokens))
+	c.usageRecorder.Record(ctx, int64(usageStats.InputTokens), int64(usageStats.OutputTokens), int64(usageStats.ReasoningTokens))
 }
 
 func (c *Client) generate(
@@ -150,9 +150,9 @@ func (c *Client) generate(
 		return nil, model, err
 	}
 
-	config := c.buildGenerateConfig(req.SystemPrompt, req.Task, model, responseMimeType, responseSchema)
+	genConfig := c.buildGenerateConfig(req.SystemPrompt, req.Task, model, responseMimeType, responseSchema)
 	contents := buildContents(req.Prompt, req.History)
-	response, err := client.Models.GenerateContent(ctx, model, contents, config)
+	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
 	if err != nil {
 		return nil, model, fmt.Errorf("generate content: %w", err)
 	}
@@ -229,29 +229,29 @@ func (c *Client) buildGenerateConfig(
 	responseSchema map[string]any,
 ) *genai.GenerateContentConfig {
 	temperature := float32(c.cfg.Gemini.TemperatureForModel(model))
-	config := &genai.GenerateContentConfig{
+	genConfig := &genai.GenerateContentConfig{
 		Temperature:     genai.Ptr(temperature),
 		MaxOutputTokens: int32(c.cfg.Gemini.MaxOutputTokens),
 	}
 
 	if systemPrompt != "" {
-		config.SystemInstruction = genai.NewContentFromText(systemPrompt, genai.RoleUser)
+		genConfig.SystemInstruction = genai.NewContentFromText(systemPrompt, genai.RoleUser)
 	}
 	if responseMimeType != "" {
-		config.ResponseMIMEType = responseMimeType
+		genConfig.ResponseMIMEType = responseMimeType
 	}
 	if responseSchema != nil {
-		config.ResponseJsonSchema = responseSchema
+		genConfig.ResponseJsonSchema = responseSchema
 	}
 
 	if thinkingLevel, ok := normalizeThinkingLevel(c.cfg.Gemini.Thinking.Level(task)); ok {
-		config.ThinkingConfig = &genai.ThinkingConfig{
+		genConfig.ThinkingConfig = &genai.ThinkingConfig{
 			IncludeThoughts: true,
 			ThinkingLevel:   thinkingLevel,
 		}
 	}
 
-	return config
+	return genConfig
 }
 
 func buildContents(prompt string, history []llm.HistoryEntry) []*genai.Content {
@@ -312,12 +312,12 @@ func extractUsage(response *genai.GenerateContentResponse) llm.Usage {
 	if response == nil || response.UsageMetadata == nil {
 		return llm.Usage{}
 	}
-	usage := response.UsageMetadata
+	usageMeta := response.UsageMetadata
 	return llm.Usage{
-		InputTokens:     int(usage.PromptTokenCount),
-		OutputTokens:    int(usage.CandidatesTokenCount) + int(usage.ThoughtsTokenCount),
-		TotalTokens:     int(usage.TotalTokenCount),
-		ReasoningTokens: int(usage.ThoughtsTokenCount),
+		InputTokens:     int(usageMeta.PromptTokenCount),
+		OutputTokens:    int(usageMeta.CandidatesTokenCount) + int(usageMeta.ThoughtsTokenCount),
+		TotalTokens:     int(usageMeta.TotalTokenCount),
+		ReasoningTokens: int(usageMeta.ThoughtsTokenCount),
 	}
 }
 
