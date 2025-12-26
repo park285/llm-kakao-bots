@@ -24,6 +24,7 @@ LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스�
 llm/
 ├── mcp-llm-server-go/        # LLM 추론 서버
 │   ├── internal/
+│   │   ├── di/               # 의존성 주입 (bootstrap.go)
 │   │   ├── gemini/           # Gemini SDK 래퍼
 │   │   ├── guard/            # 프롬프트 인젝션 가드
 │   │   ├── session/          # 세션 관리

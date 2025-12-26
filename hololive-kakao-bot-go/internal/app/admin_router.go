@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -22,10 +23,11 @@ func ProvideAdminAddr(cfg *config.Config) string {
 }
 
 // ProvideAdminServer: 관리자용 HTTP 서버 인스턴스를 생성한다.
+// H2C(HTTP/2 Cleartext)를 기본으로 사용하여 멀티플렉싱과 헤더 압축 이점을 제공한다.
 func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 	return &http.Server{
 		Addr:              addr,
-		Handler:           router,
+		Handler:           server.WrapH2C(router),
 		ReadHeaderTimeout: constants.ServerTimeout.ReadHeader,
 		IdleTimeout:       constants.ServerTimeout.Idle,
 	}
@@ -33,6 +35,7 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 
 // ProvideAdminRouter: 관리자 API 및 UI를 서빙하는 Gin 라우터를 설정하고 제공한다.
 func ProvideAdminRouter(
+	_ context.Context,
 	logger *slog.Logger,
 	adminHandler *server.AdminHandler,
 	sessions *server.ValkeySessionStore,

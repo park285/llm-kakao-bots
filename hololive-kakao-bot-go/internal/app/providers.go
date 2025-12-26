@@ -321,12 +321,14 @@ func ProvideSettingsService(logger *slog.Logger) *settings.Service {
 
 // ProvideACLService - 접근 제어 서비스 생성 (PostgreSQL 영구화)
 func ProvideACLService(
+	ctx context.Context,
 	cfg *config.Config,
 	postgres *database.PostgresService,
 	cacheSvc *cache.Service,
 	logger *slog.Logger,
 ) (*acl.Service, error) {
 	svc, err := acl.NewACLService(
+		ctx,
 		postgres,
 		cacheSvc,
 		logger,

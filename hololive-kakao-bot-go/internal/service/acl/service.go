@@ -85,6 +85,7 @@ func createTablesIfNotExist(db *gorm.DB) error {
 
 // NewACLService ACL 서비스 생성 및 초기화
 func NewACLService(
+	ctx context.Context,
 	postgres *database.PostgresService,
 	cacheSvc *cache.Service,
 	logger *slog.Logger,
@@ -107,7 +108,7 @@ func NewACLService(
 	}
 
 	// 시작 시 로드 (PostgreSQL → 메모리/Valkey)
-	if err := svc.loadFromDatabase(context.Background(), defaultEnabled, defaultRooms); err != nil {
+	if err := svc.loadFromDatabase(ctx, defaultEnabled, defaultRooms); err != nil {
 		logger.Warn("Failed to load ACL from database, using defaults", slog.Any("error", err))
 		svc.enabled = defaultEnabled
 		for _, r := range defaultRooms {
