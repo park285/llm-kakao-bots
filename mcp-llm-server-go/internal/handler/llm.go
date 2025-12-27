@@ -3,6 +3,7 @@ package handler
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -101,11 +102,22 @@ func (h *LLMHandler) handleChat(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	if strings.TrimSpace(req.SystemPrompt) != "" {
+		writeError(c, httperror.NewInvalidInput("system_prompt is not allowed"))
+		return
+	}
 
 	if err := h.guard.EnsureSafe(req.Prompt); err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
+	}
+	if req.SystemPrompt != "" {
+		if err := h.guard.EnsureSafe(req.SystemPrompt); err != nil {
+			h.logError(err)
+			writeError(c, err)
+			return
+		}
 	}
 
 	result, model, err := h.client.Chat(c.Request.Context(), h.toGeminiRequest(req))
@@ -123,11 +135,22 @@ func (h *LLMHandler) handleChatWithUsage(c *gin.Context) {
 	if !bindJSON(c, &req) {
 		return
 	}
+	if strings.TrimSpace(req.SystemPrompt) != "" {
+		writeError(c, httperror.NewInvalidInput("system_prompt is not allowed"))
+		return
+	}
 
 	if err := h.guard.EnsureSafe(req.Prompt); err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
+	}
+	if req.SystemPrompt != "" {
+		if err := h.guard.EnsureSafe(req.SystemPrompt); err != nil {
+			h.logError(err)
+			writeError(c, err)
+			return
+		}
 	}
 
 	result, _, err := h.client.ChatWithUsage(c.Request.Context(), h.toGeminiRequest(req))
@@ -155,11 +178,22 @@ func (h *LLMHandler) handleStructured(c *gin.Context) {
 		writeError(c, httperror.NewMissingField("json_schema"))
 		return
 	}
+	if strings.TrimSpace(req.SystemPrompt) != "" {
+		writeError(c, httperror.NewInvalidInput("system_prompt is not allowed"))
+		return
+	}
 
 	if err := h.guard.EnsureSafe(req.Prompt); err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
+	}
+	if req.SystemPrompt != "" {
+		if err := h.guard.EnsureSafe(req.SystemPrompt); err != nil {
+			h.logError(err)
+			writeError(c, err)
+			return
+		}
 	}
 
 	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{

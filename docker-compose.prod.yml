@@ -82,7 +82,7 @@ services:
       - valkey-mq-data:/data
       - ./logs:/var/log/valkey-mq
     command: >
-      valkey-server  --port 1833  --appendonly yes  --appendfsync everysec  --no-appendfsync-on-rewrite yes  --maxmemory 192mb  --maxmemory-policy noeviction  --loglevel notice --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+      valkey-server  --port 1833  --appendonly yes  --appendfsync everysec  --no-appendfsync-on-rewrite yes  --maxmemory 192mb  --maxmemory-policy noeviction  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
     sysctls:
       - net.core.somaxconn=1024
     restart: always
@@ -123,6 +123,7 @@ services:
       SESSION_STORE_URL: redis://valkey-cache:6379
       DB_HOST: postgres
       DB_PORT: 5432
+      GUARD_THRESHOLD: 0.6
     volumes:
       - ./logs:/app/logs
     depends_on:

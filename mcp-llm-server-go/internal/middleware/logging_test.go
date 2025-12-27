@@ -74,9 +74,9 @@ func (h *recordingHandler) Entries() []logEntry {
 	return entries
 }
 
-func TestRequestLoggerLogsInfoOnSuccess(t *testing.T) {
+func TestRequestLoggerLogsDebugOnSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := &recordingHandler{level: slog.LevelInfo}
+	handler := &recordingHandler{level: slog.LevelDebug}
 	logger := slog.New(handler)
 
 	router := gin.New()
@@ -93,8 +93,8 @@ func TestRequestLoggerLogsInfoOnSuccess(t *testing.T) {
 		t.Fatalf("expected 1 log entry, got %d", len(entries))
 	}
 	entry := entries[0]
-	if entry.level != slog.LevelInfo {
-		t.Fatalf("expected info level, got %s", entry.level)
+	if entry.level != slog.LevelDebug {
+		t.Fatalf("expected debug level, got %s", entry.level)
 	}
 	if entry.msg != "http_request" {
 		t.Fatalf("expected http_request message, got %q", entry.msg)
