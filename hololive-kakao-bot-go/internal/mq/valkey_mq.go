@@ -88,6 +88,9 @@ func NewValkeyMQClient(cfg ValkeyMQConfig, logger *slog.Logger) *ValkeyMQClient 
 		logger.Error("Failed to create MQ client", slog.Any("error", err))
 		return nil
 	}
+	if err := mqLuaRegistry.Preload(context.Background(), client); err != nil && logger != nil {
+		logger.Warn("MQ_LUA_PRELOAD_FAILED", slog.Any("error", err))
+	}
 
 	return &ValkeyMQClient{
 		cfg:    cfg,
@@ -174,6 +177,9 @@ func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *slog.Logger, handler Messag
 	if err != nil {
 		logger.Error("Failed to create MQ consumer", slog.Any("error", err))
 		return nil
+	}
+	if err := mqLuaRegistry.Preload(context.Background(), client); err != nil && logger != nil {
+		logger.Warn("MQ_LUA_PRELOAD_FAILED", slog.Any("error", err))
 	}
 
 	return &ValkeyMQConsumer{
@@ -359,17 +365,22 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	idempotencyKey := fmt.Sprintf("mq:processed:%s", msg.ID)
 
 	// Lua 스크립트로 원자적 중복 체크 + 처리 마킹
-	cmd := c.client.B().Eval().
-		Script(luaProcessWithIdempotency).
-		Numkeys(2).
-		Key(idempotencyKey).
-		Key(streamKey).
-		Arg(group).
-		Arg(msg.ID).
-		Arg(fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyTTL.Seconds()))).
-		Build()
-
-	resp := c.client.Do(ctx, cmd)
+	ttlArg := fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyTTL.Seconds()))
+	resp, err := mqLuaRegistry.Exec(
+		ctx,
+		c.client,
+		scriptProcessWithIdempotency,
+		[]string{idempotencyKey, streamKey},
+		[]string{group, msg.ID, ttlArg},
+	)
+	if err != nil {
+		c.logger.Error("MQ_IDEMPOTENCY_SCRIPT_MISSING",
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
+			slog.Any("error", err),
+		)
+		return
+	}
 	shouldProcess, err := resp.AsInt64()
 	if err != nil {
 		c.logger.Error("MQ_IDEMPOTENCY_CHECK_FAILED",
@@ -412,17 +423,22 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	c.bot.HandleMessage(ctx, irisMsg)
 
 	// 처리 완료 + ACK (Lua 스크립트로 원자적 실행)
-	completeCmd := c.client.B().Eval().
-		Script(luaCompleteProcessing).
-		Numkeys(2).
-		Key(idempotencyKey).
-		Key(streamKey).
-		Arg(group).
-		Arg(msg.ID).
-		Arg(fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyTTL.Seconds()))).
-		Build()
-
-	if err := c.client.Do(ctx, completeCmd).Error(); err != nil {
+	completeResp, err := mqLuaRegistry.Exec(
+		ctx,
+		c.client,
+		scriptCompleteProcessing,
+		[]string{idempotencyKey, streamKey},
+		[]string{group, msg.ID, ttlArg},
+	)
+	if err != nil {
+		c.logger.Error("MQ_COMPLETE_SCRIPT_MISSING",
+			slog.String("stream", streamKey),
+			slog.String("id", msg.ID),
+			slog.Any("error", err),
+		)
+		return
+	}
+	if err := completeResp.Error(); err != nil {
 		c.logger.Error("MQ_COMPLETE_PROCESSING_FAILED",
 			slog.String("stream", streamKey),
 			slog.String("id", msg.ID),

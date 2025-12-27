@@ -1,7 +1,11 @@
--- Hybrid Dequeue: ZPOPMIN (or ZRANGE+ZREM) + HGET + HDEL
+-- ============================================================
+-- Script: pending_dequeue
+-- Purpose: 대기열 메시지 꺼내기 (HASH + ZSET)
 -- KEYS[1]: dataKey (HASH)
 -- KEYS[2]: orderKey (ZSET)
--- ARGV[1]: staleThresholdMS (Deprecated/Unused in ZSET logic but kept for interface compat)
+-- ARGV[1]: staleThresholdMS (호환용, ZSET 로직에서는 미사용)
+-- Returns: nil | {userId, score, json}
+-- ============================================================
 
 local dataKey = KEYS[1]
 local orderKey = KEYS[2]

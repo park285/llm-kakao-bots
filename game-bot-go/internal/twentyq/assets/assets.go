@@ -36,3 +36,8 @@ var LockRenewReadLua string
 //
 //go:embed lua/lock_renew_write.lua
 var LockRenewWriteLua string
+
+// GuessRateLimitLua 는 정답 시도 Rate Limit 체크 및 설정 Lua 스크립트다.
+//
+//go:embed lua/guess_rate_limit.lua
+var GuessRateLimitLua string

@@ -19,11 +19,11 @@ func TestGameMessageService_isAccessAllowed_UserBlockedSendsNickname(t *testing.
 	}
 
 	accessControl := qsecurity.NewAccessControl(qconfig.AccessConfig{
-		Passthrough:     false,
-		Enabled:         true,
-		BlockedUserIDs:  []string{"user1"},
-		BlockedChatIDs:  nil,
-		AllowedChatIDs:  nil,
+		Passthrough:    false,
+		Enabled:        true,
+		BlockedUserIDs: []string{"user1"},
+		BlockedChatIDs: nil,
+		AllowedChatIDs: nil,
 	})
 
 	var published []mqmsg.OutboundMessage
@@ -54,8 +54,9 @@ func TestGameMessageService_isAccessAllowed_UserBlockedSendsNickname(t *testing.
 	if len(published) != 1 {
 		t.Fatalf("expected 1 published message, got %d", len(published))
 	}
-	if published[0].Type != mqmsg.OutboundError {
-		t.Fatalf("expected error outbound, got %s", published[0].Type)
+	// SendError는 NewFinal을 사용하여 Iris의 에러 이모지 추가를 방지한다
+	if published[0].Type != mqmsg.OutboundFinal {
+		t.Fatalf("expected final outbound (SendError uses NewFinal), got %s", published[0].Type)
 	}
 	if published[0].Text != "BLOCK:Nick" {
 		t.Fatalf("unexpected error message: %q", published[0].Text)
@@ -69,9 +70,9 @@ func TestGameMessageService_isAccessAllowed_AdminBypass(t *testing.T) {
 	}
 
 	accessControl := qsecurity.NewAccessControl(qconfig.AccessConfig{
-		Passthrough:     false,
-		Enabled:         true,
-		BlockedUserIDs:  []string{"user1"},
+		Passthrough:    false,
+		Enabled:        true,
+		BlockedUserIDs: []string{"user1"},
 	})
 
 	var published []mqmsg.OutboundMessage

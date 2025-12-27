@@ -1,7 +1,11 @@
--- READ 락 해제
+-- ============================================================
+-- Script: lock_release_read
+-- Purpose: READ 락 해제
 -- KEYS[1]: read lock hash key
 -- ARGV[1]: token
 -- ARGV[2]: ttlMillis
+-- Returns: 1 if released, 0 otherwise
+-- ============================================================
 local tokenField = "token:" .. ARGV[1]
 if redis.call("HGET", KEYS[1], tokenField) == ARGV[1] then
     redis.call("HDEL", KEYS[1], tokenField)

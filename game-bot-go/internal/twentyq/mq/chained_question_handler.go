@@ -20,6 +20,7 @@ import (
 type ChainedQuestionRiddleService interface {
 	AnswerWithOutcome(ctx context.Context, chatID string, userID string, sender *string, question string, isChain bool) (qsvc.AnswerOutcome, error)
 	StatusSeparated(ctx context.Context, chatID string) (string, string, error)
+	StatusSeparatedWithCount(ctx context.Context, chatID string) (string, string, int, error)
 }
 
 // ChainedQuestionQueueCoordinator: 체인 질문 처리에 필요한 큐 코디네이터 인터페이스
@@ -186,15 +187,16 @@ func (h *ChainedQuestionHandler) ProcessChainBatch(
 	}
 
 	// 상태 메시지 조회 및 전송
-	main, hint, err := h.riddleService.StatusSeparated(ctx, chatID)
+	main, hint, questionCount, err := h.riddleService.StatusSeparatedWithCount(ctx, chatID)
 	if err != nil {
 		h.logger.Warn("chain_status_failed", "chatID", chatID, "err", err)
 		main = h.msgProvider.Get(qmessages.ErrorNoSessionShort)
 		hint = ""
+		questionCount = 0
 	}
 
 	messages := []string{main}
-	if hint != "" {
+	if shouldShowHint(hint, questionCount) {
 		messages = append(messages, hint)
 	}
 	return emitChunkedResponses(chatID, pending.ThreadID, messages, emit)

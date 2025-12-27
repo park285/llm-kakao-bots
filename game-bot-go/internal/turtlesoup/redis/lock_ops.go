@@ -2,10 +2,11 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
-	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
@@ -45,7 +46,7 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 			if ctx.Err() != nil {
 				return false, nil
 			}
-			return false, cerrors.RedisError{Operation: "lock_acquire", Err: err}
+			return false, wrapRedisError("lock_acquire", err)
 		}
 
 		// Lock acquired
@@ -57,28 +58,22 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 		releaseCtx, releaseCancel := context.WithTimeout(context.WithoutCancel(ctx), m.redisCallTimeout)
 		defer releaseCancel()
 		_ = m.release(releaseCtx, sessionID, token)
-		return false, cerrors.RedisError{Operation: "lock_set_holder", Err: err}
+		return false, wrapRedisError("lock_set_holder", err)
 	}
 
 	return true, nil
 }
 
 func (m *LockManager) release(ctx context.Context, sessionID string, token string) error {
-	sha, err := m.loadReleaseScript(ctx)
-	if err != nil {
-		return err
-	}
-
 	key := lockKey(sessionID)
 	holderKey := lockHolderKey(sessionID)
 
-	cmd := m.client.B().Evalsha().Sha1(sha).Numkeys(2).Key(key, holderKey).Arg(token).Build()
-	if err := m.client.Do(ctx, cmd).Error(); err != nil {
-		if valkeyx.IsNoScript(err) {
-			m.clearScriptCache()
-			return m.release(ctx, sessionID, token)
-		}
-		return cerrors.RedisError{Operation: "lock_release", Err: err}
+	resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptTurtleLockRelease, []string{key, holderKey}, []string{token})
+	if err != nil {
+		return fmt.Errorf("lock release script missing: %w", err)
+	}
+	if err := resp.Error(); err != nil {
+		return wrapRedisError("lock_release", err)
 	}
 	return nil
 }
@@ -91,7 +86,7 @@ func (m *LockManager) getHolder(ctx context.Context, sessionID string) (*string,
 		if valkeyx.IsNil(err) {
 			return nil, nil
 		}
-		return nil, cerrors.RedisError{Operation: "lock_get_holder", Err: err}
+		return nil, wrapRedisError("lock_get_holder", err)
 	}
 
 	_, name := parseHolderValue(value)
@@ -116,4 +111,11 @@ func parseHolderValue(raw string) (token string, name string) {
 		return "", raw
 	}
 	return raw[:delim], raw[delim+1:]
+}
+
+func wrapRedisError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%w", valkeyx.WrapRedisError(operation, err))
 }

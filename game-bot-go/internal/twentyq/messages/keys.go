@@ -1,13 +1,17 @@
 package messages
 
-// StartWaiting: 게임 시작 프로세스 관련 메시지 키
 const (
 	StartWaiting                = "start.waiting"
 	StartReady                  = "start.ready"
 	StartReadyWithCategory      = "start.ready_with_category"
-	StartResume                 = "start.resume"
 	StartCategoryPrefix         = "start.category_prefix"
 	StartInvalidCategoryWarning = "start.invalid_category_warning"
+
+	// Resume 관련 키
+	StartResumeHeader       = "start.resume_header"
+	StartResumeCategoryLine = "start.resume_category_line"
+	StartResumeQnAHeader    = "start.resume_qna_header"
+	StartResumeHintHeader   = "start.resume_hint_header"
 )
 
 // HintWaiting: 힌트 생성 및 제공 관련 메시지 키

@@ -3,9 +3,14 @@ package redis
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/valkey-io/valkey-go"
+
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/assets"
 )
 
 const (
@@ -14,15 +19,21 @@ const (
 
 // GuessRateLimiter: 정답 시도에 대한 개인별 Rate Limit를 관리한다.
 type GuessRateLimiter struct {
-	client valkey.Client
-	prefix string
+	client   valkey.Client
+	prefix   string
+	registry *luautil.Registry
 }
 
 // NewGuessRateLimiter: 새로운 GuessRateLimiter를 생성한다.
 func NewGuessRateLimiter(client valkey.Client, prefix string) *GuessRateLimiter {
+	registry := luautil.NewRegistry([]luautil.Script{
+		{Name: luautil.ScriptGuessRateLimit, Source: assets.GuessRateLimitLua},
+	})
+	_ = registry.Preload(context.Background(), client)
 	return &GuessRateLimiter{
-		client: client,
-		prefix: prefix,
+		client:   client,
+		prefix:   prefix,
+		registry: registry,
 	}
 }
 
@@ -35,34 +46,29 @@ func (r *GuessRateLimiter) guessRateLimitKey(chatID, userID string) string {
 // 반환: (허용 여부, 남은 시간(초), 에러)
 func (r *GuessRateLimiter) CheckAndSet(ctx context.Context, chatID, userID string) (bool, int64, error) {
 	key := r.guessRateLimitKey(chatID, userID)
+	ttlSec := int64(guessRateLimitTTL.Seconds())
+	ttlArg := strconv.FormatInt(ttlSec, 10)
 
-	// TTL 확인
-	ttlResp := r.client.Do(ctx, r.client.B().Ttl().Key(key).Build())
-	ttl, err := ttlResp.AsInt64()
-	if err == nil && ttl > 0 {
-		// Rate limit 적용 중
-		return false, ttl, nil
-	}
-
-	// Rate limit 설정 (SET NX EX)
-	setResp := r.client.Do(ctx, r.client.B().Set().Key(key).Value("1").Nx().Ex(guessRateLimitTTL).Build())
-	result, err := setResp.ToString()
+	// Lua 스크립트 실행 (1 RTT)
+	// 반환값: {allowed(1|0), remaining_ms}
+	resp, err := r.registry.Exec(ctx, r.client, luautil.ScriptGuessRateLimit, []string{key}, []string{ttlArg})
 	if err != nil {
-		// NX 실패 시 (이미 존재)
-		ttlResp = r.client.Do(ctx, r.client.B().Ttl().Key(key).Build())
-		ttl, _ = ttlResp.AsInt64()
-		if ttl > 0 {
-			return false, ttl, nil
-		}
-		// 경쟁 조건 - 재시도하지 않고 허용
-		return true, 0, nil
+		return false, 0, wrapRedisError("guess_rate_limit_exec", err)
 	}
 
-	if result == "OK" {
-		return true, 0, nil
+	allowedValue, remainingMs, err := valkeyx.ParseLuaInt64Pair(resp)
+	if err != nil {
+		return false, 0, wrapRedisError("guess_rate_limit_parse", err)
 	}
 
-	return false, 0, nil
+	allowed, remainingSeconds, err := parseRateLimitResult(allowedValue, remainingMs)
+	if err != nil {
+		return false, 0, wrapRedisError("guess_rate_limit_result", err)
+	}
+	if allowed {
+		return true, 0, nil
+	}
+	return false, remainingSeconds, nil
 }
 
 // GetLimitSeconds: Rate Limit 제한 시간(초)을 반환한다.
@@ -73,13 +79,35 @@ func (r *GuessRateLimiter) GetLimitSeconds() int64 {
 // GetRemainingTime: 남은 Rate Limit 시간을 확인한다.
 func (r *GuessRateLimiter) GetRemainingTime(ctx context.Context, chatID, userID string) (int64, error) {
 	key := r.guessRateLimitKey(chatID, userID)
-	ttlResp := r.client.Do(ctx, r.client.B().Ttl().Key(key).Build())
-	ttl, err := ttlResp.AsInt64()
+	ttlResp := r.client.Do(ctx, r.client.B().Pttl().Key(key).Build())
+	ttlMillis, err := ttlResp.AsInt64()
 	if err != nil {
 		return 0, nil
 	}
-	if ttl < 0 {
+	if ttlMillis <= 0 {
 		return 0, nil
 	}
-	return ttl, nil
+
+	remainingSeconds := ttlMillis / 1000
+	if ttlMillis%1000 != 0 {
+		remainingSeconds++
+	}
+	return remainingSeconds, nil
+}
+
+func parseRateLimitResult(allowedValue int64, remainingMs int64) (bool, int64, error) {
+	if allowedValue != 0 && allowedValue != 1 {
+		return false, 0, fmt.Errorf("unexpected allowed flag: %d", allowedValue)
+	}
+
+	if remainingMs < 0 {
+		remainingMs = 0
+	}
+
+	remainingSeconds := remainingMs / 1000
+	if remainingMs%1000 != 0 {
+		remainingSeconds++
+	}
+
+	return allowedValue == 1, remainingSeconds, nil
 }

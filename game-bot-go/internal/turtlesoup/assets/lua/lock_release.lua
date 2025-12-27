@@ -1,3 +1,12 @@
+-- ============================================================
+-- Script: turtlesoup_lock_release
+-- Purpose: WRITE 락 해제 (holder 포함)
+-- KEYS[1]: lock key
+-- KEYS[2]: holder key
+-- ARGV[1]: token
+-- Returns: 1 if released, 0 otherwise
+-- ============================================================
+
 local lockKey = KEYS[1]
 local holderKey = KEYS[2]
 local token = ARGV[1]

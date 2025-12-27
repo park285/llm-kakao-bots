@@ -26,27 +26,34 @@ func (s *RiddleService) Status(ctx context.Context, chatID string) (string, erro
 
 // StatusSeparated: 게임 진행 상황을 메인 정보와 힌트 정보로 분리하여 반환한다.
 func (s *RiddleService) StatusSeparated(ctx context.Context, chatID string) (string, string, error) {
+	main, hint, _, err := s.StatusSeparatedWithCount(ctx, chatID)
+	return main, hint, err
+}
+
+// StatusSeparatedWithCount: 게임 진행 상황을 메인 정보, 힌트 정보, 질문 횟수로 분리하여 반환한다.
+// questionCount는 힌트를 제외한 실제 질문 수 (체인질문 포함).
+func (s *RiddleService) StatusSeparatedWithCount(ctx context.Context, chatID string) (string, string, int, error) {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {
-		return "", "", fmt.Errorf("chat id is empty")
+		return "", "", 0, fmt.Errorf("chat id is empty")
 	}
 
 	secret, err := s.sessionStore.GetSecret(ctx, chatID)
 	if err != nil {
-		return "", "", fmt.Errorf("secret get failed: %w", err)
+		return "", "", 0, fmt.Errorf("secret get failed: %w", err)
 	}
 	if secret == nil {
-		return "", "", qerrors.SessionNotFoundError{ChatID: chatID}
+		return "", "", 0, qerrors.SessionNotFoundError{ChatID: chatID}
 	}
 
 	history, err := s.historyStore.Get(ctx, chatID)
 	if err != nil {
-		return "", "", fmt.Errorf("history get failed: %w", err)
+		return "", "", 0, fmt.Errorf("history get failed: %w", err)
 	}
 
 	hintCount, err := s.hintCountStore.Get(ctx, chatID)
 	if err != nil {
-		return "", "", fmt.Errorf("hint count get failed: %w", err)
+		return "", "", 0, fmt.Errorf("hint count get failed: %w", err)
 	}
 
 	remaining := (qconfig.MaxHintsTotal - hintCount)
@@ -58,15 +65,19 @@ func (s *RiddleService) StatusSeparated(ctx context.Context, chatID string) (str
 
 	wrongGuesses, err := s.wrongGuessStore.GetSessionWrongGuesses(ctx, chatID)
 	if err != nil {
-		return "", "", fmt.Errorf("wrong guess get failed: %w", err)
+		return "", "", 0, fmt.Errorf("wrong guess get failed: %w", err)
 	}
 	wrongLine := s.buildStatusWrongLine(wrongGuesses)
 
 	hintLine := s.buildStatusHintLine(history)
 	qnaLines := s.buildStatusQnALines(history)
 
+	// 마지막 힌트 이후의 질문 횟수 계산
+	// 힌트가 없으면 0 반환 (힌트 라인도 없으므로 표시 안됨)
+	questionsSinceHint := countQuestionsSinceLastHint(history)
+
 	main := s.buildStatusMain(header, wrongLine, qnaLines)
-	return main, hintLine, nil
+	return main, hintLine, questionsSinceHint, nil
 }
 
 func (s *RiddleService) buildStatusHeader(category string, remaining int) string {
@@ -139,4 +150,30 @@ func (s *RiddleService) buildStatusMain(header string, wrongLine string, qnaLine
 		parts = append(parts, strings.Join(qnaLines, "\n"))
 	}
 	return strings.Join(parts, "\n")
+}
+
+// countQuestionsSinceLastHint: 히스토리에서 마지막 힌트 이후에 추가된 질문 수를 계산한다.
+// 힌트가 없으면 0을 반환한다 (힌트 라인도 없으므로 표시되지 않음).
+func countQuestionsSinceLastHint(history []qmodel.QuestionHistory) int {
+	// 마지막 힌트의 인덱스를 찾는다
+	lastHintIndex := -1
+	for i, h := range history {
+		if h.QuestionNumber < 0 {
+			lastHintIndex = i
+		}
+	}
+
+	// 힌트가 없으면 0 반환
+	if lastHintIndex < 0 {
+		return 0
+	}
+
+	// 마지막 힌트 이후의 질문 수를 계산
+	count := 0
+	for i := lastHintIndex + 1; i < len(history); i++ {
+		if history[i].QuestionNumber > 0 {
+			count++
+		}
+	}
+	return count
 }

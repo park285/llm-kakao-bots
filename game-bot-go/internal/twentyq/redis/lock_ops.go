@@ -9,6 +9,7 @@ import (
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lockutil"
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 )
@@ -19,10 +20,10 @@ func (m *LockManager) withRWLock(ctx context.Context, chatID string, holderName 
 		return fmt.Errorf("chat id is empty")
 	}
 
-	scope, ok := lockScopeFromContext(ctx)
+	scope, ok := lockutil.ScopeFromContext(ctx)
 	if !ok {
-		scope = newLockScope()
-		ctx = withLockScope(ctx, scope)
+		scope = lockutil.NewScope()
+		ctx = lockutil.WithScope(ctx, scope)
 	}
 
 	handled, err := m.handleReentry(ctx, scope, chatID, holderName, mode, block)
@@ -35,7 +36,7 @@ func (m *LockManager) withRWLock(ctx context.Context, chatID string, holderName 
 		return fmt.Errorf("generate lock token failed: %w", err)
 	}
 
-	ttlMillis := int64(qconfig.RedisLockTTLSeconds) * 1000
+	ttlMillis := lockutil.TTLMillisFromSeconds(int64(qconfig.RedisLockTTLSeconds))
 
 	// 락 획득 재시도 (exponential backoff)
 	acquired, acquireErr := m.acquireWithRetry(ctx, chatID, mode, token, ttlMillis)
@@ -58,11 +59,11 @@ func (m *LockManager) withRWLock(ctx context.Context, chatID string, holderName 
 	renewCancel := m.startRenewWatchdog(ctx, chatID, mode, token, ttlMillis)
 	defer m.releaseIfLast(ctx, scope, key, chatID, ttlMillis)
 
-	scope.set(key, heldLock{
-		mode:      mode,
-		token:     token,
-		count:     1,
-		stopRenew: renewCancel,
+	scope.Set(key, lockutil.HeldLock{
+		Mode:      int(mode),
+		Token:     token,
+		Count:     1,
+		StopRenew: renewCancel,
 	})
 
 	m.logger.Debug("lock_acquired", "chat_id", chatID, "mode", mode.String())
@@ -71,7 +72,7 @@ func (m *LockManager) withRWLock(ctx context.Context, chatID string, holderName 
 
 func (m *LockManager) handleReentry(
 	ctx context.Context,
-	scope *lockScope,
+	scope *lockutil.Scope,
 	chatID string,
 	holderName *string,
 	mode lockMode,
@@ -82,11 +83,11 @@ func (m *LockManager) handleReentry(
 
 	switch mode {
 	case lockModeWrite:
-		if scope.incrementIfHeld(writeKey) {
-			defer scope.decrement(writeKey)
+		if scope.IncrementIfHeld(writeKey) {
+			defer scope.Decrement(writeKey)
 			return true, block(ctx)
 		}
-		if scope.isHeld(readKey) {
+		if scope.IsHeld(readKey) {
 			return true, cerrors.LockError{
 				SessionID:   chatID,
 				HolderName:  holderName,
@@ -95,12 +96,12 @@ func (m *LockManager) handleReentry(
 		}
 		return false, nil
 	case lockModeRead:
-		if scope.incrementIfHeld(writeKey) {
-			defer scope.decrement(writeKey)
+		if scope.IncrementIfHeld(writeKey) {
+			defer scope.Decrement(writeKey)
 			return true, block(ctx)
 		}
-		if scope.incrementIfHeld(readKey) {
-			defer scope.decrement(readKey)
+		if scope.IncrementIfHeld(readKey) {
+			defer scope.Decrement(readKey)
 			return true, block(ctx)
 		}
 		return false, nil
@@ -109,20 +110,20 @@ func (m *LockManager) handleReentry(
 	}
 }
 
-func (m *LockManager) releaseIfLast(ctx context.Context, scope *lockScope, key string, chatID string, ttlMillis int64) {
-	held, shouldRelease := scope.releaseIfLast(key)
+func (m *LockManager) releaseIfLast(ctx context.Context, scope *lockutil.Scope, key string, chatID string, ttlMillis int64) {
+	held, shouldRelease := scope.ReleaseIfLast(key)
 	if !shouldRelease {
 		return
 	}
 
-	if held.stopRenew != nil {
-		held.stopRenew()
+	if held.StopRenew != nil {
+		held.StopRenew()
 	}
 
 	releaseCtx, releaseCancel := context.WithTimeout(context.WithoutCancel(ctx), m.redisCallTimeout)
 	defer releaseCancel()
 
-	if err := m.release(releaseCtx, chatID, held.mode, held.token, ttlMillis); err != nil {
+	if err := m.release(releaseCtx, chatID, lockMode(held.Mode), held.Token, ttlMillis); err != nil {
 		m.logger.Warn("lock_release_failed", "err", err, "chat_id", chatID)
 		return
 	}
@@ -141,35 +142,29 @@ func scopeKey(chatID string, mode lockMode) (string, error) {
 }
 
 func (m *LockManager) acquire(ctx context.Context, chatID string, mode lockMode, token string, ttlMillis int64) (bool, error) {
-	if err := m.loadScripts(ctx); err != nil {
-		return false, err
-	}
-
 	writeKey := lockKey(chatID)
 	readKey := readLockKey(chatID)
 	ttlArg := strconv.FormatInt(ttlMillis, 10)
 
 	switch mode {
 	case lockModeWrite:
-		cmd := m.client.B().Evalsha().Sha1(m.acquireWriteSHA).Numkeys(2).Key(writeKey, readKey).Arg(token, ttlArg).Build()
-		n, err := m.client.Do(ctx, cmd).AsInt64()
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockAcquireWrite, []string{writeKey, readKey}, []string{token, ttlArg})
 		if err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.acquire(ctx, chatID, mode, token, ttlMillis)
-			}
-			return false, cerrors.RedisError{Operation: "lock_acquire_write", Err: err}
+			return false, fmt.Errorf("lock acquire write script missing: %w", err)
+		}
+		n, err := valkeyx.ParseLuaInt64(resp)
+		if err != nil {
+			return false, wrapRedisError("lock_acquire_write", err)
 		}
 		return n == 1, nil
 	case lockModeRead:
-		cmd := m.client.B().Evalsha().Sha1(m.acquireReadSHA).Numkeys(2).Key(writeKey, readKey).Arg(token, ttlArg).Build()
-		n, err := m.client.Do(ctx, cmd).AsInt64()
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockAcquireRead, []string{writeKey, readKey}, []string{token, ttlArg})
 		if err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.acquire(ctx, chatID, mode, token, ttlMillis)
-			}
-			return false, cerrors.RedisError{Operation: "lock_acquire_read", Err: err}
+			return false, fmt.Errorf("lock acquire read script missing: %w", err)
+		}
+		n, err := valkeyx.ParseLuaInt64(resp)
+		if err != nil {
+			return false, wrapRedisError("lock_acquire_read", err)
 		}
 		return n == 1, nil
 	default:
@@ -229,35 +224,29 @@ func (m *LockManager) acquireWithRetry(
 }
 
 func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, token string, ttlMillis int64) (bool, error) {
-	if err := m.loadScripts(ctx); err != nil {
-		return false, err
-	}
-
 	writeKey := lockKey(chatID)
 	readKey := readLockKey(chatID)
 	ttlArg := strconv.FormatInt(ttlMillis, 10)
 
 	switch mode {
 	case lockModeWrite:
-		cmd := m.client.B().Evalsha().Sha1(m.renewWriteSHA).Numkeys(1).Key(writeKey).Arg(token, ttlArg).Build()
-		n, err := m.client.Do(ctx, cmd).AsInt64()
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockRenewWrite, []string{writeKey}, []string{token, ttlArg})
 		if err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.renew(ctx, chatID, mode, token, ttlMillis)
-			}
-			return false, cerrors.RedisError{Operation: "lock_renew_write", Err: err}
+			return false, fmt.Errorf("lock renew write script missing: %w", err)
+		}
+		n, err := valkeyx.ParseLuaInt64(resp)
+		if err != nil {
+			return false, wrapRedisError("lock_renew_write", err)
 		}
 		return n == 1, nil
 	case lockModeRead:
-		cmd := m.client.B().Evalsha().Sha1(m.renewReadSHA).Numkeys(1).Key(readKey).Arg(token, ttlArg).Build()
-		n, err := m.client.Do(ctx, cmd).AsInt64()
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockRenewRead, []string{readKey}, []string{token, ttlArg})
 		if err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.renew(ctx, chatID, mode, token, ttlMillis)
-			}
-			return false, cerrors.RedisError{Operation: "lock_renew_read", Err: err}
+			return false, fmt.Errorf("lock renew read script missing: %w", err)
+		}
+		n, err := valkeyx.ParseLuaInt64(resp)
+		if err != nil {
+			return false, wrapRedisError("lock_renew_read", err)
 		}
 		return n == 1, nil
 	default:
@@ -266,38 +255,39 @@ func (m *LockManager) renew(ctx context.Context, chatID string, mode lockMode, t
 }
 
 func (m *LockManager) release(ctx context.Context, chatID string, mode lockMode, token string, ttlMillis int64) error {
-	if err := m.loadScripts(ctx); err != nil {
-		return err
-	}
-
 	writeKey := lockKey(chatID)
 	readKey := readLockKey(chatID)
 	ttlArg := strconv.FormatInt(ttlMillis, 10)
 
 	switch mode {
 	case lockModeWrite:
-		cmd := m.client.B().Evalsha().Sha1(m.releaseWriteSHA).Numkeys(1).Key(writeKey).Arg(token).Build()
-		if err := m.client.Do(ctx, cmd).Error(); err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.release(ctx, chatID, mode, token, ttlMillis)
-			}
-			return cerrors.RedisError{Operation: "lock_release_write", Err: err}
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockRelease, []string{writeKey}, []string{token})
+		if err != nil {
+			return fmt.Errorf("lock release write script missing: %w", err)
+		}
+		if err := resp.Error(); err != nil {
+			return wrapRedisError("lock_release_write", err)
 		}
 		return nil
 	case lockModeRead:
-		cmd := m.client.B().Evalsha().Sha1(m.releaseReadSHA).Numkeys(1).Key(readKey).Arg(token, ttlArg).Build()
-		if err := m.client.Do(ctx, cmd).Error(); err != nil {
-			if valkeyx.IsNoScript(err) {
-				m.clearScriptCache()
-				return m.release(ctx, chatID, mode, token, ttlMillis)
-			}
-			return cerrors.RedisError{Operation: "lock_release_read", Err: err}
+		resp, err := m.registry.Exec(ctx, m.client, luautil.ScriptLockReleaseRead, []string{readKey}, []string{token, ttlArg})
+		if err != nil {
+			return fmt.Errorf("lock release read script missing: %w", err)
+		}
+		if err := resp.Error(); err != nil {
+			return wrapRedisError("lock_release_read", err)
 		}
 		return nil
 	default:
 		return fmt.Errorf("unknown lock mode: %d", mode)
 	}
+}
+
+func wrapRedisError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%w", valkeyx.WrapRedisError(operation, err))
 }
 
 func (m *LockManager) startRenewWatchdog(ctx context.Context, chatID string, mode lockMode, token string, ttlMillis int64) context.CancelFunc {
