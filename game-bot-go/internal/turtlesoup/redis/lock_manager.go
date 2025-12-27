@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/valkey-io/valkey-go"
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lockutil"
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
+	tsassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/assets"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 )
 
@@ -21,16 +22,22 @@ type LockManager struct {
 	client valkey.Client
 	logger *slog.Logger
 
-	releaseSHA       string
-	scriptMu         sync.Mutex
+	registry         *luautil.Registry
 	redisCallTimeout time.Duration
 }
 
 // NewLockManager: 새로운 LockManager 인스턴스를 생성한다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
+	registry := luautil.NewRegistry([]luautil.Script{
+		{Name: luautil.ScriptTurtleLockRelease, Source: tsassets.LockReleaseLua},
+	})
+	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
+		logger.Warn("lua_preload_failed", "component", "turtlesoup_lock_manager", "err", err)
+	}
 	return &LockManager{
 		client:           client,
 		logger:           logger,
+		registry:         registry,
 		redisCallTimeout: 5 * time.Second,
 	}
 }
@@ -61,20 +68,20 @@ func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName
 		return fmt.Errorf("session id is empty")
 	}
 
-	scope, ok := lockScopeFromContext(ctx)
+	scope, ok := lockutil.ScopeFromContext(ctx)
 	if !ok {
-		scope = newLockScope()
-		ctx = withLockScope(ctx, scope)
+		scope = lockutil.NewScope()
+		ctx = lockutil.WithScope(ctx, scope)
 	}
 
 	key := lockKey(sessionID)
-	if scope.incrementIfHeld(key) {
-		defer scope.decrement(key)
+	if scope.IncrementIfHeld(key) {
+		defer scope.Decrement(key)
 		return block(ctx)
 	}
 
 	timeoutSeconds := int64(tsconfig.RedisLockTimeoutSeconds)
-	lockTTLSeconds := int64(tsconfig.RedisLockTTLSeconds)
+	lockTTLDuration := lockutil.TTLDurationFromSeconds(int64(tsconfig.RedisLockTTLSeconds))
 
 	acquireCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
@@ -88,7 +95,7 @@ func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName
 
 	m.logger.Debug("lock_attempting", "session_id", sessionID, "timeout_seconds", timeoutSeconds)
 
-	acquired, acquireErr := m.acquire(acquireCtx, sessionID, token, holderValue, time.Duration(lockTTLSeconds)*time.Second)
+	acquired, acquireErr := m.acquire(acquireCtx, sessionID, token, holderValue, lockTTLDuration)
 	if acquireErr != nil {
 		return acquireErr
 	}
@@ -104,16 +111,16 @@ func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName
 		}
 	}
 
-	scope.set(key, token)
+	scope.Set(key, lockutil.HeldLock{Token: token, Count: 1})
 	defer func() {
 		releaseCtx, releaseCancel := context.WithTimeout(context.WithoutCancel(ctx), m.redisCallTimeout)
 		defer releaseCancel()
 
-		releaseToken, shouldRelease := scope.releaseIfLast(key)
+		releaseToken, shouldRelease := scope.ReleaseIfLast(key)
 		if !shouldRelease {
 			return
 		}
-		if err := m.release(releaseCtx, sessionID, releaseToken); err != nil {
+		if err := m.release(releaseCtx, sessionID, releaseToken.Token); err != nil {
 			m.logger.Warn("lock_release_failed", "err", err, "session_id", sessionID)
 		} else {
 			m.logger.Debug("lock_released", "session_id", sessionID)

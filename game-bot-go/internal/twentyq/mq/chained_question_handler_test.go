@@ -16,11 +16,12 @@ import (
 )
 
 type fakeChainedQuestionRiddleService struct {
-	lastQuestion string
-	lastIsChain  bool
-	answerScale  qmodel.FiveScaleKo
-	statusMain   string
-	statusHint   string
+	lastQuestion  string
+	lastIsChain   bool
+	answerScale   qmodel.FiveScaleKo
+	statusMain    string
+	statusHint    string
+	questionCount int
 }
 
 func (f *fakeChainedQuestionRiddleService) AnswerWithOutcome(
@@ -42,6 +43,10 @@ func (f *fakeChainedQuestionRiddleService) AnswerWithOutcome(
 
 func (f *fakeChainedQuestionRiddleService) StatusSeparated(ctx context.Context, chatID string) (string, string, error) {
 	return f.statusMain, f.statusHint, nil
+}
+
+func (f *fakeChainedQuestionRiddleService) StatusSeparatedWithCount(ctx context.Context, chatID string) (string, string, int, error) {
+	return f.statusMain, f.statusHint, f.questionCount, nil
 }
 
 type fakeChainedQuestionQueueCoordinator struct {
@@ -207,10 +212,12 @@ func TestChainedQuestionHandler_ProcessChainBatch_StatusWithHintLine_EmitsSepara
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	queueCoordinator := newFakeChainedQuestionQueueCoordinator()
 
+	// questionCount를 5로 설정하여 힌트가 표시되도록 함 (5 % HintDisplayInterval(5) == 0)
 	riddleService := &fakeChainedQuestionRiddleService{
-		answerScale: qmodel.FiveScaleAlwaysYes,
-		statusMain:  "STATUS",
-		statusHint:  "\U0001F4A1#1 HINT",
+		answerScale:   qmodel.FiveScaleAlwaysYes,
+		statusMain:    "STATUS",
+		statusHint:    "\U0001F4A1#1 HINT",
+		questionCount: 5,
 	}
 	handler := NewChainedQuestionHandler(riddleService, queueCoordinator, msgProvider, logger)
 

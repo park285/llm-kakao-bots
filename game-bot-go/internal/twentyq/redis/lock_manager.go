@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/valkey-io/valkey-go"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lockutil"
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
+	qassets "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/assets"
 )
 
 type lockMode int
@@ -35,22 +36,27 @@ type LockManager struct {
 	client valkey.Client
 	logger *slog.Logger
 
-	acquireReadSHA  string
-	acquireWriteSHA string
-	releaseReadSHA  string
-	releaseWriteSHA string
-	renewReadSHA    string
-	renewWriteSHA   string
-
-	scriptMu         sync.Mutex
+	registry         *luautil.Registry
 	redisCallTimeout time.Duration
 }
 
 // NewLockManager: 새로운 LockManager 인스턴스를 생성하고 Redis 클라이언트를 설정한다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
+	registry := luautil.NewRegistry([]luautil.Script{
+		{Name: luautil.ScriptLockAcquireRead, Source: qassets.LockAcquireReadLua},
+		{Name: luautil.ScriptLockAcquireWrite, Source: qassets.LockAcquireWriteLua},
+		{Name: luautil.ScriptLockRelease, Source: qassets.LockReleaseLua},
+		{Name: luautil.ScriptLockReleaseRead, Source: qassets.LockReleaseReadLua},
+		{Name: luautil.ScriptLockRenewRead, Source: qassets.LockRenewReadLua},
+		{Name: luautil.ScriptLockRenewWrite, Source: qassets.LockRenewWriteLua},
+	})
+	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
+		logger.Warn("lua_preload_failed", "component", "twentyq_lock_manager", "err", err)
+	}
 	return &LockManager{
 		client:           client,
 		logger:           logger,
+		registry:         registry,
 		redisCallTimeout: 5 * time.Second,
 	}
 }

@@ -1,8 +1,12 @@
--- READ 락 획득 (원자적)
+-- ============================================================
+-- Script: lock_acquire_read
+-- Purpose: READ 락 획득 (원자적)
 -- KEYS[1]: write lock key
 -- KEYS[2]: read lock hash key
 -- ARGV[1]: token
 -- ARGV[2]: ttlMillis
+-- Returns: 1 if acquired, 0 otherwise
+-- ============================================================
 if redis.call("EXISTS", KEYS[1]) == 1 then
     return 0
 else

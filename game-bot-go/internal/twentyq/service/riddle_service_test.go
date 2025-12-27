@@ -122,7 +122,10 @@ surrender:
 start:
   ready: "Start Ready"
   ready_with_category: "Start Ready {category}"
-  resume: "Resumed"
+  resume_header: "🔄 Resume{categoryLine}"
+  resume_category_line: " [{category}]"
+  resume_qna_header: "Q&A:"
+  resume_hint_header: "Hints:"
 answer:
   success: "Correct! target={target} q={questionCount} hints={hintCount}/{maxHints}{wrongGuessBlock}{hintBlock}"
   wrong_guess: "{nickname} wrong: {guess}"
@@ -564,8 +567,12 @@ func TestRiddleService_Start_Resume(t *testing.T) {
 		t.Fatalf("Start resume failed: %v", err)
 	}
 
-	if !strings.Contains(resp, "Resumed") { // msg key start.resume="Resumed"
-		t.Errorf("expected resumed message, got '%s'", resp)
+	// 새 resume 형식은 헤더와 Q&A 기록을 포함
+	if !strings.Contains(resp, "Resume") { // resume_header has "🔄 Resume"
+		t.Errorf("expected resume header, got '%s'", resp)
+	}
+	if !strings.Contains(resp, "Q: Q1 A: A1") { // Q&A history should be shown
+		t.Errorf("expected Q&A history in resume message, got '%s'", resp)
 	}
 }
 

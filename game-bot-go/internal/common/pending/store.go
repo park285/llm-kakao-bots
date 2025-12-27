@@ -2,7 +2,6 @@ package pending
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -10,26 +9,33 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	luautil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lua"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
 // Store: 대기 메시지 큐(Pending Message Queue)를 Redis에 저장하고 관리하는 공통 저장소 구현체
 // Valkey(Redis) 클라이언트와 Lua 스크립트를 사용하여 원자적(Atomic) 연산을 수행한다.
 type Store struct {
-	client valkey.Client
-	logger *slog.Logger
-	config Config
-
-	enqueueSHA string
-	dequeueSHA string
+	client   valkey.Client
+	logger   *slog.Logger
+	config   Config
+	registry *luautil.Registry
 }
 
 // NewStore: 새로운 Store 인스턴스를 생성한다.
 func NewStore(client valkey.Client, logger *slog.Logger, config Config) *Store {
+	registry := luautil.NewRegistry([]luautil.Script{
+		{Name: luautil.ScriptPendingEnqueue, Source: enqueueLua},
+		{Name: luautil.ScriptPendingDequeue, Source: dequeueLua},
+	})
+	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
+		logger.Warn("lua_preload_failed", "component", "pending_store", "err", err)
+	}
 	return &Store{
-		client: client,
-		logger: logger,
-		config: config,
+		client:   client,
+		logger:   logger,
+		config:   config,
+		registry: registry,
 	}
 }
 
@@ -42,27 +48,6 @@ type DequeueResult struct {
 	Timestamp int64
 	// RawJSON: 저장된 원본 JSON 데이터 (호출자가 구조체로 언마샬링 필요)
 	RawJSON string
-}
-
-// loadScripts Lua 스크립트를 로드하고 SHA를 캐싱.
-func (s *Store) loadScripts(ctx context.Context) error {
-	if s.enqueueSHA == "" {
-		cmd := s.client.B().ScriptLoad().Script(enqueueLua).Build()
-		sha, err := s.client.Do(ctx, cmd).ToString()
-		if err != nil {
-			return fmt.Errorf("load enqueue script failed: %w", err)
-		}
-		s.enqueueSHA = sha
-	}
-	if s.dequeueSHA == "" {
-		cmd := s.client.B().ScriptLoad().Script(dequeueLua).Build()
-		sha, err := s.client.Do(ctx, cmd).ToString()
-		if err != nil {
-			return fmt.Errorf("load dequeue script failed: %w", err)
-		}
-		s.dequeueSHA = sha
-	}
-	return nil
 }
 
 // Enqueue: 메시지를 JSON 형태로 대기열에 추가한다.
@@ -84,10 +69,6 @@ func (s *Store) enqueueInternal(
 	jsonValue string,
 	replaceOnDuplicate bool,
 ) (EnqueueResult, error) {
-	if err := s.loadScripts(ctx); err != nil {
-		return EnqueueQueueFull, err
-	}
-
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)
 
@@ -96,26 +77,24 @@ func (s *Store) enqueueInternal(
 		replaceArg = "1"
 	}
 
-	cmd := s.client.B().Evalsha().Sha1(s.enqueueSHA).Numkeys(2).Key(dataKey, orderKey).Arg(
+	resp, err := s.registry.Exec(ctx, s.client, luautil.ScriptPendingEnqueue, []string{dataKey, orderKey}, []string{
 		userID,
 		jsonValue,
 		strconv.FormatInt(timestamp, 10),
 		strconv.Itoa(s.config.MaxQueueSize),
 		strconv.Itoa(s.config.QueueTTLSeconds),
 		replaceArg,
-	).Build()
-
-	res, err := s.client.Do(ctx, cmd).ToAny()
+	})
 	if err != nil {
-		// NOSCRIPT 오류 시 스크립트 재로드
-		if valkeyx.IsNoScript(err) {
-			s.enqueueSHA = ""
-			return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, replaceOnDuplicate)
-		}
-		return EnqueueQueueFull, fmt.Errorf("pending enqueue failed: %w", err)
+		return EnqueueQueueFull, wrapRedisError("pending_enqueue_exec", err)
 	}
 
-	switch normalizeLuaResult(res) {
+	result, err := valkeyx.ParseLuaString(resp)
+	if err != nil {
+		return EnqueueQueueFull, wrapRedisError("pending_enqueue_parse", err)
+	}
+
+	switch strings.TrimSpace(result) {
 	case "SUCCESS":
 		s.logger.Debug("enqueue_success", "chat_id", chatID, "user_id", userID)
 		return EnqueueSuccess, nil
@@ -126,7 +105,7 @@ func (s *Store) enqueueInternal(
 		s.logger.Warn("enqueue_queue_full", "chat_id", chatID)
 		return EnqueueQueueFull, nil
 	default:
-		s.logger.Error("enqueue_unknown_result", "chat_id", chatID, "result", res)
+		s.logger.Error("enqueue_unknown_result", "chat_id", chatID, "result", result)
 		return EnqueueQueueFull, nil
 	}
 }
@@ -134,59 +113,44 @@ func (s *Store) enqueueInternal(
 // Dequeue: 대기열에서 가장 오래된 메시지(stale 메시지 포함)를 꺼내어 반환한다.
 // 성공 시 RawJSON 필드에 원본 데이터가 포함된다.
 func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, error) {
-	if err := s.loadScripts(ctx); err != nil {
-		return DequeueResult{}, err
-	}
-
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)
 
-	cmd := s.client.B().Evalsha().Sha1(s.dequeueSHA).Numkeys(2).Key(dataKey, orderKey).Arg(
+	resp, err := s.registry.Exec(ctx, s.client, luautil.ScriptPendingDequeue, []string{dataKey, orderKey}, []string{
 		strconv.FormatInt(s.config.StaleThresholdMS, 10),
-	).Build()
-
-	res, err := s.client.Do(ctx, cmd).ToAny()
+	})
 	if err != nil {
-		if valkeyx.IsNil(err) {
+		return DequeueResult{}, wrapRedisError("pending_dequeue_exec", err)
+	}
+
+	if respErr := resp.Error(); respErr != nil {
+		if valkeyx.IsNil(respErr) {
 			s.logger.Debug("dequeue_empty", "chat_id", chatID)
 			return DequeueResult{Status: DequeueEmpty}, nil
 		}
-		// NOSCRIPT 오류 시 스크립트 재로드
-		if valkeyx.IsNoScript(err) {
-			s.dequeueSHA = ""
-			return s.Dequeue(ctx, chatID)
-		}
-		return DequeueResult{}, fmt.Errorf("pending dequeue failed: %w", err)
-	}
-	if res == nil {
-		s.logger.Debug("dequeue_empty", "chat_id", chatID)
-		return DequeueResult{Status: DequeueEmpty}, nil
+		return DequeueResult{}, wrapRedisError("pending_dequeue", respErr)
 	}
 
-	switch typed := res.(type) {
-	case []any:
-		if len(typed) != 3 {
-			return DequeueResult{}, fmt.Errorf("pending dequeue unexpected lua result: %T len=%d", res, len(typed))
-		}
-		userID := normalizeLuaResult(typed[0])
-		timestamp, err := parseLuaScoreToInt64(typed[1])
-		if err != nil {
-			return DequeueResult{}, fmt.Errorf("pending dequeue parse score failed: %w", err)
-		}
-		raw := normalizeLuaResult(typed[2])
-		s.logger.Debug("dequeue_success", "chat_id", chatID)
-		return DequeueResult{Status: DequeueSuccess, UserID: userID, Timestamp: timestamp, RawJSON: raw}, nil
-	default:
-		// 과거 포맷(문자열만 반환) 호환.
-		raw := normalizeLuaResult(res)
-		if raw == "EXHAUSTED" {
-			s.logger.Debug("dequeue_exhausted", "chat_id", chatID)
-			return DequeueResult{Status: DequeueExhausted}, nil
-		}
-
-		s.logger.Debug("dequeue_success", "chat_id", chatID)
-		return DequeueResult{Status: DequeueSuccess, RawJSON: raw}, nil
+	values, err := valkeyx.ParseLuaArray(resp, 3)
+	if err != nil {
+		return DequeueResult{}, wrapRedisError("pending_dequeue_parse", err)
 	}
+
+	userID, err := values[0].ToString()
+	if err != nil {
+		return DequeueResult{}, fmt.Errorf("pending dequeue parse user id failed: %w", err)
+	}
+	timestamp, err := valkeyx.ParseLuaScoreToInt64(values[1])
+	if err != nil {
+		return DequeueResult{}, fmt.Errorf("pending dequeue parse score failed: %w", err)
+	}
+	raw, err := values[2].ToString()
+	if err != nil {
+		return DequeueResult{}, fmt.Errorf("pending dequeue parse json failed: %w", err)
+	}
+
+	s.logger.Debug("dequeue_success", "chat_id", chatID)
+	return DequeueResult{Status: DequeueSuccess, UserID: strings.TrimSpace(userID), Timestamp: timestamp, RawJSON: raw}, nil
 }
 
 // Size: 현재 대기열에 쌓여 있는 메시지의 개수를 반환한다. (ZCard 사용)
@@ -265,18 +229,6 @@ func (s *Store) Clear(ctx context.Context, chatID string) error {
 	return nil
 }
 
-func parseLuaScoreToInt64(v any) (int64, error) {
-	score := strings.TrimSpace(normalizeLuaResult(v))
-	if score == "" {
-		return 0, errors.New("empty score")
-	}
-	f, err := strconv.ParseFloat(score, 64)
-	if err != nil {
-		return 0, fmt.Errorf("parse lua score failed: %w", err)
-	}
-	return int64(f), nil
-}
-
 // ExtractJSON timestamp|userId|JSON 포맷에서 JSON 부분만 추출.
 func ExtractJSON(entry string) (string, bool) {
 	_, jsonPart, ok := ExtractUserIDAndJSON(entry)
@@ -303,21 +255,17 @@ func ExtractUserIDAndJSON(entry string) (string, string, bool) {
 	return userID, jsonPart, true
 }
 
+func wrapRedisError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%w", valkeyx.WrapRedisError(operation, err))
+}
+
 func (s *Store) dataKey(chatID string) string {
 	return fmt.Sprintf("%s:data:{%s}", s.config.KeyPrefix, chatID)
 }
 
 func (s *Store) orderKey(chatID string) string {
 	return fmt.Sprintf("%s:order:{%s}", s.config.KeyPrefix, chatID)
-}
-
-func normalizeLuaResult(v any) string {
-	switch typed := v.(type) {
-	case string:
-		return strings.TrimSpace(typed)
-	case []byte:
-		return strings.TrimSpace(string(typed))
-	default:
-		return strings.TrimSpace(fmt.Sprint(v))
-	}
 }

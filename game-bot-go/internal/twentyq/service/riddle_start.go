@@ -92,22 +92,81 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 }
 
 func (s *RiddleService) buildResumeMessage(ctx context.Context, chatID string) (string, error) {
+	// 세션 정보 조회
+	secret, err := s.sessionStore.GetSecret(ctx, chatID)
+	if err != nil {
+		return "", fmt.Errorf("secret get failed: %w", err)
+	}
+
 	history, err := s.historyStore.Get(ctx, chatID)
 	if err != nil {
 		return "", fmt.Errorf("history get failed: %w", err)
 	}
-	hintCount, err := s.hintCountStore.Get(ctx, chatID)
+
+	wrongGuesses, err := s.wrongGuessStore.GetSessionWrongGuesses(ctx, chatID)
 	if err != nil {
-		return "", fmt.Errorf("hint count get failed: %w", err)
+		return "", fmt.Errorf("wrong guess get failed: %w", err)
 	}
 
-	questionCount, _ := countHistoryStats(history)
+	// 카테고리 라인 생성
+	categoryLine := ""
+	if secret != nil && secret.Category != "" {
+		if categoryKo := categoryToKorean(secret.Category); categoryKo != nil {
+			categoryLine = s.msgProvider.Get(qmessages.StartResumeCategoryLine, messageprovider.P("category", *categoryKo))
+		}
+	}
 
-	return s.msgProvider.Get(
-		qmessages.StartResume,
-		messageprovider.P("questionCount", questionCount),
-		messageprovider.P("hintCount", hintCount),
-	), nil
+	// 헤더
+	header := s.msgProvider.Get(qmessages.StartResumeHeader, messageprovider.P("categoryLine", categoryLine))
+
+	// Q&A 기록
+	qnaLines := s.buildStatusQnALines(history)
+	qnaSection := ""
+	if len(qnaLines) > 0 {
+		qnaSection = s.msgProvider.Get(qmessages.StartResumeQnAHeader) + "\n" + strings.Join(qnaLines, "\n")
+	}
+
+	// 힌트 기록
+	hintSection := s.buildResumeHintSection(history)
+
+	// 틀린 정답
+	wrongSection := ""
+	if len(wrongGuesses) > 0 {
+		wrongSection = s.msgProvider.Get(qmessages.StatusWrongGuesses, messageprovider.P("guesses", strings.Join(wrongGuesses, ", ")))
+	}
+
+	// 조합: 헤더 > 힌트 > 틀린정답 > Q&A (최하단)
+	// 500자 초과 시 Q&A가 잘리더라도 중요 정보(헤더)는 유지됨
+	parts := []string{header}
+	if hintSection != "" {
+		parts = append(parts, hintSection)
+	}
+	if wrongSection != "" {
+		parts = append(parts, wrongSection)
+	}
+	if qnaSection != "" {
+		parts = append(parts, qnaSection)
+	}
+
+	return strings.Join(parts, "\n\n"), nil
+}
+
+func (s *RiddleService) buildResumeHintSection(history []qmodel.QuestionHistory) string {
+	var hints []string
+	for _, h := range history {
+		if h.QuestionNumber < 0 {
+			hintNumber := -h.QuestionNumber
+			hints = append(hints, s.msgProvider.Get(
+				qmessages.StatusHintLine,
+				messageprovider.P("number", hintNumber),
+				messageprovider.P("content", h.Answer),
+			))
+		}
+	}
+	if len(hints) == 0 {
+		return ""
+	}
+	return s.msgProvider.Get(qmessages.StartResumeHintHeader) + "\n" + strings.Join(hints, "\n")
 }
 
 func (s *RiddleService) buildStartMessage(selectedCategoryKo *string, invalidInput bool) string {

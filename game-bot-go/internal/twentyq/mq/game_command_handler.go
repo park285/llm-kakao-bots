@@ -8,6 +8,7 @@ import (
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 	qsvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/service"
 )
@@ -96,12 +97,12 @@ func (h *GameCommandHandler) handleAsk(ctx context.Context, message mqmsg.Inboun
 		return []string{text}, nil
 	}
 
-	main, hint, statusErr := h.gameService.StatusSeparated(ctx, message.ChatID)
+	main, hint, questionCount, statusErr := h.gameService.StatusSeparatedWithCount(ctx, message.ChatID)
 	if statusErr != nil {
 		return []string{text}, nil
 	}
 	messages := []string{main}
-	if hint != "" {
+	if shouldShowHint(hint, questionCount) {
 		messages = append(messages, hint)
 	}
 	return messages, nil
@@ -116,7 +117,7 @@ func (h *GameCommandHandler) handleChainedQuestion(ctx context.Context, message 
 		return nil, fmt.Errorf("chained question failed: %w", err)
 	}
 
-	main, hint, statusErr := h.gameService.StatusSeparated(ctx, message.ChatID)
+	main, hint, questionCount, statusErr := h.gameService.StatusSeparatedWithCount(ctx, message.ChatID)
 	if statusErr != nil {
 		return []string{response}, nil
 	}
@@ -128,7 +129,7 @@ func (h *GameCommandHandler) handleChainedQuestion(ctx context.Context, message 
 	}
 
 	messages := []string{main}
-	if hint != "" {
+	if shouldShowHint(hint, questionCount) {
 		messages = append(messages, hint)
 	}
 	return messages, nil
@@ -230,4 +231,16 @@ func (h *GameCommandHandler) handleUnknown(ctx context.Context, message mqmsg.In
 func isAnswerCommand(question string) bool {
 	question = strings.TrimSpace(question)
 	return strings.HasPrefix(strings.ToLower(question), "정답")
+}
+
+// shouldShowHint: 힌트 라인을 표시할지 결정한다.
+// HintDisplayInterval이 0이면 항상 표시, 양수면 해당 질문 횟수마다 표시.
+func shouldShowHint(hint string, questionCount int) bool {
+	if hint == "" {
+		return false
+	}
+	if qconfig.HintDisplayInterval <= 0 {
+		return true
+	}
+	return questionCount > 0 && questionCount%qconfig.HintDisplayInterval == 0
 }

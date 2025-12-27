@@ -29,6 +29,12 @@ const (
 	MaxHintsTotal = 1
 )
 
+// HintDisplayInterval: 힌트 라인을 표시할 질문 간격 (N번 질문마다 표시)
+// 0이면 항상 표시, 양수면 해당 횟수마다 표시
+const (
+	HintDisplayInterval = 5
+)
+
 // RedisKeyPrefix 는 Redis 키 상수 목록이다.
 const (
 	RedisKeyPrefix        = "20q"

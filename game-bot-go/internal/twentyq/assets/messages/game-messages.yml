@@ -80,14 +80,10 @@ toon:
 
     waiting: "게임을 시작합니다. 잠시만 기다려주세요..."
 
-    resume: |
-      진행 중인 게임이 있습니다.
-
-      📊 현재 상황:
-      - 질문 수: {questionCount}개
-      - 힌트 사용: {hintCount}회
-
-      게임을 계속하려면 질문을 입력하세요.
+    resume_header: "🔄 게임 재개{categoryLine}"
+    resume_category_line: " [주제:{category}]"
+    resume_qna_header: "📝 Q&A 기록:"
+    resume_hint_header: "💡 사용된 힌트:"
 
   answer:
     correct_default: "🎉 정답입니다!"
