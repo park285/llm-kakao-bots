@@ -8,6 +8,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/twentyq"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
 )
 
 func (h *TwentyQHandler) handleVerify(c *gin.Context) {
@@ -35,16 +36,34 @@ func (h *TwentyQHandler) handleVerify(c *gin.Context) {
 		return
 	}
 
-	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
+	// Self-Consistency: 3번 병렬 호출하여 합의
+	const consensusCalls = 3
+	consensus, err := h.client.StructuredWithConsensus(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
 		Task:         "verify",
-	}, twentyq.VerifySchema())
+	}, twentyq.VerifySchema(), "result", consensusCalls)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
+
+	payload := consensus.Payload
+	requestID := middleware.GetRequestID(c)
+
+	if reasoning, ok := payload["reasoning"].(string); ok && reasoning != "" {
+		h.logger.Info("twentyq_verify_cot", "request_id", requestID, "reasoning", reasoning)
+	}
+	if len(consensus.SearchQueries) > 0 {
+		h.logger.Info("twentyq_verify_search", "request_id", requestID, "queries", consensus.SearchQueries)
+	}
+	// 합의 정보 로깅
+	h.logger.Info("twentyq_verify_consensus",
+		"request_id", requestID,
+		"value", consensus.ConsensusValue,
+		"count", consensus.ConsensusCount,
+		"total", consensus.TotalCalls)
 
 	rawValue, parseErr := shared.ParseStringField(payload, "result")
 	var result *string

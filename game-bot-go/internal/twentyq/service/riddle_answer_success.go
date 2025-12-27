@@ -35,7 +35,7 @@ func (s *RiddleService) handleSuccess(ctx context.Context, chatID string, answer
 		hintCount = 0
 	}
 
-	wrongGuesses, err := s.wrongGuessStore.GetUserWrongGuesses(ctx, chatID, answererID)
+	wrongGuesses, err := s.wrongGuessStore.GetSessionWrongGuesses(ctx, chatID)
 	if err != nil {
 		s.logger.Warn("wrong_guess_get_failed", "chat_id", chatID, "err", err)
 		wrongGuesses = nil

@@ -62,6 +62,7 @@ const (
 	FiveScaleMostlyNo
 	FiveScaleAlwaysNo
 	FiveScaleInvalid
+	FiveScalePolicyViolation
 )
 
 var fiveScaleTokenToValue = map[string]FiveScaleKo{
@@ -70,6 +71,7 @@ var fiveScaleTokenToValue = map[string]FiveScaleKo{
 	"아마도 아니오":        FiveScaleMostlyNo,
 	"아니오":            FiveScaleAlwaysNo,
 	"이해할 수 없는 질문입니다": FiveScaleInvalid,
+	"정책 위반":          FiveScalePolicyViolation,
 }
 
 // ParseFiveScaleKo: AI의 답변 문자열을 분석하여 FiveScaleKo 열거형 값으로 변환한다.

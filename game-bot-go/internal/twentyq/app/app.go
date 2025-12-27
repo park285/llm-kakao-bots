@@ -43,6 +43,7 @@ type twentyQStores struct {
 	wrongGuessStore   *qredis.WrongGuessStore
 	topicHistoryStore *qredis.TopicHistoryStore
 	voteStore         *qredis.SurrenderVoteStore
+	guessRateLimiter  *qredis.GuessRateLimiter
 }
 
 func newTwentyQStores(client di.DataValkeyClient, logger *slog.Logger) *twentyQStores {
@@ -58,6 +59,7 @@ func newTwentyQStores(client di.DataValkeyClient, logger *slog.Logger) *twentyQS
 		wrongGuessStore:       qredis.NewWrongGuessStore(client.Client, logger),
 		topicHistoryStore:     qredis.NewTopicHistoryStore(client.Client, logger),
 		voteStore:             qredis.NewSurrenderVoteStore(client.Client, logger),
+		guessRateLimiter:      qredis.NewGuessRateLimiter(client.Client, "twentyq"),
 	}
 }
 
@@ -83,6 +85,7 @@ func newTwentyQRiddleService(
 		stores.wrongGuessStore,
 		stores.topicHistoryStore,
 		stores.voteStore,
+		stores.guessRateLimiter,
 		topicSelector,
 		statsRecorder,
 		logger,

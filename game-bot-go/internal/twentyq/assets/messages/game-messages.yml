@@ -39,6 +39,7 @@ toon:
     ai_empty_content: "응답이 비어 있습니다. 잠시 후 다시 시도해주세요."
     ai_empty_response: "응답 후보가 없습니다. 잠시 후 다시 시도해주세요."
     ai_unavailable: "AI 서버 점검 중입니다. 잠시 후 다시 시도해주세요."
+    guess_rate_limit: "⏱️ 정답 시도는 {totalSeconds}초에 한 번만 가능합니다. ({remainingSeconds}초 후 다시 시도 가능)"
 
   lock:
     request_in_progress: "다른 요청이 처리 중입니다."

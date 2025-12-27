@@ -414,12 +414,12 @@ func (s *GameMessageService) handleQueuedFailure(
 	var lockErr cerrors.LockError
 	if errors.As(err, &lockErr) {
 		text := s.msgProvider.Get(qmessages.LockRequestInProgress)
-		return emit(mqmsg.NewError(message.ChatID, text, message.ThreadID))
+		return emit(mqmsg.NewFinal(message.ChatID, text, message.ThreadID))
 	}
 
 	mapping := GetErrorMapping(err, s.commandPrefix)
 	text := s.msgProvider.Get(mapping.Key, mapping.Params...)
-	return emit(mqmsg.NewError(message.ChatID, text, message.ThreadID))
+	return emit(mqmsg.NewFinal(message.ChatID, text, message.ThreadID))
 }
 
 func (s *GameMessageService) handleModelInfo(ctx context.Context, message mqmsg.InboundMessage) {

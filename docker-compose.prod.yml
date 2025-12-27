@@ -123,6 +123,7 @@ services:
       SESSION_STORE_URL: redis://valkey-cache:6379
       DB_HOST: postgres
       DB_PORT: 5432
+      GUARD_THRESHOLD: 0.6
     volumes:
       - ./logs:/app/logs
     depends_on:

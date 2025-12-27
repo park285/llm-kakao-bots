@@ -2,32 +2,45 @@ package guard
 
 import "testing"
 
-func TestIsJamoOnly(t *testing.T) {
-	jamo := string([]rune{0x1100, 0x1161})
-	if !isJamoOnly(jamo) {
-		t.Fatalf("expected jamo-only to be true")
-	}
-	if isJamoOnly(jamo + "a") {
-		t.Fatalf("expected mixed text to be false")
-	}
-	if isJamoOnly("123") {
-		t.Fatalf("expected digits-only to be false")
-	}
-}
-
-func TestContainsEmoji(t *testing.T) {
-	if !containsEmoji("hello \U0001F600") {
-		t.Fatalf("expected emoji detection")
-	}
-	if containsEmoji("hello") {
-		t.Fatalf("did not expect emoji detection")
-	}
-}
-
 func TestNormalizeText(t *testing.T) {
-	input := "a\u200bb"
-	output := normalizeText(input)
-	if output != "ab" {
-		t.Fatalf("unexpected normalized output: %q", output)
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Normal text",
+			input:    "Hello World",
+			expected: "Hello World",
+		},
+		{
+			name:     "Cyrillic Homoglyph (Sеcret)",
+			input:    "Sеcret", // Cyrillic 'е' (U+0435)
+			expected: "Secret", // Latin 'e'
+		},
+		{
+			name:     "Fullwidth (Ｈｅｌｌｏ)",
+			input:    "Ｈｅｌｌｏ",
+			expected: "Hello",
+		},
+		{
+			name:     "Control chars",
+			input:    "Hello\u200BWorld", // Zero width space
+			expected: "HelloWorld",
+		},
+		{
+			name:     "Mixed Homoglyph + Fullwidth + Control",
+			input:    "Ｓ\u0435cret\u200B", // Fullwidth S, Cyrillic e, Zero width
+			expected: "Secret",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeText(tt.input)
+			if got != tt.expected {
+				t.Errorf("normalizeText(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
 	}
 }

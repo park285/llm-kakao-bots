@@ -66,7 +66,9 @@ func (p *Prompts) HintsUser(secret string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	formatted, err := prompt.FormatTemplate(template, map[string]string{"toon": secret})
+	formatted, err := prompt.FormatTemplate(template, map[string]string{
+		"toon": prompt.WrapXML("secret", secret),
+	})
 	if err != nil {
 		return "", fmt.Errorf("format hints.user: %w", err)
 	}
@@ -93,8 +95,8 @@ func (p *Prompts) AnswerUser(secret string, question string, history string) (st
 		return "", err
 	}
 	result, err := prompt.FormatTemplate(template, map[string]string{
-		"toon":     secret,
-		"question": question,
+		"toon":     prompt.WrapXML("secret", secret),
+		"question": prompt.WrapXML("question", question),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format answer.user: %w", err)
@@ -125,8 +127,8 @@ func (p *Prompts) VerifyUser(target string, guess string) (string, error) {
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"target": target,
-		"guess":  guess,
+		"target": prompt.WrapXML("target", target),
+		"guess":  prompt.WrapXML("guess", guess),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format verify-answer.user: %w", err)
@@ -153,7 +155,9 @@ func (p *Prompts) NormalizeUser(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	formatted, err := prompt.FormatTemplate(template, map[string]string{"question": question})
+	formatted, err := prompt.FormatTemplate(template, map[string]string{
+		"question": prompt.WrapXML("question", question),
+	})
 	if err != nil {
 		return "", fmt.Errorf("format normalize.user: %w", err)
 	}
@@ -180,8 +184,8 @@ func (p *Prompts) SynonymUser(target string, guess string) (string, error) {
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"target": target,
-		"guess":  guess,
+		"target": prompt.WrapXML("target", target),
+		"guess":  prompt.WrapXML("guess", guess),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format synonym-check.user: %w", err)

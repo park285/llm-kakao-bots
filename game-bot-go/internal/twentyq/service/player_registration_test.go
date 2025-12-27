@@ -20,7 +20,7 @@ func newTestRiddleServiceForRegistration(t *testing.T) (*RiddleService, *redis.P
 	svc := NewRiddleService(
 		nil, "", nil, nil, nil, nil, nil, nil,
 		playerStore,
-		nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil,
 		logger,
 	)
 	return svc, playerStore, client

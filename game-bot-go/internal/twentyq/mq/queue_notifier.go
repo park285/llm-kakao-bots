@@ -71,7 +71,7 @@ func (n *MessageQueueNotifier) NotifyFailed(
 ) error {
 	userName := pending.DisplayName(chatID, n.provider.Get(qmessages.UserAnonymous))
 	failedText := n.provider.Get(qmessages.QueueRetryFailed, messageprovider.P("user", userName))
-	return emit(mqmsg.NewError(chatID, failedText, pending.ThreadID))
+	return emit(mqmsg.NewFinal(chatID, failedText, pending.ThreadID))
 }
 
 // NotifyError: 처리 도중 발생한 에러를 사용자 친화적인 메시지로 변환하여 알린다.
@@ -86,5 +86,5 @@ func (n *MessageQueueNotifier) NotifyError(
 
 	mapping := GetErrorMapping(err, n.commandPrefix)
 	text := n.provider.Get(mapping.Key, mapping.Params...)
-	return emit(mqmsg.NewError(chatID, text, pending.ThreadID))
+	return emit(mqmsg.NewFinal(chatID, text, pending.ThreadID))
 }

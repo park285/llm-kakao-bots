@@ -45,6 +45,24 @@ func FormatTemplate(template string, values map[string]string) (string, error) {
 	return builder.String(), nil
 }
 
+var xmlEscaper = strings.NewReplacer(
+	"&", "&amp;",
+	"<", "&lt;",
+	">", "&gt;",
+	"\"", "&quot;",
+	"'", "&apos;",
+)
+
+// EscapeXML 는 XML 텍스트로 안전하게 이스케이프한다.
+func EscapeXML(value string) string {
+	return xmlEscaper.Replace(value)
+}
+
+// WrapXML 는 값을 XML 태그로 감싼다.
+func WrapXML(tag string, value string) string {
+	return "<" + tag + ">" + EscapeXML(value) + "</" + tag + ">"
+}
+
 // ValidateSystemStatic 는 시스템 프롬프트의 템플릿 사용 여부를 검사한다.
 func ValidateSystemStatic(name string, system string) error {
 	for i := 0; i < len(system); {
