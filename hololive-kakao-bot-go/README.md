@@ -1,195 +1,171 @@
 # Hololive KakaoTalk Bot (Go)
 
-> 홀로라이브 VTuber 스케줄 및 정보 제공 카카오톡 봇 (Go 버전)
+> 홀로라이브 VTuber 스케줄, 정보 검색 및 알림을 제공하는 고성능 카카오톡 봇 (Go 버전)
 
-카카오톡을 통해 홀로라이브 소속 VTuber들의 스케줄, 프로필 정보를 제공하는 봇입니다.
+카카오톡을 통해 홀로라이브 소속 VTuber들의 실시간 방송 현황, 예정된 스케줄, 공식 프로필 정보를 빠르고 편리하게 제공합니다. Go 1.25의 최신 기능과 Valkey 기반의 다층 캐싱 시스템, GORM 기반의 안정적인 데이터 관리를 통해 높은 성능과 확장성을 보장합니다.
 
-## 주요 기능
+## ✨ 주요 기능
 
-- **스케줄 조회**: Holodex API 연동으로 실시간 방송 및 예정 스케줄 확인
-- **멤버 정보**: 공식 프로필 데이터 제공 (사전 번역 데이터 내장)
-- **알림 설정**: 사용자별 멤버 알림 관리
-- **캐싱**: Valkey 기반 고성능 캐싱
-- **Circuit Breaker**: AI API 장애 대응
+-   **실시간 방송 조회 (`!라이브`)**: Holodex API와 연동하여 현재 방송 중인 멤버 확인
+-   **스케줄 정보 (`!예정`)**: 향후 24시간 내의 방송 예정 스케줄 조회
+-   **멤버 정보 & 검색**: 공식 프로필 데이터 기반 상세 정보 제공 (한국어 번역 포함)
+-   **스마트 알림 시스템**:
+    -   방송 시작 전 알림 (5분, 15분, 30분 전 등 설정 가능)
+    -   개인화된 멤버별 알림 구독/해제 (`!알람`)
+-   **관리자 대시보드**: 웹 기반 관리자 패널을 통한 봇 상태 모니터링 및 설정 관리
+-   **동적 ACL (접근 제어)**: 카카오톡 채팅방 별 접근 허용/차단 동적 관리
+-   **강력한 성능**:
+    -   **HTTP/2 (H2C)**: 멀티플렉싱 지원으로 통신 효율 극대화
+    -   **Valkey Caching**: API 호출 비용 절감 및 응답 속도 최적화
+    -   **ValkeyMQ**: 안정적인 메시지 큐 기반 비동기 처리
+    -   **Circuit Breaker**: 외부 API 장애 시 자동 차단 및 복구
 
-## 빠른 시작
+## 🛠 기술 스택
 
-### 요구사항
+이 프로젝트는 최신 Go 생태계와 안정적인 오픈소스를 활용하여 구축되었습니다.
 
-- Go 1.24+
-- Valkey 서버
-- Iris Messenger 서버
+-   **Language**: [Go](https://go.dev/) 1.25.0
+-   **Web Framework**: [Gin](https://github.com/gin-gonic/gin) 1.11.0 (High-performance HTTP web framework)
+    -   **Protocol**: HTTP/2 Cleartext (H2C) via `golang.org/x/net/http2/h2c`
+-   **Database**: PostgreSQL 16+
+    -   **ORM**: [GORM](https://gorm.io/) (PostgreSQL Driver)
+-   **Cache & MQ**: [Valkey](https://valkey.io/) (Open Source Redis Monitor)
+    -   **Client**: `valkey-io/valkey-go`
+-   **Logging**: `log/slog` (Go Standard Library)
+    -   **Handler**: `lmittmann/tint` (Colorized output), `natefinch/lumberjack` (Log rotation)
+-   **Concurrency**: `sourcegraph/conc` (Structured concurrency)
+-   **Infrastructure**:
+    -   **Messenger**: Iris (카카오톡 연동 미들웨어)
+    -   **Monitoring**: Deunhealth (컨테이너 상태 모니터링 및 자동 복구)
+    -   **Deployment**: Docker & Docker Compose
 
-### 빌드
-
-```bash
-cd /home/kapu/gemini/hololive-kakao-bot-go
-CGO_ENABLED=0 go build -tags go_json -o bin/bot ./cmd/bot  # Main Bot
-```
-
-### 실행
-
-```bash
-# .env 파일 생성 (템플릿 참고)
-cp .env.example .env
-nano .env  # API 키 및 설정 입력
-
-# Bot 실행 (foreground)
-./scripts/start-bots.sh --foreground
-
-# Bot 실행 (background)
-./scripts/start-bots.sh
-```
-
-스크립트는 `logs/` 디렉터리에 표준 출력과 오류를 기록하고, 백그라운드 실행 시 PID를 저장합니다. 종료는 `./scripts/stop-bots.sh`를 사용하세요.
-
-### 운영 스크립트
-
-```bash
-./scripts/start-bots.sh   # Bot 시작 (background)
-./scripts/restart-bots.sh # Bot 재시작
-./scripts/stop-bots.sh    # Bot 종료
-./scripts/status-bots.sh  # 서비스 상태 및 의존성 확인
-```
-
-## 프로젝트 구조
+## 📂 프로젝트 구조
 
 ```
 hololive-kakao-bot-go/
 ├── cmd/
-│   ├── bot/                      # Main Bot (HTTP webhook + alarm + YouTube)
-│   └── tools/                    # 데이터 관리 도구
-│       ├── fetch_profiles/       # 공식 프로필 fetch
-│       └── warm_member_cache/    # 멤버 캐시 워밍업
+│   ├── bot/                      # Main Bot Entrypoint
+│   └── tools/                    # 데이터 관리 및 유틸리티 도구
 ├── internal/
-│   ├── adapter/                  # 메시지 포맷팅
-│   ├── bot/                      # 봇 오케스트레이션
-│   ├── command/                  # 명령어 핸들러
-│   ├── config/                   # 환경 설정
-│   ├── constants/                # 상수 정의
-│   ├── domain/                   # 도메인 모델
-│   ├── iris/                     # Iris Messenger 클라이언트
-│   ├── service/                  # 비즈니스 로직
-│   ├── platform/                 # 공통 부트스트랩/초기화 로직
-│   ├── mq/                       # Message Queue (ValkeyMQ)
-│   └── util/                     # 헬퍼 함수
-├── data/                         # 임베디드 정적 데이터
-│   ├── members.json              # 멤버 정보
-│   ├── official_profiles/*.json  # 공식 프로필
-│   └── official_translated/*.json# 번역된 프로필
-├── scripts/                      # 운영 스크립트
-└── bin/                          # 빌드된 바이너리 (gitignored)
-    └── bot
+│   ├── adapter/                  # 메시지 포맷팅 및 외부 인터페이스 어댑터
+│   ├── app/                      # 애플리케이션 라이프사이클 및 DI (Manual Injection)
+│   ├── bot/                      # 봇 핵심 로직 및 오케스트레이션
+│   ├── command/                  # 명령어 핸들러 (!라이브, !예정 등)
+│   ├── config/                   # 환경 설정 관리
+│   ├── domain/                   # 도메인 모델 정의 (GORM Models)
+│   ├── mq/                       # ValkeyMQ 메시지 수신/발신
+│   ├── server/                   # HTTP/H2C 서버 및 미들웨어
+│   ├── service/                  # 비즈니스 로직 (YouTube, Schedule, Alarm 등)
+│   └── platform/                 # 인프라 스트럭처 (DB, Cache 연결 등)
+├── data/                         # 임베디드 정적 데이터 (번역된 프로필 등)
+├── scripts/                      # 배포 및 실행 스크립트
+└── Dockerfile                    # 프로덕션 배포용 Docker 설정
 ```
 
-## 환경 변수 설정
+## 🚀 시작하기
 
-`.env.example`을 기준으로 `.env` 파일 또는 시스템 환경 변수로 설정:
+### 사전 요구사항
 
-```env
-# Iris Server Configuration
-IRIS_BASE_URL=http://localhost:3000
+-   Go 1.25 이상
+-   Valkey (또는 Redis) 서버
+-   PostgreSQL 데이터베이스
+-   Iris 메신저 서버 (카카오톡 연동용)
+-   Holodex API Key
 
-# Bot Webhook Server Configuration
-SERVER_PORT=30001
+### 로컬 실행 (개발용)
 
-# Admin Panel Credentials
-ADMIN_USER=admin
-ADMIN_PASS=change_this_password
+1.  **환경 변수 설정**:
+    ```bash
+    cp .env.example .env
+    # .env 파일을 열어 필요한 설정(API Key, DB 정보 등)을 입력하세요.
+    ```
 
-# KakaoTalk
-# 알림을 받을 카카오톡 방 이름들 (쉼표로 구분)
-KAKAO_ROOMS=홀로라이브 알림방
+2.  **데이터베이스 초기화**:
+    GORM Auto Migration을 통해 테이블이 자동으로 생성됩니다.
 
-# Holodex API (여러 키 로테이션 지원)
-HOLODEX_API_KEY_1=your_holodex_api_key_here
-HOLODEX_API_KEY_2=
-HOLODEX_API_KEY_3=
-HOLODEX_API_KEY_4=
-HOLODEX_API_KEY_5=
+3.  **빌드 및 실행**:
+    ```bash
+    # 의존성 설치
+    go mod download
 
-# Valkey - Cache
-CACHE_HOST=localhost
-CACHE_PORT=6379
-CACHE_PASSWORD=
-CACHE_DB=0
+    # 실행
+    go run ./cmd/bot
+    
+    # 또는 스크립트 사용
+    ./scripts/start-bots.sh --foreground
+    ```
 
-# Valkey - MQ (카카오 메시지 라우팅용, Docker 포트 1833 사용)
-MQ_HOST=localhost
-MQ_PORT=1833
-MQ_PASSWORD=
-MQ_STREAM_KEY=kakao:hololive
-MQ_CONSUMER_GROUP=hololive-bot-group
-MQ_CONSUMER_NAME=consumer-1
+### Docker Compose 배포 (프로덕션)
 
-# Notification Settings
-NOTIFICATION_ADVANCE_MINUTES=5,15,30
-CHECK_INTERVAL_SECONDS=60
+이 프로젝트는 `docker-compose`를 통한 통합 배포를 권장합니다.
 
-# Logging
-LOG_LEVEL=info
-LOG_FILE=logs/bot.log
-
-# Bot Command Prefix
-BOT_PREFIX=!
-BOT_SELF_USER=iris
+```yaml
+# docker-compose.prod.yml 예시 (메인 레포지토리 참조)
+services:
+  hololive-bot:
+    image: hololive-kakao-bot-go:latest
+    environment:
+      - SERVER_PORT=30001
+      - POSTGRES_HOST=postgres
+      - CACHE_HOST=valkey-cache
+      - MQ_HOST=valkey-mq
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    labels:
+      deunhealth.restart.on.unhealthy: "true" # 헬스 체크 실패 시 자동 재시작
 ```
 
-## 지원 명령어
+## ⚙️ 환경 변수 설정 (`.env`)
 
-📺 방송 확인
-  !라이브 - 현재 라이브 중인 방송
-  !라이브 [멤버명] - 특정 멤버 라이브 확인
-  !예정 - 예정된 방송 (24시간 기준)
-  !멤버 [이름] [일수] - 특정 멤버 일정 (기본 7일)
+주요 설정 항목은 다음과 같습니다.
 
-👤 멤버 정보
-  !정보 [멤버명] - 멤버 프로필 조회
-  예: "!미코 정보", "!아쿠아에 대해 알려줘"
+| 카테고리 | 변수명 | 설명 | 기본값 |
+| :--- | :--- | :--- | :--- |
+| **서버** | `SERVER_PORT` | 봇 웹 서버 포트 | `30001` |
+| | `ADMIN_PASS_HASH` | 관리자 패널 비밀번호 (Bcrypt 해시) | **필수** |
+| | `SESSION_SECRET` | 세션 보안을 위한 시크릿 키 | **필수** |
+| | `ADMIN_ALLOWED_IPS` | 관리자 페이지 접근 허용 IP (쉼표 구분) | (전체 허용) |
+| **Holodex** | `HOLODEX_API_KEY_1` | Holodex API 키 (여러 개 등록 가능 _1~_5) | **필수** |
+| **YouTube** | `YOUTUBE_API_KEY` | YouTube Data API 키 (구독자 수 조회용) | - |
+| **Kakao** | `KAKAO_ROOMS` | 봇이 응답할 카카오톡 방 이름 목록 (쉼표 구분) | `홀로라이브 알림방` |
+| | `KAKAO_ACL_ENABLED` | ACL(접근 제어) 활성화 여부 | `true` |
+| **Iris** | `IRIS_BASE_URL` | Iris 메신저 서버 주소 | `http://localhost:3000` |
+| **DB** | `POSTGRES_HOST`, `_PORT`, ... | PostgreSQL 연결 정보 | `localhost`, `5432` |
+| **Cache** | `CACHE_HOST`, `_PORT` | Valkey(Redis) 캐시 서버 정보 | `localhost`, `6379` |
+| **MQ** | `MQ_HOST`, `_PORT` | ValkeyMQ 서버 정보 | `localhost`, `1833` |
+| **Logging** | `LOG_LEVEL` | 로그 레벨 (`debug`, `info`, `warn`, `error`) | `info` |
 
-🔔 알람 설정
-  !알람 추가 [멤버명]
-  !알람 제거 [멤버명]
-  !알람 목록
-  !알람 초기화
+## 🕹 명령어 목록
 
-📊 통계
-  !구독자순위 - 최근 10일간 구독자 증가 순위 TOP 10
-  !구독자순위 [기간]
-  자동 알림: 마일스톤 달성 시 (10만, 100만, 500만 등)
+봇이 있는 채팅방에서 아래 명령어를 사용할 수 있습니다. (`!` 접두사 기준)
 
-❓ 도움말
-  !도움말 - 전체 명령어 요약 확인
+-   **방송 확인**
+    -   `!라이브`: 현재 방송 중인 모든 멤버 목록
+    -   `!라이브 [멤버명]`: 특정 멤버의 생방송 여부 확인
+    -   `!예정`: 향후 24시간 내 예정된 방송 목록
+    -   `!멤버 [이름]`: 해당 멤버의 주간 스케줄 확인
 
-## 기술 스택
+-   **정보 조회**
+    -   `!정보 [멤버명]`: 멤버 프로필 및 상세 정보 (예: `!정보 미코`)
+    -   `!구독자순위`: 멤버들의 구독자 수 및 최근 급상승 순위 (TOP 10)
 
-- **언어**: Go 1.24
-- **캐시**: Valkey
-- **로깅**: Uber Zap
-- **메신저**: Iris (KakaoTalk 연동)
-- **데이터**: Holodex API
+-   **알림 관리**
+    -   `!알람 추가 [멤버명]`: 해당 멤버의 방송 알림 받기
+    -   `!알람 제거 [멤버명]`: 해당 멤버의 알림 끄기
+    -   `!알람 목록`: 현재 구독 중인 알림 목록 확인
+    -   `!알람 초기화`: 모든 알림 설정 초기화
 
-## 아키텍처 특징
+-   **기타**
+    -   `!도움말`: 명령어 도움말 확인
 
-- **Rate Limiting**: Holodex API 요청 제한 준수
-- **캐싱 전략**: Valkey 다층 캐싱으로 API 호출 최소화
-- **임베디드 데이터**: 공식 프로필 정적 데이터 내장
+## 🛡 관리 및 모니터링
 
-## 테스트
+-   **Health Check**: `/health` 엔드포인트를 통해 봇의 상태를 확인할 수 있습니다.
+-   **Deunhealth**: 컨테이너가 멈추거나 헬스 체크에 실패하면 `deunhealth`가 자동으로 이를 감지하고 재시작하여 가용성을 유지합니다.
+-   **Graceful Shutdown**: 종료 시그널(SIGTERM) 수신 시 진행 중인 작업을 안전하게 마무리하고 종료합니다.
 
-```bash
-# 전체 테스트 실행
-go test ./internal/...
+## 📝 라이선스
 
-# 특정 패키지 테스트
-go test ./internal/domain -v
-
-# 커버리지 확인
-go test -cover ./internal/...
-```
-
-## 라이선스
-
-Private Repository
-
----
+MIT License. See [LICENSE](LICENSE) for details.
