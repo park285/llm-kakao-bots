@@ -8,6 +8,7 @@ import (
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
+	qerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/errors"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
@@ -23,6 +24,17 @@ func (s *RiddleService) handleGuess(
 	guess = strings.TrimSpace(guess)
 	if guess == "" {
 		return "", qmodel.FiveScaleAlwaysNo, cerrors.InvalidQuestionError{Message: "empty guess"}
+	}
+
+	// 개인별 Rate Limit 체크 (1분에 1회)
+	if s.guessRateLimiter != nil {
+		allowed, remaining, err := s.guessRateLimiter.CheckAndSet(ctx, chatID, userID)
+		if err != nil {
+			s.logger.Warn("guess_rate_limit_check_failed", "chat_id", chatID, "user_id", userID, "err", err)
+			// 에러 시 Rate Limit 무시하고 진행
+		} else if !allowed {
+			return "", qmodel.FiveScaleAlwaysNo, qerrors.GuessRateLimitError{RemainingSeconds: remaining, TotalSeconds: s.guessRateLimiter.GetLimitSeconds()}
+		}
 	}
 
 	if normalizeForEquality(guess) == normalizeForEquality(secret.Target) {

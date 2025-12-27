@@ -24,6 +24,7 @@ func GetErrorMapping(err error, commandPrefix string) ErrorMapping {
 		duplicate       qerrors.DuplicateQuestionError
 		hintLimit       qerrors.HintLimitExceededError
 		hintNA          qerrors.HintNotAvailableError
+		guessRateLimit  qerrors.GuessRateLimitError
 	)
 
 	switch {
@@ -49,6 +50,14 @@ func GetErrorMapping(err error, commandPrefix string) ErrorMapping {
 		}
 	case errors.As(err, &hintNA):
 		return ErrorMapping{Key: qmessages.ErrorHintNotAvailable}
+	case errors.As(err, &guessRateLimit):
+		return ErrorMapping{
+			Key: qmessages.ErrorGuessRateLimit,
+			Params: []messageprovider.Param{
+				messageprovider.P("remainingSeconds", guessRateLimit.RemainingSeconds),
+				messageprovider.P("totalSeconds", guessRateLimit.TotalSeconds),
+			},
+		}
 	case errors.Is(err, context.DeadlineExceeded):
 		return ErrorMapping{Key: qmessages.ErrorAITimeout}
 	default:

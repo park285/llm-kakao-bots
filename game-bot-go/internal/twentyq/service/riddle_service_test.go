@@ -152,6 +152,7 @@ answer:
 		wrongGuessStore,
 		topicHistoryStore,
 		voteStore,
+		nil, // guessRateLimiter
 		topicSelector,
 		statsRecorder,
 		logger,
@@ -744,7 +745,7 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 	// Need to initialize session
 	sStore.SaveSecret(ctx, chatID, qmodel.RiddleSecret{Target: "T"})
 
-	svc := NewRiddleService(llmClient, "/20q", msgProvider, qredis.NewLockManager(valkeyClient, logger), sStore, nil, qredis.NewHistoryStore(valkeyClient, logger), nil, nil, nil, nil, nil, nil, nil, logger)
+	svc := NewRiddleService(llmClient, "/20q", msgProvider, qredis.NewLockManager(valkeyClient, logger), sStore, nil, qredis.NewHistoryStore(valkeyClient, logger), nil, nil, nil, nil, nil, nil, nil, nil, logger)
 
 	_, err := svc.Answer(ctx, chatID, user1, nil, "bad input")
 	if err == nil {
@@ -846,7 +847,7 @@ func TestRiddleService_Normalize_EdgeCases(t *testing.T) {
 
 	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := NewRiddleService(client, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	svc := NewRiddleService(client, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 
 	ctx := context.Background()
 

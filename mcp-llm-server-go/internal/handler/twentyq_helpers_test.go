@@ -28,10 +28,10 @@ func TestBuildRecentQAHistoryContext(t *testing.T) {
 		{Role: "assistant", Content: "A: no"},
 	}
 	context := shared.BuildRecentQAHistoryContext(history, "[header]", 1)
-	if !strings.Contains(context, "Q: second") || !strings.Contains(context, "A: no") {
+	if !strings.Contains(context, "<q>second</q>") || !strings.Contains(context, "<a>no</a>") {
 		t.Fatalf("unexpected history context: %s", context)
 	}
-	if strings.Contains(context, "Q: first") {
+	if strings.Contains(context, "<q>first</q>") {
 		t.Fatalf("expected older history to be trimmed")
 	}
 }

@@ -103,28 +103,159 @@ func (c *Client) ChatWithUsage(ctx context.Context, req Request) (llm.ChatResult
 
 // Structured 는 JSON 스키마 기반 응답을 반환한다.
 func (c *Client) Structured(ctx context.Context, req Request, schema map[string]any) (map[string]any, string, error) {
+	parsed, model, _, err := c.structuredInternal(ctx, req, schema, false)
+	return parsed, model, err
+}
+
+// StructuredResult 는 검색 정보를 포함한 응답 결과다.
+type StructuredResult struct {
+	Payload       map[string]any
+	Model         string
+	SearchQueries []string // Google Search가 사용된 경우 검색 쿼리
+}
+
+// StructuredWithSearch 는 Google Search 도구를 활성화한 JSON 스키마 기반 응답을 반환한다.
+// LLM이 필요하다고 판단하면 자체적으로 검색을 수행한다.
+func (c *Client) StructuredWithSearch(ctx context.Context, req Request, schema map[string]any) (StructuredResult, error) {
+	parsed, model, searchQueries, err := c.structuredInternal(ctx, req, schema, true)
+	return StructuredResult{
+		Payload:       parsed,
+		Model:         model,
+		SearchQueries: searchQueries,
+	}, err
+}
+
+// ConsensusResult 는 합의 로직 결과다.
+type ConsensusResult struct {
+	Payload        map[string]any
+	Model          string
+	SearchQueries  []string
+	ConsensusField string // 합의 기준 필드
+	ConsensusValue string // 합의된 값
+	ConsensusCount int    // 동의한 호출 수
+	TotalCalls     int    // 총 호출 수
+}
+
+// StructuredWithConsensus 는 동일 요청을 N번 병렬 호출하여 합의된 결과를 반환한다.
+// fieldName 필드의 값을 기준으로 다수결을 수행한다.
+func (c *Client) StructuredWithConsensus(
+	ctx context.Context,
+	req Request,
+	schema map[string]any,
+	fieldName string,
+	numCalls int,
+) (ConsensusResult, error) {
+	if numCalls <= 1 {
+		result, err := c.StructuredWithSearch(ctx, req, schema)
+		if err != nil {
+			return ConsensusResult{}, err
+		}
+		value := ""
+		if v, ok := result.Payload[fieldName].(string); ok {
+			value = v
+		}
+		return ConsensusResult{
+			Payload:        result.Payload,
+			Model:          result.Model,
+			SearchQueries:  result.SearchQueries,
+			ConsensusField: fieldName,
+			ConsensusValue: value,
+			ConsensusCount: 1,
+			TotalCalls:     1,
+		}, nil
+	}
+
+	// 병렬 호출
+	type callResult struct {
+		result StructuredResult
+		err    error
+	}
+	results := make(chan callResult, numCalls)
+
+	for i := 0; i < numCalls; i++ {
+		go func() {
+			r, e := c.StructuredWithSearch(ctx, req, schema)
+			results <- callResult{result: r, err: e}
+		}()
+	}
+
+	// 결과 수집
+	votes := make(map[string]int)
+	payloads := make(map[string]map[string]any)
+	var allSearchQueries []string
+	var model string
+	successCount := 0
+
+	for i := 0; i < numCalls; i++ {
+		cr := <-results
+		if cr.err != nil {
+			continue
+		}
+		successCount++
+		if model == "" {
+			model = cr.result.Model
+		}
+		allSearchQueries = append(allSearchQueries, cr.result.SearchQueries...)
+
+		if value, ok := cr.result.Payload[fieldName].(string); ok {
+			votes[value]++
+			if _, exists := payloads[value]; !exists {
+				payloads[value] = cr.result.Payload
+			}
+		}
+	}
+
+	if successCount == 0 {
+		return ConsensusResult{}, errors.New("all consensus calls failed")
+	}
+
+	// 다수결
+	var winningValue string
+	var winningCount int
+	for value, count := range votes {
+		if count > winningCount {
+			winningValue = value
+			winningCount = count
+		}
+	}
+
+	return ConsensusResult{
+		Payload:        payloads[winningValue],
+		Model:          model,
+		SearchQueries:  allSearchQueries,
+		ConsensusField: fieldName,
+		ConsensusValue: winningValue,
+		ConsensusCount: winningCount,
+		TotalCalls:     numCalls,
+	}, nil
+}
+
+func (c *Client) structuredInternal(ctx context.Context, req Request, schema map[string]any, enableSearch bool) (map[string]any, string, []string, error) {
 	start := time.Now()
-	response, model, err := c.generate(ctx, req, "application/json", schema)
+	response, model, err := c.generateWithTools(ctx, req, "application/json", schema, enableSearch)
 	if err != nil {
 		c.metrics.RecordError(time.Since(start))
-		return nil, model, err
+		return nil, model, nil, err
 	}
 
 	usageStats := extractUsage(response)
 	c.metrics.RecordSuccess(time.Since(start), usageStats)
 	c.recordUsage(ctx, usageStats)
 
+	// Extract search queries from grounding metadata
+	searchQueries := extractSearchQueries(response)
+
 	payload := response.Text()
 	if strings.TrimSpace(payload) == "" {
-		return nil, model, errors.New("empty structured response")
+		return nil, model, searchQueries, errors.New("empty structured response")
 	}
 
 	var parsed map[string]any
 	if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
-		return nil, model, fmt.Errorf("decode structured response: %w", err)
+		return nil, model, searchQueries, fmt.Errorf("decode structured response: %w", err)
 	}
 
-	return parsed, model, nil
+	return parsed, model, searchQueries, nil
 }
 
 func (c *Client) recordUsage(ctx context.Context, usageStats llm.Usage) {
@@ -134,11 +265,12 @@ func (c *Client) recordUsage(ctx context.Context, usageStats llm.Usage) {
 	c.usageRecorder.Record(ctx, int64(usageStats.InputTokens), int64(usageStats.OutputTokens), int64(usageStats.ReasoningTokens))
 }
 
-func (c *Client) generate(
+func (c *Client) generateWithTools(
 	ctx context.Context,
 	req Request,
 	responseMimeType string,
 	responseSchema map[string]any,
+	enableSearch bool,
 ) (*genai.GenerateContentResponse, string, error) {
 	client, err := c.selectClient(ctx)
 	if err != nil {
@@ -151,12 +283,29 @@ func (c *Client) generate(
 	}
 
 	genConfig := c.buildGenerateConfig(req.SystemPrompt, req.Task, model, responseMimeType, responseSchema)
+
+	// Google Search 도구 활성화
+	if enableSearch {
+		genConfig.Tools = []*genai.Tool{
+			{GoogleSearch: &genai.GoogleSearch{}},
+		}
+	}
+
 	contents := buildContents(req.Prompt, req.History)
 	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
 	if err != nil {
 		return nil, model, fmt.Errorf("generate content: %w", err)
 	}
 	return response, model, nil
+}
+
+func (c *Client) generate(
+	ctx context.Context,
+	req Request,
+	responseMimeType string,
+	responseSchema map[string]any,
+) (*genai.GenerateContentResponse, string, error) {
+	return c.generateWithTools(ctx, req, responseMimeType, responseSchema, false)
 }
 
 // selectClient는 라운드로빈으로 API 키를 선택하고 해당 클라이언트를 반환한다.
@@ -323,4 +472,16 @@ func extractUsage(response *genai.GenerateContentResponse) llm.Usage {
 
 func isGemini3(model string) bool {
 	return strings.Contains(strings.ToLower(model), "gemini-3")
+}
+
+// extractSearchQueries 는 응답에서 Google Search 쿼리를 추출한다.
+func extractSearchQueries(response *genai.GenerateContentResponse) []string {
+	if response == nil || len(response.Candidates) == 0 {
+		return nil
+	}
+	gm := response.Candidates[0].GroundingMetadata
+	if gm == nil {
+		return nil
+	}
+	return gm.WebSearchQueries
 }

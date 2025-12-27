@@ -32,3 +32,18 @@ func TestValidateSystemStatic(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestEscapeXML(t *testing.T) {
+	input := `<tag>&"'`
+	expected := "&lt;tag&gt;&amp;&quot;&apos;"
+	if got := EscapeXML(input); got != expected {
+		t.Fatalf("unexpected escape result: %s", got)
+	}
+}
+
+func TestWrapXML(t *testing.T) {
+	got := WrapXML("q", `a<b`)
+	if got != "<q>a&lt;b</q>" {
+		t.Fatalf("unexpected wrap result: %s", got)
+	}
+}

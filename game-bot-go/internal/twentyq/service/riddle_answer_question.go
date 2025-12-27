@@ -67,6 +67,9 @@ func (s *RiddleService) handleRegularQuestionWithFlags(
 			if *parsed == qmodel.FiveScaleInvalid {
 				return "", qmodel.FiveScaleAlwaysNo, cerrors.InvalidQuestionError{Message: "invalid question"}
 			}
+			if *parsed == qmodel.FiveScalePolicyViolation {
+				return "", qmodel.FiveScaleAlwaysNo, cerrors.InvalidQuestionError{Message: "policy violation"}
+			}
 			scale = *parsed
 			answerToken = qmodel.FiveScaleToken(*parsed)
 		}

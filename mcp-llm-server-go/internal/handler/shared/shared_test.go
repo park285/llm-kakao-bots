@@ -46,10 +46,10 @@ func TestBuildRecentQAHistoryContext(t *testing.T) {
 
 	// maxPairs=1: 최근 1쌍만 포함
 	context := shared.BuildRecentQAHistoryContext(history, "[header]", 1)
-	if !strings.Contains(context, "Q: third") || !strings.Contains(context, "A: maybe") {
+	if !strings.Contains(context, "<q>third</q>") || !strings.Contains(context, "<a>maybe</a>") {
 		t.Fatalf("expected recent pair in context: %s", context)
 	}
-	if strings.Contains(context, "Q: first") {
+	if strings.Contains(context, "<q>first</q>") {
 		t.Fatalf("expected older history to be trimmed")
 	}
 

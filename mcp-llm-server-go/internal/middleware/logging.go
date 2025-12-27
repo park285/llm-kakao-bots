@@ -45,7 +45,7 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 			case status >= 400:
 				logger.Warn("http_request", fields...)
 			default:
-				logger.Info("http_request", fields...)
+				logger.Debug("http_request", fields...)
 			}
 		}()
 

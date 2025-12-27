@@ -179,6 +179,10 @@ type ValkeyMQConfigEnvOptions struct {
 	ResetConsumerGroupOnStartupKeys []string
 	StreamKeyKeys                   []string
 	ReplyStreamKeyKeys              []string
+	BatchSizeKeys                   []string
+	BlockTimeoutMillisKeys          []string
+	ConcurrencyKeys                 []string
+	StreamMaxLenKeys                []string
 
 	DefaultHost     string
 	DefaultPort     int
@@ -193,6 +197,62 @@ type ValkeyMQConfigEnvOptions struct {
 	DefaultResetConsumerGroupOnStartup bool
 	DefaultStreamKey                   string
 	DefaultReplyStreamKey              string
+	DefaultBatchSize                   int64
+	DefaultBlockTimeoutMillis          int64
+	DefaultConcurrency                 int
+	DefaultStreamMaxLen                int64
+}
+
+type valkeyMQTuning struct {
+	batchSize          int64
+	blockTimeoutMillis int64
+	concurrency        int
+	streamMaxLen       int64
+}
+
+func readValkeyMQTuning(opts ValkeyMQConfigEnvOptions) (valkeyMQTuning, error) {
+	batchSize, err := Int64FromEnvFirstNonEmpty(opts.BatchSizeKeys, opts.DefaultBatchSize)
+	if err != nil {
+		return valkeyMQTuning{}, fmt.Errorf("read valkey mq batch size failed: %w", err)
+	}
+
+	blockTimeoutMillis, err := Int64FromEnvFirstNonEmpty(
+		opts.BlockTimeoutMillisKeys,
+		opts.DefaultBlockTimeoutMillis,
+	)
+	if err != nil {
+		return valkeyMQTuning{}, fmt.Errorf("read valkey mq read timeout failed: %w", err)
+	}
+
+	concurrency, err := IntFromEnvFirstNonEmpty(opts.ConcurrencyKeys, opts.DefaultConcurrency)
+	if err != nil {
+		return valkeyMQTuning{}, fmt.Errorf("read valkey mq concurrency failed: %w", err)
+	}
+
+	streamMaxLen, err := Int64FromEnvFirstNonEmpty(opts.StreamMaxLenKeys, opts.DefaultStreamMaxLen)
+	if err != nil {
+		return valkeyMQTuning{}, fmt.Errorf("read valkey mq stream max len failed: %w", err)
+	}
+
+	if batchSize <= 0 {
+		batchSize = opts.DefaultBatchSize
+	}
+	if blockTimeoutMillis <= 0 {
+		blockTimeoutMillis = opts.DefaultBlockTimeoutMillis
+	}
+	if concurrency <= 0 {
+		concurrency = opts.DefaultConcurrency
+	}
+	if streamMaxLen <= 0 {
+		streamMaxLen = opts.DefaultStreamMaxLen
+	}
+
+	return valkeyMQTuning{
+		batchSize:          batchSize,
+		blockTimeoutMillis: blockTimeoutMillis,
+		concurrency:        concurrency,
+		streamMaxLen:       streamMaxLen,
+	}, nil
 }
 
 // ReadValkeyMQConfigFromEnv 는 동작을 수행한다.
@@ -223,6 +283,11 @@ func ReadValkeyMQConfigFromEnv(opts ValkeyMQConfigEnvOptions) (ValkeyMQConfig, e
 		)
 	}
 
+	tuning, err := readValkeyMQTuning(opts)
+	if err != nil {
+		return ValkeyMQConfig{}, err
+	}
+
 	resetGroupOnStartup, err := BoolFromEnvFirstNonEmpty(
 		opts.ResetConsumerGroupOnStartupKeys,
 		opts.DefaultResetConsumerGroupOnStartup,
@@ -232,6 +297,7 @@ func ReadValkeyMQConfigFromEnv(opts ValkeyMQConfigEnvOptions) (ValkeyMQConfig, e
 	}
 
 	timeout := time.Duration(timeoutMillis) * time.Millisecond
+	blockTimeout := time.Duration(tuning.blockTimeoutMillis) * time.Millisecond
 
 	return ValkeyMQConfig{
 		Host:     StringFromEnvFirstNonEmpty(opts.HostKeys, opts.DefaultHost),
@@ -260,6 +326,10 @@ func ReadValkeyMQConfigFromEnv(opts ValkeyMQConfigEnvOptions) (ValkeyMQConfig, e
 			opts.ReplyStreamKeyKeys,
 			opts.DefaultReplyStreamKey,
 		),
+		BatchSize:    tuning.batchSize,
+		BlockTimeout: blockTimeout,
+		Concurrency:  tuning.concurrency,
+		StreamMaxLen: tuning.streamMaxLen,
 	}, nil
 }
 

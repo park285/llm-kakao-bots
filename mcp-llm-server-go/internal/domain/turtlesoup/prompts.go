@@ -45,9 +45,9 @@ func (p *Prompts) AnswerUser(puzzle string, question string, history string) (st
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"puzzle":   puzzle,
+		"puzzle":   prompt.WrapXML("puzzle", puzzle),
 		"history":  history,
-		"question": question,
+		"question": prompt.WrapXML("question", question),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format answer.user: %w", err)
@@ -75,7 +75,7 @@ func (p *Prompts) HintUser(puzzle string, level int) (string, error) {
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"puzzle": puzzle,
+		"puzzle": prompt.WrapXML("puzzle", puzzle),
 		"level":  strconv.Itoa(level),
 	})
 	if err != nil {
@@ -104,8 +104,8 @@ func (p *Prompts) ValidateUser(solution string, playerAnswer string) (string, er
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"solution":      solution,
-		"player_answer": playerAnswer,
+		"solution":      prompt.WrapXML("solution", solution),
+		"player_answer": prompt.WrapXML("player_answer", playerAnswer),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format validate.user: %w", err)
@@ -133,7 +133,7 @@ func (p *Prompts) RevealUser(puzzle string) (string, error) {
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"puzzle": puzzle,
+		"puzzle": prompt.WrapXML("puzzle", puzzle),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format reveal.user: %w", err)
@@ -161,9 +161,9 @@ func (p *Prompts) GenerateUser(category string, difficulty int, theme string, ex
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"category":   category,
+		"category":   prompt.WrapXML("category", category),
 		"difficulty": strconv.Itoa(difficulty),
-		"theme":      theme,
+		"theme":      prompt.WrapXML("theme", theme),
 		"examples":   examples,
 	})
 	if err != nil {
@@ -192,9 +192,9 @@ func (p *Prompts) RewriteUser(title string, scenario string, solution string, di
 		return "", err
 	}
 	formatted, err := prompt.FormatTemplate(template, map[string]string{
-		"title":      title,
-		"scenario":   scenario,
-		"solution":   solution,
+		"title":      prompt.WrapXML("title", title),
+		"scenario":   prompt.WrapXML("scenario", scenario),
+		"solution":   prompt.WrapXML("solution", solution),
 		"difficulty": strconv.Itoa(difficulty),
 	})
 	if err != nil {
