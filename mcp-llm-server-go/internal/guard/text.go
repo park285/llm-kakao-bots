@@ -4,11 +4,19 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/mtibben/confusables"
 	"golang.org/x/text/unicode/norm"
 )
 
 func normalizeText(text string) string {
-	normalized := norm.NFKC.String(text)
+	// 1. Homoglyph 정규화 (Visual Skeleton 추출)
+	// 예: "Sеcret" (Cyrillic e) -> "Secret"
+	skeleton := confusables.Skeleton(text)
+
+	// 2. NFKC 정규화
+	normalized := norm.NFKC.String(skeleton)
+
+	// 3. 제어 문자 제거
 	return stripControlChars(normalized)
 }
 

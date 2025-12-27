@@ -62,14 +62,17 @@ system: |
   No explanations, no thinking process, no markdown outside JSON.
 
 user: |
-  Category: {category}, Difficulty: {difficulty}, Theme: {theme}
+  Category: {category}
+  Difficulty: {difficulty}
+  Theme: {theme}
   
   [Preset Examples]
   {examples}
   
   [Constraints]
-  - Category MUST be exactly: {category}
+  - Category MUST be exactly the raw value inside the <category> tag.
   - Difficulty MUST be exactly the integer: {difficulty}. No other difficulty allowed.
+  - Theme is provided inside the <theme> tag (use the raw value, do not include tags).
   - Generate EXACTLY 3 hints.
   - All content (title, scenario, solution, hints) MUST be in Korean.
   

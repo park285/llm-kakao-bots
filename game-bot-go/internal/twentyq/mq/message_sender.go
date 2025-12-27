@@ -56,8 +56,9 @@ func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMe
 }
 
 // SendError: 발생한 에러에 매핑된 사용자 메시지를 전송한다.
+// 게임 관련 에러는 final 타입으로 전송하여 Iris의 에러 이모지 추가를 방지한다.
 func (s *MessageSender) SendError(ctx context.Context, message mqmsg.InboundMessage, mapping ErrorMapping) error {
-	return s.publish(ctx, mqmsg.NewError(message.ChatID, s.msgProvider.Get(mapping.Key, mapping.Params...), message.ThreadID))
+	return s.publish(ctx, mqmsg.NewFinal(message.ChatID, s.msgProvider.Get(mapping.Key, mapping.Params...), message.ThreadID))
 }
 
 // SendLockError: 락 획득 실패(다른 요청 처리 중) 시 안내 메시지를 전송한다.
