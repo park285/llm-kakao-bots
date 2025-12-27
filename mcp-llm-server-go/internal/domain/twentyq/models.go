@@ -18,6 +18,8 @@ const (
 	AnswerProbablyNo AnswerScale = "아마도 아니오"
 	// AnswerNo 는 부정 답변이다.
 	AnswerNo AnswerScale = domainmodels.AnswerNoText
+	// AnswerPolicyViolation 는 정책 위반 질문이다. 히스토리에 기록되지 않는다.
+	AnswerPolicyViolation AnswerScale = "정책 위반"
 )
 
 var answerScales = []AnswerScale{
@@ -25,6 +27,7 @@ var answerScales = []AnswerScale{
 	AnswerProbablyYes,
 	AnswerProbablyNo,
 	AnswerNo,
+	AnswerPolicyViolation,
 }
 
 // ParseAnswerScale 는 답변 척도를 파싱한다.
@@ -88,7 +91,8 @@ func SynonymResultName(value string) (string, bool) {
 
 // HintsOutput 은 힌트 출력 스키마다.
 type HintsOutput struct {
-	Hints []string `json:"hints"`
+	Reasoning string   `json:"reasoning"`
+	Hints     []string `json:"hints"`
 }
 
 // NormalizeOutput 은 정규화 출력 스키마다.
@@ -98,7 +102,8 @@ type NormalizeOutput struct {
 
 // VerifyOutput 은 검증 출력 스키마다.
 type VerifyOutput struct {
-	Result string `json:"result"`
+	Reasoning string `json:"reasoning"`
+	Result    string `json:"result"`
 }
 
 // SynonymOutput 은 유사어 출력 스키마다.
@@ -106,11 +111,44 @@ type SynonymOutput struct {
 	Result string `json:"result"`
 }
 
-var hintsSchema = domainmodels.RequiredStringArrayFieldSchema("hints")
+// hintsSchema 는 힌트 스키마다 (reasoning + hints 배열).
+var hintsSchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"reasoning": map[string]any{
+			"type":        "string",
+			"description": "Thought process for creating the poetic hint",
+		},
+		"hints": map[string]any{
+			"type": "array",
+			"items": map[string]any{
+				"type": "string",
+			},
+		},
+	},
+	"required": []string{"reasoning", "hints"},
+}
 
 var normalizeSchema = domainmodels.RequiredStringFieldSchema("normalized")
 
-var verifySchema = domainmodels.RequiredStringFieldSchema("result")
+var verifySchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"reasoning": map[string]any{
+			"type":        "string",
+			"description": "Step-by-step thought process for the verification decision",
+		},
+		"result": map[string]any{
+			"type": "string",
+			"enum": []string{
+				string(VerifyAccept),
+				string(VerifyClose),
+				string(VerifyReject),
+			},
+		},
+	},
+	"required": []string{"reasoning", "result"},
+}
 
 var synonymSchema = domainmodels.RequiredStringFieldSchema("result")
 
@@ -136,13 +174,19 @@ func SynonymSchema() map[string]any {
 
 // AnswerOutput 은 답변 출력 스키마다.
 type AnswerOutput struct {
-	Answer string `json:"answer"`
+	Reasoning  string  `json:"reasoning"`
+	Answer     string  `json:"answer"`
+	Confidence float64 `json:"confidence"`
 }
 
-// answerSchema 는 답변 스키마다 (enum 제약).
+// answerSchema 는 답변 스키마다 (reasoning + enum 제약 + confidence).
 var answerSchema = map[string]any{
 	"type": "object",
 	"properties": map[string]any{
+		"reasoning": map[string]any{
+			"type":        "string",
+			"description": "Step-by-step thought process explaining how you arrived at the answer",
+		},
 		"answer": map[string]any{
 			"type": "string",
 			"enum": []string{
@@ -150,10 +194,17 @@ var answerSchema = map[string]any{
 				string(AnswerProbablyYes),
 				string(AnswerProbablyNo),
 				string(AnswerNo),
+				string(AnswerPolicyViolation),
 			},
 		},
+		"confidence": map[string]any{
+			"type":        "number",
+			"minimum":     0.0,
+			"maximum":     1.0,
+			"description": "Confidence level 0.0-1.0. Use < 0.5 if uncertain, prefer 아마도 scales when low confidence.",
+		},
 	},
-	"required": []string{"answer"},
+	"required": []string{"reasoning", "answer", "confidence"},
 }
 
 // AnswerSchema 는 답변 JSON 스키마를 반환한다.

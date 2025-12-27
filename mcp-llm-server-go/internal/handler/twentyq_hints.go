@@ -9,6 +9,8 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
 )
 
@@ -45,7 +47,7 @@ func (h *TwentyQHandler) handleHints(c *gin.Context) {
 		return
 	}
 	if detailsJSON != "" {
-		userContent = userContent + "\n\n[추가 정보(JSON)]\n" + detailsJSON
+		userContent = userContent + "\n\n[추가 정보(JSON)]\n" + prompt.WrapXML("details_json", detailsJSON)
 	}
 
 	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
@@ -57,6 +59,11 @@ func (h *TwentyQHandler) handleHints(c *gin.Context) {
 		h.logError(err)
 		writeError(c, err)
 		return
+	}
+
+	// Log Chain of Thought reasoning
+	if reasoning, ok := payload["reasoning"].(string); ok && reasoning != "" {
+		h.logger.Info("twentyq_hints_cot", "request_id", middleware.GetRequestID(c), "reasoning", reasoning)
 	}
 
 	hints, err := shared.ParseStringSlice(payload, "hints")

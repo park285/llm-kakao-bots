@@ -13,6 +13,8 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/llm"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
 )
@@ -78,10 +80,13 @@ func (h *TwentyQHandler) handleAnswer(c *gin.Context) {
 		return
 	}
 
-	if err := h.appendAnswerHistory(c.Request.Context(), sessionID, req.Question, scaleText); err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
+	// 정책 위반 질문은 히스토리에 추가하지 않음
+	if scaleText != string(twentyq.AnswerPolicyViolation) {
+		if err := h.appendAnswerHistory(c.Request.Context(), sessionID, req.Question, scaleText); err != nil {
+			h.logError(err)
+			writeError(c, err)
+			return
+		}
 	}
 
 	var scale *string
@@ -153,7 +158,7 @@ func (h *TwentyQHandler) buildAnswerPrompt(
 		return "", "", fmt.Errorf("format answer user prompt: %w", err)
 	}
 	if detailsJSON != "" {
-		userContent = userContent + "\n\n[추가 정보(JSON)]\n" + detailsJSON
+		userContent = userContent + "\n\n[추가 정보(JSON)]\n" + prompt.WrapXML("details_json", detailsJSON)
 	}
 	return system, userContent, nil
 }
@@ -198,7 +203,7 @@ func (h *TwentyQHandler) logAnswerRequest(sessionID string, historyCount int, qu
 }
 
 func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userContent string) (string, string, error) {
-	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
+	result, err := h.client.StructuredWithSearch(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
 		Task:         "answer",
@@ -207,7 +212,19 @@ func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userConten
 		return "", "", fmt.Errorf("answer structured: %w", err)
 	}
 
-	rawValue, ok := payload["answer"].(string)
+	requestID := middleware.GetRequestID(c)
+
+	// Log Chain of Thought reasoning
+	if reasoning, ok := result.Payload["reasoning"].(string); ok && reasoning != "" {
+		h.logger.Info("twentyq_cot", "request_id", requestID, "reasoning", reasoning)
+	}
+
+	// Log Google Search usage if any
+	if len(result.SearchQueries) > 0 {
+		h.logger.Info("twentyq_search", "request_id", requestID, "queries", result.SearchQueries)
+	}
+
+	rawValue, ok := result.Payload["answer"].(string)
 	if !ok || rawValue == "" {
 		return "", "", nil
 	}
