@@ -36,3 +36,13 @@ func (e HintLimitExceededError) Error() string {
 type HintNotAvailableError struct{}
 
 func (e HintNotAvailableError) Error() string { return "hint not available" }
+
+// GuessRateLimitError: 정답 시도 횟수 제한을 초과했을 때 발생하는 에러
+type GuessRateLimitError struct {
+	RemainingSeconds int64
+	TotalSeconds     int64
+}
+
+func (e GuessRateLimitError) Error() string {
+	return fmt.Sprintf("guess rate limit exceeded remainingSeconds=%d", e.RemainingSeconds)
+}

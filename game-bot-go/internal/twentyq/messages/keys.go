@@ -122,6 +122,7 @@ const (
 	ErrorUserBlocked       = "error.user_blocked"
 	ErrorChatBlocked       = "error.chat_blocked"
 	ErrorNoPermission      = "error.no_permission"
+	ErrorGuessRateLimit    = "error.guess_rate_limit"
 )
 
 // StatsNotFound: 전적 조회 관련 메시지 키
