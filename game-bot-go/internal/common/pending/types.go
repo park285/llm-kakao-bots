@@ -13,6 +13,14 @@ const (
 	EnqueueDuplicate
 )
 
+// Lua 스크립트 반환값 상수 (오타 방지)
+const (
+	luaStatusSuccess      = "SUCCESS"
+	luaStatusDuplicate    = "DUPLICATE"
+	luaStatusQueueFull    = "QUEUE_FULL"
+	luaStatusInconsistent = "INCONSISTENT"
+)
+
 func (r EnqueueResult) String() string {
 	switch r {
 	case EnqueueSuccess:
@@ -37,6 +45,8 @@ const (
 	DequeueExhausted
 	// DequeueSuccess: 유효한 메시지를 성공적으로 추출함
 	DequeueSuccess
+	// DequeueInconsistent: ZSET에는 있지만 HASH에 데이터 없음 (Self-Healing 완료, 재시도 권장)
+	DequeueInconsistent
 )
 
 func (s DequeueStatus) String() string {
@@ -47,6 +57,8 @@ func (s DequeueStatus) String() string {
 		return "EXHAUSTED"
 	case DequeueSuccess:
 		return "SUCCESS"
+	case DequeueInconsistent:
+		return "INCONSISTENT"
 	default:
 		return "UNKNOWN"
 	}

@@ -95,13 +95,13 @@ func (s *Store) enqueueInternal(
 	}
 
 	switch strings.TrimSpace(result) {
-	case "SUCCESS":
+	case luaStatusSuccess:
 		s.logger.Debug("enqueue_success", "chat_id", chatID, "user_id", userID)
 		return EnqueueSuccess, nil
-	case "DUPLICATE":
+	case luaStatusDuplicate:
 		s.logger.Debug("enqueue_duplicate", "chat_id", chatID, "user_id", userID)
 		return EnqueueDuplicate, nil
-	case "QUEUE_FULL":
+	case luaStatusQueueFull:
 		s.logger.Warn("enqueue_queue_full", "chat_id", chatID)
 		return EnqueueQueueFull, nil
 	default:
@@ -131,20 +131,35 @@ func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, erro
 		return DequeueResult{}, wrapRedisError("pending_dequeue", respErr)
 	}
 
-	values, err := valkeyx.ParseLuaArray(resp, 3)
+	// Lua 반환값 파싱: 3개(Success) 또는 2개(Inconsistent)
+	rawValues, err := resp.ToArray()
 	if err != nil {
-		return DequeueResult{}, wrapRedisError("pending_dequeue_parse", err)
+		return DequeueResult{}, wrapRedisError("pending_dequeue_parse_array", err)
 	}
 
-	userID, err := values[0].ToString()
+	// [Stability] INCONSISTENT 상태 처리: {"INCONSISTENT", userId}
+	if len(rawValues) == 2 {
+		firstVal, _ := rawValues[0].ToString()
+		if firstVal == luaStatusInconsistent {
+			userID, _ := rawValues[1].ToString()
+			s.logger.Warn("dequeue_inconsistent", "chat_id", chatID, "user_id", userID)
+			return DequeueResult{Status: DequeueInconsistent, UserID: userID}, nil
+		}
+	}
+
+	if len(rawValues) != 3 {
+		return DequeueResult{}, fmt.Errorf("pending dequeue unexpected array length: %d", len(rawValues))
+	}
+
+	userID, err := rawValues[0].ToString()
 	if err != nil {
 		return DequeueResult{}, fmt.Errorf("pending dequeue parse user id failed: %w", err)
 	}
-	timestamp, err := valkeyx.ParseLuaScoreToInt64(values[1])
+	timestamp, err := valkeyx.ParseLuaScoreToInt64(rawValues[1])
 	if err != nil {
 		return DequeueResult{}, fmt.Errorf("pending dequeue parse score failed: %w", err)
 	}
-	raw, err := values[2].ToString()
+	raw, err := rawValues[2].ToString()
 	if err != nil {
 		return DequeueResult{}, fmt.Errorf("pending dequeue parse json failed: %w", err)
 	}

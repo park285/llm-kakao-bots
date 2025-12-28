@@ -4,7 +4,11 @@
 -- KEYS[1]: dataKey (HASH)
 -- KEYS[2]: orderKey (ZSET)
 -- ARGV[1]: staleThresholdMS (호환용, ZSET 로직에서는 미사용)
--- Returns: nil | {userId, score, json}
+-- ============================================================
+-- Returns:
+--   Empty: nil
+--   Success: {userId, score, json}
+--   Inconsistent: {"INCONSISTENT", userId} (ZSET에만 존재, HASH에 없음)
 -- ============================================================
 
 local dataKey = KEYS[1]
@@ -23,11 +27,12 @@ local userId = members[1]
 local val = redis.call("HGET", dataKey, userId)
 local score = redis.call("ZSCORE", orderKey, userId)
 
--- 3. 데이터가 HASH에 없으면 ZSET에서도 정리 (Inconsistency Fix)
+-- 3. [Stability] 데이터 불일치 방어: ZSET에만 존재, HASH에 없음
 if not val then
+    -- ZSET에서 정리 (Self-Healing)
     redis.call("ZREM", orderKey, userId)
-    -- 재귀적으로 다음 항목 시도할 수도 있으나, 일단 빈 결과 반환하여 다음 폴링 유도
-    return nil 
+    -- Go 클라이언트에 명시적 INCONSISTENT 반환 → 즉시 재시도 유도
+    return {"INCONSISTENT", userId}
 end
 
 -- 4. 큐에서 제거 (Commit Dequeue)
@@ -35,3 +40,4 @@ redis.call("ZREM", orderKey, userId)
 redis.call("HDEL", dataKey, userId)
 
 return {userId, score, val}
+
