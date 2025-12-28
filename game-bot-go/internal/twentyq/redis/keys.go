@@ -78,12 +78,6 @@ func lockKey(chatID string) string {
 	return valkeyx.BuildKey(qconfig.RedisKeyLockPrefix, chatID)
 }
 
-// readLockKey 는 세션 읽기 락 키를 생성한다.
-// 형식: 20q:lock:{chatID}:read
-func readLockKey(chatID string) string {
-	return valkeyx.BuildKeySuffix(qconfig.RedisKeyLockPrefix, chatID, "read")
-}
-
 // chainSkipFlagKey 는 체인 질문 스킵 플래그 키를 생성한다.
 // 형식: 20q:pending-messages:chain_skip:{chatID}:{userID}
 func chainSkipFlagKey(chatID string, userID string) string {

@@ -55,7 +55,7 @@ const (
 // RedisSessionTTLSeconds 는 Redis TTL 상수 목록이다.
 const (
 	RedisSessionTTLSeconds    = 12 * 60 * 60
-	RedisLockTTLSeconds       = 300
+	RedisLockTTLSeconds       = 5
 	RedisProcessingTTLSeconds = 200
 )
 

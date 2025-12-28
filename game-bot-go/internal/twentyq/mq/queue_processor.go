@@ -186,18 +186,7 @@ func (p *MessageQueueProcessor) processSingleQueuedMessage(
 		holderName = *pending.Sender
 	}
 
-	cmd := p.commandParser.Parse(pending.Content)
-	requiresWrite := true
-	if cmd != nil {
-		requiresWrite = cmd.RequiresWriteLock()
-	}
-
-	lockFn := p.lockManager.WithLock
-	if !requiresWrite {
-		lockFn = p.lockManager.WithReadLock
-	}
-
-	lockErr := lockFn(ctx, chatID, &holderName, func(ctx context.Context) error {
+	lockErr := p.lockManager.WithLock(ctx, chatID, &holderName, func(ctx context.Context) error {
 		if err := p.processingLockService.StartProcessing(ctx, chatID); err != nil {
 			return fmt.Errorf("start processing failed: %w", err)
 		}

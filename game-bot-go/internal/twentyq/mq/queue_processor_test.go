@@ -60,14 +60,6 @@ func (m *mockLockManagerForTest) WithLock(_ context.Context, _ string, _ *string
 	return fn(context.Background())
 }
 
-func (m *mockLockManagerForTest) WithReadLock(_ context.Context, _ string, _ *string, fn func(context.Context) error) error {
-	m.lockCalls++
-	if m.lockErr != nil {
-		return m.lockErr
-	}
-	return fn(context.Background())
-}
-
 func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(nil, nil))
 }

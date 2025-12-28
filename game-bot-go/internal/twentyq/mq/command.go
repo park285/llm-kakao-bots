@@ -54,18 +54,6 @@ type Command struct {
 	ModelOverride *string
 }
 
-// RequiresWriteLock: 해당 명령어를 처리하기 위해 게임 상태에 대한 쓰기 락(배타적 락)이 필요한지 여부를 반환한다.
-// 조회성 명령어(Status, Stats 등)는 락 없이 또는 읽기 락으로 처리 가능할 수 있음을 나타낸다.
-func (c Command) RequiresWriteLock() bool {
-	switch c.Kind {
-	case CommandStatus,
-		CommandUserStats, CommandRoomStats, CommandAdminUsage:
-		return false
-	default:
-		return true
-	}
-}
-
 // WaitingMessageKey: 명령어를 처리하는 동안 사용자에게 즉시 보여줄 '대기 중' 메시지의 키를 반환한다.
 // 반환값이 nil이면 별도의 대기 메시지를 보내지 않는다.
 func (c Command) WaitingMessageKey() *string {

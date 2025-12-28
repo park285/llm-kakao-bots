@@ -9,7 +9,9 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/lockutil"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
+	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 )
 
 func newTestLockManager(t *testing.T) (*LockManager, valkey.Client) {
@@ -129,55 +131,75 @@ func TestLockManager_Reentry(t *testing.T) {
 	}
 }
 
-func TestLockManager_ReadWriteExclusion(t *testing.T) {
+func TestLockManager_AcquireExclusive(t *testing.T) {
 	lm, client := newTestLockManager(t)
 	defer client.Close()
 	prefix := testhelper.UniqueTestPrefix(t)
 	defer testhelper.CleanupTestKeys(t, client, "20q:")
 
 	ctx := context.Background()
-	chatID := prefix + "room_rw"
+	chatID := prefix + "room_acquire"
 
-	// 1. Acquire Write Lock
-	startCh := make(chan struct{})
-	releaseCh := make(chan struct{})
-	doneCh := make(chan struct{})
-
-	go func() {
-		close(startCh)
-		lm.WithLock(ctx, chatID, nil, func(ctx context.Context) error {
-			<-releaseCh
-			return nil
-		})
-		close(doneCh)
-	}()
-
-	<-startCh
-	time.Sleep(50 * time.Millisecond) // Wait for lock acquisition
-
-	// 2. Try to Acquire Read Lock (Should Timeout)
-	timeoutCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
-	defer cancel()
-
-	err := lm.WithReadLock(timeoutCtx, chatID, nil, func(ctx context.Context) error {
-		return nil
-	})
-
-	// Should fail with deadline exceeded or acquisition failure
-	if err == nil {
-		t.Error("WithReadLock should fail (timeout) while Write Lock is held")
+	token1, err := lockutil.NewToken()
+	if err != nil {
+		t.Fatalf("token1 failed: %v", err)
+	}
+	token2, err := lockutil.NewToken()
+	if err != nil {
+		t.Fatalf("token2 failed: %v", err)
 	}
 
-	// 3. Release Write Lock
-	close(releaseCh)
-	<-doneCh
-	time.Sleep(20 * time.Millisecond)
+	ttlMillis := lockutil.TTLMillisFromSeconds(int64(qconfig.RedisLockTTLSeconds))
 
-	// 4. Try Acquire Read Lock (Should Succeed)
-	err = lm.WithReadLock(ctx, chatID, nil, func(ctx context.Context) error {
-		return nil
-	})
+	acquired, err := lm.acquire(ctx, chatID, token1, ttlMillis)
 	if err != nil {
-		t.Errorf("WithReadLock failed after Write Lock released: %v", err)
+		t.Fatalf("first acquire failed: %v", err)
+	}
+	if !acquired {
+		t.Fatal("expected first acquire to succeed")
+	}
+
+	acquired, err = lm.acquire(ctx, chatID, token2, ttlMillis)
+	if err != nil {
+		t.Fatalf("second acquire failed: %v", err)
+	}
+	if acquired {
+		t.Fatal("expected second acquire to fail while lock is held")
+	}
+}
+
+func TestLockManager_ReleaseIgnoresMismatchedToken(t *testing.T) {
+	lm, client := newTestLockManager(t)
+	defer client.Close()
+	prefix := testhelper.UniqueTestPrefix(t)
+	defer testhelper.CleanupTestKeys(t, client, "20q:")
+
+	ctx := context.Background()
+	chatID := prefix + "room_release_token"
+
+	token, err := lockutil.NewToken()
+	if err != nil {
+		t.Fatalf("token failed: %v", err)
+	}
+	ttlMillis := lockutil.TTLMillisFromSeconds(int64(qconfig.RedisLockTTLSeconds))
+
+	acquired, err := lm.acquire(ctx, chatID, token, ttlMillis)
+	if err != nil {
+		t.Fatalf("acquire failed: %v", err)
+	}
+	if !acquired {
+		t.Fatal("expected acquire to succeed")
+	}
+
+	if err := lm.release(ctx, chatID, "wrong-token"); err != nil {
+		t.Fatalf("release with wrong token failed: %v", err)
+	}
+
+	held, err := lm.acquire(ctx, chatID, "second-token", ttlMillis)
+	if err != nil {
+		t.Fatalf("reacquire failed: %v", err)
+	}
+	if held {
+		t.Fatal("expected lock to remain held after wrong-token release")
 	}
 }

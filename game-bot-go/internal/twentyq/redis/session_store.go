@@ -181,7 +181,6 @@ func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 		fmt.Sprintf("%s:order:{%s}", qconfig.RedisKeyPendingPrefix, chatID), // 20q:pending-messages:order:{chatID}
 		fmt.Sprintf("%s:%s", qconfig.RedisKeyTopics, chatID),                // 20q:topics:{chatID}
 		lockKey(chatID),       // 20q:lock:{chatID}
-		readLockKey(chatID),   // 20q:lock:{chatID}:read
 		processingKey(chatID), // 20q:lock:processing:{chatID}
 	}
 

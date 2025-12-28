@@ -127,12 +127,7 @@ func (s *GameMessageService) handleCommand(ctx context.Context, message mqmsg.In
 		holderName = strings.TrimSpace(*message.Sender)
 	}
 
-	lockFn := s.lockManager.WithLock
-	if !command.RequiresWriteLock() {
-		lockFn = s.lockManager.WithReadLock
-	}
-
-	lockErr := lockFn(ctx, chatID, &holderName, func(ctx context.Context) error {
+	lockErr := s.lockManager.WithLock(ctx, chatID, &holderName, func(ctx context.Context) error {
 		if s.playerRegistrar != nil && command.Kind != CommandUnknown {
 			s.playerRegistrar.RegisterPlayerAsync(ctx, message.ChatID, message.UserID, message.Sender)
 		}
@@ -150,7 +145,7 @@ func (s *GameMessageService) handleCommand(ctx context.Context, message mqmsg.In
 	if lockErr != nil {
 		var lockFailure cerrors.LockError
 		if errors.As(lockErr, &lockFailure) {
-			s.logger.Warn("message_rejected_locked", "chat_id", message.ChatID, "user_id", message.UserID, "mode_write", command.RequiresWriteLock())
+			s.logger.Warn("message_rejected_locked", "chat_id", message.ChatID, "user_id", message.UserID, "mode_write", true)
 			s.enqueueMessage(ctx, message)
 			// processQueuedMessages 호출 제거: Lock 보유자가 처리 완료 시 큐 처리됨
 			// 즉시 호출 시 Lock 실패 → 재큐잉 → 알림 루프 발생
