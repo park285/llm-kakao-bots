@@ -11,26 +11,42 @@
 -- Error:
 --   ERR invalid ttl (ttl_seconds가 0 이하인 경우)
 -- ============================================================
+-- Security Notes:
+--   PTTL=-2: 키가 만료되어 사라짐 (Race Condition) → 키 재생성 후 허용
+--   PTTL=-1: 키에 TTL 없음 (Zombie Key) → Self-Healing: TTL 강제 설정 후 차단
+-- ============================================================
 
 local key = KEYS[1]
 local ttlSeconds = tonumber(ARGV[1])
+
+-- [Security] 입력값 검증: 잘못된 파라미터로 인한 Redis Panic 방지
 if not ttlSeconds or ttlSeconds <= 0 then
     return redis.error_reply("ERR invalid ttl")
 end
 
 local ttlMillis = ttlSeconds * 1000
 
--- 1. 먼저 SET NX를 시도합니다. (가장 흔한 '성공' 케이스를 최적화)
--- 성공 시 'OK'가 반환되고, 실패 시(이미 키가 있음) nil이 반환됩니다.
+-- 1. SET NX 시도 (신규 차단 윈도우 시작)
 local ok = redis.call('SET', key, '1', 'NX', 'PX', ttlMillis)
-
 if ok then
-    return {1, 0} -- 성공적으로 Rate Limit 통과
+    return {1, 0} -- 허용 (새 Rate Limit 윈도우 시작)
 end
 
--- 2. SET에 실패했다면 이미 제한이 걸려있는 상태입니다. 남은 시간을 반환합니다.
+-- 2. SET 실패: 이미 키가 존재함. 남은 시간 조회
 local remaining = redis.call('PTTL', key)
-if remaining < 0 then
+
+-- [Stability] Race Condition & Zombie Key 방어
+if remaining == -2 then
+    -- 상황: SET NX 실패 직후 키가 만료되어 사라짐 (Race Condition)
+    -- 조치: 즉시 키를 다시 생성하여 이번 요청을 카운트하고 허용
+    redis.call('SET', key, '1', 'PX', ttlMillis)
     return {1, 0}
+elseif remaining == -1 then
+    -- 상황: 키는 있는데 만료 시간이 없음 (Zombie Key - 보안 위협)
+    -- 조치: [Self-Healing] 강제로 만료 시간을 설정하고, 이번 요청은 차단
+    redis.call('PEXPIRE', key, ttlMillis)
+    return {0, ttlMillis}
 end
+
 return {0, remaining}
+
