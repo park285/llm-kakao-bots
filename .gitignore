@@ -198,3 +198,4 @@ yarn-error.log*
 !gradlew
 !gradlew.bat
 !docs/
+mcp-llm-server-go/internal/domain/twentyq/topics/*.backup.*
