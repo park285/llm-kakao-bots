@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/valkey-io/valkey-go"
+	"golang.org/x/sync/errgroup"
 )
 
 // Script 는 Registry 에 등록되는 Lua 스크립트 정의다.
@@ -52,6 +53,7 @@ func (r *Registry) Exec(ctx context.Context, client valkey.Client, name string, 
 }
 
 // Preload 는 등록된 Lua 스크립트를 SCRIPT LOAD 로 서버에 적재한다.
+// 노드별 병렬 로드를 수행하여 부트스트랩 시간을 단축한다.
 func (r *Registry) Preload(ctx context.Context, client valkey.Client) error {
 	if r == nil {
 		return fmt.Errorf("lua registry is nil")
@@ -65,21 +67,29 @@ func (r *Registry) Preload(ctx context.Context, client valkey.Client) error {
 		nodes = map[string]valkey.Client{"default": client}
 	}
 
-	var firstErr error
+	// 병렬 로드: 노드 x 스크립트 조합을 동시에 처리
+	g, gctx := errgroup.WithContext(ctx)
 	for name, meta := range r.metas {
 		if meta.NoSHA {
 			continue
 		}
+		scriptName := name
+		scriptSource := meta.Source
 		for _, node := range nodes {
-			cmd := node.B().ScriptLoad().Script(meta.Source).Build()
-			if err := node.Do(ctx, cmd).Error(); err != nil {
-				if firstErr == nil {
-					firstErr = fmt.Errorf("lua preload failed (%s): %w", name, err)
+			nodeClient := node
+			g.Go(func() error {
+				cmd := nodeClient.B().ScriptLoad().Script(scriptSource).Build()
+				if err := nodeClient.Do(gctx, cmd).Error(); err != nil {
+					return fmt.Errorf("lua preload failed (%s): %w", scriptName, err)
 				}
-			}
+				return nil
+			})
 		}
 	}
-	return firstErr
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("lua preload: %w", err)
+	}
+	return nil
 }
 
 // Script 는 등록된 스크립트를 반환한다.
