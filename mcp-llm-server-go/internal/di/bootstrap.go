@@ -59,7 +59,12 @@ func InitializeApp() (*App, error) {
 		return nil, fmt.Errorf("twentyq prompts: %w", err)
 	}
 
-	twentyQHandler := handler.NewTwentyQHandler(cfg, geminiClient, injectionGuard, sessionStore, twentyqPrompts, logger)
+	topicLoader, err := twentyq.NewTopicLoader()
+	if err != nil {
+		return nil, fmt.Errorf("topic loader: %w", err)
+	}
+
+	twentyQHandler := handler.NewTwentyQHandler(cfg, geminiClient, injectionGuard, sessionStore, twentyqPrompts, topicLoader, logger)
 
 	turtlesoupPrompts, err := turtlesoup.NewPrompts()
 	if err != nil {

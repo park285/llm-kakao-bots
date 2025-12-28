@@ -30,7 +30,6 @@ type RiddleService struct {
 	voteStore         *qredis.SurrenderVoteStore
 	guessRateLimiter  *qredis.GuessRateLimiter
 
-	topicSelector *TopicSelector
 	statsRecorder *StatsRecorder
 	logger        *slog.Logger
 
@@ -53,7 +52,6 @@ func NewRiddleService(
 	topicHistoryStore *qredis.TopicHistoryStore,
 	voteStore *qredis.SurrenderVoteStore,
 	guessRateLimiter *qredis.GuessRateLimiter,
-	topicSelector *TopicSelector,
 	statsRecorder *StatsRecorder,
 	logger *slog.Logger,
 ) *RiddleService {
@@ -71,7 +69,6 @@ func NewRiddleService(
 		topicHistoryStore: topicHistoryStore,
 		voteStore:         voteStore,
 		guessRateLimiter:  guessRateLimiter,
-		topicSelector:     topicSelector,
 		statsRecorder:     statsRecorder,
 		logger:            logger,
 	}

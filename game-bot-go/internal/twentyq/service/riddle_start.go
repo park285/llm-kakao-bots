@@ -41,8 +41,7 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 		selectedKey, invalidInput := selectCategory(categories)
 		s.logger.Info("start_category_selection", "chat_id", chatID, "input", categories, "selectedKey", selectedKey, "invalidInput", invalidInput)
 
-		allCategories := s.topicSelector.Categories()
-		banned, err := s.topicHistoryStore.GetBannedTopics(ctx, chatID, optionalString(selectedKey), 20, allCategories)
+		banned, err := s.topicHistoryStore.GetBannedTopics(ctx, chatID, optionalString(selectedKey), 20, qconfig.AllCategories)
 		if err != nil {
 			return fmt.Errorf("get banned topics failed: %w", err)
 		}
@@ -52,20 +51,20 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 			excludedCategories = []string{categoryMovie}
 		}
 
-		topic, err := s.topicSelector.SelectTopic(selectedKey, banned, excludedCategories)
+		topicResp, err := s.restClient.TwentyQSelectTopic(ctx, selectedKey, banned, excludedCategories)
 		if err != nil {
-			return err
+			return fmt.Errorf("select topic failed: %w", err)
 		}
-		s.logger.Info("start_topic_selected", "chat_id", chatID, "topic_name", topic.Name, "topic_category", topic.Category)
+		s.logger.Info("start_topic_selected", "chat_id", chatID, "topic_name", topicResp.Name, "topic_category", topicResp.Category)
 
-		descriptionJSON, err := json.Marshal(topic.Details)
+		descriptionJSON, err := json.Marshal(topicResp.Details)
 		if err != nil {
 			return fmt.Errorf("marshal topic details failed: %w", err)
 		}
 
 		secret := qmodel.RiddleSecret{
-			Target:      topic.Name,
-			Category:    topic.Category,
+			Target:      topicResp.Name,
+			Category:    topicResp.Category,
 			Intro:       s.msgProvider.Get("start.intro"),
 			Description: string(descriptionJSON),
 		}
@@ -73,7 +72,7 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 		if err := s.sessionStore.SaveSecret(ctx, chatID, secret); err != nil {
 			return fmt.Errorf("save secret failed: %w", err)
 		}
-		if err := s.categoryStore.Save(ctx, chatID, optionalString(topic.Category)); err != nil {
+		if err := s.categoryStore.Save(ctx, chatID, optionalString(topicResp.Category)); err != nil {
 			return fmt.Errorf("save category failed: %w", err)
 		}
 
@@ -81,7 +80,7 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 			s.logger.Warn("llm_session_create_failed", "chat_id", chatID, "err", err)
 		}
 
-		returnText = s.buildStartMessage(categoryToKorean(topic.Category), invalidInput)
+		returnText = s.buildStartMessage(categoryToKorean(topicResp.Category), invalidInput)
 		return nil
 	})
 	if err != nil {

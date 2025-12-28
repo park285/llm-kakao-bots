@@ -133,3 +133,45 @@ func (c *Client) TwentyQCheckSynonym(ctx context.Context, target string, guess s
 	}
 	return &out, nil
 }
+
+// TwentyQSelectTopicRequest: 토픽 선택 요청 파라미터
+type TwentyQSelectTopicRequest struct {
+	Category           string   `json:"category"`
+	BannedTopics       []string `json:"bannedTopics"`
+	ExcludedCategories []string `json:"excludedCategories"`
+}
+
+// TwentyQSelectTopicResponse: 토픽 선택 응답
+type TwentyQSelectTopicResponse struct {
+	Name     string         `json:"name"`
+	Category string         `json:"category"`
+	Details  map[string]any `json:"details"`
+}
+
+// TwentyQCategoriesResponse: 카테고리 목록 응답
+type TwentyQCategoriesResponse struct {
+	Categories []string `json:"categories"`
+}
+
+// TwentyQSelectTopic: 조건에 맞는 토픽을 선택 요청한다.
+func (c *Client) TwentyQSelectTopic(ctx context.Context, category string, bannedTopics []string, excludedCategories []string) (*TwentyQSelectTopicResponse, error) {
+	req := TwentyQSelectTopicRequest{
+		Category:           category,
+		BannedTopics:       bannedTopics,
+		ExcludedCategories: excludedCategories,
+	}
+	var out TwentyQSelectTopicResponse
+	if err := c.Post(ctx, "/api/twentyq/topics/select", req, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// TwentyQGetCategories: 사용 가능한 카테고리 목록을 조회한다.
+func (c *Client) TwentyQGetCategories(ctx context.Context) (*TwentyQCategoriesResponse, error) {
+	var out TwentyQCategoriesResponse
+	if err := c.Get(ctx, "/api/twentyq/topics/categories", &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}

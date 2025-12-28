@@ -16,12 +16,13 @@ import (
 
 // TwentyQHandler 는 TwentyQ API 핸들러다.
 type TwentyQHandler struct {
-	cfg     *config.Config
-	client  *gemini.Client
-	guard   *guard.InjectionGuard
-	store   *session.Store
-	prompts *twentyq.Prompts
-	logger  *slog.Logger
+	cfg         *config.Config
+	client      *gemini.Client
+	guard       *guard.InjectionGuard
+	store       *session.Store
+	prompts     *twentyq.Prompts
+	topicLoader *twentyq.TopicLoader
+	logger      *slog.Logger
 }
 
 // NewTwentyQHandler 는 TwentyQ 핸들러를 생성한다.
@@ -31,15 +32,17 @@ func NewTwentyQHandler(
 	injectionGuard *guard.InjectionGuard,
 	store *session.Store,
 	prompts *twentyq.Prompts,
+	topicLoader *twentyq.TopicLoader,
 	logger *slog.Logger,
 ) *TwentyQHandler {
 	return &TwentyQHandler{
-		cfg:     cfg,
-		client:  client,
-		guard:   injectionGuard,
-		store:   store,
-		prompts: prompts,
-		logger:  logger,
+		cfg:         cfg,
+		client:      client,
+		guard:       injectionGuard,
+		store:       store,
+		prompts:     prompts,
+		topicLoader: topicLoader,
+		logger:      logger,
 	}
 }
 
@@ -51,6 +54,8 @@ func (h *TwentyQHandler) RegisterRoutes(router *gin.Engine) {
 	group.POST("/verifications", h.handleVerify)
 	group.POST("/normalizations", h.handleNormalize)
 	group.POST("/synonym-checks", h.handleSynonym)
+	group.POST("/topics/select", h.handleSelectTopic)
+	group.GET("/topics/categories", h.handleCategories)
 }
 
 func (h *TwentyQHandler) ensureSafeDetails(detailsJSON string) error {

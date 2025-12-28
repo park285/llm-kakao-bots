@@ -74,18 +74,18 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	statsRecorder := NewStatsRecorder(repo, logger, qconfig.StatsConfig{})
 
-	// 4. TopicSelector (Builtin Mock)
-	// We can use the real one, but with a small list of topics
-	// Assume topics_builtin.go has the list. Or just rely on defaults.
-	topicSelector := NewTopicSelector(logger)
-
 	// 5. LLM Client (Mock Server)
 	prefix := testhelper.UniqueTestPrefix(t)
 	env := &testEnv{client: client, db: db, mockResponse: "{}", t: t, prefix: prefix} // Default empty JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return mocked response
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, env.mockResponse) // Use dynamic mock response
+		// 토픽 선택 API mock
+		if strings.Contains(r.URL.Path, "/api/twentyq/topics/select") {
+			fmt.Fprint(w, `{"name":"테스트토픽","category":"object","details":{"type":"test"}}`)
+			return
+		}
+		// 기타 요청은 동적 mock 응답 사용
+		fmt.Fprint(w, env.mockResponse)
 	}))
 	env.ts = ts
 
@@ -156,7 +156,6 @@ answer:
 		topicHistoryStore,
 		voteStore,
 		nil, // guessRateLimiter
-		topicSelector,
 		statsRecorder,
 		logger,
 	)
@@ -752,7 +751,7 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 	// Need to initialize session
 	sStore.SaveSecret(ctx, chatID, qmodel.RiddleSecret{Target: "T"})
 
-	svc := NewRiddleService(llmClient, "/20q", msgProvider, qredis.NewLockManager(valkeyClient, logger), sStore, nil, qredis.NewHistoryStore(valkeyClient, logger), nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	svc := NewRiddleService(llmClient, "/20q", msgProvider, qredis.NewLockManager(valkeyClient, logger), sStore, nil, qredis.NewHistoryStore(valkeyClient, logger), nil, nil, nil, nil, nil, nil, nil, logger)
 
 	_, err := svc.Answer(ctx, chatID, user1, nil, "bad input")
 	if err == nil {
@@ -854,7 +853,7 @@ func TestRiddleService_Normalize_EdgeCases(t *testing.T) {
 
 	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := NewRiddleService(client, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
+	svc := NewRiddleService(client, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 
 	ctx := context.Background()
 

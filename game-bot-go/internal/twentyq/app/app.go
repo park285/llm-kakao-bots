@@ -71,7 +71,6 @@ func newTwentyQRiddleService(
 	statsRecorder *qsvc.StatsRecorder,
 	logger *slog.Logger,
 ) *qsvc.RiddleService {
-	topicSelector := qsvc.NewTopicSelector(logger)
 	return qsvc.NewRiddleService(
 		restClient,
 		cfg.Commands.Prefix,
@@ -86,7 +85,6 @@ func newTwentyQRiddleService(
 		stores.topicHistoryStore,
 		stores.voteStore,
 		stores.guessRateLimiter,
-		topicSelector,
 		statsRecorder,
 		logger,
 	)
