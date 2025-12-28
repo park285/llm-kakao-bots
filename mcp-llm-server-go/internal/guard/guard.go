@@ -155,7 +155,22 @@ func (g *InjectionGuard) evaluateInternal(input string) Evaluation {
 		}
 	}
 
-	normalized := normalizeText(input)
+	if isPureBase64(input) {
+		if g.logger != nil {
+			g.logger.Warn("guard_base64_blocked", "input", trimForLog(input))
+		}
+		return Evaluation{
+			Score:     threshold,
+			Hits:      []Match{{ID: "base64_encoded", Weight: threshold}},
+			Threshold: threshold,
+		}
+	}
+
+	// 정규화 파이프라인:
+	// 1. 자모 시퀀스 조합 (ㅍㅡㄹㅗㅁㅍㅡㅌㅡ → 프롬프트)
+	// 2. Homoglyph + NFKC 정규화
+	composed := composeJamoSequences(input)
+	normalized := normalizeText(composed)
 	score, hits := g.evaluatePacks(normalized)
 	return Evaluation{Score: score, Hits: hits, Threshold: threshold}
 }

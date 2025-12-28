@@ -62,17 +62,18 @@ func BuildRecentQAHistoryContext(history []llm.HistoryEntry, header string, maxP
 	}
 
 	// 확인된 속성 요약 (간결한 형태)
-	var summaryLines []string
+	summaryLines := make([]string, 0, len(pairs))
 	for _, p := range pairs {
 		// Q를 축약하여 속성처럼 표현
 		summaryLines = append(summaryLines, fmt.Sprintf("• %s → %s", truncateQuestion(p.question, 20), p.answer))
 	}
 
 	// 상세 Q&A 목록
-	var historyLines []string
+	historyLines := make([]string, 0, len(pairs)*2)
 	for _, p := range pairs {
-		historyLines = append(historyLines, prompt.WrapXML("q", p.question))
-		historyLines = append(historyLines, prompt.WrapXML("a", p.answer))
+		historyLines = append(historyLines,
+			prompt.WrapXML("q", p.question),
+			prompt.WrapXML("a", p.answer))
 	}
 
 	var result strings.Builder

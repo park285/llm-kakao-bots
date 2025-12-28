@@ -5,6 +5,7 @@ go 1.25.5
 require (
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/cloudflare/ahocorasick v0.0.0-20240916140611-054963ec9396
+	github.com/forPelevin/gomoji v1.4.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-playground/validator/v10 v10.30.0
 	github.com/goccy/go-json v0.10.5
@@ -60,8 +61,10 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.58.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
+	github.com/ymw0407/jamo v1.0.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect
