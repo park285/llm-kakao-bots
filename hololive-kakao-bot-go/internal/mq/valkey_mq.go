@@ -82,13 +82,13 @@ type ValkeyMQClient struct {
 }
 
 // NewValkeyMQClient: 새로운 ValkeyMQClient 인스턴스를 생성하고 연결을 초기화한다.
-func NewValkeyMQClient(cfg ValkeyMQConfig, logger *slog.Logger) *ValkeyMQClient {
+func NewValkeyMQClient(ctx context.Context, cfg ValkeyMQConfig, logger *slog.Logger) *ValkeyMQClient {
 	client, err := newValkeyClient(cfg.Host, cfg.Port, cfg.Password, logger)
 	if err != nil {
 		logger.Error("Failed to create MQ client", slog.Any("error", err))
 		return nil
 	}
-	if err := mqLuaRegistry.Preload(context.Background(), client); err != nil && logger != nil {
+	if err := mqLuaRegistry.Preload(ctx, client); err != nil && logger != nil {
 		logger.Warn("MQ_LUA_PRELOAD_FAILED", slog.Any("error", err))
 	}
 
@@ -167,7 +167,7 @@ type ValkeyMQConsumer struct {
 }
 
 // NewValkeyMQConsumer: 새로운 ValkeyMQConsumer 인스턴스를 생성한다.
-func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *slog.Logger, handler MessageHandler, cacheService *cache.Service) *ValkeyMQConsumer {
+func NewValkeyMQConsumer(ctx context.Context, cfg ValkeyMQConfig, logger *slog.Logger, handler MessageHandler, cacheService *cache.Service) *ValkeyMQConsumer {
 	// Worker count 기본값
 	if cfg.WorkerCount == 0 {
 		cfg.WorkerCount = constants.MQConfig.WorkerCount
@@ -178,7 +178,7 @@ func NewValkeyMQConsumer(cfg ValkeyMQConfig, logger *slog.Logger, handler Messag
 		logger.Error("Failed to create MQ consumer", slog.Any("error", err))
 		return nil
 	}
-	if err := mqLuaRegistry.Preload(context.Background(), client); err != nil && logger != nil {
+	if err := mqLuaRegistry.Preload(ctx, client); err != nil && logger != nil {
 		logger.Warn("MQ_LUA_PRELOAD_FAILED", slog.Any("error", err))
 	}
 

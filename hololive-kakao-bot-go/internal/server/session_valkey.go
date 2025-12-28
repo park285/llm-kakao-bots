@@ -11,6 +11,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
+	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
 const (
@@ -77,7 +78,7 @@ func (s *ValkeySessionStore) ValidateSession(sessionID string) bool {
 	key := sessionKeyPrefix + sessionID
 
 	resp := s.client.Do(ctx, s.client.B().Get().Key(key).Build())
-	if valkey.IsValkeyNil(resp.Error()) {
+	if util.IsValkeyNil(resp.Error()) {
 		return false // 세션 없음
 	}
 	if resp.Error() != nil {

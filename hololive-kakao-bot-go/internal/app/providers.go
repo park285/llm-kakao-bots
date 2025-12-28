@@ -88,8 +88,8 @@ func ProvideValkeyMQConfig(cfg *config.Config) mq.ValkeyMQConfig {
 }
 
 // ProvideIrisClient - Iris MQ 클라이언트 생성
-func ProvideIrisClient(mqCfg mq.ValkeyMQConfig, logger *slog.Logger) iris.Client {
-	return mq.NewValkeyMQClient(mqCfg, logger)
+func ProvideIrisClient(ctx context.Context, mqCfg mq.ValkeyMQConfig, logger *slog.Logger) iris.Client {
+	return mq.NewValkeyMQClient(ctx, mqCfg, logger)
 }
 
 // ----------------------------------------------------------------------------

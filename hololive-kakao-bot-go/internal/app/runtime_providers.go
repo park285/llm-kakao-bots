@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -40,12 +41,13 @@ func ProvideBot(deps *bot.Dependencies) (*bot.Bot, error) {
 
 // ProvideValkeyMQConsumer: 메시지 큐(Valkey) 컨슈머를 생성하여 제공한다.
 func ProvideValkeyMQConsumer(
+	ctx context.Context,
 	mqCfg mq.ValkeyMQConfig,
 	logger *slog.Logger,
 	kakaoBot *bot.Bot,
 	cacheSvc *cache.Service,
 ) (*mq.ValkeyMQConsumer, error) {
-	consumer := mq.NewValkeyMQConsumer(mqCfg, logger, kakaoBot, cacheSvc)
+	consumer := mq.NewValkeyMQConsumer(ctx, mqCfg, logger, kakaoBot, cacheSvc)
 	if consumer == nil {
 		return nil, fmt.Errorf("valkey MQ consumer 생성 실패")
 	}

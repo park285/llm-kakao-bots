@@ -316,10 +316,10 @@ func (c *Cache) InvalidateAll(ctx context.Context) error {
 		return nil
 	}
 
-	// Valkey 캐시 클리어
-	keys, err := c.cache.Keys(ctx, memberCachePattern)
+	// Valkey 캐시 클리어 (SCAN 사용으로 Redis 블로킹 방지)
+	keys, err := c.cache.ScanKeys(ctx, memberCachePattern, 100)
 	if err != nil {
-		return fmt.Errorf("failed to get keys for invalidation: %w", err)
+		return fmt.Errorf("failed to scan keys for invalidation: %w", err)
 	}
 	if len(keys) > 0 {
 		if _, err := c.cache.DelMany(ctx, keys); err != nil {

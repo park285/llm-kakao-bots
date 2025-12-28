@@ -20,7 +20,7 @@ type coreInfrastructure struct {
 // initCoreInfrastructure 는 공통 인프라를 초기화한다.
 func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*coreInfrastructure, error) {
 	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
-	irisClient := ProvideIrisClient(valkeyMQConfig, logger)
+	irisClient := ProvideIrisClient(ctx, valkeyMQConfig, logger)
 	messageStack := ProvideMessageStack(cfg)
 
 	valkeyConfig := ProvideValkeyConfig(cfg)
@@ -135,7 +135,7 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 	}
 
 	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
-	valkeyMQConsumer, err := ProvideValkeyMQConsumer(valkeyMQConfig, logger, botBot, deps.Cache)
+	valkeyMQConsumer, err := ProvideValkeyMQConsumer(ctx, valkeyMQConfig, logger, botBot, deps.Cache)
 	if err != nil {
 		return nil, err
 	}
