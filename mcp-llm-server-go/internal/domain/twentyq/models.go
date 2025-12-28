@@ -22,12 +22,14 @@ const (
 	AnswerPolicyViolation AnswerScale = "정책 위반"
 )
 
+// 순서 중요: ParseAnswerScale에서 Contains로 매칭하므로 긴 문자열이 먼저 와야 함
+// "아마도 예"가 "예"보다 먼저 매칭되어야 올바르게 파싱됨
 var answerScales = []AnswerScale{
-	AnswerYes,
-	AnswerProbablyYes,
-	AnswerProbablyNo,
-	AnswerNo,
-	AnswerPolicyViolation,
+	AnswerProbablyYes,     // "아마도 예"
+	AnswerProbablyNo,      // "아마도 아니오"
+	AnswerYes,             // "예"
+	AnswerNo,              // "아니오"
+	AnswerPolicyViolation, // "정책 위반"
 }
 
 // ParseAnswerScale 는 답변 척도를 파싱한다.
