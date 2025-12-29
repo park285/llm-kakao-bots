@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	// ErrSessionNotFound 는 세션 미존재 오류다.
+	// ErrSessionNotFound: 세션 미존재 오류입니다.
 	ErrSessionNotFound = errors.New("session not found")
-	// ErrStoreDisabled 는 저장소 비활성 오류다.
+	// ErrStoreDisabled: 저장소 비활성 오류입니다.
 	ErrStoreDisabled = errors.New("session store disabled")
 )
 
@@ -30,7 +30,7 @@ const (
 	storeBackendValkey
 )
 
-// Meta 는 세션 메타데이터다.
+// Meta: 세션 메타데이터입니다.
 type Meta struct {
 	ID           string    `json:"id"`
 	SystemPrompt string    `json:"system_prompt,omitempty"`
@@ -40,7 +40,7 @@ type Meta struct {
 	MessageCount int       `json:"message_count"`
 }
 
-// Store 는 Valkey 기반 세션 저장소다.
+// Store: Valkey 기반 세션 저장소입니다.
 type Store struct {
 	client  valkey.Client
 	cfg     *config.Config
@@ -54,7 +54,7 @@ type Store struct {
 	historyExpireAt map[string]time.Time
 }
 
-// NewStore 는 세션 저장소를 생성한다.
+// NewStore: 세션 저장소를 생성합니다.
 func NewStore(cfg *config.Config) (*Store, error) {
 	if cfg == nil {
 		return nil, errors.New("config is nil")
@@ -113,12 +113,12 @@ func newMemoryStore(cfg *config.Config) *Store {
 	}
 }
 
-// IsEnabled 는 저장소 활성화 여부를 반환한다.
+// IsEnabled: 저장소 활성화 여부를 반환합니다.
 func (s *Store) IsEnabled() bool {
 	return s.enabled
 }
 
-// Close 는 Valkey 연결을 종료한다.
+// Close: Valkey 연결을 종료합니다.
 func (s *Store) Close() {
 	if s == nil {
 		return
@@ -240,6 +240,7 @@ func (s *Store) DeleteSession(ctx context.Context, sessionID string) error {
 }
 
 // GetHistory 세션 히스토리 조회
+// Zstd 압축 해제 후 JSON 역직렬화
 func (s *Store) GetHistory(ctx context.Context, sessionID string) ([]llm.HistoryEntry, error) {
 	if !s.enabled {
 		return nil, ErrStoreDisabled
@@ -256,9 +257,15 @@ func (s *Store) GetHistory(ctx context.Context, sessionID string) ([]llm.History
 
 	history := make([]llm.HistoryEntry, 0, len(results))
 	for _, item := range results {
+		// Zstd 압축 해제
+		decompressed, err := decompressZstd([]byte(item))
+		if err != nil {
+			continue // 손상된 entry 스킵
+		}
+
 		var entry llm.HistoryEntry
-		if err := json.Unmarshal([]byte(item), &entry); err != nil {
-			continue // skip invalid entries
+		if err := json.Unmarshal(decompressed, &entry); err != nil {
+			continue
 		}
 		history = append(history, entry)
 	}
@@ -268,6 +275,7 @@ func (s *Store) GetHistory(ctx context.Context, sessionID string) ([]llm.History
 
 // AppendHistory 히스토리에 메시지 추가
 // DoMulti로 배치 처리하여 N+2 RTT → 1 RTT로 최적화
+// JSON 직렬화 후 Zstd 압축하여 저장
 func (s *Store) AppendHistory(ctx context.Context, sessionID string, entries ...llm.HistoryEntry) error {
 	if !s.enabled {
 		return ErrStoreDisabled
@@ -281,14 +289,20 @@ func (s *Store) AppendHistory(ctx context.Context, sessionID string, entries ...
 
 	historyKey := s.historyKey(sessionID)
 
-	// 모든 entry를 미리 직렬화
+	// 모든 entry를 직렬화 후 압축
 	elements := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		data, err := json.Marshal(entry)
 		if err != nil {
 			return fmt.Errorf("marshal history entry: %w", err)
 		}
-		elements = append(elements, string(data))
+
+		// Zstd 압축
+		compressed, err := compressZstd(data)
+		if err != nil {
+			return fmt.Errorf("compress history entry: %w", err)
+		}
+		elements = append(elements, string(compressed))
 	}
 
 	// 명령어 배치 구성: RPUSH + EXPIRE + (optional) LTRIM

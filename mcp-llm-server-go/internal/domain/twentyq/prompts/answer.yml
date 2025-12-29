@@ -15,6 +15,9 @@ system: |
   Example: "Does it have fur?" Secret: penguin
   → "Penguins are birds with feathers, not fur. Answer: no."
 
+  === CONSISTENCY ===
+  Review previous answers in the conversation history to ensure consistency.
+
   === GOOGLE SEARCH (LAST RESORT) ===
   Adds 3-5s delay. Use ONLY for: scientific names, exact dates, truly obscure trivia.
   DO NOT search for: estimable properties (size/weight/color), common knowledge, logic-answerable Qs.
@@ -74,7 +77,6 @@ system: |
   Q: "asdfghjkl" Secret: any → reasoning: "Gibberish, not a valid question." → answer: "정책 위반"
 
 user: |
-  Secret: {toon}
-  Question: {question}
+  {question}
 
   Reason step-by-step, then answer.

@@ -21,7 +21,7 @@ func (noEscapeHTMLJSON) Marshal(v any) ([]byte, error) {
 
 var jsonNoEscapeHTML = noEscapeHTMLJSON{}
 
-// ParseStringSlice 는 map에서 문자열 슬라이스 필드를 파싱한다.
+// ParseStringSlice: map에서 문자열 슬라이스 필드를 파싱합니다.
 func ParseStringSlice(payload map[string]any, field string) ([]string, error) {
 	raw, ok := payload[field]
 	if !ok {
@@ -45,7 +45,7 @@ func ParseStringSlice(payload map[string]any, field string) ([]string, error) {
 	}
 }
 
-// ParseStringField 는 map에서 문자열 필드를 파싱한다.
+// ParseStringField: map에서 문자열 필드를 파싱합니다.
 func ParseStringField(payload map[string]any, field string) (string, error) {
 	raw, ok := payload[field]
 	if !ok {
@@ -58,7 +58,7 @@ func ParseStringField(payload map[string]any, field string) (string, error) {
 	return text, nil
 }
 
-// SerializeDetails 는 details map을 JSON 문자열로 직렬화한다.
+// SerializeDetails: details map을 JSON 문자열로 직렬화합니다.
 func SerializeDetails(details map[string]any) (string, error) {
 	if len(details) == 0 {
 		return "", nil
@@ -70,7 +70,7 @@ func SerializeDetails(details map[string]any) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-// TrimRunes 는 문자열을 최대 maxRunes 개의 룬으로 자른다.
+// TrimRunes: 문자열을 최대 maxRunes 개의 룬으로 자릅니다.
 func TrimRunes(value string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""

@@ -27,7 +27,7 @@ func RequestID() gin.HandlerFunc {
 	}
 }
 
-// GetRequestID 는 컨텍스트의 요청 ID를 반환한다.
+// GetRequestID: 컨텍스트의 요청 ID를 반환합니다.
 func GetRequestID(c *gin.Context) string {
 	if c == nil {
 		return ""

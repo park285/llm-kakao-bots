@@ -10,21 +10,21 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
 )
 
-// SelectTopicRequest 는 토픽 선택 요청이다.
+// SelectTopicRequest: 토픽 선택 요청입니다.
 type SelectTopicRequest struct {
 	Category           string   `json:"category"`
 	BannedTopics       []string `json:"bannedTopics"`
 	ExcludedCategories []string `json:"excludedCategories"`
 }
 
-// SelectTopicResponse 는 토픽 선택 응답이다.
+// SelectTopicResponse: 토픽 선택 응답입니다.
 type SelectTopicResponse struct {
 	Name     string         `json:"name"`
 	Category string         `json:"category"`
 	Details  map[string]any `json:"details"`
 }
 
-// CategoriesResponse 는 카테고리 목록 응답이다.
+// CategoriesResponse: 카테고리 목록 응답입니다.
 type CategoriesResponse struct {
 	Categories []string `json:"categories"`
 }

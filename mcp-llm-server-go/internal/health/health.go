@@ -13,20 +13,20 @@ import (
 
 var startTime = time.Now()
 
-// Component 는 상태 구성 요소다.
+// Component: 상태 구성 요소입니다.
 type Component struct {
 	Status string         `json:"status"`
 	Detail map[string]any `json:"detail"`
 }
 
-// Response 는 상태 응답 본문이다.
+// Response: 상태 응답 본문입니다.
 type Response struct {
 	Status       string               `json:"status"`
 	Components   map[string]Component `json:"components"`
 	SessionStore map[string]any       `json:"session_store"`
 }
 
-// Collect 는 헬스 상태를 수집한다.
+// Collect: 헬스 상태를 수집합니다.
 func Collect(ctx context.Context, cfg *config.Config, deepChecks bool) Response {
 	components := make(map[string]Component)
 

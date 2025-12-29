@@ -19,7 +19,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 )
 
-// Repository 는 usage DB 접근을 담당한다.
+// Repository: usage DB 접근을 담당합니다.
 type Repository struct {
 	cfg    *config.Config
 	logger *slog.Logger
@@ -28,7 +28,7 @@ type Repository struct {
 	sqlDB  *sql.DB
 }
 
-// NewRepository 는 usage 저장소를 생성한다.
+// NewRepository: usage 저장소를 생성합니다.
 func NewRepository(cfg *config.Config, logger *slog.Logger) *Repository {
 	return &Repository{
 		cfg:    cfg,
@@ -36,7 +36,7 @@ func NewRepository(cfg *config.Config, logger *slog.Logger) *Repository {
 	}
 }
 
-// RecordUsage 는 지정한 날짜(또는 오늘)의 토큰 사용량을 누적 저장한다.
+// RecordUsage: 지정한 날짜(또는 오늘)의 토큰 사용량을 누적 저장합니다.
 func (r *Repository) RecordUsage(
 	ctx context.Context,
 	inputTokens int64,
@@ -80,7 +80,7 @@ func (r *Repository) RecordUsage(
 	}).Create(&row).Error
 }
 
-// GetDailyUsage 는 특정 날짜(또는 오늘)의 사용량을 조회한다.
+// GetDailyUsage: 특정 날짜(또는 오늘)의 사용량을 조회합니다.
 func (r *Repository) GetDailyUsage(ctx context.Context, usageDate time.Time) (*DailyUsage, error) {
 	db, err := r.getDB(ctx)
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *Repository) GetDailyUsage(ctx context.Context, usageDate time.Time) (*D
 	}, nil
 }
 
-// GetRecentUsage 는 최근 N일 사용량을 조회한다.
+// GetRecentUsage: 최근 N일 사용량을 조회합니다.
 func (r *Repository) GetRecentUsage(ctx context.Context, days int) ([]DailyUsage, error) {
 	db, err := r.getDB(ctx)
 	if err != nil {
@@ -138,7 +138,7 @@ func (r *Repository) GetRecentUsage(ctx context.Context, days int) ([]DailyUsage
 	return usages, nil
 }
 
-// GetTotalUsage 는 최근 N일 합계를 조회한다.
+// GetTotalUsage: 최근 N일 합계를 조회합니다.
 func (r *Repository) GetTotalUsage(ctx context.Context, days int) (DailyUsage, error) {
 	db, err := r.getDB(ctx)
 	if err != nil {
@@ -176,7 +176,7 @@ func (r *Repository) GetTotalUsage(ctx context.Context, days int) (DailyUsage, e
 	}, nil
 }
 
-// Close 는 DB 연결을 닫는다.
+// Close: DB 연결을 닫습니다.
 func (r *Repository) Close() {
 	r.mu.Lock()
 	defer r.mu.Unlock()

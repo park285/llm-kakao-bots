@@ -18,13 +18,13 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 )
 
-// LLMClient 는 LLM 호출 인터페이스다.
+// LLMClient: LLM 호출 인터페이스입니다.
 type LLMClient interface {
 	Chat(ctx context.Context, req gemini.Request) (string, string, error)
 	Structured(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error)
 }
 
-// TurtleSoupHandler 는 Turtle Soup API 핸들러다.
+// TurtleSoupHandler: Turtle Soup API 핸들러입니다.
 type TurtleSoupHandler struct {
 	cfg     *config.Config
 	client  LLMClient
@@ -35,7 +35,7 @@ type TurtleSoupHandler struct {
 	logger  *slog.Logger
 }
 
-// NewTurtleSoupHandler 는 Turtle Soup 핸들러를 생성한다.
+// NewTurtleSoupHandler: Turtle Soup 핸들러를 생성합니다.
 func NewTurtleSoupHandler(
 	cfg *config.Config,
 	client LLMClient,
@@ -56,7 +56,7 @@ func NewTurtleSoupHandler(
 	}
 }
 
-// RegisterRoutes 는 Turtle Soup 라우트를 등록한다.
+// RegisterRoutes: Turtle Soup 라우트를 등록합니다.
 func (h *TurtleSoupHandler) RegisterRoutes(router *gin.Engine) {
 	group := router.Group("/api/turtle-soup")
 	group.POST("/answers", h.handleAnswer)
@@ -71,12 +71,14 @@ func (h *TurtleSoupHandler) RegisterRoutes(router *gin.Engine) {
 	group.POST("/puzzles/reload", h.handleReloadPuzzles)
 }
 
+// resolveSession: 세션 정보를 조회하고 히스토리를 반환합니다.
+// 암시적 캐싱 최적화: 문자열 변환 없이 Native History 배열만 반환합니다.
 func (h *TurtleSoupHandler) resolveSession(
 	ctx context.Context,
 	sessionID *string,
 	chatID *string,
 	namespace *string,
-) (string, string, int, []llm.HistoryEntry, error) {
+) (string, int, []llm.HistoryEntry, error) {
 	effectiveSessionID, derived := shared.ResolveSessionID(shared.ValueOrEmpty(sessionID), shared.ValueOrEmpty(chatID), shared.ValueOrEmpty(namespace), "turtle-soup")
 	if effectiveSessionID != "" && derived && sessionID == nil {
 		now := time.Now()
@@ -89,23 +91,22 @@ func (h *TurtleSoupHandler) resolveSession(
 			MessageCount: 0,
 		}
 		if err := h.store.CreateSession(ctx, meta); err != nil {
-			return "", "", 0, nil, fmt.Errorf("create session: %w", err)
+			return "", 0, nil, fmt.Errorf("create session: %w", err)
 		}
 	}
 
 	if effectiveSessionID == "" {
-		return "", "", 0, nil, nil
+		return "", 0, []llm.HistoryEntry{}, nil // Cold Start: 빈 슬라이스 반환
 	}
 
 	history, err := h.store.GetHistory(ctx, effectiveSessionID)
 	if err != nil {
 		h.logError(err)
-		return effectiveSessionID, "", 0, nil, nil
+		return effectiveSessionID, 0, []llm.HistoryEntry{}, nil // 에러 시 빈 슬라이스
 	}
 
 	pairs := countQAPairs(history)
-	historyContext := shared.BuildRecentQAHistoryContext(history, "[이전 질문/답변 기록]", h.cfg.Session.HistoryMaxPairs)
-	return effectiveSessionID, historyContext, pairs, history, nil
+	return effectiveSessionID, pairs, history, nil
 }
 
 func (h *TurtleSoupHandler) appendHistory(ctx context.Context, sessionID string, question string, answer string) error {

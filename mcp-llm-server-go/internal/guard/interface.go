@@ -1,7 +1,7 @@
 package guard
 
-// Guard 는 입력 검증 인터페이스다.
-// 테스트에서 mock 구현을 주입할 수 있도록 한다.
+// Guard: 입력 검증 인터페이스입니다.
+// 테스트에서 mock 구현을 주입할 수 있습니다.
 type Guard interface {
 	// Evaluate 입력 문자열 평가
 	Evaluate(input string) Evaluation

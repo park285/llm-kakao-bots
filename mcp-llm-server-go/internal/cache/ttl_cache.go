@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const ttlCachePurgeLimit = 8
+
 type entry[K comparable, V any] struct {
 	key       K
 	value     V
@@ -19,26 +21,29 @@ type TTLCache[K comparable, V any] struct {
 	maxSize int
 	order   *list.List
 	items   map[K]*list.Element
+	enabled bool
 }
 
-// NewTTLCache 는 만료 시간과 최대 크기를 갖는 TTLCache 를 생성한다.
+// NewTTLCache: 만료 시간과 최대 크기를 갖는 TTLCache를 생성합니다.
+// maxSize 또는 ttl이 0 이하이면 비활성 캐시를 반환합니다.
 func NewTTLCache[K comparable, V any](maxSize int, ttl time.Duration) *TTLCache[K, V] {
-	if maxSize <= 0 {
-		maxSize = 1
-	}
-	if ttl <= 0 {
-		ttl = time.Second
+	if maxSize <= 0 || ttl <= 0 {
+		return &TTLCache[K, V]{enabled: false}
 	}
 	return &TTLCache[K, V]{
 		ttl:     ttl,
 		maxSize: maxSize,
 		order:   list.New(),
 		items:   make(map[K]*list.Element, maxSize),
+		enabled: true,
 	}
 }
 
 func (c *TTLCache[K, V]) Get(key K) (V, bool) {
 	var zero V
+	if c == nil || !c.enabled {
+		return zero, false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -58,13 +63,18 @@ func (c *TTLCache[K, V]) Get(key K) (V, bool) {
 }
 
 func (c *TTLCache[K, V]) Set(key K, value V) {
+	if c == nil || !c.enabled {
+		return
+	}
+	now := time.Now()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if element, ok := c.items[key]; ok {
 		ent := element.Value.(*entry[K, V])
 		ent.value = value
-		ent.expiresAt = time.Now().Add(c.ttl)
+		ent.expiresAt = now.Add(c.ttl)
 		c.order.MoveToFront(element)
 		return
 	}
@@ -72,14 +82,18 @@ func (c *TTLCache[K, V]) Set(key K, value V) {
 	ent := &entry[K, V]{
 		key:       key,
 		value:     value,
-		expiresAt: time.Now().Add(c.ttl),
+		expiresAt: now.Add(c.ttl),
 	}
 	element := c.order.PushFront(ent)
 	c.items[key] = element
+	c.purgeExpired(now, ttlCachePurgeLimit)
 	c.evictIfNeeded()
 }
 
 func (c *TTLCache[K, V]) Delete(key K) {
+	if c == nil || !c.enabled {
+		return
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -91,9 +105,26 @@ func (c *TTLCache[K, V]) Delete(key K) {
 }
 
 func (c *TTLCache[K, V]) Len() int {
+	if c == nil || !c.enabled {
+		return 0
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.items)
+}
+
+func (c *TTLCache[K, V]) purgeExpired(now time.Time, limit int) {
+	for i := 0; i < limit; i++ {
+		element := c.order.Back()
+		if element == nil {
+			return
+		}
+		ent := element.Value.(*entry[K, V])
+		if now.Before(ent.expiresAt) {
+			return
+		}
+		c.removeElement(element)
+	}
 }
 
 func (c *TTLCache[K, V]) evictIfNeeded() {

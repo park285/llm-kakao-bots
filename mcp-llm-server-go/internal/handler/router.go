@@ -10,7 +10,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
 )
 
-// NewRouter 는 HTTP 라우터를 구성한다.
+// NewRouter: HTTP 라우터를 구성합니다.
 func NewRouter(
 	cfg *config.Config,
 	logger *slog.Logger,

@@ -42,7 +42,7 @@ type CreateSessionRequest struct {
 	Model        string `json:"model,omitempty"`
 }
 
-// Info 는 세션 정보 응답이다.
+// Info: 세션 정보 응답입니다.
 type Info struct {
 	ID           string             `json:"id"`
 	SystemPrompt string             `json:"system_prompt,omitempty"`

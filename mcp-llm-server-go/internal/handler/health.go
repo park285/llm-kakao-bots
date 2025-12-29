@@ -9,7 +9,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/health"
 )
 
-// ModelConfigResponse 는 모델 설정 응답이다.
+// ModelConfigResponse: 모델 설정 응답입니다.
 type ModelConfigResponse struct {
 	ModelDefault          string  `json:"model_default"`
 	ModelHints            string  `json:"model_hints"`
@@ -23,7 +23,7 @@ type ModelConfigResponse struct {
 	TransportMode         string  `json:"transport_mode"`
 }
 
-// RegisterHealthRoutes 는 상태 확인 라우트를 등록한다.
+// RegisterHealthRoutes: 상태 확인 라우트를 등록합니다.
 func RegisterHealthRoutes(router *gin.Engine, cfg *config.Config) {
 	router.GET("/health", func(c *gin.Context) {
 		payload := health.Collect(c.Request.Context(), cfg, true)

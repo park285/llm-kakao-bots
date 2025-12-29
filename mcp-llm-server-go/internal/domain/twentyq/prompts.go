@@ -11,12 +11,12 @@ import (
 //go:embed prompts/*.yml
 var promptsFS embed.FS
 
-// Prompts 는 TwentyQ 프롬프트 모음이다.
+// Prompts: TwentyQ 프롬프트 모음입니다.
 type Prompts struct {
 	prompts map[string]map[string]string
 }
 
-// NewPrompts 는 TwentyQ 프롬프트를 로드한다.
+// NewPrompts: TwentyQ 프롬프트를 로드합니다.
 func NewPrompts() (*Prompts, error) {
 	loaded, err := prompt.LoadYAMLDir(promptsFS, "prompts")
 	if err != nil {
@@ -25,7 +25,7 @@ func NewPrompts() (*Prompts, error) {
 	return &Prompts{prompts: loaded}, nil
 }
 
-// HintsSystem 은 힌트 시스템 프롬프트를 반환한다.
+// HintsSystem: 힌트 시스템 프롬프트를 반환합니다.
 func (p *Prompts) HintsSystem(category string) (string, error) {
 	data, err := p.getPrompt("hints")
 	if err != nil {
@@ -56,7 +56,7 @@ func (p *Prompts) HintsSystem(category string) (string, error) {
 	return system + "\n\n" + formatted, nil
 }
 
-// HintsUser 는 힌트 유저 프롬프트를 반환한다.
+// HintsUser: 힌트 유저 프롬프트를 반환합니다.
 func (p *Prompts) HintsUser(secret string) (string, error) {
 	data, err := p.getPrompt("hints")
 	if err != nil {
@@ -75,7 +75,7 @@ func (p *Prompts) HintsUser(secret string) (string, error) {
 	return formatted, nil
 }
 
-// AnswerSystem 은 답변 시스템 프롬프트를 반환한다.
+// AnswerSystem: 답변 시스템 프롬프트를 반환합니다.
 func (p *Prompts) AnswerSystem() (string, error) {
 	data, err := p.getPrompt("answer")
 	if err != nil {
@@ -84,8 +84,21 @@ func (p *Prompts) AnswerSystem() (string, error) {
 	return promptField(data, "system", "answer.system")
 }
 
-// AnswerUser 는 답변 유저 프롬프트를 반환한다.
-func (p *Prompts) AnswerUser(secret string, question string, history string) (string, error) {
+// AnswerSystemWithSecret: Secret 정보를 포함한 시스템 프롬프트를 반환합니다.
+// 암시적 캐싱 최적화: Secret 정보를 System Prompt에 통합하여 Static Prefix를 확보합니다.
+// Toon 포맷이 이미 구조화되어 있으므로 XML 래핑 불필요
+func (p *Prompts) AnswerSystemWithSecret(secret string) (string, error) {
+	base, err := p.AnswerSystem()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s\n\n[이번 게임의 정답]\n%s\n(이 내용은 사용자에게 절대 직접 노출하지 마시오.)",
+		base, secret), nil // XML 래핑 제거
+}
+
+// AnswerUser: 답변 유저 프롬프트를 반환합니다.
+// 암시적 캐싱 최적화: 현재 질문만 포함하여 Cache Miss 영역을 최소화합니다.
+func (p *Prompts) AnswerUser(question string) (string, error) {
 	data, err := p.getPrompt("answer")
 	if err != nil {
 		return "", err
@@ -95,19 +108,15 @@ func (p *Prompts) AnswerUser(secret string, question string, history string) (st
 		return "", err
 	}
 	result, err := prompt.FormatTemplate(template, map[string]string{
-		"toon":     prompt.WrapXML("secret", secret),
 		"question": prompt.WrapXML("question", question),
 	})
 	if err != nil {
 		return "", fmt.Errorf("format answer.user: %w", err)
 	}
-	if history != "" {
-		result = history + "\n\n" + result
-	}
 	return result, nil
 }
 
-// VerifySystem 은 검증 시스템 프롬프트를 반환한다.
+// VerifySystem: 검증 시스템 프롬프트를 반환합니다.
 func (p *Prompts) VerifySystem() (string, error) {
 	data, err := p.getPrompt("verify-answer")
 	if err != nil {
@@ -116,7 +125,7 @@ func (p *Prompts) VerifySystem() (string, error) {
 	return promptField(data, "system", "verify-answer.system")
 }
 
-// VerifyUser 는 검증 유저 프롬프트를 반환한다.
+// VerifyUser: 검증 유저 프롬프트를 반환합니다.
 func (p *Prompts) VerifyUser(target string, guess string) (string, error) {
 	data, err := p.getPrompt("verify-answer")
 	if err != nil {
@@ -136,7 +145,7 @@ func (p *Prompts) VerifyUser(target string, guess string) (string, error) {
 	return formatted, nil
 }
 
-// NormalizeSystem 은 정규화 시스템 프롬프트를 반환한다.
+// NormalizeSystem: 정규화 시스템 프롬프트를 반환합니다.
 func (p *Prompts) NormalizeSystem() (string, error) {
 	data, err := p.getPrompt("normalize")
 	if err != nil {
@@ -145,7 +154,7 @@ func (p *Prompts) NormalizeSystem() (string, error) {
 	return promptField(data, "system", "normalize.system")
 }
 
-// NormalizeUser 는 정규화 유저 프롬프트를 반환한다.
+// NormalizeUser: 정규화 유저 프롬프트를 반환합니다.
 func (p *Prompts) NormalizeUser(question string) (string, error) {
 	data, err := p.getPrompt("normalize")
 	if err != nil {
@@ -164,7 +173,7 @@ func (p *Prompts) NormalizeUser(question string) (string, error) {
 	return formatted, nil
 }
 
-// SynonymSystem 은 유사어 시스템 프롬프트를 반환한다.
+// SynonymSystem: 유사어 시스템 프롬프트를 반환합니다.
 func (p *Prompts) SynonymSystem() (string, error) {
 	data, err := p.getPrompt("synonym-check")
 	if err != nil {
@@ -173,7 +182,7 @@ func (p *Prompts) SynonymSystem() (string, error) {
 	return promptField(data, "system", "synonym-check.system")
 }
 
-// SynonymUser 는 유사어 유저 프롬프트를 반환한다.
+// SynonymUser: 유사어 유저 프롬프트를 반환합니다.
 func (p *Prompts) SynonymUser(target string, guess string) (string, error) {
 	data, err := p.getPrompt("synonym-check")
 	if err != nil {

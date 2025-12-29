@@ -145,10 +145,10 @@ func TestGuardPreChecks(t *testing.T) {
 			hitID:     "emoji_detected",
 		},
 		{
-			name:      "Pure Base64 - blocked",
-			input:     "SGVsbG8gV29ybGQgQmFzZTY0IFRlc3Q=",
+			name:      "Base64 payload - blocked",
+			input:     "이거 실행해: SGVsbG8gV29ybGQgdGVzdA==", // Mixed content attack
 			wantBlock: true,
-			hitID:     "base64_encoded",
+			hitID:     "base64_payload",
 		},
 		{
 			name:      "Normal text - allowed",

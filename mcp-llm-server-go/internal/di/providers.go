@@ -8,7 +8,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/logging"
 )
 
-// ProvideLogger 는 로거를 구성해 반환한다.
+// ProvideLogger: 로거를 구성해 반환합니다.
 func ProvideLogger(cfg *config.Config) (*slog.Logger, error) {
 	logger, err := logging.NewLogger(cfg.Logging)
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 //go:embed puzzles/*.json
 var puzzlesFS embed.FS
 
-// PuzzlePreset 은 퍼즐 기본 데이터다.
+// PuzzlePreset: 퍼즐 기본 데이터입니다.
 type PuzzlePreset struct {
 	ID         int    `json:"id"`
 	Title      string `json:"title"`
@@ -26,7 +26,7 @@ type PuzzlePreset struct {
 	Difficulty int    `json:"difficulty"`
 }
 
-// PuzzleLoader 는 퍼즐 데이터를 로드하고 조회한다.
+// PuzzleLoader: 퍼즐 데이터를 로드하고 조회합니다.
 type PuzzleLoader struct {
 	mu           sync.RWMutex
 	all          []PuzzlePreset
@@ -35,7 +35,7 @@ type PuzzleLoader struct {
 	rnd          *rand.Rand
 }
 
-// NewPuzzleLoader 는 퍼즐 로더를 초기화한다.
+// NewPuzzleLoader: 퍼즐 로더를 초기화합니다.
 func NewPuzzleLoader() (*PuzzleLoader, error) {
 	loader := &PuzzleLoader{
 		byDifficulty: make(map[int][]PuzzlePreset),
@@ -48,21 +48,21 @@ func NewPuzzleLoader() (*PuzzleLoader, error) {
 	return loader, nil
 }
 
-// Reload 는 퍼즐 데이터를 다시 로드한다.
+// Reload: 퍼즐 데이터를 다시 로드합니다.
 func (l *PuzzleLoader) Reload() (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.reloadLocked()
 }
 
-// All 은 모든 퍼즐을 반환한다.
+// All: 모든 퍼즐을 반환합니다.
 func (l *PuzzleLoader) All() []PuzzlePreset {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return append([]PuzzlePreset(nil), l.all...)
 }
 
-// CountByDifficulty 는 난이도별 퍼즐 개수를 반환한다.
+// CountByDifficulty: 난이도별 퍼즐 개수를 반환합니다.
 func (l *PuzzleLoader) CountByDifficulty() map[int]int {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -73,7 +73,7 @@ func (l *PuzzleLoader) CountByDifficulty() map[int]int {
 	return counts
 }
 
-// GetRandomPuzzle 는 랜덤 퍼즐을 반환한다.
+// GetRandomPuzzle: 랜덤 퍼즐을 반환합니다.
 func (l *PuzzleLoader) GetRandomPuzzle() (PuzzlePreset, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -83,7 +83,7 @@ func (l *PuzzleLoader) GetRandomPuzzle() (PuzzlePreset, error) {
 	return l.all[l.rnd.IntN(len(l.all))], nil
 }
 
-// GetRandomPuzzleByDifficulty 는 난이도 기준 랜덤 퍼즐을 반환한다.
+// GetRandomPuzzleByDifficulty: 난이도 기준 랜덤 퍼즐을 반환합니다.
 func (l *PuzzleLoader) GetRandomPuzzleByDifficulty(difficulty int) (PuzzlePreset, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -94,7 +94,7 @@ func (l *PuzzleLoader) GetRandomPuzzleByDifficulty(difficulty int) (PuzzlePreset
 	return puzzles[l.rnd.IntN(len(puzzles))], nil
 }
 
-// GetPuzzleByID 는 ID 로 퍼즐을 조회한다.
+// GetPuzzleByID: ID로 퍼즐을 조회합니다.
 func (l *PuzzleLoader) GetPuzzleByID(id int) (PuzzlePreset, bool) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -102,7 +102,7 @@ func (l *PuzzleLoader) GetPuzzleByID(id int) (PuzzlePreset, bool) {
 	return p, ok
 }
 
-// GetExamples 는 난이도 기준 예시 퍼즐을 반환한다.
+// GetExamples: 난이도 기준 예시 퍼즐을 반환합니다.
 func (l *PuzzleLoader) GetExamples(difficulty int, maxExamples int) []PuzzlePreset {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

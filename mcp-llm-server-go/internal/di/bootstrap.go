@@ -15,7 +15,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usage"
 )
 
-// InitializeApp 은 애플리케이션 의존성을 초기화하고 App 인스턴스를 반환한다.
+// InitializeApp: 애플리케이션 의존성을 초기화하고 App 인스턴스를 반환합니다.
 func InitializeApp() (*App, error) {
 	cfg, err := config.ProvideConfig()
 	if err != nil {

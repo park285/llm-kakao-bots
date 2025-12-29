@@ -1,19 +1,19 @@
 package handler
 
-// TwentyQHintsRequest 는 힌트 요청 본문이다.
+// TwentyQHintsRequest: 힌트 요청 본문입니다.
 type TwentyQHintsRequest struct {
 	Target   string         `json:"target" binding:"required"`
 	Category string         `json:"category" binding:"required"`
 	Details  map[string]any `json:"details"`
 }
 
-// TwentyQHintsResponse 는 힌트 응답 본문이다.
+// TwentyQHintsResponse: 힌트 응답 본문입니다.
 type TwentyQHintsResponse struct {
 	Hints            []string `json:"hints"`
 	ThoughtSignature *string  `json:"thought_signature"`
 }
 
-// TwentyQAnswerRequest 는 정답 요청 본문이다.
+// TwentyQAnswerRequest: 정답 요청 본문입니다.
 type TwentyQAnswerRequest struct {
 	SessionID *string        `json:"session_id"`
 	ChatID    *string        `json:"chat_id"`
@@ -24,43 +24,43 @@ type TwentyQAnswerRequest struct {
 	Details   map[string]any `json:"details"`
 }
 
-// TwentyQAnswerResponse 는 정답 응답 본문이다.
+// TwentyQAnswerResponse: 정답 응답 본문입니다.
 type TwentyQAnswerResponse struct {
 	Scale            *string `json:"scale"`
 	RawText          string  `json:"raw_text"`
 	ThoughtSignature *string `json:"thought_signature"`
 }
 
-// TwentyQVerifyRequest 는 정답 검증 요청 본문이다.
+// TwentyQVerifyRequest: 정답 검증 요청 본문입니다.
 type TwentyQVerifyRequest struct {
 	Target string `json:"target" binding:"required"`
 	Guess  string `json:"guess" binding:"required"`
 }
 
-// TwentyQVerifyResponse 는 정답 검증 응답 본문이다.
+// TwentyQVerifyResponse: 정답 검증 응답 본문입니다.
 type TwentyQVerifyResponse struct {
 	Result  *string `json:"result"`
 	RawText string  `json:"raw_text"`
 }
 
-// TwentyQNormalizeRequest 는 질문 정규화 요청 본문이다.
+// TwentyQNormalizeRequest: 질문 정규화 요청 본문입니다.
 type TwentyQNormalizeRequest struct {
 	Question string `json:"question" binding:"required"`
 }
 
-// TwentyQNormalizeResponse 는 질문 정규화 응답 본문이다.
+// TwentyQNormalizeResponse: 질문 정규화 응답 본문입니다.
 type TwentyQNormalizeResponse struct {
 	Normalized string `json:"normalized"`
 	Original   string `json:"original"`
 }
 
-// TwentyQSynonymRequest 는 유사어 확인 요청 본문이다.
+// TwentyQSynonymRequest: 유사어 확인 요청 본문입니다.
 type TwentyQSynonymRequest struct {
 	Target string `json:"target" binding:"required"`
 	Guess  string `json:"guess" binding:"required"`
 }
 
-// TwentyQSynonymResponse 는 유사어 확인 응답 본문이다.
+// TwentyQSynonymResponse: 유사어 확인 응답 본문입니다.
 type TwentyQSynonymResponse struct {
 	Result  *string `json:"result"`
 	RawText string  `json:"raw_text"`

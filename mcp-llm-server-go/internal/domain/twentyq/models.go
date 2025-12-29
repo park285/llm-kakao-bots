@@ -6,19 +6,19 @@ import (
 	domainmodels "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/models"
 )
 
-// AnswerScale 는 스무고개 답변 척도 타입이다.
+// AnswerScale: 스무고개 답변 척도 타입입니다.
 type AnswerScale string
 
 const (
-	// AnswerYes 는 긍정 답변이다.
+	// AnswerYes: 긍정 답변입니다.
 	AnswerYes AnswerScale = domainmodels.AnswerYesText
-	// AnswerProbablyYes 는 아마도 예 답변이다.
+	// AnswerProbablyYes: 아마도 예 답변입니다.
 	AnswerProbablyYes AnswerScale = "아마도 예"
-	// AnswerProbablyNo 는 아마도 아니오 답변이다.
+	// AnswerProbablyNo: 아마도 아니오 답변입니다.
 	AnswerProbablyNo AnswerScale = "아마도 아니오"
-	// AnswerNo 는 부정 답변이다.
+	// AnswerNo: 부정 답변입니다.
 	AnswerNo AnswerScale = domainmodels.AnswerNoText
-	// AnswerPolicyViolation 는 정책 위반 질문이다. 히스토리에 기록되지 않는다.
+	// AnswerPolicyViolation: 정책 위반 질문입니다. 히스토리에 기록되지 않습니다.
 	AnswerPolicyViolation AnswerScale = "정책 위반"
 )
 
@@ -32,7 +32,7 @@ var answerScales = []AnswerScale{
 	AnswerPolicyViolation, // "정책 위반"
 }
 
-// ParseAnswerScale 는 답변 척도를 파싱한다.
+// ParseAnswerScale: 답변 척도를 파싱합니다.
 func ParseAnswerScale(text string) (AnswerScale, bool) {
 	text = strings.TrimSpace(text)
 	for _, scale := range answerScales {
@@ -43,19 +43,19 @@ func ParseAnswerScale(text string) (AnswerScale, bool) {
 	return "", false
 }
 
-// VerifyResult 는 정답 검증 결과 타입이다.
+// VerifyResult: 정답 검증 결과 타입입니다.
 type VerifyResult string
 
 const (
-	// VerifyAccept 는 정답 판정이다.
+	// VerifyAccept: 정답 판정입니다.
 	VerifyAccept VerifyResult = "정답"
-	// VerifyClose 는 근접 판정이다.
+	// VerifyClose: 근접 판정입니다.
 	VerifyClose VerifyResult = "근접"
-	// VerifyReject 는 오답 판정이다.
+	// VerifyReject: 오답 판정입니다.
 	VerifyReject VerifyResult = "오답"
 )
 
-// VerifyResultName 는 검증 결과를 영문 코드로 변환한다.
+// VerifyResultName: 검증 결과를 영문 코드로 변환합니다.
 func VerifyResultName(value string) (string, bool) {
 	switch strings.TrimSpace(value) {
 	case string(VerifyAccept):
@@ -69,17 +69,17 @@ func VerifyResultName(value string) (string, bool) {
 	}
 }
 
-// SynonymResult 는 유사어 판정 결과 타입이다.
+// SynonymResult: 유사어 판정 결과 타입입니다.
 type SynonymResult string
 
 const (
-	// SynonymEquivalent 는 동일 판정이다.
+	// SynonymEquivalent: 동일 판정입니다.
 	SynonymEquivalent SynonymResult = "동일"
-	// SynonymNotEquivalent 는 상이 판정이다.
+	// SynonymNotEquivalent: 상이 판정입니다.
 	SynonymNotEquivalent SynonymResult = "상이"
 )
 
-// SynonymResultName 는 유사어 판정을 영문 코드로 변환한다.
+// SynonymResultName: 유사어 판정을 영문 코드로 변환합니다.
 func SynonymResultName(value string) (string, bool) {
 	switch strings.TrimSpace(value) {
 	case string(SynonymEquivalent):
@@ -91,29 +91,29 @@ func SynonymResultName(value string) (string, bool) {
 	}
 }
 
-// HintsOutput 은 힌트 출력 스키마다.
+// HintsOutput: 힌트 출력 스키마입니다.
 type HintsOutput struct {
 	Reasoning string   `json:"reasoning"`
 	Hints     []string `json:"hints"`
 }
 
-// NormalizeOutput 은 정규화 출력 스키마다.
+// NormalizeOutput: 정규화 출력 스키마입니다.
 type NormalizeOutput struct {
 	Normalized string `json:"normalized"`
 }
 
-// VerifyOutput 은 검증 출력 스키마다.
+// VerifyOutput: 검증 출력 스키마입니다.
 type VerifyOutput struct {
 	Reasoning string `json:"reasoning"`
 	Result    string `json:"result"`
 }
 
-// SynonymOutput 은 유사어 출력 스키마다.
+// SynonymOutput: 유사어 출력 스키마입니다.
 type SynonymOutput struct {
 	Result string `json:"result"`
 }
 
-// hintsSchema 는 힌트 스키마다 (reasoning + hints 배열).
+// hintsSchema: 힌트 스키마 (reasoning + hints 배열)
 var hintsSchema = map[string]any{
 	"type": "object",
 	"properties": map[string]any{
@@ -154,34 +154,34 @@ var verifySchema = map[string]any{
 
 var synonymSchema = domainmodels.RequiredStringFieldSchema("result")
 
-// HintsSchema 는 힌트 JSON 스키마를 반환한다.
+// HintsSchema: 힌트 JSON 스키마를 반환합니다.
 func HintsSchema() map[string]any {
 	return hintsSchema
 }
 
-// NormalizeSchema 는 정규화 JSON 스키마를 반환한다.
+// NormalizeSchema: 정규화 JSON 스키마를 반환합니다.
 func NormalizeSchema() map[string]any {
 	return normalizeSchema
 }
 
-// VerifySchema 는 검증 JSON 스키마를 반환한다.
+// VerifySchema: 검증 JSON 스키마를 반환합니다.
 func VerifySchema() map[string]any {
 	return verifySchema
 }
 
-// SynonymSchema 는 유사어 JSON 스키마를 반환한다.
+// SynonymSchema: 유사어 JSON 스키마를 반환합니다.
 func SynonymSchema() map[string]any {
 	return synonymSchema
 }
 
-// AnswerOutput 은 답변 출력 스키마다.
+// AnswerOutput: 답변 출력 스키마입니다.
 type AnswerOutput struct {
 	Reasoning  string  `json:"reasoning"`
 	Answer     string  `json:"answer"`
 	Confidence float64 `json:"confidence"`
 }
 
-// answerSchema 는 답변 스키마다 (reasoning + enum 제약 + confidence).
+// answerSchema: 답변 스키마 (reasoning + enum 제약 + confidence)
 var answerSchema = map[string]any{
 	"type": "object",
 	"properties": map[string]any{
@@ -209,7 +209,7 @@ var answerSchema = map[string]any{
 	"required": []string{"reasoning", "answer", "confidence"},
 }
 
-// AnswerSchema 는 답변 JSON 스키마를 반환한다.
+// AnswerSchema: 답변 JSON 스키마를 반환합니다.
 func AnswerSchema() map[string]any {
 	return answerSchema
 }

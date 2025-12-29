@@ -8,12 +8,12 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/guard"
 )
 
-// GuardRequest 는 가드 검사 요청이다.
+// GuardRequest: 가드 검사 요청입니다.
 type GuardRequest struct {
 	InputText string `json:"input_text" binding:"required"`
 }
 
-// GuardResponse 는 가드 평가 응답이다.
+// GuardResponse: 가드 평가 응답입니다.
 type GuardResponse struct {
 	Score     float64       `json:"score"`
 	Malicious bool          `json:"malicious"`
@@ -21,17 +21,17 @@ type GuardResponse struct {
 	Hits      []guard.Match `json:"hits"`
 }
 
-// GuardHandler 는 가드 API 핸들러다.
+// GuardHandler: 가드 API 핸들러입니다.
 type GuardHandler struct {
 	guard *guard.InjectionGuard
 }
 
-// NewGuardHandler 는 가드 핸들러를 생성한다.
+// NewGuardHandler: 가드 핸들러를 생성합니다.
 func NewGuardHandler(injectionGuard *guard.InjectionGuard) *GuardHandler {
 	return &GuardHandler{guard: injectionGuard}
 }
 
-// RegisterRoutes 는 가드 라우트를 등록한다.
+// RegisterRoutes: 가드 라우트를 등록합니다.
 func (h *GuardHandler) RegisterRoutes(router *gin.Engine) {
 	group := router.Group("/api/guard")
 	group.POST("/evaluations", h.handleEvaluate)

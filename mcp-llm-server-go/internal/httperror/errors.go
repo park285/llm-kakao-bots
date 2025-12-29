@@ -71,7 +71,7 @@ type Error struct {
 	Details map[string]any
 }
 
-// Error 는 오류 메시지를 반환한다.
+// Error: 오류 메시지를 반환합니다.
 func (e *Error) Error() string {
 	return e.Message
 }

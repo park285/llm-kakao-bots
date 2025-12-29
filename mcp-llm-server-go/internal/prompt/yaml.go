@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadYAMLMapping 는 프롬프트 YAML 파일을 로드한다.
+// LoadYAMLMapping: 프롬프트 YAML 파일을 로드합니다.
 func LoadYAMLMapping(fsys fs.FS, filePath string) (map[string]string, error) {
 	data, err := fs.ReadFile(fsys, filePath)
 	if err != nil {
@@ -40,7 +40,7 @@ func LoadYAMLMapping(fsys fs.FS, filePath string) (map[string]string, error) {
 	return mapping, nil
 }
 
-// LoadYAMLDir 는 디렉터리의 프롬프트 YAML 을 로드한다.
+// LoadYAMLDir: 디렉터리의 프롬프트 YAML을 로드합니다.
 func LoadYAMLDir(fsys fs.FS, dir string) (map[string]map[string]string, error) {
 	paths, err := fs.Glob(fsys, path.Join(dir, "*.yml"))
 	if err != nil {

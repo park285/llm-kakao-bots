@@ -19,7 +19,7 @@ type usageDelta struct {
 
 const defaultFlushTimeout = 5 * time.Second
 
-// batcher 는 토큰 사용량을 배치로 DB에 플러시한다.
+// batcher: 토큰 사용량을 배치로 DB에 플러시합니다.
 type batcher struct {
 	repo                     *Repository
 	logger                   *slog.Logger

@@ -6,8 +6,8 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/llm"
 )
 
-// Storage 는 세션 저장소 인터페이스다.
-// 테스트에서 mock 구현을 주입할 수 있도록 한다.
+// Storage: 세션 저장소 인터페이스입니다.
+// 테스트에서 mock 구현을 주입할 수 있도록 합니다.
 type Storage interface {
 	// IsEnabled 저장소 활성화 여부
 	IsEnabled() bool

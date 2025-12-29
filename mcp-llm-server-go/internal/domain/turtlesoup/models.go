@@ -35,14 +35,14 @@ var turtleBaseAnswers = []AnswerType{
 	AnswerYes,
 }
 
-// IsImportantAnswer 는 중요 질문 메시지 포함 여부를 판단한다.
+// IsImportantAnswer: 중요 질문 메시지 포함 여부를 판단합니다.
 func IsImportantAnswer(rawText string) bool {
 	normalized := strings.ReplaceAll(rawText, " ", "")
 	return strings.Contains(normalized, strings.ReplaceAll(AnswerImportantMessage, " ", "")) ||
 		strings.Contains(normalized, "중요합니다")
 }
 
-// ParseBaseAnswer 는 답변 문장에서 기본 답변 타입을 추출한다.
+// ParseBaseAnswer: 답변 문장에서 기본 답변 타입을 추출합니다.
 func ParseBaseAnswer(rawText string) (AnswerType, bool) {
 	raw := strings.TrimSpace(rawText)
 	for _, answer := range turtleBaseAnswers {
@@ -84,7 +84,7 @@ const (
 	ValidationClose ValidationResult = "CLOSE"
 )
 
-// ParseValidationResult 는 검증 결과를 파싱한다.
+// ParseValidationResult: 검증 결과를 파싱합니다.
 func ParseValidationResult(rawText string) (ValidationResult, bool) {
 	upper := strings.ToUpper(rawText)
 	for _, candidate := range []ValidationResult{ValidationYes, ValidationNo, ValidationClose} {
@@ -143,17 +143,17 @@ var rewriteSchema = map[string]any{
 	"required": []string{"scenario", "solution"},
 }
 
-// HintSchema 는 힌트 JSON 스키마를 반환한다.
+// HintSchema: 힌트 JSON 스키마를 반환합니다.
 func HintSchema() map[string]any {
 	return hintSchema
 }
 
-// PuzzleSchema 는 퍼즐 JSON 스키마를 반환한다.
+// PuzzleSchema: 퍼즐 JSON 스키마를 반환합니다.
 func PuzzleSchema() map[string]any {
 	return puzzleSchema
 }
 
-// RewriteSchema 는 리라이트 JSON 스키마를 반환한다.
+// RewriteSchema: 리라이트 JSON 스키마를 반환합니다.
 func RewriteSchema() map[string]any {
 	return rewriteSchema
 }
@@ -186,7 +186,7 @@ var answerSchema = map[string]any{
 	"required": []string{"answer", "important"},
 }
 
-// AnswerSchema 는 답변 JSON 스키마를 반환한다.
+// AnswerSchema: 답변 JSON 스키마를 반환합니다.
 func AnswerSchema() map[string]any {
 	return answerSchema
 }
@@ -212,7 +212,7 @@ var validateSchema = map[string]any{
 	"required": []string{"result"},
 }
 
-// ValidateSchema 는 검증 JSON 스키마를 반환한다.
+// ValidateSchema: 검증 JSON 스키마를 반환합니다.
 func ValidateSchema() map[string]any {
 	return validateSchema
 }

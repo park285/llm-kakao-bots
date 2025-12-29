@@ -12,7 +12,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 )
 
-// NewHTTPServer 는 HTTP 서버를 생성한다.
+// NewHTTPServer: HTTP 서버를 생성합니다.
 func NewHTTPServer(cfg *config.Config, router *gin.Engine) *http.Server {
 	addr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
 	server := &http.Server{

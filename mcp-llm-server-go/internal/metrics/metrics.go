@@ -7,7 +7,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/llm"
 )
 
-// Store 는 LLM 호출 통계를 저장한다.
+// Store: LLM 호출 통계를 저장합니다.
 type Store struct {
 	totalCalls           int64
 	totalErrors          int64
@@ -17,12 +17,12 @@ type Store struct {
 	totalDurationMs      int64
 }
 
-// NewStore 는 통계 저장소를 생성한다.
+// NewStore: 통계 저장소를 생성합니다.
 func NewStore() *Store {
 	return &Store{}
 }
 
-// RecordSuccess 는 성공 호출 통계를 기록한다.
+// RecordSuccess: 성공 호출 통계를 기록합니다.
 func (s *Store) RecordSuccess(duration time.Duration, usage llm.Usage) {
 	atomic.AddInt64(&s.totalCalls, 1)
 	atomic.AddInt64(&s.totalInputTokens, int64(usage.InputTokens))
@@ -31,14 +31,14 @@ func (s *Store) RecordSuccess(duration time.Duration, usage llm.Usage) {
 	atomic.AddInt64(&s.totalDurationMs, duration.Milliseconds())
 }
 
-// RecordError 는 실패 호출 통계를 기록한다.
+// RecordError: 실패 호출 통계를 기록합니다.
 func (s *Store) RecordError(duration time.Duration) {
 	atomic.AddInt64(&s.totalCalls, 1)
 	atomic.AddInt64(&s.totalErrors, 1)
 	atomic.AddInt64(&s.totalDurationMs, duration.Milliseconds())
 }
 
-// UsageTotals 는 누적 사용량을 반환한다.
+// UsageTotals: 누적 사용량을 반환합니다.
 func (s *Store) UsageTotals() llm.Usage {
 	input := atomic.LoadInt64(&s.totalInputTokens)
 	output := atomic.LoadInt64(&s.totalOutputTokens)
@@ -51,7 +51,7 @@ func (s *Store) UsageTotals() llm.Usage {
 	}
 }
 
-// Snapshot 는 통계 스냅샷을 반환한다.
+// Snapshot: 통계 스냅샷을 반환합니다.
 func (s *Store) Snapshot() map[string]float64 {
 	totalCalls := atomic.LoadInt64(&s.totalCalls)
 	totalErrors := atomic.LoadInt64(&s.totalErrors)

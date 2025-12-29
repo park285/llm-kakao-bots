@@ -8,14 +8,14 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 )
 
-// Recorder 는 요청별 토큰 사용량을 저장하거나 배치로 적재한다.
+// Recorder: 요청별 토큰 사용량을 저장하거나 배치로 적재합니다.
 type Recorder struct {
 	repo    *Repository
 	batcher *batcher
 	logger  *slog.Logger
 }
 
-// NewRecorder 는 설정에 따라 배치 사용 여부를 결정해 Recorder를 생성한다.
+// NewRecorder: 설정에 따라 배치 사용 여부를 결정해 Recorder를 생성합니다.
 func NewRecorder(cfg *config.Config, repo *Repository, logger *slog.Logger) *Recorder {
 	recorder := &Recorder{
 		repo:   repo,
@@ -40,7 +40,7 @@ func NewRecorder(cfg *config.Config, repo *Repository, logger *slog.Logger) *Rec
 	return recorder
 }
 
-// Record 는 1회 요청의 토큰 사용량을 기록한다.
+// Record: 1회 요청의 토큰 사용량을 기록합니다.
 func (r *Recorder) Record(ctx context.Context, inputTokens int64, outputTokens int64, reasoningTokens int64) {
 	if r == nil || r.repo == nil {
 		return
@@ -61,7 +61,7 @@ func (r *Recorder) Record(ctx context.Context, inputTokens int64, outputTokens i
 	}
 }
 
-// Close 는 배치 플러셔를 중지한다.
+// Close: 배치 플러셔를 중지합니다.
 func (r *Recorder) Close() {
 	if r == nil || r.batcher == nil {
 		return

@@ -8,8 +8,8 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
 )
 
-// ResolveSessionID 는 세션 ID를 결정한다.
-// 반환: (effectiveSessionID, derived). derived가 true면 chatID+namespace로 생성된 것.
+// ResolveSessionID: 세션 ID를 결정합니다.
+// 반환: (effectiveSessionID, derived). derived가 true면 chatID+namespace로 생성된 것입니다.
 func ResolveSessionID(sessionID string, chatID string, namespace string, defaultNamespace string) (string, bool) {
 	if sessionID != "" {
 		return sessionID, false
@@ -24,8 +24,8 @@ func ResolveSessionID(sessionID string, chatID string, namespace string, default
 	return fmt.Sprintf("%s:%s", effectiveNamespace, chatID), true
 }
 
-// BuildRecentQAHistoryContext 는 히스토리에서 최근 Q/A 쌍을 추출해 문자열로 변환한다.
-// 확인된 속성 요약을 상단에 추가하여 일관성 유지를 돕는다.
+// BuildRecentQAHistoryContext: 히스토리에서 최근 Q/A 쌍을 추출해 문자열로 변환합니다.
+// 확인된 속성 요약을 상단에 추가하여 일관성 유지를 돕습니다.
 func BuildRecentQAHistoryContext(history []llm.HistoryEntry, header string, maxPairs int) string {
 	if maxPairs <= 0 {
 		return ""
@@ -87,7 +87,7 @@ func BuildRecentQAHistoryContext(history []llm.HistoryEntry, header string, maxP
 	return result.String()
 }
 
-// truncateQuestion 은 질문을 maxLen 글자로 축약한다.
+// truncateQuestion: 질문을 maxLen 글자로 축약합니다.
 func truncateQuestion(q string, maxLen int) string {
 	runes := []rune(q)
 	if len(runes) <= maxLen {
@@ -96,7 +96,7 @@ func truncateQuestion(q string, maxLen int) string {
 	return string(runes[:maxLen]) + "..."
 }
 
-// ValueOrEmpty 는 nil 포인터면 빈 문자열을 반환한다.
+// ValueOrEmpty: nil 포인터면 빈 문자열을 반환합니다.
 func ValueOrEmpty(value *string) string {
 	if value == nil {
 		return ""

@@ -14,7 +14,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 )
 
-// TwentyQHandler 는 TwentyQ API 핸들러다.
+// TwentyQHandler: TwentyQ API 핸들러입니다.
 type TwentyQHandler struct {
 	cfg         *config.Config
 	client      *gemini.Client
@@ -25,7 +25,7 @@ type TwentyQHandler struct {
 	logger      *slog.Logger
 }
 
-// NewTwentyQHandler 는 TwentyQ 핸들러를 생성한다.
+// NewTwentyQHandler: TwentyQ 핸들러를 생성합니다.
 func NewTwentyQHandler(
 	cfg *config.Config,
 	client *gemini.Client,
@@ -46,7 +46,7 @@ func NewTwentyQHandler(
 	}
 }
 
-// RegisterRoutes 는 TwentyQ 라우트를 등록한다.
+// RegisterRoutes: TwentyQ 라우트를 등록합니다.
 func (h *TwentyQHandler) RegisterRoutes(router *gin.Engine) {
 	group := router.Group("/api/twentyq")
 	group.POST("/hints", h.handleHints)

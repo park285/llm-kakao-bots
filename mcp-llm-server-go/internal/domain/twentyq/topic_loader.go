@@ -14,14 +14,14 @@ import (
 //go:embed topics/*.json
 var topicsFS embed.FS
 
-// TopicEntry 는 토픽 상세 정보 구조체다.
+// TopicEntry: 토픽 상세 정보 구조체입니다.
 type TopicEntry struct {
 	Name     string         `json:"name"`
 	Details  map[string]any `json:"details"`
 	Category string         `json:"category"`
 }
 
-// TopicLoader 는 카테고리별 토픽을 로드하고 선택한다.
+// TopicLoader: 카테고리별 토픽을 로드하고 선택합니다.
 type TopicLoader struct {
 	mu     sync.RWMutex
 	topics map[string][]TopicEntry
@@ -34,7 +34,7 @@ type topicItemRaw struct {
 	Details map[string]any `json:"details"`
 }
 
-// categoryFileMapping 은 카테고리별 파일 매핑이다.
+// categoryFileMapping: 카테고리별 파일 매핑입니다.
 var categoryFileMapping = map[string]string{
 	"object":        "object.json",
 	"food":          "food.json",
@@ -45,7 +45,7 @@ var categoryFileMapping = map[string]string{
 	"idiom_proverb": "saza.json",
 }
 
-// AllCategories 는 사용 가능한 모든 카테고리 목록이다.
+// AllCategories: 사용 가능한 모든 카테고리 목록입니다.
 var AllCategories = []string{
 	"organism",
 	"food",
@@ -56,7 +56,7 @@ var AllCategories = []string{
 	"idiom_proverb",
 }
 
-// NewTopicLoader 는 TopicLoader 를 생성하고 토픽을 로드한다.
+// NewTopicLoader: TopicLoader를 생성하고 토픽을 로드합니다.
 func NewTopicLoader() (*TopicLoader, error) {
 	loader := &TopicLoader{
 		topics: make(map[string][]TopicEntry),
@@ -119,7 +119,7 @@ func (l *TopicLoader) loadCategory(category string, filename string) ([]TopicEnt
 	return entries, nil
 }
 
-// SelectTopic 은 조건에 맞는 토픽을 랜덤하게 선택한다.
+// SelectTopic: 조건에 맞는 토픽을 랜덤하게 선택합니다.
 func (l *TopicLoader) SelectTopic(category string, bannedTopics []string, excludedCategories []string) (TopicEntry, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -151,7 +151,7 @@ func (l *TopicLoader) SelectTopic(category string, bannedTopics []string, exclud
 	return available[idx], nil
 }
 
-// Categories 는 사용 가능한 모든 카테고리를 반환한다.
+// Categories: 사용 가능한 모든 카테고리를 반환합니다.
 func (l *TopicLoader) Categories() []string {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

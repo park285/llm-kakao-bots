@@ -16,7 +16,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usage"
 )
 
-// ChatRequest 는 채팅 요청 본문이다.
+// ChatRequest: 채팅 요청 본문입니다.
 type ChatRequest struct {
 	Prompt       string             `json:"prompt" binding:"required"`
 	SystemPrompt string             `json:"system_prompt"`
@@ -25,13 +25,13 @@ type ChatRequest struct {
 	Task         string             `json:"task"`
 }
 
-// ChatResponse 는 채팅 응답 본문이다.
+// ChatResponse: 채팅 응답 본문입니다.
 type ChatResponse struct {
 	Response string `json:"response"`
 	Model    string `json:"model"`
 }
 
-// StructuredRequest 는 JSON 스키마 요청 본문이다.
+// StructuredRequest: JSON 스키마 요청 본문입니다.
 type StructuredRequest struct {
 	Prompt       string             `json:"prompt" binding:"required"`
 	JSONSchema   map[string]any     `json:"json_schema" binding:"required"`
@@ -40,7 +40,7 @@ type StructuredRequest struct {
 	Model        string             `json:"model"`
 }
 
-// ChatWithUsageResponse 는 사용량 포함 응답이다.
+// ChatWithUsageResponse: 사용량 포함 응답입니다.
 type ChatWithUsageResponse struct {
 	Text         string    `json:"text"`
 	Usage        llm.Usage `json:"usage"`
@@ -48,7 +48,7 @@ type ChatWithUsageResponse struct {
 	HasReasoning bool      `json:"has_reasoning"`
 }
 
-// UsageResponse 는 사용량 응답이다.
+// UsageResponse: 사용량 응답입니다.
 type UsageResponse struct {
 	InputTokens     int64  `json:"input_tokens"`
 	OutputTokens    int64  `json:"output_tokens"`
@@ -57,7 +57,7 @@ type UsageResponse struct {
 	Model           string `json:"model"`
 }
 
-// LLMHandler 는 LLM API 핸들러다.
+// LLMHandler: LLM API 핸들러입니다.
 type LLMHandler struct {
 	cfg       *config.Config
 	client    *gemini.Client
@@ -67,7 +67,7 @@ type LLMHandler struct {
 	logger    *slog.Logger
 }
 
-// NewLLMHandler 는 LLM 핸들러를 생성한다.
+// NewLLMHandler: LLM 핸들러를 생성합니다.
 func NewLLMHandler(
 	cfg *config.Config,
 	client *gemini.Client,
@@ -86,7 +86,7 @@ func NewLLMHandler(
 	}
 }
 
-// RegisterRoutes 는 LLM 라우트를 등록한다.
+// RegisterRoutes: LLM 라우트를 등록합니다.
 func (h *LLMHandler) RegisterRoutes(router *gin.Engine) {
 	group := router.Group("/api/llm")
 	group.POST("/chat", h.handleChat)

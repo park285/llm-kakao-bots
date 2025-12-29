@@ -15,7 +15,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 )
 
-// InjectionGuard 는 입력 문자열을 검사한다.
+// InjectionGuard: 입력 문자열을 검사하는 보안 가드입니다.
 type InjectionGuard struct {
 	cfg    *config.Config
 	logger *slog.Logger
@@ -24,7 +24,7 @@ type InjectionGuard struct {
 	group  singleflight.Group
 }
 
-// NewGuard 는 입력 검증 가드를 생성한다.
+// NewGuard: 입력 검증 가드를 생성합니다.
 func NewGuard(cfg *config.Config, logger *slog.Logger) (*InjectionGuard, error) {
 	if cfg == nil {
 		return nil, errors.New("config is nil")
@@ -44,7 +44,7 @@ func NewGuard(cfg *config.Config, logger *slog.Logger) (*InjectionGuard, error) 
 	return guard, nil
 }
 
-// Evaluate 는 입력 문자열을 평가한다.
+// Evaluate: 입력 문자열을 평가합니다.
 func (g *InjectionGuard) Evaluate(input string) Evaluation {
 	if g == nil || g.cfg == nil || !g.cfg.Guard.Enabled {
 		return Evaluation{Score: 0, Hits: nil, Threshold: math.Inf(1)}
@@ -66,7 +66,7 @@ func (g *InjectionGuard) Evaluate(input string) Evaluation {
 	return Evaluation{Score: 0, Hits: nil, Threshold: g.threshold()}
 }
 
-// EnsureSafe 는 위험 입력을 오류로 반환한다.
+// EnsureSafe: 위험 입력을 오류로 반환합니다.
 func (g *InjectionGuard) EnsureSafe(input string) error {
 	evaluation := g.Evaluate(input)
 	if evaluation.Malicious() {
@@ -75,7 +75,7 @@ func (g *InjectionGuard) EnsureSafe(input string) error {
 	return nil
 }
 
-// IsMalicious 는 입력이 위험한지 여부를 반환한다.
+// IsMalicious: 입력이 위험한지 여부를 반환합니다.
 func (g *InjectionGuard) IsMalicious(input string) bool {
 	return g.Evaluate(input).Malicious()
 }
@@ -155,13 +155,13 @@ func (g *InjectionGuard) evaluateInternal(input string) Evaluation {
 		}
 	}
 
-	if isPureBase64(input) {
+	if containsSuspiciousBase64(input) {
 		if g.logger != nil {
-			g.logger.Warn("guard_base64_blocked", "input", trimForLog(input))
+			g.logger.Warn("guard_base64_payload_blocked", "input", trimForLog(input))
 		}
 		return Evaluation{
 			Score:     threshold,
-			Hits:      []Match{{ID: "base64_encoded", Weight: threshold}},
+			Hits:      []Match{{ID: "base64_payload", Weight: threshold}},
 			Threshold: threshold,
 		}
 	}

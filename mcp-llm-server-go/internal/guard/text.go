@@ -1,8 +1,11 @@
 package guard
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/forPelevin/gomoji"
 	"github.com/mtibben/confusables"
@@ -31,70 +34,134 @@ func isASCIIOnly(text string) bool {
 	return true
 }
 
-func isPureBase64(text string) bool {
-	// 최소 길이 조건 체크
-	if len(text) < 20 {
-		return false
-	}
-
-	// [Fast Path] ASCII 검사
-	if isASCIIOnly(text) {
-		return validateBase64Loop(text)
-	}
-
-	// ASCII가 아니라면(공격 시도 가능성), 정규화 후 검증
-	normalized := normalizeTextForBase64(text)
-	return validateBase64Loop(normalized)
+// isBase64Char: Base64 문자셋 검사 (A-Za-z0-9+/-_)
+func isBase64Char(c byte) bool {
+	return (c >= 'A' && c <= 'Z') ||
+		(c >= 'a' && c <= 'z') ||
+		(c >= '0' && c <= '9') ||
+		c == '+' || c == '/' || c == '-' || c == '_'
 }
 
-// validateBase64Loop: Regex 대체용 검증 루프
-// 공백 스킵, 문자셋 확인, 패딩 규칙 검사, 길이 검사를 한 번의 순회(One-pass)로 처리합니다.
-func validateBase64Loop(s string) bool {
-	validLen := 0
-	paddingLen := 0
-	hasPadding := false
+// containsSuspiciousBase64: 입력값 내에 숨겨진 악성 Base64 페이로드가 있는지 탐지
+// 패턴 추출 방식: 입력 전체가 아닌, Base64 의심 패턴만 추출하여 검사
+// 의미 기반 필터링: 디코딩된 결과가 '읽을 수 있는 텍스트'일 때만 차단
+func containsSuspiciousBase64(input string) bool {
+	n := len(input)
+	i := 0
 
-	for _, r := range s {
-		// 공백은 무시 (stripAllWhitespace 효과)
-		if unicode.IsSpace(r) {
+	// 수동 스캐너로 Base64 패턴 추출 (Zero-Alloc)
+	for i < n {
+		// Base64 문자가 아니면 스킵
+		if !isBase64Char(input[i]) {
+			i++
 			continue
+		}
+
+		// Base64 시퀀스 시작점 찾음
+		start := i
+		for i < n && isBase64Char(input[i]) {
+			i++
 		}
 
 		// 패딩(=) 처리
-		if r == '=' {
-			hasPadding = true
-			paddingLen++
+		paddingCount := 0
+		for i < n && input[i] == '=' && paddingCount < 2 {
+			i++
+			paddingCount++
+		}
+
+		seqLen := i - start
+		// 최소 20자 이상이어야 의미 있는 Base64
+		if seqLen < 20 {
 			continue
 		}
 
-		// 패딩이 나온 후에 일반 문자가 오면 안 됨 (Regex의 "={0,2}$" 규칙 준수)
-		if hasPadding {
-			return false
-		}
-
-		// Base64 문자셋 확인 (A-Za-z0-9+/ 와 -_ 허용)
-		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') ||
-			r == '+' || r == '/' || r == '-' || r == '_' {
-			validLen++
+		// 디코딩 시도
+		match := input[start:i]
+		decodedBytes, err := tryDecodeBase64(match)
+		if err != nil {
 			continue
 		}
 
-		// 허용되지 않은 문자
+		// 디코딩된 결과가 '읽을 수 있는 텍스트'인지 확인
+		if isReadableText(decodedBytes) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// tryDecodeBase64: URL-Safe 문자 치환 및 패딩 보정 후 디코딩 (Zero-Alloc 최적화)
+func tryDecodeBase64(s string) ([]byte, error) {
+	n := len(s)
+	if n == 0 {
+		return nil, fmt.Errorf("base64 decode: empty input")
+	}
+
+	// 패딩 계산: Base64 길이는 4의 배수여야 함
+	padNeeded := (4 - n%4) % 4
+
+	// 버퍼 할당 (URL-Safe 치환 + 패딩)
+	buf := make([]byte, n+padNeeded)
+
+	// URL-Safe 문자('-', '_')를 표준 문자('+', '/')로 치환 (바이트 단위)
+	for i := 0; i < n; i++ {
+		switch s[i] {
+		case '-':
+			buf[i] = '+'
+		case '_':
+			buf[i] = '/'
+		default:
+			buf[i] = s[i]
+		}
+	}
+
+	// 패딩 추가
+	for i := 0; i < padNeeded; i++ {
+		buf[n+i] = '='
+	}
+
+	// 디코딩 (in-place 가능하지만 안전을 위해 별도 버퍼)
+	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(buf)))
+	written, err := base64.StdEncoding.Decode(decoded, buf)
+	if err != nil {
+		return nil, fmt.Errorf("base64 decode: %w", err)
+	}
+	return decoded[:written], nil
+}
+
+// isReadableText: 바이트 배열이 사람이 읽을 수 있는 텍스트인지 판별 (Zero-Alloc 최적화)
+// UTF-8 유효성 검사 + 출력 가능 문자 비율 검사
+func isReadableText(data []byte) bool {
+	n := len(data)
+	if n == 0 {
 		return false
 	}
 
-	// Base64 유효성 검사:
-	// 1. "{20,}" 조건: 유효 문자 길이가 20 이상
-	// 2. "={0,2}" 조건: 패딩은 최대 2개
-	// 3. 4의 배수 조건: Base64 인코딩 원리상 데이터 길이는 4의 배수
-	totalLen := validLen + paddingLen
-	return validLen >= 20 && paddingLen <= 2 && totalLen%4 == 0
-}
+	printableCount := 0
+	totalChars := 0
+	i := 0
 
-// normalizeTextForBase64: Base64 검사용 정규화 (Homoglyph 변환)
-func normalizeTextForBase64(text string) string {
-	skeleton := confusables.Skeleton(text)
-	return norm.NFKC.String(skeleton)
+	// UTF-8 유효성 검사와 가독성 검사를 단일 루프로 통합
+	for i < n {
+		r, size := utf8.DecodeRune(data[i:])
+		if r == utf8.RuneError && size == 1 {
+			// 유효하지 않은 UTF-8 → 바이너리 데이터
+			return false
+		}
+		i += size
+		totalChars++
+
+		// 출력 가능한 문자(한글, 영문, 숫자 등)이거나 공백 문자일 경우 카운트
+		if unicode.IsPrint(r) || unicode.IsSpace(r) {
+			printableCount++
+		}
+	}
+
+	// 가독성 비율 검사 (정수 연산: printableCount * 100 > totalChars * 90)
+	// 전체 문자의 90% 이상이 읽을 수 있는 문자라면 '의도된 텍스트'로 판단
+	return totalChars > 0 && printableCount*100 > totalChars*90
 }
 
 // hangulTable: 한글 범위 (Jamo 포함하지 않음 - 완성형만)
@@ -176,15 +243,15 @@ func stripControlChars(text string) string {
 	return builder.String()
 }
 
-// containsEmoji: 입력 문자열에 이모지가 포함되어 있는지 확인한다.
-// gomoji 라이브러리를 사용하여 최신 유니코드 이모지 표준을 자동 지원한다.
+// containsEmoji: 입력 문자열에 이모지가 포함되어 있는지 확인합니다.
+// gomoji 라이브러리를 사용하여 최신 유니코드 이모지 표준을 자동 지원합니다.
 func containsEmoji(text string) bool {
 	return gomoji.ContainsEmoji(text)
 }
 
-// isJamoOnly: 입력이 한글 자모로만 구성되어 있는지 확인한다.
-// 자모 외에 공백, 숫자, 구두점은 허용된다. (예: "ㅈㅓㅇㄷㅏㅂ 123!" → true)
-// 완성형 한글(가-힣)이 포함되면 false를 반환한다.
+// isJamoOnly: 입력이 한글 자모로만 구성되어 있는지 확인합니다.
+// 자모 외에 공백, 숫자, 구두점은 허용됩니다. (예: "ㅈㅓㅇㄷㅏㅂ 123!" → true)
+// 완성형 한글(가-힣)이 포함되면 false를 반환합니다.
 func isJamoOnly(text string) bool {
 	trimmed := strings.TrimSpace(text)
 	if trimmed == "" {
@@ -205,9 +272,9 @@ func isJamoOnly(text string) bool {
 	return hasJamo
 }
 
-// composeJamoSequences: 혼합 문자열에서 연속 자모 시퀀스를 완성형으로 조합한다.
+// composeJamoSequences: 혼합 문자열에서 연속 자모 시퀀스를 완성형으로 조합합니다.
 // 예: "시스템 ㅍㅡㄹㅗㅁㅍㅡㅌㅡ" → "시스템 프롬프트"
-// 조합에 실패한 자모는 원본 그대로 유지된다.
+// 조합에 실패한 자모는 원본 그대로 유지됩니다.
 func composeJamoSequences(text string) string {
 	var result strings.Builder
 	var jamoBuffer strings.Builder

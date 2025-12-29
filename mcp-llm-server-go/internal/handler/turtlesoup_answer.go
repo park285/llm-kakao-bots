@@ -23,30 +23,36 @@ func (h *TurtleSoupHandler) handleAnswer(c *gin.Context) {
 		return
 	}
 
-	sessionID, historyContext, historyPairs, history, err := h.resolveSession(c.Request.Context(), req.SessionID, req.ChatID, req.Namespace)
+	// 암시적 캐싱 최적화: historyContext (문자열) 대신 history (배열)만 사용
+	sessionID, historyPairs, history, err := h.resolveSession(c.Request.Context(), req.SessionID, req.ChatID, req.Namespace)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
 
+	// Static Prefix: 퍼즐 정보를 System Prompt에 통합 (세션 내내 불변)
 	puzzleToon := toon.EncodePuzzle(req.Scenario, req.Solution, "", nil)
-	system, err := h.prompts.AnswerSystem()
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-	userContent, err := h.prompts.AnswerUser(puzzleToon, req.Question, historyContext)
+	system, err := h.prompts.AnswerSystemWithPuzzle(puzzleToon)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
 
+	// Cache Miss 최소화: 현재 질문만 포함
+	userContent, err := h.prompts.AnswerUser(req.Question)
+	if err != nil {
+		h.logError(err)
+		writeError(c, err)
+		return
+	}
+
+	// 암시적 캐싱: Native History 배열 전달 (누적 Cache Hit)
 	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
+		History:      history, // Native History 사용
 		Task:         "answer",
 	}, turtlesoup.AnswerSchema())
 	if err != nil {

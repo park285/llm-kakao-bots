@@ -467,6 +467,7 @@ func extractUsage(response *genai.GenerateContentResponse) llm.Usage {
 		OutputTokens:    int(usageMeta.CandidatesTokenCount) + int(usageMeta.ThoughtsTokenCount),
 		TotalTokens:     int(usageMeta.TotalTokenCount),
 		ReasoningTokens: int(usageMeta.ThoughtsTokenCount),
+		CachedTokens:    int(usageMeta.CachedContentTokenCount), // 암시적 캐싱 토큰 추출
 	}
 }
 

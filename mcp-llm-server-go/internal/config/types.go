@@ -16,7 +16,7 @@ type ThinkingConfig struct {
 	LevelVerify  string
 }
 
-// Level 는 작업 유형별 thinking 레벨을 반환한다.
+// Level: 작업 유형별 thinking 레벨을 반환합니다.
 func (t ThinkingConfig) Level(task string) string {
 	switch task {
 	case "hints":
@@ -46,7 +46,7 @@ type GeminiConfig struct {
 	FailoverAttempts int
 }
 
-// PrimaryKey 는 기본 API 키를 반환한다.
+// PrimaryKey: 기본 API 키를 반환합니다.
 func (g GeminiConfig) PrimaryKey() string {
 	if len(g.APIKeys) == 0 {
 		return ""
@@ -54,7 +54,7 @@ func (g GeminiConfig) PrimaryKey() string {
 	return g.APIKeys[0]
 }
 
-// ModelForTask 는 작업 유형별 모델을 반환한다.
+// ModelForTask: 작업 유형별 모델을 반환합니다.
 func (g GeminiConfig) ModelForTask(task string) string {
 	switch task {
 	case "hints":
@@ -73,7 +73,7 @@ func (g GeminiConfig) ModelForTask(task string) string {
 	return g.DefaultModel
 }
 
-// TemperatureForModel 는 모델별 temperature 를 계산한다.
+// TemperatureForModel: 모델별 temperature를 계산합니다.
 func (g GeminiConfig) TemperatureForModel(model string) float64 {
 	if isGemini3(model) {
 		return max(gemini3MinTemperature, g.Temperature)
@@ -155,7 +155,7 @@ type DatabaseConfig struct {
 	UsageBatchErrorLogMaxIntervalSeconds int
 }
 
-// DSN 은 DB 접속 문자열을 반환한다.
+// DSN: DB 접속 문자열을 반환합니다.
 func (d DatabaseConfig) DSN() string {
 	host := net.JoinHostPort(d.Host, strconv.Itoa(d.Port))
 	u := &url.URL{

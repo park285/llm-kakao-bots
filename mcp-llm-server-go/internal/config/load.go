@@ -14,7 +14,7 @@ var (
 	configValue *Config
 )
 
-// Load 는 환경 변수 기반 설정을 로드한다.
+// Load: 환경 변수 기반 설정을 로드합니다.
 func Load() *Config {
 	configOnce.Do(func() {
 		_ = godotenv.Load()
@@ -23,7 +23,7 @@ func Load() *Config {
 	return configValue
 }
 
-// ProvideConfig 는 설정을 로드하고 검증한다.
+// ProvideConfig: 설정을 로드하고 검증합니다.
 func ProvideConfig() (*Config, error) {
 	cfg := Load()
 	if cfg == nil {
@@ -35,7 +35,7 @@ func ProvideConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// Validate 는 설정 유효성을 검사한다.
+// Validate: 설정 유효성을 검사합니다.
 func (c *Config) Validate() error {
 	if c == nil {
 		return errors.New("config is nil")
@@ -108,7 +108,10 @@ func buildConfig() *Config {
 		Session: SessionConfig{
 			MaxSessions:       getEnvInt("MAX_SESSIONS", 50),
 			SessionTTLMinutes: getEnvInt("SESSION_TTL_MINUTES", 1440),
-			HistoryMaxPairs:   getEnvNonNegativeInt("SESSION_HISTORY_MAX_PAIRS", 10),
+			// 암시적 캐싱 최적화: 히스토리를 자르지 않아야 캐시 적중률이 극대화됨
+			// 게임은 보통 10-20턴에 종료되므로 50쌍(100개 메시지)이면 충분
+			// 슬라이딩 윈도우 → 캐시 무효화 방지
+			HistoryMaxPairs: getEnvNonNegativeInt("SESSION_HISTORY_MAX_PAIRS", 50),
 		},
 		SessionStore: SessionStoreConfig{
 			URL:                 getEnvString("SESSION_STORE_URL", "redis://localhost:6379"),

@@ -19,7 +19,7 @@ type App struct {
 	UsageRecorder   *usage.Recorder
 }
 
-// NewApp 은 App 인스턴스를 생성한다.
+// NewApp: App 인스턴스를 생성합니다.
 func NewApp(
 	server *http.Server,
 	logger *slog.Logger,

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Encode 는 값을 Toon 포맷 문자열로 변환한다.
+// Encode: 값을 Toon 포맷 문자열로 변환합니다.
 func Encode(value any) string {
 	return encode(value, 0)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
 )
 
-// WriteError 는 에러 응답을 작성한다.
+// WriteError: 에러 응답을 작성합니다.
 func WriteError(c *gin.Context, err error) {
 	if c == nil {
 		return
@@ -19,7 +19,7 @@ func WriteError(c *gin.Context, err error) {
 	c.JSON(status, payload)
 }
 
-// BindJSON 는 요청 본문을 JSON으로 파싱한다.
+// BindJSON: 요청 본문을 JSON으로 파싱합니다.
 func BindJSON(c *gin.Context, out any) bool {
 	if c == nil {
 		return false
@@ -31,7 +31,7 @@ func BindJSON(c *gin.Context, out any) bool {
 	return true
 }
 
-// BindJSONAllowEmpty 는 빈 본문도 허용한다.
+// BindJSONAllowEmpty: 빈 본문도 허용합니다.
 func BindJSONAllowEmpty(c *gin.Context, out any) bool {
 	if c == nil {
 		return false

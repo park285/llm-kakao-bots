@@ -13,7 +13,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usage"
 )
 
-// DailyUsageResponse 는 일자별 사용량 응답이다.
+// DailyUsageResponse: 일자별 사용량 응답입니다.
 type DailyUsageResponse struct {
 	UsageDate       string `json:"usage_date"`
 	InputTokens     int64  `json:"input_tokens"`
@@ -24,7 +24,7 @@ type DailyUsageResponse struct {
 	Model           string `json:"model"`
 }
 
-// UsageListResponse 는 사용량 목록 응답이다.
+// UsageListResponse: 사용량 목록 응답입니다.
 type UsageListResponse struct {
 	Usages            []DailyUsageResponse `json:"usages"`
 	TotalInputTokens  int64                `json:"total_input_tokens"`
@@ -34,14 +34,14 @@ type UsageListResponse struct {
 	Model             string               `json:"model"`
 }
 
-// UsageHandler 는 사용량 API 핸들러다.
+// UsageHandler: 사용량 API 핸들러입니다.
 type UsageHandler struct {
 	cfg    *config.Config
 	repo   *usage.Repository
 	logger *slog.Logger
 }
 
-// NewUsageHandler 는 사용량 핸들러를 생성한다.
+// NewUsageHandler: 사용량 핸들러를 생성합니다.
 func NewUsageHandler(cfg *config.Config, repo *usage.Repository, logger *slog.Logger) *UsageHandler {
 	return &UsageHandler{
 		cfg:    cfg,
@@ -50,7 +50,7 @@ func NewUsageHandler(cfg *config.Config, repo *usage.Repository, logger *slog.Lo
 	}
 }
 
-// RegisterRoutes 는 사용량 라우트를 등록한다.
+// RegisterRoutes: 사용량 라우트를 등록합니다.
 func (h *UsageHandler) RegisterRoutes(router *gin.Engine) {
 	group := router.Group("/api/usage")
 	group.GET("/daily", h.handleDaily)

@@ -44,3 +44,15 @@ func TestTTLCacheExpires(t *testing.T) {
 		t.Fatalf("expected key 'a' to expire")
 	}
 }
+
+func TestTTLCacheDisabled(t *testing.T) {
+	cache := NewTTLCache[string, int](0, 0)
+	cache.Set("a", 1)
+
+	if _, ok := cache.Get("a"); ok {
+		t.Fatalf("expected disabled cache to miss")
+	}
+	if cache.Len() != 0 {
+		t.Fatalf("expected length 0, got %d", cache.Len())
+	}
+}

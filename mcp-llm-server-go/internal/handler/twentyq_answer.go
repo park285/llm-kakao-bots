@@ -48,7 +48,8 @@ func (h *TwentyQHandler) handleAnswer(c *gin.Context) {
 		return
 	}
 
-	sessionID, historyContext, historyCount, err := h.resolveAnswerSession(c.Request.Context(), req)
+	// 암시적 캐싱 최적화: historyContext (문자열) 대신 history (배열) 사용
+	sessionID, historyCount, history, err := h.resolveAnswerSession(c.Request.Context(), req)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
@@ -57,14 +58,16 @@ func (h *TwentyQHandler) handleAnswer(c *gin.Context) {
 
 	h.logAnswerRequest(sessionID, historyCount, req.Question)
 
-	system, userContent, err := h.buildAnswerPrompt(req, historyContext, detailsJSON)
+	// Static Prefix: Secret 정보를 System Prompt에 통합
+	system, userContent, err := h.buildAnswerPrompt(req, detailsJSON)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
 
-	rawText, scaleText, err := h.getAnswerText(c, system, userContent)
+	// 암시적 캐싱: Native History 배열 전달
+	rawText, scaleText, err := h.getAnswerText(c, system, userContent, history)
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
@@ -100,10 +103,12 @@ func (h *TwentyQHandler) handleAnswer(c *gin.Context) {
 	})
 }
 
+// resolveAnswerSession: 세션 정보를 조회하고 히스토리를 반환합니다.
+// 암시적 캐싱 최적화: 문자열 변환 없이 Native History 배열만 반환합니다.
 func (h *TwentyQHandler) resolveAnswerSession(
 	ctx context.Context,
 	req TwentyQAnswerRequest,
-) (string, string, int, error) {
+) (string, int, []llm.HistoryEntry, error) {
 	sessionID, derived := shared.ResolveSessionID(
 		shared.ValueOrEmpty(req.SessionID),
 		shared.ValueOrEmpty(req.ChatID),
@@ -121,39 +126,38 @@ func (h *TwentyQHandler) resolveAnswerSession(
 			MessageCount: 0,
 		}
 		if err := h.store.CreateSession(ctx, meta); err != nil {
-			return "", "", 0, fmt.Errorf("create session: %w", err)
+			return "", 0, nil, fmt.Errorf("create session: %w", err)
 		}
 	}
 
 	if sessionID == "" {
-		return "", "", 0, nil
+		return "", 0, []llm.HistoryEntry{}, nil // Cold Start: 빈 슬라이스 반환
 	}
 
 	history, err := h.store.GetHistory(ctx, sessionID)
 	if err != nil {
 		h.logError(err)
-		return sessionID, "", 0, nil
+		return sessionID, 0, []llm.HistoryEntry{}, nil // 에러 시 빈 슬라이스
 	}
 	historyCount := len(history)
-	historyContext := shared.BuildRecentQAHistoryContext(
-		history,
-		fmt.Sprintf("[이전 질문/답변 기록 - 정답: %s]", req.Target),
-		h.cfg.Session.HistoryMaxPairs,
-	)
-	return sessionID, historyContext, historyCount, nil
+	return sessionID, historyCount, history, nil
 }
 
+// buildAnswerPrompt: 답변 프롬프트를 구성합니다.
+// 암시적 캐싱 최적화: Secret을 System Prompt에 통합하고, 현재 질문만 User Prompt에 포함합니다.
 func (h *TwentyQHandler) buildAnswerPrompt(
 	req TwentyQAnswerRequest,
-	historyContext string,
 	detailsJSON string,
 ) (string, string, error) {
-	system, err := h.prompts.AnswerSystem()
+	// Static Prefix: Secret 정보를 System Prompt에 통합 (세션 내내 불변)
+	secretToon := toon.EncodeSecret(req.Target, req.Category, nil)
+	system, err := h.prompts.AnswerSystemWithSecret(secretToon)
 	if err != nil {
 		return "", "", fmt.Errorf("load answer system prompt: %w", err)
 	}
-	secretToon := toon.EncodeSecret(req.Target, req.Category, nil)
-	userContent, err := h.prompts.AnswerUser(secretToon, req.Question, historyContext)
+
+	// Cache Miss 최소화: 현재 질문만 포함
+	userContent, err := h.prompts.AnswerUser(req.Question)
 	if err != nil {
 		return "", "", fmt.Errorf("format answer user prompt: %w", err)
 	}
@@ -202,10 +206,13 @@ func (h *TwentyQHandler) logAnswerRequest(sessionID string, historyCount int, qu
 	)
 }
 
-func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userContent string) (string, string, error) {
+// getAnswerText: LLM 응답을 가져옵니다.
+// 암시적 캐싱 최적화: Native History 배열을 전달하여 누적 Cache Hit를 확보합니다.
+func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userContent string, history []llm.HistoryEntry) (string, string, error) {
 	result, err := h.client.StructuredWithSearch(c.Request.Context(), gemini.Request{
 		Prompt:       userContent,
 		SystemPrompt: system,
+		History:      history, // Native History 사용
 		Task:         "answer",
 	}, twentyq.AnswerSchema())
 	if err != nil {

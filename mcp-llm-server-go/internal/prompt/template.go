@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// FormatTemplate 는 템플릿 문자열을 값으로 치환한다.
+// FormatTemplate: 템플릿 문자열을 값으로 치환합니다.
 func FormatTemplate(template string, values map[string]string) (string, error) {
 	var builder strings.Builder
 	builder.Grow(len(template))
@@ -53,17 +53,17 @@ var xmlEscaper = strings.NewReplacer(
 	"'", "&apos;",
 )
 
-// EscapeXML 는 XML 텍스트로 안전하게 이스케이프한다.
+// EscapeXML: XML 텍스트로 안전하게 이스케이프합니다.
 func EscapeXML(value string) string {
 	return xmlEscaper.Replace(value)
 }
 
-// WrapXML 는 값을 XML 태그로 감싼다.
+// WrapXML: 값을 XML 태그로 감쌉니다.
 func WrapXML(tag string, value string) string {
 	return "<" + tag + ">" + EscapeXML(value) + "</" + tag + ">"
 }
 
-// ValidateSystemStatic 는 시스템 프롬프트의 템플릿 사용 여부를 검사한다.
+// ValidateSystemStatic: 시스템 프롬프트의 템플릿 사용 여부를 검사합니다.
 func ValidateSystemStatic(name string, system string) error {
 	for i := 0; i < len(system); {
 		switch system[i] {

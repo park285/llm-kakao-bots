@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// Store 는 사용량 저장소 인터페이스다.
-// 테스트에서 mock 구현을 주입할 수 있도록 한다.
+// Store: 사용량 저장소 인터페이스입니다.
+// 테스트에서 mock 구현을 주입할 수 있도록 합니다.
 type Store interface {
 	// RecordUsage 토큰 사용량 기록
 	RecordUsage(

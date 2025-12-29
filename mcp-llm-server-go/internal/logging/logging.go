@@ -19,7 +19,7 @@ const (
 	defaultLogFileName = "server.log"
 )
 
-// NewLogger 는 로거를 생성한다.
+// NewLogger: 로거를 생성합니다.
 func NewLogger(cfg config.LoggingConfig) (*slog.Logger, error) {
 	level := parseLevel(cfg.Level)
 	logDir := strings.TrimSpace(cfg.LogDir)
