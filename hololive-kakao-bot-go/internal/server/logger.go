@@ -31,8 +31,8 @@ func LoggerMiddleware(ctx context.Context, logger *slog.Logger, skipPaths ...str
 
 		status := c.Writer.Status()
 
-		// 레벨 결정
-		level := slog.LevelInfo
+		// 레벨 결정: 정상 요청은 DEBUG, 4xx는 WARN, 5xx는 ERROR
+		level := slog.LevelDebug
 		if status >= 500 {
 			level = slog.LevelError
 		} else if status >= 400 {

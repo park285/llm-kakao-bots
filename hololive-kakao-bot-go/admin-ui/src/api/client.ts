@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore } from '@/stores/authStore'
 
 // API 클라이언트 생성
 const apiClient = axios.create({

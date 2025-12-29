@@ -6,22 +6,31 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/alarm"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 )
 
 // NewAlarmService: 새로운 AlarmService 인스턴스를 생성하고 설정(목표 알림 시간 등)을 초기화한다.
-func NewAlarmService(cacheSvc *cache.Service, holodexSvc *holodex.Service, logger *slog.Logger, advanceMinutes []int) *AlarmService {
+func NewAlarmService(
+	cacheSvc *cache.Service,
+	holodexSvc *holodex.Service,
+	alarmRepo *alarm.Repository,
+	logger *slog.Logger,
+	advanceMinutes []int,
+) *AlarmService {
 	targetMinutes := buildTargetMinutes(advanceMinutes)
 
 	return &AlarmService{
 		cache:           cacheSvc,
 		holodex:         holodexSvc,
+		alarmRepo:       alarmRepo,
 		logger:          logger,
 		targetMinutes:   targetMinutes,
-		baseConcurrency: 15,   // 최소 동시성
-		maxConcurrency:  50,   // 최대 동시성
-		autoscale:       true, // 자동 스케일링 활성화
+		baseConcurrency: 15,
+		maxConcurrency:  50,
+		autoscale:       true,
 	}
 }
 
@@ -88,6 +97,16 @@ func (as *AlarmService) AddAlarm(ctx context.Context, roomID, userID, channelID,
 		_ = as.cache.HSet(ctx, UserNamesCacheKey, userID, userName)
 	}
 
+	// 비동기 DB 저장 (Write-Through, non-blocking)
+	as.persistAlarmAsync(&domain.Alarm{
+		RoomID:     roomID,
+		UserID:     userID,
+		ChannelID:  channelID,
+		MemberName: memberName,
+		RoomName:   roomName,
+		UserName:   userName,
+	})
+
 	as.logger.Info("Alarm added",
 		slog.String("room_id", roomID),
 		slog.String("room_name", roomName),
@@ -133,6 +152,9 @@ func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channel
 			slog.String("user_id", userID),
 		)
 	}
+
+	// 비동기 DB 삭제 (Write-Through, non-blocking)
+	as.removeAlarmAsync(roomID, userID, channelID)
 
 	as.logger.Info("Alarm removed",
 		slog.String("room_id", roomID),
@@ -186,6 +208,9 @@ func (as *AlarmService) ClearUserAlarms(ctx context.Context, roomID, userID stri
 	}
 
 	_, _ = as.cache.SRem(ctx, AlarmRegistryKey, []string{registryKey})
+
+	// 비동기 DB 삭제 (Write-Through, non-blocking)
+	as.clearUserAlarmsAsync(roomID, userID)
 
 	as.logger.Info("All alarms cleared",
 		slog.String("room_id", roomID),

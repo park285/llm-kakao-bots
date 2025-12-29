@@ -27,7 +27,7 @@ func NewSettingsService(filePath string, logger *slog.Logger) *Service {
 		filePath: filePath,
 		logger:   logger,
 		cache: &Settings{
-			AlarmAdvanceMinutes: 5, // Default
+			AlarmAdvanceMinutes: 5, // 기본값
 		},
 	}
 	s.load()
@@ -37,7 +37,7 @@ func NewSettingsService(filePath string, logger *slog.Logger) *Service {
 func (s *Service) load() {
 	f, err := os.Open(s.filePath)
 	if err != nil {
-		return // Use defaults if file missing
+		return // 파일이 없으면 기본값 사용함
 	}
 	defer f.Close()
 

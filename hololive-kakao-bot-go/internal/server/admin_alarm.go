@@ -10,12 +10,12 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
 
-// GetAlarms returns all alarms as JSON
+// GetAlarms: 모든 알람을 JSON으로 반환합니다.
 func (h *AdminHandler) GetAlarms(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
 
-	// Get all alarm registry keys
+	// 모든 알림 레지스트리 키 조회
 	alarmKeys, err := h.alarm.GetAllAlarmKeys(ctx)
 	if err != nil {
 		h.logger.Error("Failed to get alarm keys", slog.Any("error", err))
@@ -29,7 +29,7 @@ func (h *AdminHandler) GetAlarms(c *gin.Context) {
 	})
 }
 
-// DeleteAlarm deletes a specific alarm
+// DeleteAlarm: 특정 알람을 삭제합니다.
 func (h *AdminHandler) DeleteAlarm(c *gin.Context) {
 	var req struct {
 		RoomID    string `json:"roomId" binding:"required"`

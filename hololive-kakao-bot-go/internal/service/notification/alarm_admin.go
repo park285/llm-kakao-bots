@@ -15,7 +15,7 @@ type AlarmEntry struct {
 	MemberName string `json:"memberName"`
 }
 
-// GetAllAlarmKeys returns all alarms for admin dashboard
+// GetAllAlarmKeys: 관리자 대시보드용 모든 알람 정보를 반환합니다.
 func (as *AlarmService) GetAllAlarmKeys(ctx context.Context) ([]*AlarmEntry, error) {
 	registryKeys, err := as.cache.SMembers(ctx, AlarmRegistryKey)
 	if err != nil {

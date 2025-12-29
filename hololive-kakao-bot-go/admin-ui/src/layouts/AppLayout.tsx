@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../stores/authStore';
-import { authApi } from '../api';
+import { useAuthStore } from '@/stores/authStore';
+import { authApi } from '@/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,

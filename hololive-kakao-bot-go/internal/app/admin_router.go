@@ -15,6 +15,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/server"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/docker"
 )
 
 // ProvideAdminAddr: 관리자 서버가 리슨할 주소를 반환한다.
@@ -38,6 +39,7 @@ func ProvideAdminRouter(
 	ctx context.Context,
 	logger *slog.Logger,
 	adminHandler *server.AdminHandler,
+	dockerSvc *docker.Service,
 	sessions *server.ValkeySessionStore,
 	securityCfg *server.SecurityConfig,
 	allowedCIDRs []*net.IPNet,
@@ -54,6 +56,14 @@ func ProvideAdminRouter(
 
 	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret)
 	registerAdminRoutes(router, adminIPGuard, adminAuth, adminHandler)
+
+	// Docker 컨테이너 관리 API (선택적)
+	dockerHandler := server.NewDockerHandler(dockerSvc)
+	registerDockerRoutes(router, adminIPGuard, adminAuth, dockerHandler)
+	if dockerSvc != nil {
+		logger.Info("Docker management API enabled")
+	}
+
 	registerAdminUIRoutes(router)
 
 	return router, nil
@@ -111,7 +121,7 @@ func newAdminStaticCacheMiddleware() gin.HandlerFunc {
 }
 
 func registerAdminHealthRoutes(router *gin.Engine) {
-	// Health check endpoint (Gzip 비활성화 - 작은 응답)
+	// Health check 엔드포인트 (Gzip 비활성화 - 작은 응답)
 	router.GET("/health", func(c *gin.Context) {
 		c.Data(200, "application/json", []byte(`{"status":"ok"}`))
 	})
@@ -123,12 +133,13 @@ func registerAdminRoutes(
 	adminAuth gin.HandlerFunc,
 	adminHandler *server.AdminHandler,
 ) {
-	// Public admin API routes (no auth required)
+	// 공개 관리자 API 라우트 (인증 불필요)
 	router.POST("/admin/api/login", adminIPGuard, adminHandler.HandleLogin)
 	router.GET("/admin/api/logout", adminIPGuard, adminHandler.HandleLogout)
 
-	// Protected admin API routes (auth required)
+	// 보호된 관리자 API 라우트 (인증 필요)
 	adminAPI := router.Group("/admin/api", adminIPGuard, adminAuth)
+	adminAPI.POST("/heartbeat", adminHandler.HandleHeartbeat) // 세션 TTL 갱신
 	adminAPI.GET("/members", adminHandler.GetMembers)
 	adminAPI.POST("/members", adminHandler.AddMember)
 	adminAPI.POST("/members/:id/aliases", adminHandler.AddAlias)
@@ -144,12 +155,27 @@ func registerAdminRoutes(
 	adminAPI.POST("/names/user", adminHandler.SetUserName)
 	adminAPI.PATCH("/members/:id/graduation", adminHandler.SetGraduation)
 	adminAPI.PATCH("/members/:id/channel", adminHandler.UpdateChannelID)
+	adminAPI.PATCH("/members/:id/name", adminHandler.UpdateMemberName)
 	adminAPI.GET("/streams/live", adminHandler.GetLiveStreams)
 	adminAPI.GET("/streams/upcoming", adminHandler.GetUpcomingStreams)
 	adminAPI.GET("/stats/channels", adminHandler.GetChannelStats)
 	adminAPI.GET("/logs", adminHandler.GetLogs)
 	adminAPI.GET("/settings", adminHandler.GetSettings)
 	adminAPI.POST("/settings", adminHandler.UpdateSettings)
+}
+
+func registerDockerRoutes(
+	router *gin.Engine,
+	adminIPGuard gin.HandlerFunc,
+	adminAuth gin.HandlerFunc,
+	dockerHandler *server.DockerHandler,
+) {
+	dockerAPI := router.Group("/admin/api/docker", adminIPGuard, adminAuth)
+	dockerAPI.GET("/health", dockerHandler.GetHealth)
+	dockerAPI.GET("/containers", dockerHandler.GetContainers)
+	dockerAPI.POST("/containers/:name/restart", dockerHandler.RestartContainer)
+	dockerAPI.POST("/containers/:name/stop", dockerHandler.StopContainer)
+	dockerAPI.POST("/containers/:name/start", dockerHandler.StartContainer)
 }
 
 func registerAdminUIRoutes(router *gin.Engine) {

@@ -19,7 +19,7 @@ import type {
   SettingsResponse,
   Settings,
   Member,
-} from '../types'
+} from '@/types'
 
 // Auth API
 export const authApi = {
@@ -33,6 +33,15 @@ export const authApi = {
 
   logout: async () => {
     await apiClient.get('/logout')
+  },
+
+  heartbeat: async (): Promise<boolean> => {
+    try {
+      await apiClient.post('/heartbeat')
+      return true
+    } catch {
+      return false // 세션 만료
+    }
   },
 }
 
@@ -76,6 +85,14 @@ export const membersApi = {
     const response = await apiClient.patch<ApiResponse>(
       `/members/${String(memberId)}/channel`,
       request
+    )
+    return response.data
+  },
+
+  updateName: async (memberId: number, name: string) => {
+    const response = await apiClient.patch<ApiResponse>(
+      `/members/${String(memberId)}/name`,
+      { name }
     )
     return response.data
   },
@@ -184,8 +201,8 @@ export const namesApi = {
   },
 }
 
-// Watchdog API (컨테이너 관리 - proxied through backend)
-export interface WatchdogContainer {
+// Docker API (컨테이너 관리)
+export interface DockerContainer {
   name: string
   id: string
   image: string
@@ -195,31 +212,31 @@ export interface WatchdogContainer {
   managed: boolean
   paused: boolean
   startedAt?: string
-  finishedAt?: string
 }
 
-export const watchdogApi = {
+export const dockerApi = {
   checkHealth: async () => {
-    const response = await apiClient.get<{ status: string; available: boolean }>('/watchdog/health')
+    const response = await apiClient.get<{ status: string; available: boolean }>('/docker/health')
     return response.data
   },
 
   getContainers: async () => {
-    const response = await apiClient.get<{ status: string; containers: WatchdogContainer[] }>('/watchdog/containers')
+    const response = await apiClient.get<{ status: string; containers: DockerContainer[] }>('/docker/containers')
     return response.data
   },
 
-  getManagedTargets: async () => {
-    const response = await apiClient.get<{ status: string; targets: WatchdogContainer[] }>('/watchdog/targets')
+  restartContainer: async (name: string) => {
+    const response = await apiClient.post<ApiResponse>(`/docker/containers/${name}/restart`)
     return response.data
   },
 
-  restartContainer: async (name: string, reason?: string, force?: boolean) => {
-    const response = await apiClient.post<ApiResponse>(`/watchdog/containers/${name}/restart`, {
-      reason: reason ?? 'Admin dashboard restart',
-      force: force ?? false,
-    })
+  stopContainer: async (name: string) => {
+    const response = await apiClient.post<ApiResponse>(`/docker/containers/${name}/stop`)
+    return response.data
+  },
+
+  startContainer: async (name: string) => {
+    const response = await apiClient.post<ApiResponse>(`/docker/containers/${name}/start`)
     return response.data
   },
 }
-

@@ -4,11 +4,19 @@ import "time"
 
 // Alarm: 특정 채팅방(user)이 특정 멤버(channel)의 방송 알림을 구독한 정보
 type Alarm struct {
-	RoomID     string    `json:"room_id"`     // KakaoTalk room ID
-	UserID     string    `json:"user_id"`     // KakaoTalk user ID
-	ChannelID  string    `json:"channel_id"`  // YouTube channel ID
-	MemberName string    `json:"member_name"` // Member name for display
+	ID         int       `json:"id,omitempty"`          // DB 기본 키
+	RoomID     string    `json:"room_id"`               // 카카오톡 방 ID
+	UserID     string    `json:"user_id"`               // 카카오톡 사용자 ID
+	ChannelID  string    `json:"channel_id"`            // YouTube 채널 ID
+	MemberName string    `json:"member_name,omitempty"` // 표시용 멤버 이름
+	RoomName   string    `json:"room_name,omitempty"`   // 방 이름 (캐싱용)
+	UserName   string    `json:"user_name,omitempty"`   // 사용자 이름 (캐싱용)
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+// RegistryKey: room:user 형식의 레지스트리 키를 반환한다.
+func (a *Alarm) RegistryKey() string {
+	return a.RoomID + ":" + a.UserID
 }
 
 // NewAlarm: 새로운 알림 구독 객체를 생성한다.

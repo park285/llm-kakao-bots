@@ -69,8 +69,16 @@ func NewHolodexService(apiKeys []string, cacheSvc *cache.Service, scraper *Scrap
 
 	logger.Info("Holodex API key pool configured", slog.Int("active_keys", len(apiKeys)))
 
+	// DefaultTransport 복제: TCP Keep-Alive(30s), TLSHandshakeTimeout(10s), Proxy 지원 등 안전장치 유지
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxConnsPerHost = constants.HolodexTransportConfig.MaxConnsPerHost
+	transport.MaxIdleConnsPerHost = constants.HolodexTransportConfig.MaxIdleConnsPerHost
+	transport.IdleConnTimeout = constants.HolodexTransportConfig.IdleConnTimeout
+	// HTTP/2 활성화 유지 (DefaultTransport 기본값): Cloudflare가 HTTP/2 응답을 보내므로 필수
+
 	httpClient := &http.Client{
-		Timeout: constants.APIConfig.HolodexTimeout,
+		Timeout:   constants.APIConfig.HolodexTimeout,
+		Transport: transport,
 	}
 
 	requester := NewHolodexAPIClient(httpClient, apiKeys, logger)

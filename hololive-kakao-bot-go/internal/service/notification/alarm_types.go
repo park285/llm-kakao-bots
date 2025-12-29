@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/alarm"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 )
@@ -34,6 +35,7 @@ type NotifiedData struct {
 type AlarmService struct {
 	cache           *cache.Service
 	holodex         *holodex.Service
+	alarmRepo       *alarm.Repository // DB 영속 저장소 (write-through)
 	logger          *slog.Logger
 	targetMinutes   []int
 	baseConcurrency int  // 기본 동시성

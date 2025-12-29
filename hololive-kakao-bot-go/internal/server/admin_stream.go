@@ -12,7 +12,7 @@ import (
 const channelStatsCacheKey = "admin:channel_stats"
 const channelStatsCacheTTL = 10 * time.Minute
 
-// GetLiveStreams returns currently live streams
+// GetLiveStreams: 현재 라이브 방송 중인 스트림 목록을 반환합니다.
 func (h *AdminHandler) GetLiveStreams(c *gin.Context) {
 	ctx := c.Request.Context()
 	streams, err := h.holodex.GetLiveStreams(ctx)
@@ -24,7 +24,7 @@ func (h *AdminHandler) GetLiveStreams(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ok", "streams": streams})
 }
 
-// GetUpcomingStreams returns upcoming streams
+// GetUpcomingStreams: 예정된 스트림 목록을 반환합니다.
 func (h *AdminHandler) GetUpcomingStreams(c *gin.Context) {
 	ctx := c.Request.Context()
 	streams, err := h.holodex.GetUpcomingStreams(ctx, 24)
@@ -36,7 +36,7 @@ func (h *AdminHandler) GetUpcomingStreams(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ok", "streams": streams})
 }
 
-// GetChannelStats returns channel statistics (cached for 10 minutes)
+// GetChannelStats: 채널 통계를 반환합니다. (10분간 캐시됨)
 func (h *AdminHandler) GetChannelStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	if h.youtube == nil {

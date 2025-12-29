@@ -9,7 +9,7 @@ type MemberDataProvider interface {
 	FindMemberByName(name string) *Member
 	FindMemberByAlias(alias string) *Member
 	GetChannelIDs() []string
-	GetAllMembers() []*Member // For iteration (legacy compatibility)
+	GetAllMembers() []*Member // 순회용 (레거시 호환성)
 	WithContext(ctx context.Context) MemberDataProvider
 }
 

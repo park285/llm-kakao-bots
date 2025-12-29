@@ -12,13 +12,13 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 )
 
-// aliasRequest represents a unified alias request
+// aliasRequest: 별칭 추가/삭제 요청을 위한 통합 구조체
 type aliasRequest struct {
 	Type  string `json:"type" binding:"required,oneof=ko ja"`
 	Alias string `json:"alias" binding:"required,min=1"`
 }
 
-// handleAliasOperation processes alias add/remove operations with shared logic
+// handleAliasOperation: 별칭 추가/삭제 작업을 공통 로직으로 처리함
 func (h *AdminHandler) handleAliasOperation(
 	c *gin.Context,
 	repoFunc func(context.Context, int, string, string) error,
@@ -74,12 +74,12 @@ func (h *AdminHandler) handleAliasOperation(
 	})
 }
 
-// AddAlias adds an alias to a member
+// AddAlias: 멤버에게 별칭을 추가합니다.
 func (h *AdminHandler) AddAlias(c *gin.Context) {
 	h.handleAliasOperation(c, h.repo.AddAlias, "add")
 }
 
-// RemoveAlias removes an alias from a member
+// RemoveAlias: 멤버의 별칭을 삭제합니다.
 func (h *AdminHandler) RemoveAlias(c *gin.Context) {
 	h.handleAliasOperation(c, h.repo.RemoveAlias, "remove")
 }
@@ -194,7 +194,60 @@ func (h *AdminHandler) UpdateChannelID(c *gin.Context) {
 	})
 }
 
-// GetMembers returns all members as JSON
+// UpdateMemberName: 멤버의 이름을 업데이트합니다.
+//
+//nolint:dupl // Similar patterns for different update operations
+func (h *AdminHandler) UpdateMemberName(c *gin.Context) {
+	memberID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		h.logger.Warn("Invalid member ID", slog.String("id", c.Param("id")), slog.Any("error", err))
+		c.JSON(400, gin.H{"error": "Invalid member ID"})
+		return
+	}
+
+	var req struct {
+		Name string `json:"name" binding:"required,min=1"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.Warn("Invalid request body", slog.Any("error", err))
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
+	defer cancel()
+
+	if err := h.repo.UpdateMemberName(ctx, memberID, req.Name); err != nil {
+		h.logger.Error("Failed to update member name",
+			slog.Int("member_id", memberID),
+			slog.String("name", req.Name),
+			slog.Any("error", err),
+		)
+		c.JSON(500, gin.H{"error": "Failed to update member name"})
+		return
+	}
+
+	if err := h.memberCache.Refresh(ctx); err != nil {
+		h.logger.Warn("Failed to refresh cache after member name update", slog.Any("error", err))
+	}
+
+	h.logger.Info("Member name updated",
+		slog.Int("member_id", memberID),
+		slog.String("name", req.Name),
+	)
+
+	h.activity.Log("member_name_update", fmt.Sprintf("Member name updated to %s (ID: %d)", req.Name, memberID), map[string]any{
+		"member_id": memberID,
+		"name":      req.Name,
+	})
+
+	c.JSON(200, gin.H{
+		"status":  "ok",
+		"message": "Member name updated successfully",
+	})
+}
+
+// GetMembers: 모든 멤버 목록을 JSON으로 반환합니다.
 func (h *AdminHandler) GetMembers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
@@ -212,7 +265,7 @@ func (h *AdminHandler) GetMembers(c *gin.Context) {
 	})
 }
 
-// AddMember adds a new member
+// AddMember: 새로운 멤버를 추가합니다.
 func (h *AdminHandler) AddMember(c *gin.Context) {
 	var req domain.Member
 	if err := c.ShouldBindJSON(&req); err != nil {

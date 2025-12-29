@@ -28,7 +28,43 @@ func (as *AlarmService) GetMemberName(ctx context.Context, channelID string) (st
 	return name, nil
 }
 
-// SetRoomName sets a display name for a room ID
+// GetMemberNameWithFallback: 2-layer fallback으로 멤버 이름을 조회한다.
+// 1. Cache (Valkey) → 2. Database (alarms 테이블)
+// DB 조회 성공 시 Valkey에 캐싱하여 다음 요청은 Valkey에서 처리.
+func (as *AlarmService) GetMemberNameWithFallback(ctx context.Context, channelID string) string {
+	// Layer 1: Valkey Cache (빠름)
+	name, err := as.cache.HGet(ctx, MemberNameKey, channelID)
+	if err == nil && util.TrimSpace(name) != "" {
+		return name
+	}
+
+	// Layer 2: alarms 테이블 (영속 저장소)
+	if as.alarmRepo != nil {
+		displayName, err := as.alarmRepo.GetMemberName(ctx, channelID)
+		if err == nil && displayName != "" {
+			// DB 조회 성공 시 Valkey에 캐싱 (다음 요청은 빠르게)
+			if cacheErr := as.CacheMemberName(ctx, channelID, displayName); cacheErr != nil {
+				as.logger.Warn("Failed to cache member name from DB",
+					slog.String("channel_id", channelID),
+					slog.Any("error", cacheErr),
+				)
+			}
+			as.logger.Debug("Member name resolved from alarms DB",
+				slog.String("channel_id", channelID),
+				slog.String("name", displayName),
+			)
+			return displayName
+		}
+	}
+
+	// 모든 레이어 실패: 채널 ID 반환
+	as.logger.Warn("Failed to resolve member name from cache/DB",
+		slog.String("channel_id", channelID),
+	)
+	return channelID
+}
+
+// SetRoomName: 방 ID에 대한 표시 이름을 설정합니다.
 func (as *AlarmService) SetRoomName(ctx context.Context, roomID, roomName string) error {
 	if err := as.cache.HSet(ctx, RoomNamesCacheKey, roomID, roomName); err != nil {
 		return fmt.Errorf("set room name: %w", err)
@@ -36,7 +72,7 @@ func (as *AlarmService) SetRoomName(ctx context.Context, roomID, roomName string
 	return nil
 }
 
-// SetUserName sets a display name for a user ID
+// SetUserName: 사용자 ID에 대한 표시 이름을 설정합니다.
 func (as *AlarmService) SetUserName(ctx context.Context, userID, userName string) error {
 	if err := as.cache.HSet(ctx, UserNamesCacheKey, userID, userName); err != nil {
 		return fmt.Errorf("set user name: %w", err)
@@ -64,7 +100,7 @@ func (as *AlarmService) MarkAsNotified(ctx context.Context, streamID string, sta
 	return nil
 }
 
-// isAlreadyNotified checks if a notification was already sent for this stream
+// isAlreadyNotified: 해당 방송에 대해 이미 알림이 발송되었는지 확인함
 func (as *AlarmService) isAlreadyNotified(ctx context.Context, streamID string) bool {
 	notifiedKey := NotifiedKeyPrefix + streamID
 	var notifiedData NotifiedData

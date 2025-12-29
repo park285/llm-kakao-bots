@@ -87,14 +87,14 @@ func NewMemberMatcher(
 	return mm
 }
 
-// tryExactAliasMatch attempts exact match via database aliases (Lazy Loading from PostgreSQL)
+// tryExactAliasMatch: 데이터베이스 별칭을 통한 정확한 매칭을 시도함 (PostgreSQL Lazy Loading)
 func (mm *MemberMatcher) tryExactAliasMatch(ctx context.Context, provider, fallback domain.MemberDataProvider, queryNorm string) *matchCandidate {
-	// Try provider first (PostgreSQL with Valkey cache)
+	// Provider(PostgreSQL + Valkey 캐시)에서 먼저 조회함
 	if member := provider.FindMemberByAlias(queryNorm); member != nil && member.ChannelID != "" {
 		return mm.candidateFromMember(member, "alias-db")
 	}
 
-	// Try fallback
+	// Fallback 데이터에서 조회함
 	if fallback != nil {
 		if member := fallback.FindMemberByAlias(queryNorm); member != nil && member.ChannelID != "" {
 			return mm.candidateFromMember(member, "alias-fallback")
@@ -104,7 +104,7 @@ func (mm *MemberMatcher) tryExactAliasMatch(ctx context.Context, provider, fallb
 	return nil
 }
 
-// tryExactValkeyMatch attempts exact match in dynamic Valkey data without immediate Holodex calls.
+// tryExactValkeyMatch: 동적 Valkey 데이터에서 정확한 매칭을 시도함 (Holodex 호출 없이)
 func (mm *MemberMatcher) tryExactValkeyMatch(provider domain.MemberDataProvider, query string, dynamicMembers map[string]string) *matchCandidate {
 	for name, channelID := range dynamicMembers {
 		if strings.EqualFold(name, query) {
@@ -114,7 +114,7 @@ func (mm *MemberMatcher) tryExactValkeyMatch(provider domain.MemberDataProvider,
 	return nil
 }
 
-// tryPartialStaticMatch attempts partial match in static member data.
+// tryPartialStaticMatch: 정적 멤버 데이터에서 부분 매칭을 시도함
 func (mm *MemberMatcher) tryPartialStaticMatch(provider, fallback domain.MemberDataProvider, queryNorm string) *matchCandidate {
 	if provider != nil {
 		for _, member := range provider.GetAllMembers() {
@@ -137,7 +137,7 @@ func (mm *MemberMatcher) tryPartialStaticMatch(provider, fallback domain.MemberD
 	return nil
 }
 
-// tryPartialValkeyMatch attempts partial match in dynamic Valkey data.
+// tryPartialValkeyMatch: 동적 Valkey 데이터에서 부분 매칭을 시도함
 func (mm *MemberMatcher) tryPartialValkeyMatch(provider domain.MemberDataProvider, queryNorm string, dynamicMembers map[string]string) *matchCandidate {
 	for name, channelID := range dynamicMembers {
 		nameNorm := util.Normalize(name)
@@ -148,7 +148,7 @@ func (mm *MemberMatcher) tryPartialValkeyMatch(provider domain.MemberDataProvide
 	return nil
 }
 
-// tryPartialAliasMatch attempts partial match across all aliases.
+// tryPartialAliasMatch: 모든 별칭에서 부분 매칭을 시도함
 func (mm *MemberMatcher) tryPartialAliasMatch(provider, fallback domain.MemberDataProvider, queryNorm string) *matchCandidate {
 	if provider != nil {
 		for _, member := range provider.GetAllMembers() {
@@ -252,6 +252,16 @@ func (mm *MemberMatcher) hydrateChannel(ctx context.Context, candidate *matchCan
 			slog.String("source", candidate.source),
 			slog.Any("error", err),
 		)
+		// Holodex 실패 시 캐시에서 채널명 조회 시도
+		if mm.cache != nil {
+			if cachedName, cacheErr := mm.cache.HGet(ctx, "member_names", candidate.channelID); cacheErr == nil && cachedName != "" {
+				fallback.Name = cachedName
+				mm.logger.Debug("Using cached channel name as fallback",
+					slog.String("channel_id", candidate.channelID),
+					slog.String("cached_name", cachedName),
+				)
+			}
+		}
 		return fallback, nil
 	}
 
@@ -330,7 +340,7 @@ func toStringPtr(value string) *string {
 	return &copied
 }
 
-// loadDynamicMembers fetches member data from Valkey cache
+// loadDynamicMembers: Valkey 캐시에서 멤버 데이터를 로드함
 func (mm *MemberMatcher) loadDynamicMembers(ctx context.Context) map[string]string {
 	members, err := mm.cache.GetAllMembers(ctx)
 	if err != nil {
@@ -383,30 +393,30 @@ func (mm *MemberMatcher) findBestMatchImpl(ctx context.Context, query string) (*
 	}
 	queryNorm := util.NormalizeSuffix(query)
 
-	// Strategy 1: Exact alias match (fastest)
+	// Strategy 1: 정확한 별칭 매칭 (가장 빠름)
 	if channel, err := mm.finalizeCandidate(ctx, mm.tryExactAliasMatch(ctx, provider, fallbackProvider, queryNorm)); err != nil || channel != nil {
 		return channel, err
 	}
 
-	// Load dynamic members once for strategies 2 & 4
+	// Strategy 2, 4번에서 사용할 동적 멤버를 한 번만 로드함
 	dynamicMembers := mm.loadDynamicMembers(ctx)
 
-	// Strategy 2: Exact match in Valkey
+	// Strategy 2: Valkey에서 정확한 매칭
 	if channel, err := mm.finalizeCandidate(ctx, mm.tryExactValkeyMatch(provider, query, dynamicMembers)); err != nil || channel != nil {
 		return channel, err
 	}
 
-	// Strategy 3: Partial match in static data
+	// Strategy 3: 정적 데이터에서 부분 매칭
 	if channel, err := mm.finalizeCandidate(ctx, mm.tryPartialStaticMatch(provider, fallbackProvider, queryNorm)); err != nil || channel != nil {
 		return channel, err
 	}
 
-	// Strategy 4: Partial match in Valkey
+	// Strategy 4: Valkey에서 부분 매칭
 	if channel, err := mm.finalizeCandidate(ctx, mm.tryPartialValkeyMatch(provider, queryNorm, dynamicMembers)); err != nil || channel != nil {
 		return channel, err
 	}
 
-	// Strategy 5: Partial alias match
+	// Strategy 5: 별칭에서 부분 매칭
 	if channel, err := mm.finalizeCandidate(ctx, mm.tryPartialAliasMatch(provider, fallbackProvider, queryNorm)); err != nil || channel != nil {
 		return channel, err
 	}

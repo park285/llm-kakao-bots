@@ -14,16 +14,17 @@ type SessionProvider interface {
 	CreateSession(ctx context.Context) *Session
 	ValidateSession(sessionID string) bool
 	DeleteSession(sessionID string)
+	RefreshSession(sessionID string) bool // Heartbeat용 TTL 갱신
 }
 
-// Session represents an admin session
+// Session: 관리자 세션 정보를 담는 구조체입니다.
 type Session struct {
 	ID        string    `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-// AdminAuthMiddleware validates admin session for API endpoints
+// AdminAuthMiddleware: API 엔드포인트의 관리자 세션을 검증하는 미들웨어입니다.
 func AdminAuthMiddleware(sessions SessionProvider, sessionSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		signedSessionID, err := c.Cookie(sessionCookieName)

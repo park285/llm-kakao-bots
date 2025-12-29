@@ -103,8 +103,20 @@ var APIConfig = struct {
 	MaxRetryAttempts int
 }{
 	HolodexBaseURL:   "https://holodex.net/api/v2",
-	HolodexTimeout:   10 * time.Second,
+	HolodexTimeout:   15 * time.Second, // 간헐적 서버 지연 대응 (10s → 15s)
 	MaxRetryAttempts: 3,
+}
+
+// HolodexTransportConfig 는 Holodex HTTP Transport 설정이다.
+// 동시 요청 시 커넥션 풀 고갈 방지를 위해 디폴트(MaxIdleConnsPerHost=2)보다 높게 설정한다.
+var HolodexTransportConfig = struct {
+	MaxConnsPerHost     int
+	MaxIdleConnsPerHost int
+	IdleConnTimeout     time.Duration
+}{
+	MaxConnsPerHost:     50, // 최대 동시 연결 수 (maxConcurrency와 동일)
+	MaxIdleConnsPerHost: 50, // 유휴 커넥션 유지 수
+	IdleConnTimeout:     30 * time.Second,
 }
 
 // OfficialScheduleConfig 는 패키지 변수다.
@@ -279,10 +291,14 @@ var RequestTimeout = struct {
 }
 
 // SessionConfig 는 세션 관련 설정이다.
+// ExpiryDuration: 세션 TTL (heartbeat 미수신 시 만료)
+// HeartbeatInterval: 프론트엔드 heartbeat 주기
 var SessionConfig = struct {
-	ExpiryDuration time.Duration
+	ExpiryDuration    time.Duration
+	HeartbeatInterval time.Duration
 }{
-	ExpiryDuration: 24 * time.Hour,
+	ExpiryDuration:    1 * time.Hour,    // 브라우저 닫기 → 1시간 후 Valkey 세션 만료
+	HeartbeatInterval: 15 * time.Minute, // 프론트엔드 heartbeat 주기
 }
 
 // DatabaseConfig 는 데이터베이스 연결 설정이다.

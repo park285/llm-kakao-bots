@@ -2,6 +2,7 @@ import { useState, useOptimistic } from 'react'
 import ConfirmModal from './ConfirmModal'
 import ChannelEditModal from './ChannelEditModal'
 import AddMemberModal from './AddMemberModal'
+import EditNameModal from './EditNameModal'
 import MemberCard from './MemberCard'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { membersApi } from '@/api'
@@ -42,6 +43,14 @@ const MembersTab = () => {
     },
   })
 
+  const updateNameMutation = useMutation({
+    mutationFn: ({ memberId, name }: { memberId: number; name: string }) =>
+      membersApi.updateName(memberId, name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['members'] })
+    },
+  })
+
   const setGraduationMutation = useMutation({
     mutationFn: ({ memberId, isGraduated }: { memberId: number; isGraduated: boolean }) =>
       membersApi.setGraduation(memberId, { isGraduated }),
@@ -55,8 +64,8 @@ const MembersTab = () => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['members'] })
     },
-    onError: (err) => {
-      alert(`Failed to add member: ${(err).message}`)
+    onError: (err: Error) => {
+      alert(`Failed to add member: ${err.message}`)
     }
   })
 
@@ -74,12 +83,13 @@ const MembersTab = () => {
     | { type: 'removeAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
     | { type: 'graduation'; memberId: number; memberName: string; currentStatus: boolean }
     | { type: 'channelEdit'; memberId: number; memberName: string; currentChannelId: string }
+    | { type: 'nameEdit'; memberId: number; currentName: string }
 
   const [modal, setModal] = useState<ModalState>({ type: 'none' })
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   // Optimistic updates setup (unchanged logic)
-  const allMembers = (response?.members ?? []).map(m => ({
+  const allMembers = (response?.members ?? []).map((m: Member) => ({
     ...m,
     aliases: {
       ko: m.aliases.ko,
@@ -92,17 +102,19 @@ const MembersTab = () => {
     | { type: 'addAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
     | { type: 'removeAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
     | { type: 'updateChannel'; memberId: number; channelId: string }
+    | { type: 'updateName'; memberId: number; name: string }
 
   const [optimisticMembers, setOptimisticMembers] = useOptimistic(
     allMembers,
-    (state, update: OptimisticUpdate) => {
+    (state: typeof allMembers, update: OptimisticUpdate) => {
+      type MemberItem = typeof allMembers[number]
       switch (update.type) {
         case 'graduation':
-          return state.map((m) =>
+          return state.map((m: MemberItem) =>
             m.id === update.memberId ? { ...m, isGraduated: update.isGraduated } : m
           )
         case 'addAlias':
-          return state.map((m) =>
+          return state.map((m: MemberItem) =>
             m.id === update.memberId
               ? {
                 ...m,
@@ -114,22 +126,26 @@ const MembersTab = () => {
               : m
           )
         case 'removeAlias':
-          return state.map((m) =>
+          return state.map((m: MemberItem) =>
             m.id === update.memberId
               ? {
                 ...m,
                 aliases: {
                   ...m.aliases,
                   [update.aliasType]: m.aliases[update.aliasType].filter(
-                    (a) => a !== update.alias
+                    (a: string) => a !== update.alias
                   ),
                 },
               }
               : m
           )
         case 'updateChannel':
-          return state.map((m) =>
+          return state.map((m: MemberItem) =>
             m.id === update.memberId ? { ...m, channelId: update.channelId } : m
+          )
+        case 'updateName':
+          return state.map((m: MemberItem) =>
+            m.id === update.memberId ? { ...m, name: update.name } : m
           )
       }
     }
@@ -175,6 +191,17 @@ const MembersTab = () => {
 
     setOptimisticMembers({ type: 'updateChannel', memberId: modal.memberId, channelId: newChannelId })
     void updateChannelMutation.mutateAsync({ memberId: modal.memberId, channelId: newChannelId })
+  }
+
+  const handleEditName = (memberId: number, currentName: string) => {
+    setModal({ type: 'nameEdit', memberId, currentName })
+  }
+
+  const confirmEditName = (newName: string) => {
+    if (modal.type !== 'nameEdit') return
+
+    setOptimisticMembers({ type: 'updateName', memberId: modal.memberId, name: newName })
+    void updateNameMutation.mutateAsync({ memberId: modal.memberId, name: newName })
   }
 
   const handleToggleGraduation = (memberId: number, memberName: string, currentStatus: boolean) => {
@@ -268,6 +295,7 @@ const MembersTab = () => {
             onRemoveAlias={handleRemoveAlias}
             onToggleGraduation={handleToggleGraduation}
             onEditChannel={handleUpdateChannel}
+            onEditName={handleEditName}
           />
         ))}
       </div>
@@ -308,6 +336,15 @@ const MembersTab = () => {
         memberId={modal.type === 'channelEdit' ? modal.memberId : 0}
         memberName={modal.type === 'channelEdit' ? modal.memberName : ''}
         currentChannelId={modal.type === 'channelEdit' ? modal.currentChannelId : ''}
+      />
+
+      <EditNameModal
+        isOpen={modal.type === 'nameEdit'}
+        onClose={() => { setModal({ type: 'none' }) }}
+        onSave={confirmEditName}
+        type="member"
+        id={modal.type === 'nameEdit' ? String(modal.memberId) : ''}
+        currentName={modal.type === 'nameEdit' ? modal.currentName : ''}
       />
 
       <AddMemberModal

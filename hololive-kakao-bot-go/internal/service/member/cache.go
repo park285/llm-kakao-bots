@@ -29,16 +29,16 @@ type Cache struct {
 	cache  *cache.Service
 	logger *slog.Logger
 
-	// In-memory caches
+	// 인메모리 캐시
 	byChannelID sync.Map // map[string]*domain.Member
 	byName      sync.Map // map[string]*domain.Member
 	allMembers  sync.Map // []string (channel IDs)
 
-	// Cache configuration
+	// 캐시 설정
 	cacheTTL time.Duration
 	warmup   bool
 
-	// Warm-up configuration
+	// 워밍업 설정
 	warmUpChunkSize     int
 	warmUpMaxGoroutines int
 }
@@ -46,7 +46,7 @@ type Cache struct {
 // CacheConfig: 멤버 캐시 설정을 위한 구조체 (TTL, 워밍업 옵션 등)
 type CacheConfig struct {
 	ValkeyTTL           time.Duration
-	WarmUp              bool // Load all members into memory on startup
+	WarmUp              bool // 시작 시 전체 멤버를 메모리에 로드
 	WarmUpChunkSize     int
 	WarmUpMaxGoroutines int
 }
@@ -75,7 +75,7 @@ func NewMemberCache(ctx context.Context, repo *Repository, cacheService *cache.S
 		warmUpMaxGoroutines: cfg.WarmUpMaxGoroutines,
 	}
 
-	// Warm up cache if enabled
+	// 워밍업이 활성화된 경우 캐시 워밍업 수행함
 	if cfg.WarmUp {
 		if err := mc.WarmUpCache(ctx); err != nil {
 			logger.Warn("Failed to warm up member cache", slog.Any("error", err))
@@ -339,7 +339,7 @@ func (c *Cache) Refresh(ctx context.Context) error {
 	return c.WarmUpCache(ctx)
 }
 
-// InvalidateAliasCache invalidates Valkey cache for specific alias
+// InvalidateAliasCache: 특정 별칭에 대한 Valkey 캐시를 무효화합니다.
 func (c *Cache) InvalidateAliasCache(ctx context.Context, alias string) error {
 	if !c.cacheEnabled() {
 		c.logger.Info("Alias cache invalidated", slog.String("alias", alias))

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { roomsApi } from '../api'
+import { roomsApi } from '@/api'
 
 const RoomsTab = () => {
   const queryClient = useQueryClient()

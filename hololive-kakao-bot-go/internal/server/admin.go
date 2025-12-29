@@ -15,7 +15,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// AdminHandler handles admin API requests
+// AdminHandler: 관리자 API 요청을 처리하는 핸들러입니다.
 // 핸들러 메서드는 도메인별 파일로 분리됨:
 //   - admin_auth.go: 인증 (로그인/로그아웃)
 //   - admin_member.go: 멤버 관리
@@ -44,7 +44,7 @@ type AdminHandler struct {
 	startTime     time.Time
 }
 
-// NewAdminHandler creates a new admin handler
+// NewAdminHandler: 새로운 관리자 핸들러를 생성합니다.
 func NewAdminHandler(
 	repo *member.Repository,
 	memberCache *member.Cache,

@@ -25,7 +25,7 @@ type ValkeySessionStore struct {
 	ttl    time.Duration
 }
 
-// NewValkeySessionStore creates a new Valkey-based session store
+// NewValkeySessionStore: 새로운 Valkey 기반 세션 저장소를 생성합니다.
 func NewValkeySessionStore(client valkey.Client, logger *slog.Logger) *ValkeySessionStore {
 	return &ValkeySessionStore{
 		client: client,
@@ -34,7 +34,7 @@ func NewValkeySessionStore(client valkey.Client, logger *slog.Logger) *ValkeySes
 	}
 }
 
-// CreateSession creates a new admin session and stores it in Valkey
+// CreateSession: 새로운 관리자 세션을 생성하고 Valkey에 저장합니다.
 func (s *ValkeySessionStore) CreateSession(ctx context.Context) *Session {
 	sessionID := generateValkeySessionID()
 	now := time.Now()
@@ -70,7 +70,7 @@ func (s *ValkeySessionStore) CreateSession(ctx context.Context) *Session {
 	return session
 }
 
-// ValidateSession checks if a session exists and is valid in Valkey
+// ValidateSession: 세션이 Valkey에 존재하고 유효한지 확인합니다.
 func (s *ValkeySessionStore) ValidateSession(sessionID string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -107,7 +107,7 @@ func (s *ValkeySessionStore) ValidateSession(sessionID string) bool {
 	return true
 }
 
-// DeleteSession removes a session from Valkey
+// DeleteSession: Valkey에서 세션을 삭제합니다.
 func (s *ValkeySessionStore) DeleteSession(sessionID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -119,6 +119,35 @@ func (s *ValkeySessionStore) DeleteSession(sessionID string) {
 	} else {
 		s.logger.Debug("Session deleted from Valkey", slog.String("session_id", truncateSessionID(sessionID)))
 	}
+}
+
+// RefreshSession: 세션의 TTL을 연장합니다. (Heartbeat). 세션이 존재하고 갱신되면 true를 반환합니다.
+func (s *ValkeySessionStore) RefreshSession(sessionID string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	key := sessionKeyPrefix + sessionID
+
+	// EXPIRE 명령으로 TTL 갱신 (키가 없으면 0 반환)
+	resp := s.client.Do(ctx, s.client.B().Expire().Key(key).Seconds(int64(s.ttl.Seconds())).Build())
+	if resp.Error() != nil {
+		s.logger.Error("Failed to refresh session", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", resp.Error()))
+		return false
+	}
+
+	result, err := resp.AsInt64()
+	if err != nil {
+		s.logger.Error("Failed to parse EXPIRE response", slog.String("session_id", truncateSessionID(sessionID)), slog.Any("error", err))
+		return false
+	}
+
+	if result == 0 {
+		// 키가 존재하지 않음 (세션 만료됨)
+		return false
+	}
+
+	s.logger.Debug("Session refreshed", slog.String("session_id", truncateSessionID(sessionID)), slog.Duration("ttl", s.ttl))
+	return true
 }
 
 func generateValkeySessionID() string {

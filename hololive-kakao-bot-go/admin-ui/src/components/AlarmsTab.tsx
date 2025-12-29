@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { alarmsApi, namesApi } from '../api'
-import type { Alarm } from '../types'
+import { alarmsApi, namesApi } from '@/api'
+import type { Alarm } from '@/types'
 import EditNameModal from './EditNameModal'
 
 interface AlarmGroup {
@@ -21,7 +21,7 @@ const AlarmsTab = () => {
     id: string
     currentName: string
   } | null>(null)
-  
+
   const { data: response, isLoading } = useQuery({
     queryKey: ['alarms'],
     queryFn: alarmsApi.getAll,
@@ -78,7 +78,7 @@ const AlarmsTab = () => {
   // 검색 필터링
   const filteredGroups = useMemo(() => {
     if (!search.trim()) return groupedAlarms
-    
+
     const searchLower = search.toLowerCase()
     return groupedAlarms.filter(group =>
       group.roomName.toLowerCase().includes(searchLower) ||
@@ -102,7 +102,7 @@ const AlarmsTab = () => {
   const handleDelete = (alarm: Alarm) => {
     if (!confirm(`알람을 삭제하시겠습니까?
 채널: ${alarm.memberName || alarm.channelId}`)) return
-    
+
     void deleteAlarmMutation.mutateAsync({
       roomId: alarm.roomId,
       userId: alarm.userId,

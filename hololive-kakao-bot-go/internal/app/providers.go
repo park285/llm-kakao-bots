@@ -16,8 +16,10 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/platform/bootstrap"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/acl"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/activity"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/alarm"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/docker"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/matcher"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
@@ -242,14 +244,29 @@ func ProvideMemberMatcher(
 // 알림 Provider
 // ----------------------------------------------------------------------------
 
+// ProvideAlarmRepository - 알람 저장소 생성 (DB 영속화)
+func ProvideAlarmRepository(
+	postgres *database.PostgresService,
+	logger *slog.Logger,
+) *alarm.Repository {
+	return alarm.NewRepository(postgres.GetDB(), logger)
+}
+
 // ProvideAlarmService - 알림 서비스 생성
 func ProvideAlarmService(
 	cfg *config.Config,
 	cacheSvc *cache.Service,
 	holodexSvc *holodex.Service,
+	alarmRepo *alarm.Repository,
 	logger *slog.Logger,
 ) *notification.AlarmService {
-	return notification.NewAlarmService(cacheSvc, holodexSvc, logger, cfg.Notification.AdvanceMinutes)
+	return notification.NewAlarmService(
+		cacheSvc,
+		holodexSvc,
+		alarmRepo,
+		logger,
+		cfg.Notification.AdvanceMinutes,
+	)
 }
 
 // ----------------------------------------------------------------------------
@@ -323,6 +340,17 @@ func ProvideSettingsService(logger *slog.Logger) *settings.Service {
 	return settings.NewSettingsService("settings.json", logger)
 }
 
+// ProvideDockerService - Docker 관리 서비스 생성 (선택적)
+func ProvideDockerService(logger *slog.Logger) *docker.Service {
+	svc, err := docker.NewService(logger, "20q-kakao-bot")
+	if err != nil {
+		logger.Warn("Docker 서비스 초기화 실패 (컨테이너 관리 비활성화)", slog.Any("error", err))
+		return nil
+	}
+	logger.Info("Docker 관리 서비스 활성화")
+	return svc
+}
+
 // ProvideACLService - 접근 제어 서비스 생성 (PostgreSQL 영구화)
 func ProvideACLService(
 	ctx context.Context,
@@ -380,7 +408,7 @@ func ProvideBotDependencies(
 	memberCache *member.Cache,
 	holodexSvc *holodex.Service,
 	profiles *member.ProfileService,
-	alarm *notification.AlarmService,
+	alarmSvc *notification.AlarmService,
 	memberMatcher *matcher.MemberMatcher,
 	membersData domain.MemberDataProvider,
 	ytStack *YouTubeStack,
@@ -400,7 +428,7 @@ func ProvideBotDependencies(
 		MemberCache:      memberCache,
 		Holodex:          holodexSvc,
 		Profiles:         profiles,
-		Alarm:            alarm,
+		Alarm:            alarmSvc,
 		Matcher:          memberMatcher,
 		MembersData:      membersData,
 		Service:          ytStack.Service,

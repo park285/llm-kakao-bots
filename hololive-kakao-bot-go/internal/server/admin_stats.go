@@ -12,7 +12,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
 )
 
-// GetStats returns bot statistics (parallel fetch for performance)
+// GetStats: 봇 통계를 반환합니다. (성능 최적화를 위해 병렬 조회)
 func (h *AdminHandler) GetStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()

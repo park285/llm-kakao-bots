@@ -278,6 +278,7 @@ services:
       GOMEMLIMIT: "450MiB"
     volumes:
       - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "30001:30001"
     depends_on:

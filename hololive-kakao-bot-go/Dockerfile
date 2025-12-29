@@ -31,8 +31,11 @@ RUN apk add --no-cache ca-certificates tzdata && \
     mkdir -p /usr/share/zoneinfo/Asia && \
     mv /tmp/Seoul /usr/share/zoneinfo/Asia/Seoul
 
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+# Docker 소켓 접근을 위해 호스트의 docker 그룹 GID(988)와 일치시킴
+RUN addgroup -g 988 docker && \
+    addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    addgroup appuser docker
 
 WORKDIR /app
 

@@ -63,7 +63,15 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 		return nil, err
 	}
 
-	alarmService := ProvideAlarmService(cfg, cacheService, holodexService, logger)
+	alarmRepository := ProvideAlarmRepository(postgresService, logger)
+	alarmService := ProvideAlarmService(cfg, cacheService, holodexService, alarmRepository, logger)
+
+	// 앱 시작 시 알람 캐시 워밍 (DB에서 Valkey로 일괄 로드)
+	if warnErr := alarmService.WarmCacheFromDB(ctx); warnErr != nil {
+		logger.Warn("Failed to warm alarm cache from DB", "error", warnErr)
+		// 캐시 워밍 실패는 치명적이지 않음 - 계속 진행
+	}
+
 	memberDataProvider := ProvideMembersData(memberServiceAdapter)
 	memberMatcher := ProvideMemberMatcher(ctx, memberDataProvider, cacheService, holodexService, logger)
 	youTubeStatsRepository := ProvideYouTubeStatsRepository(postgresService, logger)
@@ -154,7 +162,10 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 		return nil, err
 	}
 
-	adminRouter, err := ProvideAdminRouter(ctx, logger, adminHandler, valkeySessionStore, securityConfig, adminAllowedCIDRs)
+	// Docker 서비스 (선택적 - 소켓 마운트 필요)
+	dockerService := ProvideDockerService(logger)
+
+	adminRouter, err := ProvideAdminRouter(ctx, logger, adminHandler, dockerService, valkeySessionStore, securityConfig, adminAllowedCIDRs)
 	if err != nil {
 		return nil, err
 	}

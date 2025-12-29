@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { logsApi } from '../api'
+import { logsApi } from '@/api'
 import { ScrollText, RefreshCw, AlertTriangle, Shield, Activity, ChevronDown, ChevronRight, Server } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
-import type { LogEntry } from '../types'
+import type { LogEntry } from '@/types'
 
 const formatDetailValue = (value: unknown): string => {
     if (value === null) return 'null'

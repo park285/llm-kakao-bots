@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface EditNameModalProps {
   isOpen: boolean
   onClose: () => void
-  type: 'room' | 'user'
+  type: 'room' | 'user' | 'member'
   id: string
   currentName: string
   onSave: (newName: string) => void
@@ -12,6 +12,12 @@ interface EditNameModalProps {
 const EditNameModal = ({ isOpen, onClose, type, id, currentName, onSave }: EditNameModalProps) => {
   const [name, setName] = useState(currentName)
   const isNumericId = /^\d+$/.test(currentName)
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(currentName)
+    }
+  }, [isOpen, currentName])
 
   const handleSave = () => {
     const trimmed = name.trim()
@@ -22,8 +28,23 @@ const EditNameModal = ({ isOpen, onClose, type, id, currentName, onSave }: EditN
 
   if (!isOpen) return null
 
-  const label = type === 'room' ? '방 이름' : '유저 이름'
-  const placeholder = type === 'room' ? '홀로라이브 알림방' : '카푸'
+  let label = ''
+  let placeholder = ''
+
+  switch (type) {
+    case 'room':
+      label = '방 이름'
+      placeholder = '홀로라이브 알림방'
+      break
+    case 'user':
+      label = '유저 이름'
+      placeholder = '카푸'
+      break
+    case 'member':
+      label = '멤버 이름'
+      placeholder = 'Tokino Sora'
+      break
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">

@@ -11,7 +11,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/settings"
 )
 
-// SetRoomName sets a display name for a room ID
+// SetRoomName: 방 ID에 대한 표시 이름을 설정합니다.
 func (h *AdminHandler) SetRoomName(c *gin.Context) {
 	var req struct {
 		RoomID   string `json:"roomId" binding:"required"`
@@ -27,7 +27,7 @@ func (h *AdminHandler) SetRoomName(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
 
-	// Save to Valkey via AlarmService
+	// AlarmService를 통해 Valkey에 저장함
 	if err := h.alarm.SetRoomName(ctx, req.RoomID, req.RoomName); err != nil {
 		h.logger.Error("Failed to set room name", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to set room name"})
@@ -50,7 +50,7 @@ func (h *AdminHandler) SetRoomName(c *gin.Context) {
 	})
 }
 
-// SetUserName sets a display name for a user ID
+// SetUserName: 사용자 ID에 대한 표시 이름을 설정합니다.
 func (h *AdminHandler) SetUserName(c *gin.Context) {
 	var req struct {
 		UserID   string `json:"userId" binding:"required"`
@@ -66,7 +66,7 @@ func (h *AdminHandler) SetUserName(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
 
-	// Save to Valkey via AlarmService
+	// AlarmService를 통해 Valkey에 저장함
 	if err := h.alarm.SetUserName(ctx, req.UserID, req.UserName); err != nil {
 		h.logger.Error("Failed to set user name", slog.Any("error", err))
 		c.JSON(500, gin.H{"error": "Failed to set user name"})
@@ -84,7 +84,7 @@ func (h *AdminHandler) SetUserName(c *gin.Context) {
 	})
 }
 
-// GetLogs returns activity logs
+// GetLogs: 활동 로그를 반환합니다.
 func (h *AdminHandler) GetLogs(c *gin.Context) {
 	logs, err := h.activity.GetRecentLogs(100)
 	if err != nil {
@@ -95,13 +95,13 @@ func (h *AdminHandler) GetLogs(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ok", "logs": logs})
 }
 
-// GetSettings returns current settings
+// GetSettings: 현재 설정을 반환합니다.
 func (h *AdminHandler) GetSettings(c *gin.Context) {
 	s := h.settings.Get()
 	c.JSON(200, gin.H{"status": "ok", "settings": s})
 }
 
-// UpdateSettings updates settings
+// UpdateSettings: 설정을 업데이트합니다.
 func (h *AdminHandler) UpdateSettings(c *gin.Context) {
 	var req settings.Settings
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { streamsApi } from '../api'
+import { streamsApi } from '@/api'
 import { ExternalLink, Calendar, PlayCircle } from 'lucide-react'
+import type { Stream } from '@/types'
 
 // Helper for image optimization using wsrv.nl (Open source image proxy)
 // Features: Caching, Resizing, WebP Conversion, Compression
@@ -41,7 +42,7 @@ const StreamsTab = () => {
                     <div className="h-40 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {liveData?.streams.map((stream) => (
+                        {liveData?.streams.map((stream: Stream) => (
                             <div key={stream.id} className="group relative rounded-xl overflow-hidden border border-slate-200 hover:shadow-md transition-all">
                                 {stream.thumbnail ? (
                                     <div className="aspect-video relative overflow-hidden bg-slate-100">
@@ -98,7 +99,7 @@ const StreamsTab = () => {
                     <div className="h-40 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {upcomingData?.streams.map((stream) => (
+                        {upcomingData?.streams.map((stream: Stream) => (
                             <div key={stream.id} className="flex items-center p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors group">
                                 <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-100 mr-4 relative flex items-center justify-center text-slate-300">
                                     {stream.thumbnail ? (

@@ -151,10 +151,7 @@ func (c *AlarmCommand) handleList(ctx context.Context, cmdCtx *domain.CommandCon
 
 	alarmInfos := make([]adapter.AlarmListEntry, 0, len(channelIDs))
 	for _, channelID := range channelIDs {
-		memberName, err := c.Deps().Alarm.GetMemberName(ctx, channelID)
-		if err != nil || memberName == "" {
-			memberName = channelID
-		}
+		memberName := c.Deps().Alarm.GetMemberNameWithFallback(ctx, channelID)
 		nextStreamInfo, _ := c.Deps().Alarm.GetNextStreamInfo(ctx, channelID)
 		alarmInfos = append(alarmInfos, adapter.AlarmListEntry{
 			MemberName: memberName,

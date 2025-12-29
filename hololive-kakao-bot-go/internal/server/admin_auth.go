@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// HandleLogin 는 동작을 수행한다.
+// HandleLogin: 관리자 로그인을 처리합니다.
 func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	ip := c.ClientIP()
 
@@ -57,7 +57,7 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	// 세션 생성 및 HMAC 서명
 	session := h.sessions.CreateSession(c.Request.Context())
 	signedSessionID := SignSessionID(session.ID, h.securityCfg.SessionSecret)
-	SetSecureCookie(c, sessionCookieName, signedSessionID, 86400, h.securityCfg.ForceHTTPS)
+	SetSecureCookie(c, sessionCookieName, signedSessionID, 0, h.securityCfg.ForceHTTPS) // 0 = 세션 쿠키 (브라우저 종료 시 삭제)
 
 	h.logger.Info("Admin logged in",
 		slog.String("username", req.Username),
@@ -96,7 +96,7 @@ func (h *AdminHandler) handleLoginFailure(c *gin.Context, ip, username, reason s
 	c.JSON(200, gin.H{"success": false, "error": "Authentication failed"})
 }
 
-// HandleLogout processes admin logout (JSON API)
+// HandleLogout: 관리자 로그아웃을 처리합니다. (JSON API)
 func (h *AdminHandler) HandleLogout(c *gin.Context) {
 	signedSessionID, _ := c.Cookie(sessionCookieName)
 	if signedSessionID != "" {
@@ -116,4 +116,28 @@ func (h *AdminHandler) HandleLogout(c *gin.Context) {
 		"status":  "ok",
 		"message": "Logout successful",
 	})
+}
+
+// HandleHeartbeat: 세션 TTL을 갱신합니다. (프론트엔드에서 주기적으로 호출)
+func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
+	signedSessionID, err := c.Cookie(sessionCookieName)
+	if err != nil || signedSessionID == "" {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	sessionID, valid := ValidateSessionSignature(signedSessionID, h.securityCfg.SessionSecret)
+	if !valid {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	if !h.sessions.RefreshSession(sessionID) {
+		// 세션이 이미 만료됨
+		ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
+		c.JSON(401, gin.H{"error": "Session expired"})
+		return
+	}
+
+	c.JSON(200, gin.H{"status": "ok"})
 }

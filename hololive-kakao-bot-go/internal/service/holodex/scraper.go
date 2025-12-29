@@ -281,7 +281,12 @@ func (s *ScraperService) parseDatetimeWithContext(date, timeStr string) (*time.T
 
 	combined := fmt.Sprintf("%s %s", date, timeStr)
 
-	jst, _ := time.LoadLocation("Asia/Tokyo")
+	// JST 타임존 로드 (Alpine에 tzdata 없을 경우 FixedZone 폴백)
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		s.logger.Debug("Failed to load Asia/Tokyo timezone, using FixedZone", slog.Any("error", err))
+		jst = time.FixedZone("JST", 9*60*60) // UTC+9
+	}
 	now := time.Now().In(jst)
 
 	t, err := time.ParseInLocation("01/02 15:04", combined, jst)

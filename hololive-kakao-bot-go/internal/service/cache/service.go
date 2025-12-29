@@ -72,7 +72,7 @@ func NewCacheService(cfg Config, logger *slog.Logger) (*Service, error) {
 func (c *Service) Get(ctx context.Context, key string, dest any) error {
 	resp := c.client.Do(ctx, c.client.B().Get().Key(key).Build())
 	if util.IsValkeyNil(resp.Error()) {
-		return nil // Key doesn't exist - not an error
+		return nil // 키가 존재하지 않음 - 에러 아님
 	}
 	if resp.Error() != nil {
 		c.logger.Error("Cache get operation failed", slog.String("key", key), slog.Any("error", resp.Error()))
@@ -364,7 +364,7 @@ func (c *Service) HMSet(ctx context.Context, key string, fields map[string]any) 
 func (c *Service) HGet(ctx context.Context, key, field string) (string, error) {
 	resp := c.client.Do(ctx, c.client.B().Hget().Key(key).Field(field).Build())
 	if util.IsValkeyNil(resp.Error()) {
-		return "", nil // Field doesn't exist - not an error
+		return "", nil // 필드가 존재하지 않음 - 에러 아님
 	}
 	if resp.Error() != nil {
 		c.logger.Error("Cache hash get failed", slog.String("key", key), slog.String("field", field), slog.Any("error", resp.Error()))
@@ -461,7 +461,7 @@ func (c *Service) WaitUntilReady(ctx context.Context, timeout time.Duration) err
 	}
 }
 
-// GetClient returns the underlying Valkey client for advanced operations
+// GetClient: 고급 조작을 위해 내부 Valkey 클라이언트를 반환합니다.
 func (c *Service) GetClient() valkey.Client {
 	return c.client
 }

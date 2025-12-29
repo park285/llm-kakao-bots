@@ -203,8 +203,8 @@ func (b *Bot) Start(ctx context.Context) error {
 	}
 }
 
-// HandleMessage processes incoming messages from Iris webhook
-// Made public for HTTP webhook handler
+// HandleMessage: Iris webhook으로부터 수신한 메시지를 처리합니다.
+// HTTP webhook 핸들러에서 호출하기 위해 public으로 노출됩니다.
 func (b *Bot) HandleMessage(ctx context.Context, message *iris.Message) {
 	commandType := "unknown"
 
@@ -267,7 +267,7 @@ func (b *Bot) HandleMessage(ctx context.Context, message *iris.Message) {
 			slog.String("room", chatID),
 			slog.String("user_name", userName),
 		)
-		return // Ignore unknown commands
+		return // 알 수 없는 명령어는 무시함
 	}
 
 	b.logger.Info("Command received",

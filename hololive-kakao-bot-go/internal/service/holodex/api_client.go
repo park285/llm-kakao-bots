@@ -161,6 +161,7 @@ func (c *APIClient) newRequest(ctx context.Context, method, reqURL string, apiKe
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-APIKEY", apiKey)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36")
 	return req, nil
 }
 
@@ -173,7 +174,7 @@ func (c *APIClient) retryAfterNetworkFailure(ctx context.Context, err error, att
 
 	if attempt < maxAttempts-1 {
 		delay := c.computeDelay(attempt)
-		c.logger.Warn("Request failed, retrying",
+		c.logger.Debug("Request failed, retrying",
 			slog.Any("error", err),
 			slog.Int("attempt", attempt+1),
 			slog.Duration("delay", delay),

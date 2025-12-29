@@ -108,7 +108,7 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 		ctx = context.Background()
 	}
 
-	// Start YouTube scheduler if enabled (ingestion feature)
+	// 활성화된 경우 YouTube 스케줄러 시작 (ingestion 기능)
 	if r.Scheduler != nil {
 		r.Scheduler.Start(ctx)
 		if r.Logger != nil {
@@ -116,7 +116,7 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 		}
 	}
 
-	// Start alarm checker in background
+	// 백그라운드에서 알림 체커 시작
 	if r.Bot != nil {
 		go func() {
 			if err := r.Bot.Start(ctx); err != nil {
@@ -147,7 +147,7 @@ func (r *BotRuntime) Shutdown(ctx context.Context) {
 		return
 	}
 
-	// Stop YouTube scheduler
+	// YouTube 스케줄러 중지
 	if r.Scheduler != nil {
 		r.Scheduler.Stop()
 		if r.Logger != nil {

@@ -1,10 +1,11 @@
 {
-  "version": "2.0.3",
-  "lastUpdated": "2025-10-08",
+  "version": "2.1.0",
+  "lastUpdated": "2025-12-28",
   "sources": [
     "PostgreSQL holo_oshi_db (member_enriched_data)",
     "member_channel_ids.json",
-    "member_aliases.json"
+    "member_aliases.json",
+    "Official Channels (Holodex API)"
   ],
   "members": [
     {
@@ -140,11 +141,11 @@
       "name": "Cecilia Immergreen",
       "aliases": {
         "ko": [
-      "세실리아",
-      "이머그린",
-      "세실리아이머그린",
-      "세시",
-      "시시"
+          "세실리아",
+          "이머그린",
+          "세실리아이머그린",
+          "세시",
+          "시시"
         ],
         "ja": [
           "Cecilia Immergreen Ch. hololive-EN",
@@ -1259,6 +1260,108 @@
       },
       "nameJa": "癒月ちょこ",
       "nameKo": "유즈키 초코"
+    },
+    {
+      "channelId": "UCJFZiqLMntJufDCHc6bQixg",
+      "name": "Hololive Official",
+      "aliases": {
+        "ko": [
+          "홀로라이브",
+          "공식채널",
+          "홀로그라"
+        ],
+        "ja": [
+          "hololive ホロライブ - VTuber Group",
+          "ホロライブ公式"
+        ]
+      },
+      "nameJa": "hololive ホロライブ",
+      "nameKo": "홀로라이브 공식"
+    },
+    {
+      "channelId": "UCozx5csNhCx1wsVq3SZVkBQ",
+      "name": "holoAN room",
+      "aliases": {
+        "ko": [
+          "호로아나",
+          "홀로아나",
+          "호로아나방"
+        ],
+        "ja": [
+          "ホロアナ",
+          "holoAN"
+        ]
+      },
+      "nameJa": "holoAN room (ホロアナ)",
+      "nameKo": "호로아나"
+    },
+    {
+      "channelId": "UCotXwY6s8pWmuWd_snKYjhg",
+      "name": "Hololive EN Official",
+      "aliases": {
+        "ko": [
+          "홀로EN",
+          "홀로라이브영어",
+          "홀로EN공식"
+        ],
+        "ja": [
+          "hololive English"
+        ]
+      },
+      "nameJa": "hololive English",
+      "nameKo": "홀로라이브 EN 공식"
+    },
+    {
+      "channelId": "UCfrWoRGlawPQDQxxeIDRP0Q",
+      "name": "Hololive ID Official",
+      "aliases": {
+        "ko": [
+          "홀로ID",
+          "홀로인도네시아",
+          "홀로ID공식"
+        ],
+        "ja": [
+          "hololive Indonesia"
+        ]
+      },
+      "nameJa": "hololive Indonesia",
+      "nameKo": "홀로라이브 ID 공식"
+    },
+    {
+      "channelId": "UC10wVt6hoQiwySRhz7RdOUA",
+      "name": "DEV_IS ReGLOSS",
+      "aliases": {
+        "ko": [
+          "리글로스",
+          "ReGLOSS",
+          "데비스리글로스",
+          "리글로스공식"
+        ],
+        "ja": [
+          "hololive DEV_IS ReGLOSS",
+          "ReGLOSS"
+        ]
+      },
+      "nameJa": "hololive DEV_IS ReGLOSS",
+      "nameKo": "리글로스 공식"
+    },
+    {
+      "channelId": "UCu2n3qHuOuQIygREMnWeQWg",
+      "name": "DEV_IS FLOW GLOW",
+      "aliases": {
+        "ko": [
+          "플로우글로우",
+          "FLOW GLOW",
+          "데비스플로우글로우",
+          "플글"
+        ],
+        "ja": [
+          "hololive DEV_IS FLOW GLOW",
+          "FLOW GLOW"
+        ]
+      },
+      "nameJa": "hololive DEV_IS FLOW GLOW",
+      "nameKo": "플로우글로우 공식"
     }
   ]
 }

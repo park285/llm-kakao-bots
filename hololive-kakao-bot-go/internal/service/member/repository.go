@@ -14,7 +14,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
 )
 
-// Model represents the GORM model for members table
+// Model: members 테이블과 매핑되는 GORM 모델입니다.
 type Model struct {
 	ID           int            `gorm:"primaryKey;column:id"`
 	Slug         string         `gorm:"column:slug"`
@@ -163,7 +163,7 @@ func (r *Repository) FindByAlias(ctx context.Context, alias string) (*domain.Mem
 	return r.scanMember(id, slug, channelID, englishName, japaneseName, koreanName, status, isGraduated, aliasesJSON)
 }
 
-// GetAllChannelIDs returns all channel IDs
+// GetAllChannelIDs: 모든 멤버의 채널 ID 목록을 반환합니다.
 func (r *Repository) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	query := `
 		SELECT channel_id
@@ -246,7 +246,7 @@ func (r *Repository) GetAllMembers(ctx context.Context) ([]*domain.Member, error
 	return members, nil
 }
 
-// scanMember converts DB row to domain.Member
+// scanMember: DB 조회 결과를 domain.Member로 변환함
 func (r *Repository) scanMember(
 	id int,
 	slug string,
@@ -299,7 +299,7 @@ func (r *Repository) AddAlias(ctx context.Context, memberID int, aliasType strin
 		return fmt.Errorf("failed to unmarshal aliases: %w", err)
 	}
 
-	// Check if alias already exists
+	// 별칭 중복 여부 확인함
 	existing := aliases.Ko
 	if aliasType == "ja" {
 		existing = aliases.Ja
@@ -311,7 +311,7 @@ func (r *Repository) AddAlias(ctx context.Context, memberID int, aliasType strin
 		}
 	}
 
-	// Add new alias
+	// 새 별칭 추가함
 	if aliasType == "ko" {
 		aliases.Ko = append(aliases.Ko, alias)
 	} else {
@@ -346,7 +346,7 @@ func (r *Repository) RemoveAlias(ctx context.Context, memberID int, aliasType st
 		return fmt.Errorf("failed to unmarshal aliases: %w", err)
 	}
 
-	// Remove alias
+	// 별칭 제거함
 	original := aliases.Ko
 	if aliasType == "ja" {
 		original = aliases.Ja
@@ -391,7 +391,7 @@ func (r *Repository) SetGraduation(ctx context.Context, memberID int, isGraduate
 	return nil
 }
 
-// UpdateChannelID updates the YouTube channel ID of a member using GORM
+// UpdateChannelID: 멤버의 YouTube 채널 ID를 업데이트합니다.
 func (r *Repository) UpdateChannelID(ctx context.Context, memberID int, channelID string) error {
 	var member Model
 	if err := r.gormDB.WithContext(ctx).First(&member, memberID).Error; err != nil {
@@ -405,6 +405,20 @@ func (r *Repository) UpdateChannelID(ctx context.Context, memberID int, channelI
 	return nil
 }
 
+// UpdateMemberName: 멤버의 영어 이름을 업데이트합니다.
+func (r *Repository) UpdateMemberName(ctx context.Context, memberID int, name string) error {
+	var member Model
+	if err := r.gormDB.WithContext(ctx).First(&member, memberID).Error; err != nil {
+		return fmt.Errorf("failed to find member: %w", err)
+	}
+
+	if err := r.gormDB.WithContext(ctx).Model(&member).Update("english_name", name).Error; err != nil {
+		return fmt.Errorf("failed to update member name: %w", err)
+	}
+
+	return nil
+}
+
 // CreateMember: 새로운 멤버를 데이터베이스에 생성한다.
 func (r *Repository) CreateMember(ctx context.Context, member *domain.Member) error {
 	aliasesJSON, err := json.Marshal(member.Aliases)
@@ -412,7 +426,7 @@ func (r *Repository) CreateMember(ctx context.Context, member *domain.Member) er
 		return fmt.Errorf("failed to marshal aliases: %w", err)
 	}
 
-	// Use Name as Slug since domain.Member doesn't expose Slug yet
+	// domain.Member가 Slug를 노출하지 않으므로 Name을 Slug로 사용함
 	slug := member.Name
 
 	chID := member.ChannelID

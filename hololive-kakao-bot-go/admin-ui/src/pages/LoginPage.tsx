@@ -2,8 +2,8 @@ import axios from 'axios'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { authApi } from '../api'
-import { useAuthStore } from '../stores/authStore'
+import { authApi } from '@/api'
+import { useAuthStore } from '@/stores/authStore'
 import { motion } from 'framer-motion'
 import { Loader2, ArrowRight, Lock, User, Play } from 'lucide-react'
 
@@ -23,7 +23,7 @@ const LoginPage = () => {
       setAuthenticated(true)
       void navigate('/dashboard/stats')
     },
-    onError: (err) => {
+    onError: (err: unknown) => {
       if (axios.isAxiosError(err)) {
         if (err.response?.status === 429) {
           setError('너무 많은 로그인 시도가 감지되었습니다. 15분 후 다시 시도해주세요.')

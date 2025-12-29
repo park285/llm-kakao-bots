@@ -76,13 +76,13 @@ func (l *Logger) GetRecentLogs(limit int) ([]LogEntry, error) {
 	for decoder.More() {
 		var entry LogEntry
 		if err := decoder.Decode(&entry); err != nil {
-			continue // Skip malformed lines
+			continue // 잘못된 형식의 줄은 건너뜀
 		}
 		logs = append(logs, entry)
 	}
 
-	// Just return all logs, let the caller or UI handle truncation/pagination if it gets too large.
-	// But enforcing a limit is good practice.
+	// 전체 로그를 반환함. 너무 커지면 호출자 또는 UI가 잘라서 처리함.
+	// 단, limit 적용은 좋은 관행임.
 	if len(logs) > limit {
 		return logs[len(logs)-limit:], nil
 	}
