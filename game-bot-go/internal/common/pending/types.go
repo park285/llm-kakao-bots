@@ -3,7 +3,7 @@ package pending
 // EnqueueResult Lua 스크립트 enqueue 결과.
 type EnqueueResult int
 
-// EnqueueResult: 메시지 등록 결과를 나타내는 상태 상수
+// EnqueueResult: 메시지 등록 결과를 나타내는 상태 상수입니다.
 const (
 	// EnqueueSuccess: 메시지가 성공적으로 대기열에 등록됨
 	EnqueueSuccess EnqueueResult = iota
@@ -37,7 +37,7 @@ func (r EnqueueResult) String() string {
 // DequeueStatus Lua 스크립트 dequeue 결과 상태.
 type DequeueStatus int
 
-// DequeueStatus: 메시지 추출 결과를 나타내는 상태 상수
+// DequeueStatus: 메시지 추출 결과를 나타내는 상태 상수입니다.
 const (
 	// DequeueEmpty: 대기열이 비어있음
 	DequeueEmpty DequeueStatus = iota
@@ -64,11 +64,11 @@ func (s DequeueStatus) String() string {
 	}
 }
 
-// Message: 큐에 저장될 수 있는 메시지 객체의 공통 인터페이스
+// Message: 큐에 저장될 수 있는 메시지 객체의 공통 인터페이스입니다.
 type Message interface {
-	// GetUserID: 중복 체크를 위한 사용자 식별자를 반환한다.
+	// GetUserID: 중복 체크를 위한 사용자 식별자를 반환합니다.
 	GetUserID() string
-	// GetTimestamp: 오래된 메시지 처리를 위한 타임스탬프(Unix ms)를 반환한다.
+	// GetTimestamp: 오래된 메시지 처리를 위한 타임스탬프(Unix ms)를 반환합니다.
 	GetTimestamp() int64
 }
 

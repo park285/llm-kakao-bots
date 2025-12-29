@@ -102,7 +102,7 @@ type TurtleSoupPuzzlePresetResponse struct {
 	Difficulty *int    `json:"difficulty,omitempty"`
 }
 
-// TurtleSoupAnswerQuestion: 사용자의 질문에 대한 예/아니오 답변을 요청한다.
+// TurtleSoupAnswerQuestion: 사용자의 질문에 대한 예/아니오 답변을 요청합니다.
 func (c *Client) TurtleSoupAnswerQuestion(
 	ctx context.Context,
 	chatID string,
@@ -126,7 +126,7 @@ func (c *Client) TurtleSoupAnswerQuestion(
 	return &out, nil
 }
 
-// TurtleSoupGenerateHint: 힌트 생성을 요청한다.
+// TurtleSoupGenerateHint: 힌트 생성을 요청합니다.
 func (c *Client) TurtleSoupGenerateHint(
 	ctx context.Context,
 	chatID string,
@@ -150,7 +150,7 @@ func (c *Client) TurtleSoupGenerateHint(
 	return &out, nil
 }
 
-// TurtleSoupValidateSolution: 사용자의 정답 시도를 검증한다.
+// TurtleSoupValidateSolution: 사용자의 정답 시도를 검증합니다.
 func (c *Client) TurtleSoupValidateSolution(
 	ctx context.Context,
 	chatID string,
@@ -172,7 +172,7 @@ func (c *Client) TurtleSoupValidateSolution(
 	return &out, nil
 }
 
-// TurtleSoupRewriteScenario: 사용자가 입력한 시나리오를 게임에 맞게 최적화/재작성한다.
+// TurtleSoupRewriteScenario: 사용자가 입력한 시나리오를 게임에 맞게 최적화/재작성합니다.
 func (c *Client) TurtleSoupRewriteScenario(
 	ctx context.Context,
 	title string,
@@ -194,7 +194,7 @@ func (c *Client) TurtleSoupRewriteScenario(
 	return &out, nil
 }
 
-// TurtleSoupGeneratePuzzle: 새로운 퍼즐을 자동으로 생성한다.
+// TurtleSoupGeneratePuzzle: 새로운 퍼즐을 자동으로 생성합니다.
 func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuzzleGenerationRequest) (*TurtleSoupPuzzleGenerationResponse, error) {
 	var out TurtleSoupPuzzleGenerationResponse
 	if err := c.Post(ctx, "/api/turtle-soup/puzzles", req, &out); err != nil {
@@ -203,7 +203,7 @@ func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuz
 	return &out, nil
 }
 
-// TurtleSoupGetRandomPuzzle: 프리셋 퍼즐 중 하나를 랜덤으로 가져온다.
+// TurtleSoupGetRandomPuzzle: 프리셋 퍼즐 중 하나를 랜덤으로 가져옵니다.
 func (c *Client) TurtleSoupGetRandomPuzzle(ctx context.Context, difficulty *int) (*TurtleSoupPuzzlePresetResponse, error) {
 	path := "/api/turtle-soup/puzzles/random"
 	if difficulty != nil {

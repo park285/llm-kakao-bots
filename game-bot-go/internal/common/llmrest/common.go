@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// GetModelConfig 는 동작을 수행한다.
+// GetModelConfig: LLM 모델 설정 정보를 조회합니다.
 func (c *Client) GetModelConfig(ctx context.Context) (*ModelConfigResponse, error) {
 	var out ModelConfigResponse
 	if err := c.Get(ctx, "/health/models", &out); err != nil {
@@ -16,7 +16,7 @@ func (c *Client) GetModelConfig(ctx context.Context) (*ModelConfigResponse, erro
 	return &out, nil
 }
 
-// CreateSession 는 동작을 수행한다.
+// CreateSession: 새로운 세션을 생성합니다.
 func (c *Client) CreateSession(ctx context.Context, chatID string, namespace string) (*SessionCreateResponse, error) {
 	req := SessionCreateRequest{ChatID: &chatID, Namespace: &namespace}
 	var out SessionCreateResponse
@@ -26,7 +26,7 @@ func (c *Client) CreateSession(ctx context.Context, chatID string, namespace str
 	return &out, nil
 }
 
-// EndSession 는 동작을 수행한다.
+// EndSession: 세션 ID로 세션을 종료합니다.
 func (c *Client) EndSession(ctx context.Context, sessionID string) (*SessionEndResponse, error) {
 	escaped := url.PathEscape(strings.TrimSpace(sessionID))
 	if escaped == "" {
@@ -40,13 +40,13 @@ func (c *Client) EndSession(ctx context.Context, sessionID string) (*SessionEndR
 	return &out, nil
 }
 
-// EndSessionByChat 는 동작을 수행한다.
+// EndSessionByChat: 채팅 ID로 세션을 종료합니다.
 func (c *Client) EndSessionByChat(ctx context.Context, namespace string, chatID string) (*SessionEndResponse, error) {
 	sessionID := strings.TrimSpace(namespace) + ":" + strings.TrimSpace(chatID)
 	return c.EndSession(ctx, sessionID)
 }
 
-// GuardIsMalicious 는 동작을 수행한다.
+// GuardIsMalicious: 입력 텍스트의 악의적 체크 여부를 확인합니다.
 func (c *Client) GuardIsMalicious(ctx context.Context, text string) (bool, error) {
 	var out GuardMaliciousResponse
 	if err := c.Post(ctx, "/api/guard/checks", GuardRequest{InputText: text}, &out); err != nil {
@@ -55,7 +55,7 @@ func (c *Client) GuardIsMalicious(ctx context.Context, text string) (bool, error
 	return out.Malicious, nil
 }
 
-// GetUsage 는 동작을 수행한다.
+// GetUsage: 메모리 기반 사용량을 조회합니다.
 func (c *Client) GetUsage(ctx context.Context, headers map[string]string) (*UsageResponse, error) {
 	var out UsageResponse
 	if err := c.GetWithHeaders(ctx, "/api/llm/usage", headers, &out); err != nil {
@@ -64,7 +64,7 @@ func (c *Client) GetUsage(ctx context.Context, headers map[string]string) (*Usag
 	return &out, nil
 }
 
-// GetTotalUsage 는 동작을 수행한다.
+// GetTotalUsage: 전체 누적 사용량을 조회합니다.
 func (c *Client) GetTotalUsage(ctx context.Context, headers map[string]string) (*UsageResponse, error) {
 	var out UsageResponse
 	if err := c.GetWithHeaders(ctx, "/api/llm/usage/total", headers, &out); err != nil {
@@ -73,7 +73,7 @@ func (c *Client) GetTotalUsage(ctx context.Context, headers map[string]string) (
 	return &out, nil
 }
 
-// GetDailyUsage 는 동작을 수행한다.
+// GetDailyUsage: 일별 사용량을 조회합니다.
 func (c *Client) GetDailyUsage(ctx context.Context, headers map[string]string) (*DailyUsageResponse, error) {
 	var out DailyUsageResponse
 	if err := c.GetWithHeaders(ctx, "/api/usage/daily", headers, &out); err != nil {
@@ -82,7 +82,7 @@ func (c *Client) GetDailyUsage(ctx context.Context, headers map[string]string) (
 	return &out, nil
 }
 
-// GetRecentUsage 는 동작을 수행한다.
+// GetRecentUsage: 지정된 일수 내 사용량을 조회합니다.
 func (c *Client) GetRecentUsage(ctx context.Context, days int, headers map[string]string) (*UsageListResponse, error) {
 	var out UsageListResponse
 	if err := c.GetWithHeaders(ctx, fmt.Sprintf("/api/usage/recent?days=%d", days), headers, &out); err != nil {
@@ -91,7 +91,7 @@ func (c *Client) GetRecentUsage(ctx context.Context, days int, headers map[strin
 	return &out, nil
 }
 
-// GetUsageTotalFromDB 는 동작을 수행한다.
+// GetUsageTotalFromDB: DB에서 지정된 일수 내 누적 사용량을 조회합니다.
 func (c *Client) GetUsageTotalFromDB(ctx context.Context, days int, headers map[string]string) (*UsageResponse, error) {
 	var out UsageResponse
 	if err := c.GetWithHeaders(ctx, fmt.Sprintf("/api/usage/total?days=%d", days), headers, &out); err != nil {

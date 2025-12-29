@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Script 는 Registry 에 등록되는 Lua 스크립트 정의다.
+// Script: Registry에 등록되는 Lua 스크립트 정의입니다.
 type Script struct {
 	Name     string
 	Source   string
@@ -17,13 +17,13 @@ type Script struct {
 	LoadSHA1 bool
 }
 
-// Registry 는 Lua 스크립트 실행을 단일 경로로 관리한다.
+// Registry: Lua 스크립트 실행을 단일 경로로 관리합니다.
 type Registry struct {
 	scripts map[string]*valkey.Lua
 	metas   map[string]Script
 }
 
-// NewRegistry 는 스크립트 목록으로 Registry 를 생성한다.
+// NewRegistry: 스크립트 목록으로 Registry를 생성합니다.
 func NewRegistry(scripts []Script) *Registry {
 	registry := &Registry{
 		scripts: make(map[string]*valkey.Lua, len(scripts)),
@@ -36,8 +36,8 @@ func NewRegistry(scripts []Script) *Registry {
 	return registry
 }
 
-// Exec 는 등록된 스크립트를 실행한다.
-// Redis 오류는 ValkeyResult.Error()로 확인한다.
+// Exec: 등록된 스크립트를 실행합니다.
+// Redis 오류는 ValkeyResult.Error()로 확인합니다.
 func (r *Registry) Exec(ctx context.Context, client valkey.Client, name string, keys []string, args []string) (valkey.ValkeyResult, error) {
 	if r == nil {
 		return valkey.ValkeyResult{}, fmt.Errorf("lua registry is nil")
@@ -52,8 +52,8 @@ func (r *Registry) Exec(ctx context.Context, client valkey.Client, name string, 
 	return script.Exec(ctx, client, keys, args), nil
 }
 
-// Preload 는 등록된 Lua 스크립트를 SCRIPT LOAD 로 서버에 적재한다.
-// 노드별 병렬 로드를 수행하여 부트스트랩 시간을 단축한다.
+// Preload: 등록된 Lua 스크립트를 SCRIPT LOAD로 서버에 적재합니다.
+// 노드별 병렬 로드를 수행하여 부트스트랩 시간을 단축합니다.
 func (r *Registry) Preload(ctx context.Context, client valkey.Client) error {
 	if r == nil {
 		return fmt.Errorf("lua registry is nil")
@@ -92,7 +92,7 @@ func (r *Registry) Preload(ctx context.Context, client valkey.Client) error {
 	return nil
 }
 
-// Script 는 등록된 스크립트를 반환한다.
+// Script: 등록된 스크립트를 반환합니다.
 func (r *Registry) Script(name string) (*valkey.Lua, bool) {
 	if r == nil {
 		return nil, false

@@ -1,5 +1,5 @@
-// Package errors: 게임 서비스 전체에서 공용으로 사용되는 에러 타입들을 정의한다.
-// twentyq, turtlesoup 등 도메인 간 공유되는 인프라스트럭처 에러 타입을 포함한다.
+// Package errors: 게임 서비스 전체에서 공용으로 사용되는 에러 타입들을 정의합니다.
+// twentyq, turtlesoup 등 도메인 간 공유되는 인프라스트럭처 에러 타입을 포함합니다.
 package errors
 
 import (
@@ -125,9 +125,9 @@ var expectedUserBehaviorTypes = []func() any{
 	func() any { return new(MalformedInputError) },
 }
 
-// IsExpectedUserBehavior: 에러가 사용자의 정상적인(예상된) 패턴 내의 실수인지 확인한다.
+// IsExpectedUserBehavior: 에러가 사용자의 정상적인(예상된) 패턴 내의 실수인지 확인합니다.
 // (로그 레벨을 낮추거나 사용자에게 친절한 메시지를 보내는 용도)
-// 공통 에러 타입만 체크하며, 도메인 특화 에러는 각 패키지에서 확장하여 사용한다.
+// 공통 에러 타입만 체크하며, 도메인 특화 에러는 각 패키지에서 확장하여 사용합니다.
 func IsExpectedUserBehavior(err error) bool {
 	if err == nil {
 		return false

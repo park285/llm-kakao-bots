@@ -14,7 +14,7 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
-// NewToken 는 락 식별을 위한 임의 토큰을 생성한다.
+// NewToken: 락 식별을 위한 임의 토큰을 생성합니다.
 func NewToken() (string, error) {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
@@ -23,7 +23,7 @@ func NewToken() (string, error) {
 	return hex.EncodeToString(b[:]), nil
 }
 
-// TryAcquireSharedLock 는 공유 락을 획득한다. (SET NX)
+// TryAcquireSharedLock: 공유 락을 획득합니다. (SET NX)
 func TryAcquireSharedLock(ctx context.Context, client valkey.Client, lockKey string, ttlSeconds int64) (bool, error) {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {
@@ -44,7 +44,7 @@ func TryAcquireSharedLock(ctx context.Context, client valkey.Client, lockKey str
 	return true, nil
 }
 
-// ReleaseSharedLock 는 공유 락을 해제한다. (DEL)
+// ReleaseSharedLock: 공유 락을 해제합니다. (DEL)
 func ReleaseSharedLock(ctx context.Context, client valkey.Client, lockKey string) error {
 	lockKey = strings.TrimSpace(lockKey)
 	if lockKey == "" {

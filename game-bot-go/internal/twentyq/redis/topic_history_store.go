@@ -18,7 +18,7 @@ type TopicHistoryStore struct {
 	logger *slog.Logger
 }
 
-// NewTopicHistoryStore: 새로운 TopicHistoryStore 인스턴스를 생성한다.
+// NewTopicHistoryStore: 새로운 TopicHistoryStore 인스턴스를 생성합니다.
 func NewTopicHistoryStore(client valkey.Client, logger *slog.Logger) *TopicHistoryStore {
 	return &TopicHistoryStore{
 		client: client,
@@ -26,19 +26,19 @@ func NewTopicHistoryStore(client valkey.Client, logger *slog.Logger) *TopicHisto
 	}
 }
 
-// GetRecent: 최근 출제된 전역 주제 목록을 조회한다.
+// GetRecent: 최근 출제된 전역 주제 목록을 조회합니다.
 func (s *TopicHistoryStore) GetRecent(ctx context.Context, chatID string, limit int) ([]string, error) {
 	key := topicsGlobalKey(chatID)
 	return s.getRecentByKey(ctx, key, limit, "topics_get_recent_global")
 }
 
-// GetRecentByCategory: 특정 카테고리 내에서 최근 출제된 주제 목록을 조회한다.
+// GetRecentByCategory: 특정 카테고리 내에서 최근 출제된 주제 목록을 조회합니다.
 func (s *TopicHistoryStore) GetRecentByCategory(ctx context.Context, chatID string, category string, limit int) ([]string, error) {
 	key := topicsCategoryKey(chatID, category)
 	return s.getRecentByKey(ctx, key, limit, "topics_get_recent_category")
 }
 
-// GetBannedTopics: 중복 출제 방지를 위해 금지된(최근 사용된) 주제 목록을 모두 조회한다.
+// GetBannedTopics: 중복 출제 방지를 위해 금지된(최근 사용된) 주제 목록을 모두 조회합니다.
 func (s *TopicHistoryStore) GetBannedTopics(ctx context.Context, chatID string, category *string, limit int, allCategories []string) ([]string, error) {
 	globalRecent, err := s.GetRecent(ctx, chatID, limit)
 	if err != nil {
@@ -91,7 +91,7 @@ func (s *TopicHistoryStore) GetBannedTopics(ctx context.Context, chatID string, 
 	return merged, nil
 }
 
-// AddCompletedTopic: 게임이 완료된 주제를 기록에 추가한다.
+// AddCompletedTopic: 게임이 완료된 주제를 기록에 추가합니다.
 func (s *TopicHistoryStore) AddCompletedTopic(ctx context.Context, chatID string, category string, topic string, limit int) error {
 	category = strings.TrimSpace(category)
 	topic = strings.TrimSpace(topic)

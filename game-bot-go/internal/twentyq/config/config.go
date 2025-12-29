@@ -67,7 +67,7 @@ type Config struct {
 	Stats        StatsConfig
 }
 
-// LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드한다.
+// LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드합니다.
 func LoadFromEnv() (*Config, error) {
 	server, err := readServerConfig()
 	if err != nil {

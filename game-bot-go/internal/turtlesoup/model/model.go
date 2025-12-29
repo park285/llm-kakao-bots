@@ -17,7 +17,7 @@ const (
 	PuzzleCategoryMystery PuzzleCategory = "MYSTERY"
 )
 
-// ParsePuzzleCategory: 문자열을 PuzzleCategory로 변환한다.
+// ParsePuzzleCategory: 문자열을 PuzzleCategory로 변환합니다.
 func ParsePuzzleCategory(input string) PuzzleCategory {
 	normalized := strings.TrimSpace(input)
 	if normalized == "" {
@@ -67,7 +67,7 @@ type GameState struct {
 	LastActivityAt time.Time `json:"lastActivityAt"`
 }
 
-// NewInitialState: 새로운 게임 상태를 초기화한다.
+// NewInitialState: 새로운 게임 상태를 초기화합니다.
 func NewInitialState(sessionID string, userID string, chatID string, puzzle Puzzle) GameState {
 	now := time.Now()
 	return GameState{
@@ -81,7 +81,7 @@ func NewInitialState(sessionID string, userID string, chatID string, puzzle Puzz
 	}
 }
 
-// UseHint: 힌트를 사용하고 상태를 업데이트한다. (Immutable)
+// UseHint: 힌트를 사용하고 상태를 업데이트합니다. (Immutable)
 func (s GameState) UseHint(hintContent string) GameState {
 	now := time.Now()
 	nextHints := append(slices.Clone(s.HintContents), hintContent)
@@ -92,7 +92,7 @@ func (s GameState) UseHint(hintContent string) GameState {
 	})
 }
 
-// AddPlayer: 참여자를 목록에 추가하고 상태를 업데이트한다. (Immutable)
+// AddPlayer: 참여자를 목록에 추가하고 상태를 업데이트합니다. (Immutable)
 func (s GameState) AddPlayer(playerID string) GameState {
 	now := time.Now()
 	if slices.Contains(s.Players, playerID) {
@@ -105,7 +105,7 @@ func (s GameState) AddPlayer(playerID string) GameState {
 	})
 }
 
-// MarkSolved: 게임을 해결됨 상태로 변경한다. (Immutable)
+// MarkSolved: 게임을 해결됨 상태로 변경합니다. (Immutable)
 func (s GameState) MarkSolved() GameState {
 	now := time.Now()
 	return s.copyWith(func(next *GameState) {
@@ -114,7 +114,7 @@ func (s GameState) MarkSolved() GameState {
 	})
 }
 
-// UpdateActivity: 마지막 활동 시간을 현재로 갱신한다. (Immutable)
+// UpdateActivity: 마지막 활동 시간을 현재로 갱신합니다. (Immutable)
 func (s GameState) UpdateActivity() GameState {
 	now := time.Now()
 	return s.copyWith(func(next *GameState) {
@@ -139,7 +139,7 @@ const (
 	ValidationNo    ValidationResult = "NO"
 )
 
-// ParseValidationResult: 문자열을 ValidationResult로 변환한다.
+// ParseValidationResult: 문자열을 ValidationResult로 변환합니다.
 func ParseValidationResult(input string) (ValidationResult, error) {
 	upper := strings.ToUpper(strings.TrimSpace(input))
 	switch ValidationResult(upper) {
@@ -150,10 +150,10 @@ func ParseValidationResult(input string) (ValidationResult, error) {
 	}
 }
 
-// IsCorrect: 정답 여부를 반환한다.
+// IsCorrect: 정답 여부를 반환합니다.
 func (r ValidationResult) IsCorrect() bool { return r == ValidationYes }
 
-// IsClose: 정답에 근접했는지 여부를 반환한다.
+// IsClose: 정답에 근접했는지 여부를 반환합니다.
 func (r ValidationResult) IsClose() bool { return r == ValidationClose }
 
 // AnswerResult: 정답 제출 후의 상세 결과 (판정, 힌트 사용 내역, 설명 포함)
@@ -166,10 +166,10 @@ type AnswerResult struct {
 	Explanation   string
 }
 
-// IsCorrect: 정답 여부를 반환한다.
+// IsCorrect: 정답 여부를 반환합니다.
 func (r AnswerResult) IsCorrect() bool { return r.Result.IsCorrect() }
 
-// IsClose: 정답에 근접했는지 여부를 반환한다.
+// IsClose: 정답에 근접했는지 여부를 반환합니다.
 func (r AnswerResult) IsClose() bool { return r.Result.IsClose() }
 
 // SurrenderResult: 게임 포기(항복) 시 공개되는 정답과 해석 정보

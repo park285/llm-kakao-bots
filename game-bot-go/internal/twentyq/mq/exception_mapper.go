@@ -16,7 +16,7 @@ type ErrorMapping struct {
 	Params []messageprovider.Param
 }
 
-// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 전달할 적절한 메시지 키와 파라미터를 매핑하여 반환한다.
+// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 전달할 적절한 메시지 키와 파라미터를 매핑하여 반환합니다.
 func GetErrorMapping(err error, commandPrefix string) ErrorMapping {
 	var (
 		sessionNotFound qerrors.SessionNotFoundError

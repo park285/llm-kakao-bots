@@ -7,3 +7,6 @@ var enqueueLua string
 
 //go:embed lua/pending_dequeue.lua
 var dequeueLua string
+
+//go:embed lua/pending_dequeue_batch.lua
+var dequeueBatchLua string

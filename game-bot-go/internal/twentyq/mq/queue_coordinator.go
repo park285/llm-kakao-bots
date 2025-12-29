@@ -15,7 +15,7 @@ type MessageQueueCoordinator struct {
 	logger *slog.Logger
 }
 
-// NewMessageQueueCoordinator: 새로운 MessageQueueCoordinator 인스턴스를 생성한다.
+// NewMessageQueueCoordinator: 새로운 MessageQueueCoordinator 인스턴스를 생성합니다.
 func NewMessageQueueCoordinator(store *qredis.PendingMessageStore, logger *slog.Logger) *MessageQueueCoordinator {
 	return &MessageQueueCoordinator{
 		store:  store,
@@ -33,7 +33,7 @@ func (c *MessageQueueCoordinator) logEnqueueFailure(chatID string, userID string
 	}
 }
 
-// Enqueue: 메시지를 대기열에 추가하고 결과를 반환한다. (실패 시 로그 기록)
+// Enqueue: 메시지를 대기열에 추가하고 결과를 반환합니다. (실패 시 로그 기록)
 func (c *MessageQueueCoordinator) Enqueue(ctx context.Context, chatID string, msg qmodel.PendingMessage) (qredis.EnqueueResult, error) {
 	res, err := c.store.Enqueue(ctx, chatID, msg)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *MessageQueueCoordinator) Enqueue(ctx context.Context, chatID string, ms
 	return res, nil
 }
 
-// EnqueueReplacingDuplicate: 기존 중복 메시지가 있다면 최신 내용으로 교체하여 대기열에 추가한다.
+// EnqueueReplacingDuplicate: 기존 중복 메시지가 있다면 최신 내용으로 교체하여 대기열에 추가합니다.
 func (c *MessageQueueCoordinator) EnqueueReplacingDuplicate(ctx context.Context, chatID string, msg qmodel.PendingMessage) (qredis.EnqueueResult, error) {
 	res, err := c.store.EnqueueReplacingDuplicate(ctx, chatID, msg)
 	if err != nil {
@@ -53,7 +53,7 @@ func (c *MessageQueueCoordinator) EnqueueReplacingDuplicate(ctx context.Context,
 	return res, nil
 }
 
-// Dequeue: 대기열에서 가장 오래된 메시지를 꺼낸다.
+// Dequeue: 대기열에서 가장 오래된 메시지를 꺼냅니다.
 func (c *MessageQueueCoordinator) Dequeue(ctx context.Context, chatID string) (qredis.DequeueResult, error) {
 	res, err := c.store.Dequeue(ctx, chatID)
 	if err != nil {
@@ -62,7 +62,16 @@ func (c *MessageQueueCoordinator) Dequeue(ctx context.Context, chatID string) (q
 	return res, nil
 }
 
-// HasPending: 대기 중인 메시지가 있는지 확인한다.
+// DequeueBatch: 대기열에서 여러 메시지를 꺼냅니다.
+func (c *MessageQueueCoordinator) DequeueBatch(ctx context.Context, chatID string, limit int) ([]qmodel.PendingMessage, error) {
+	messages, err := c.store.DequeueBatch(ctx, chatID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("queue dequeue batch failed: %w", err)
+	}
+	return messages, nil
+}
+
+// HasPending: 대기 중인 메시지가 있는지 확인합니다.
 func (c *MessageQueueCoordinator) HasPending(ctx context.Context, chatID string) (bool, error) {
 	ok, err := c.store.HasPending(ctx, chatID)
 	if err != nil {
@@ -71,7 +80,7 @@ func (c *MessageQueueCoordinator) HasPending(ctx context.Context, chatID string)
 	return ok, nil
 }
 
-// Size: 대기열 크기를 반환한다.
+// Size: 대기열 크기를 반환합니다.
 func (c *MessageQueueCoordinator) Size(ctx context.Context, chatID string) (int, error) {
 	size, err := c.store.Size(ctx, chatID)
 	if err != nil {
@@ -80,7 +89,7 @@ func (c *MessageQueueCoordinator) Size(ctx context.Context, chatID string) (int,
 	return size, nil
 }
 
-// GetQueueDetails: 대기열 상세 정보를 반환한다.
+// GetQueueDetails: 대기열 상세 정보를 반환합니다.
 func (c *MessageQueueCoordinator) GetQueueDetails(ctx context.Context, chatID string) (string, error) {
 	details, err := c.store.GetQueueDetails(ctx, chatID)
 	if err != nil {
@@ -89,7 +98,7 @@ func (c *MessageQueueCoordinator) GetQueueDetails(ctx context.Context, chatID st
 	return details, nil
 }
 
-// Clear: 대기열을 비운다.
+// Clear: 대기열을 비웁니다.
 func (c *MessageQueueCoordinator) Clear(ctx context.Context, chatID string) error {
 	if err := c.store.Clear(ctx, chatID); err != nil {
 		return fmt.Errorf("queue clear failed: %w", err)
@@ -97,7 +106,7 @@ func (c *MessageQueueCoordinator) Clear(ctx context.Context, chatID string) erro
 	return nil
 }
 
-// SetChainSkipFlag: 체인 질문 그룹의 나머지 질문들을 스킵하도록 플래그를 설정한다.
+// SetChainSkipFlag: 체인 질문 그룹의 나머지 질문들을 스킵하도록 플래그를 설정합니다.
 func (c *MessageQueueCoordinator) SetChainSkipFlag(ctx context.Context, chatID string, userID string) error {
 	if err := c.store.SetChainSkipFlag(ctx, chatID, userID); err != nil {
 		return fmt.Errorf("set chain skip flag failed: %w", err)
@@ -105,7 +114,7 @@ func (c *MessageQueueCoordinator) SetChainSkipFlag(ctx context.Context, chatID s
 	return nil
 }
 
-// CheckAndClearChainSkipFlag: 스킵 플래그가 설정되어 있는지 확인하고, 확인 후 플래그를 제거한다.
+// CheckAndClearChainSkipFlag: 스킵 플래그가 설정되어 있는지 확인하고, 확인 후 플래그를 제거합니다.
 func (c *MessageQueueCoordinator) CheckAndClearChainSkipFlag(ctx context.Context, chatID string, userID string) (bool, error) {
 	skipped, err := c.store.CheckAndClearChainSkipFlag(ctx, chatID, userID)
 	if err != nil {

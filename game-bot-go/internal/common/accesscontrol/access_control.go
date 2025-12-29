@@ -23,12 +23,12 @@ type AccessControl struct {
 	cfg commonconfig.AccessConfig
 }
 
-// New: 새로운 AccessControl 인스턴스를 생성한다.
+// New: 새로운 AccessControl 인스턴스를 생성합니다.
 func New(cfg commonconfig.AccessConfig) *AccessControl {
 	return &AccessControl{cfg: cfg}
 }
 
-// DenialReason: 사용자 및 채팅방의 접근 거부 사유를 반환한다. (허용 시 DenialReasonNone)
+// DenialReason: 사용자 및 채팅방의 접근 거부 사유를 반환합니다. (허용 시 DenialReasonNone)
 func (a *AccessControl) DenialReason(userID string, chatID string) DenialReason {
 	if a == nil {
 		return DenialReasonNone

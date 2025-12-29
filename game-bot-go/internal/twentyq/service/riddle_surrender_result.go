@@ -12,7 +12,7 @@ import (
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 )
 
-// Surrender: 게임 포기 처리를 수행하고 정답을 공개한다.
+// Surrender: 게임 포기 처리를 수행하고 정답을 공개합니다.
 func (s *RiddleService) Surrender(ctx context.Context, chatID string) (string, error) {
 	holderName := chatID
 	out := ""

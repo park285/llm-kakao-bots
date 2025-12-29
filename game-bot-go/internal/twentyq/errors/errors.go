@@ -1,5 +1,5 @@
-// Package errors: 스무고개(TwentyQ) 게임에 특화된 에러 타입들을 정의한다.
-// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용한다.
+// Package errors: 스무고개(TwentyQ) 게임에 특화된 에러 타입들을 정의합니다.
+// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용합니다.
 package errors
 
 import "fmt"

@@ -24,6 +24,8 @@ const (
 	MQStreamMaxLen = 1000
 	// QueueMaxDequeueIterations: 큐에서 최대 디큐 반복 횟수
 	QueueMaxDequeueIterations = 50
+	// QueueDequeueBatchSize: 큐 디큐 배치 크기
+	QueueDequeueBatchSize = MQBatchSize
 )
 
 // Redis 공통 TTL 상수.

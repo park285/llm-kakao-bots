@@ -12,18 +12,20 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
 const (
-	defaultUsdKrwRate    = 1400.0
-	exchangeRateAPIURL   = "https://api.frankfurter.app/latest?from=USD&to=KRW"
-	exchangeRateCacheTTL = time.Hour
+	defaultUsdKrwRate           = 1400.0
+	exchangeRateAPIURL          = "https://api.frankfurter.app/latest?from=USD&to=KRW"
+	exchangeRateCacheTTL        = time.Hour
+	exchangeRateSingleflightKey = "exchange_rate_usd_krw"
 )
 
-// ExchangeRateService USD/KRW 환율 조회 인터페이스.
-// - Kotlin 구현과 동일하게 실패 시 기본 환율로 fallback 한다.
+// ExchangeRateService USD/KRW 환율 조회 인터페이스입니다.
+// - Kotlin 구현과 동일하게 실패 시 기본 환율로 fallback 합니다.
 type ExchangeRateService interface {
 	UsdToKrw(ctx context.Context, usdAmount float64) float64
 	RateInfo(ctx context.Context) string
@@ -36,12 +38,13 @@ type FrankfurterExchangeRateService struct {
 	logger  *slog.Logger
 	printer *message.Printer
 
-	mu          sync.Mutex
+	mu          sync.RWMutex
+	sf          singleflight.Group
 	cachedRate  float64
 	cachedUntil time.Time
 }
 
-// NewFrankfurterExchangeRateService: 새로운 FrankfurterExchangeRateService 인스턴스를 생성한다.
+// NewFrankfurterExchangeRateService: 새로운 FrankfurterExchangeRateService 인스턴스를 생성합니다.
 func NewFrankfurterExchangeRateService(logger *slog.Logger) *FrankfurterExchangeRateService {
 	if logger == nil {
 		logger = slog.Default()
@@ -54,13 +57,13 @@ func NewFrankfurterExchangeRateService(logger *slog.Logger) *FrankfurterExchange
 	}
 }
 
-// UsdToKrw: USD 금액을 KRW로 변환한다.
+// UsdToKrw: USD 금액을 KRW로 변환합니다.
 func (s *FrankfurterExchangeRateService) UsdToKrw(ctx context.Context, usdAmount float64) float64 {
 	rate := s.getUsdKrwRate(ctx)
 	return usdAmount * rate
 }
 
-// RateInfo: 현재 적용 중인 환율 정보를 문자열로 반환한다.
+// RateInfo: 현재 적용 중인 환율 정보를 문자열로 반환합니다.
 func (s *FrankfurterExchangeRateService) RateInfo(ctx context.Context) string {
 	rate := s.getUsdKrwRate(ctx)
 	rounded := int64(math.Round(rate))
@@ -70,17 +73,39 @@ func (s *FrankfurterExchangeRateService) RateInfo(ctx context.Context) string {
 func (s *FrankfurterExchangeRateService) getUsdKrwRate(ctx context.Context) float64 {
 	now := time.Now()
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	cachedRate := s.cachedRate
+	cachedUntil := s.cachedUntil
+	s.mu.RUnlock()
 
-	if !s.cachedUntil.IsZero() && now.Before(s.cachedUntil) && s.cachedRate > 0 {
-		return s.cachedRate
+	if !cachedUntil.IsZero() && now.Before(cachedUntil) && cachedRate > 0 {
+		return cachedRate
 	}
 
-	rate := s.fetchUsdKrwRate(ctx)
-	s.cachedRate = rate
-	s.cachedUntil = now.Add(exchangeRateCacheTTL)
-	return rate
+	value, _, _ := s.sf.Do(exchangeRateSingleflightKey, func() (any, error) {
+		now := time.Now()
+
+		s.mu.RLock()
+		cachedRate := s.cachedRate
+		cachedUntil := s.cachedUntil
+		s.mu.RUnlock()
+
+		if !cachedUntil.IsZero() && now.Before(cachedUntil) && cachedRate > 0 {
+			return cachedRate, nil
+		}
+
+		rate := s.fetchUsdKrwRate(ctx)
+		s.mu.Lock()
+		s.cachedRate = rate
+		s.cachedUntil = time.Now().Add(exchangeRateCacheTTL)
+		s.mu.Unlock()
+		return rate, nil
+	})
+
+	if rate, ok := value.(float64); ok {
+		return rate
+	}
+	return defaultUsdKrwRate
 }
 
 type frankfurterResponse struct {

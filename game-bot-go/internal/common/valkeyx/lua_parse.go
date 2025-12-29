@@ -9,7 +9,7 @@ import (
 	"github.com/valkey-io/valkey-go"
 )
 
-// ParseLuaArray 는 Lua 결과를 배열로 파싱하고 길이를 검증한다.
+// ParseLuaArray: Lua 결과를 배열로 파싱하고 길이를 검증합니다.
 func ParseLuaArray(resp valkey.ValkeyResult, expectedLen int) ([]valkey.ValkeyMessage, error) {
 	values, err := resp.ToArray()
 	if err != nil {
@@ -21,7 +21,7 @@ func ParseLuaArray(resp valkey.ValkeyResult, expectedLen int) ([]valkey.ValkeyMe
 	return values, nil
 }
 
-// ParseLuaInt64 는 Lua 결과를 int64로 파싱한다.
+// ParseLuaInt64: Lua 결과를 int64로 파싱합니다.
 func ParseLuaInt64(resp valkey.ValkeyResult) (int64, error) {
 	value, err := resp.AsInt64()
 	if err != nil {
@@ -30,7 +30,7 @@ func ParseLuaInt64(resp valkey.ValkeyResult) (int64, error) {
 	return value, nil
 }
 
-// ParseLuaInt64Message 는 Lua 배열 메시지를 int64로 파싱한다.
+// ParseLuaInt64Message: Lua 배열 메시지를 int64로 파싱합니다.
 func ParseLuaInt64Message(msg valkey.ValkeyMessage) (int64, error) {
 	value, err := msg.AsInt64()
 	if err != nil {
@@ -39,7 +39,7 @@ func ParseLuaInt64Message(msg valkey.ValkeyMessage) (int64, error) {
 	return value, nil
 }
 
-// ParseLuaInt64Pair 는 Lua 결과를 [int64, int64]로 파싱한다.
+// ParseLuaInt64Pair: Lua 결과를 [int64, int64]로 파싱합니다.
 func ParseLuaInt64Pair(resp valkey.ValkeyResult) (int64, int64, error) {
 	values, err := ParseLuaArray(resp, 2)
 	if err != nil {
@@ -56,7 +56,7 @@ func ParseLuaInt64Pair(resp valkey.ValkeyResult) (int64, int64, error) {
 	return first, second, nil
 }
 
-// ParseLuaString 는 Lua 결과를 문자열로 파싱한다.
+// ParseLuaString: Lua 결과를 문자열로 파싱합니다.
 func ParseLuaString(resp valkey.ValkeyResult) (string, error) {
 	value, err := resp.ToString()
 	if err != nil {
@@ -65,7 +65,7 @@ func ParseLuaString(resp valkey.ValkeyResult) (string, error) {
 	return value, nil
 }
 
-// ParseLuaScoreToInt64 는 Lua 점수 값을 int64로 파싱한다.
+// ParseLuaScoreToInt64: Lua 점수 값을 int64로 파싱합니다.
 func ParseLuaScoreToInt64(msg valkey.ValkeyMessage) (int64, error) {
 	score, err := msg.ToString()
 	if err != nil {

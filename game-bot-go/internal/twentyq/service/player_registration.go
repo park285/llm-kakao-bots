@@ -18,7 +18,7 @@ type playerRegistrationTask struct {
 	sender string
 }
 
-// RegisterPlayerAsync: 비동기로 플레이어 등록 작업을 큐에 추가한다. (병목 방지)
+// RegisterPlayerAsync: 비동기로 플레이어 등록 작업을 큐에 추가합니다. (병목 방지)
 func (s *RiddleService) RegisterPlayerAsync(ctx context.Context, chatID string, userID string, sender *string) {
 	if s == nil {
 		return

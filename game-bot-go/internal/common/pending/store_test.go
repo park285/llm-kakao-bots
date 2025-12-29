@@ -195,6 +195,52 @@ func TestStore_Dequeue(t *testing.T) {
 	}
 }
 
+func TestStore_DequeueBatch(t *testing.T) {
+	store, client := newTestStore(t)
+	defer client.Close()
+
+	ctx := context.Background()
+	chatID := "room1"
+
+	results, err := store.DequeueBatch(ctx, chatID, 2)
+	if err != nil {
+		t.Fatalf("dequeue batch failed: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected empty batch, got %d", len(results))
+	}
+
+	ts := time.Now().UnixMilli()
+	store.Enqueue(ctx, chatID, "user1", ts, `{"id":1}`)
+	store.Enqueue(ctx, chatID, "user2", ts+100, `{"id":2}`)
+	store.Enqueue(ctx, chatID, "user3", ts+200, `{"id":3}`)
+
+	results, err = store.DequeueBatch(ctx, chatID, 2)
+	if err != nil {
+		t.Fatalf("dequeue batch failed: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	if results[0].RawJSON != `{"id":1}` {
+		t.Fatalf("expected first json '{\"id\":1}', got '%s'", results[0].RawJSON)
+	}
+	if results[1].RawJSON != `{"id":2}` {
+		t.Fatalf("expected second json '{\"id\":2}', got '%s'", results[1].RawJSON)
+	}
+
+	results, err = store.DequeueBatch(ctx, chatID, 2)
+	if err != nil {
+		t.Fatalf("dequeue batch failed: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].RawJSON != `{"id":3}` {
+		t.Fatalf("expected third json '{\"id\":3}', got '%s'", results[0].RawJSON)
+	}
+}
+
 func TestStore_Clear(t *testing.T) {
 	store, client := newTestStore(t)
 	defer client.Close()

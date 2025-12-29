@@ -30,8 +30,8 @@ type ChainedQuestionQueueCoordinator interface {
 	CheckAndClearChainSkipFlag(ctx context.Context, chatID string, userID string) (bool, error)
 }
 
-// ChainedQuestionHandler: 사용자가 쉼표 등으로 구분하여 입력한 연속 질문(Chain Question)을 관리하는 핸들러.
-// 첫 번째 질문은 즉시 실행하고, 나머지는 백그라운드 큐에 배정하여 순차적으로 처리되도록 한다.
+// ChainedQuestionHandler: 사용자가 쉼표 등으로 구분하여 입력한 연속 질문(Chain Question)을 관리하는 핸들러입니다.
+// 첫 번째 질문은 즉시 실행하고, 나머지는 백그라운드 큐에 배정하여 순차적으로 처리되도록 합니다.
 type ChainedQuestionHandler struct {
 	riddleService    ChainedQuestionRiddleService
 	queueCoordinator ChainedQuestionQueueCoordinator
@@ -54,8 +54,8 @@ func NewChainedQuestionHandler(
 	}
 }
 
-// PrepareChainQueue: 첫 번째 질문을 제외한 나머지 질문들을 Redis 대기열에 '배치(Batch)' 형태로 미리 등록(Enqueue)한다.
-// 또한 사용자에게 대기열에 등록되었음을 알리는 메시지를 생성하여 반환한다.
+// PrepareChainQueue: 첫 번째 질문을 제외한 나머지 질문들을 Redis 대기열에 '배치(Batch)' 형태로 미리 등록(Enqueue)합니다.
+// 또한 사용자에게 대기열에 등록되었음을 알리는 메시지를 생성하여 반환합니다.
 func (h *ChainedQuestionHandler) PrepareChainQueue(
 	ctx context.Context,
 	chatID string,
@@ -107,8 +107,8 @@ func (h *ChainedQuestionHandler) PrepareChainQueue(
 		messageprovider.P("queueDetails", queueDetails.String())), nil
 }
 
-// Handle: 연속 질문 중 첫 번째 질문을 즉시 실행하여 결과를 반환한다.
-// 이후 질문 진행 여부(조건)를 판단하고, 중단이 필요하면 스킵 플래그를 설정한다.
+// Handle: 연속 질문 중 첫 번째 질문을 즉시 실행하여 결과를 반환합니다.
+// 이후 질문 진행 여부(조건)를 판단하고, 중단이 필요하면 스킵 플래그를 설정합니다.
 func (h *ChainedQuestionHandler) Handle(
 	ctx context.Context,
 	chatID string,
@@ -153,8 +153,8 @@ func (h *ChainedQuestionHandler) Handle(
 	return outcome.Message, nil
 }
 
-// ProcessChainBatch: 대기열에서 꺼낸 나머지 연속 질문들을 순차적으로 실행한다. (백그라운드 처리)
-// 실행 전 스킵 플래그를 확인하여, 이전 질문의 결과에 따라 중단 여부를 결정한다.
+// ProcessChainBatch: 대기열에서 꺼낸 나머지 연속 질문들을 순차적으로 실행합니다. (백그라운드 처리)
+// 실행 전 스킵 플래그를 확인하여, 이전 질문의 결과에 따라 중단 여부를 결정합니다.
 func (h *ChainedQuestionHandler) ProcessChainBatch(
 	ctx context.Context,
 	chatID string,

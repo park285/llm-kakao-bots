@@ -12,13 +12,13 @@ type InboundMessageHandler interface {
 	HandleMessage(ctx context.Context, message mqmsg.InboundMessage)
 }
 
-// StreamMessageHandler: Redis 스트림으로부터 수신된 로우(Raw) 메시지를 파싱하여 비즈니스 로직 처리가 가능한 형태(mqmsg.InboundMessage)로 변환하고 처리 모듈로 전달한다.
+// StreamMessageHandler: Redis 스트림으로부터 수신된 로우(Raw) 메시지를 파싱하여 비즈니스 로직 처리가 가능한 형태(mqmsg.InboundMessage)로 변환하고 처리 모듈로 전달합니다.
 type StreamMessageHandler struct {
 	handler InboundMessageHandler
 	logger  *slog.Logger
 }
 
-// NewStreamMessageHandler: 새로운 StreamMessageHandler 인스턴스를 생성한다.
+// NewStreamMessageHandler: 새로운 StreamMessageHandler 인스턴스를 생성합니다.
 func NewStreamMessageHandler(handler InboundMessageHandler, logger *slog.Logger) *StreamMessageHandler {
 	if logger == nil {
 		logger = slog.Default()
@@ -29,7 +29,7 @@ func NewStreamMessageHandler(handler InboundMessageHandler, logger *slog.Logger)
 	}
 }
 
-// HandleStreamMessage: XMessage(Redis Stream Message)를 받아 필수 필드(room, text 등)를 추출하여 InboundMessage로 변환한 뒤 핸들러에게 전달한다.
+// HandleStreamMessage: XMessage(Redis Stream Message)를 받아 필수 필드(room, text 등)를 추출하여 InboundMessage로 변환한 뒤 핸들러에게 전달합니다.
 func (h *StreamMessageHandler) HandleStreamMessage(ctx context.Context, message XMessage) error {
 	fields := make(map[string]string, 5)
 	for k, v := range message.Values {

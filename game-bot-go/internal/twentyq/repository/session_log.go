@@ -22,7 +22,7 @@ type GameSessionParams struct {
 	Now              time.Time
 }
 
-// RecordGameSession: 게임 세션 메타데이터를 기록한다.
+// RecordGameSession: 게임 세션 메타데이터를 기록합니다.
 func (r *Repository) RecordGameSession(ctx context.Context, p GameSessionParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -77,7 +77,7 @@ type GameLogParams struct {
 	Now             time.Time
 }
 
-// RecordGameLog: 플레이어별 게임 활동 로그를 기록한다.
+// RecordGameLog: 플레이어별 게임 활동 로그를 기록합니다.
 func (r *Repository) RecordGameLog(ctx context.Context, p GameLogParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")

@@ -18,7 +18,7 @@ type WrongGuessStore struct {
 	logger *slog.Logger
 }
 
-// NewWrongGuessStore: 새로운 WrongGuessStore 인스턴스를 생성한다.
+// NewWrongGuessStore: 새로운 WrongGuessStore 인스턴스를 생성합니다.
 func NewWrongGuessStore(client valkey.Client, logger *slog.Logger) *WrongGuessStore {
 	return &WrongGuessStore{
 		client: client,
@@ -26,7 +26,7 @@ func NewWrongGuessStore(client valkey.Client, logger *slog.Logger) *WrongGuessSt
 	}
 }
 
-// Add: 사용자 및 세션의 오답 기록을 추가한다.
+// Add: 사용자 및 세션의 오답 기록을 추가합니다.
 func (s *WrongGuessStore) Add(ctx context.Context, chatID string, userID string, guess string) error {
 	guess = strings.TrimSpace(guess)
 	if guess == "" {
@@ -52,7 +52,7 @@ func (s *WrongGuessStore) Add(ctx context.Context, chatID string, userID string,
 	return nil
 }
 
-// GetSessionWrongGuesses: 현재 세션에서 발생한 모든 오답 목록을 조회한다.
+// GetSessionWrongGuesses: 현재 세션에서 발생한 모든 오답 목록을 조회합니다.
 func (s *WrongGuessStore) GetSessionWrongGuesses(ctx context.Context, chatID string) ([]string, error) {
 	key := wrongGuessSessionKey(chatID)
 	cmd := s.client.B().Smembers().Key(key).Build()
@@ -66,7 +66,7 @@ func (s *WrongGuessStore) GetSessionWrongGuesses(ctx context.Context, chatID str
 	return values, nil
 }
 
-// GetUserWrongGuesses: 특정 사용자가 해당 세션에서 입력한 오답 목록을 조회한다.
+// GetUserWrongGuesses: 특정 사용자가 해당 세션에서 입력한 오답 목록을 조회합니다.
 func (s *WrongGuessStore) GetUserWrongGuesses(ctx context.Context, chatID string, userID string) ([]string, error) {
 	key := wrongGuessUserKey(chatID, userID)
 	cmd := s.client.B().Smembers().Key(key).Build()
@@ -80,7 +80,7 @@ func (s *WrongGuessStore) GetUserWrongGuesses(ctx context.Context, chatID string
 	return values, nil
 }
 
-// GetUserWrongGuessCount: 특정 사용자의 오답 횟수를 조회한다.
+// GetUserWrongGuessCount: 특정 사용자의 오답 횟수를 조회합니다.
 func (s *WrongGuessStore) GetUserWrongGuessCount(ctx context.Context, chatID string, userID string) (int, error) {
 	key := wrongGuessUserKey(chatID, userID)
 	cmd := s.client.B().Scard().Key(key).Build()
@@ -141,7 +141,7 @@ func (s *WrongGuessStore) GetUserWrongGuessCountBatch(ctx context.Context, chatI
 	return result, nil
 }
 
-// Delete: 세션 종료 시 오답 기록을 일괄 삭제한다.
+// Delete: 세션 종료 시 오답 기록을 일괄 삭제합니다.
 func (s *WrongGuessStore) Delete(ctx context.Context, chatID string, userIDs []string) error {
 	keys := make([]string, 0, 1+len(userIDs))
 	keys = append(keys, wrongGuessSessionKey(chatID))

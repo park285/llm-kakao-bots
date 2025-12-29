@@ -16,7 +16,7 @@ type MessageSender struct {
 	publish     func(ctx context.Context, msg mqmsg.OutboundMessage) error
 }
 
-// NewMessageSender: 주어진 발행 함수를 사용하여 새로운 MessageSender 인스턴스를 생성한다.
+// NewMessageSender: 주어진 발행 함수를 사용하여 새로운 MessageSender 인스턴스를 생성합니다.
 func NewMessageSender(msgProvider *messageprovider.Provider, publish func(ctx context.Context, msg mqmsg.OutboundMessage) error) *MessageSender {
 	return &MessageSender{
 		msgProvider: msgProvider,
@@ -24,7 +24,7 @@ func NewMessageSender(msgProvider *messageprovider.Provider, publish func(ctx co
 	}
 }
 
-// SendFinal: 최종 처리 결과(답변)를 전송한다. 메시지가 길 경우 분할 전송한다.
+// SendFinal: 최종 처리 결과(답변)를 전송합니다. 메시지가 길 경우 분할 전송합니다.
 func (s *MessageSender) SendFinal(ctx context.Context, message mqmsg.InboundMessage, text string) error {
 	chunks := textutil.ChunkByLines(text, qconfig.KakaoMessageMaxLength)
 	if len(chunks) == 0 {
@@ -46,7 +46,7 @@ func (s *MessageSender) SendFinal(ctx context.Context, message mqmsg.InboundMess
 	return nil
 }
 
-// SendWaiting: 명령어 처리가 시작되었음을 알리는 대기 메시지(예: ~가 생각 중입니다)를 전송한다.
+// SendWaiting: 명령어 처리가 시작되었음을 알리는 대기 메시지(예: ~가 생각 중입니다)를 전송합니다.
 func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMessage, command Command) error {
 	key := command.WaitingMessageKey()
 	if key == nil {
@@ -55,13 +55,13 @@ func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMe
 	return s.publish(ctx, mqmsg.NewWaiting(message.ChatID, s.msgProvider.Get(*key), message.ThreadID))
 }
 
-// SendError: 발생한 에러에 매핑된 사용자 메시지를 전송한다.
-// 게임 관련 에러는 final 타입으로 전송하여 Iris의 에러 이모지 추가를 방지한다.
+// SendError: 발생한 에러에 매핑된 사용자 메시지를 전송합니다.
+// 게임 관련 에러는 final 타입으로 전송하여 Iris의 에러 이모지 추가를 방지합니다.
 func (s *MessageSender) SendError(ctx context.Context, message mqmsg.InboundMessage, mapping ErrorMapping) error {
 	return s.publish(ctx, mqmsg.NewFinal(message.ChatID, s.msgProvider.Get(mapping.Key, mapping.Params...), message.ThreadID))
 }
 
-// SendLockError: 락 획득 실패(다른 요청 처리 중) 시 안내 메시지를 전송한다.
+// SendLockError: 락 획득 실패(다른 요청 처리 중) 시 안내 메시지를 전송합니다.
 func (s *MessageSender) SendLockError(ctx context.Context, message mqmsg.InboundMessage) error {
 	return s.publish(ctx, mqmsg.NewError(message.ChatID, s.msgProvider.Get(qmessages.LockRequestInProgress), message.ThreadID))
 }

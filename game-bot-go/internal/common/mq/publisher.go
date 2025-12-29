@@ -15,14 +15,14 @@ type StreamPublisherConfig struct {
 	MaxLen int64
 }
 
-// StreamPublisher: 설정된 Redis 스트림으로 메시지를 발행(XADD)하는 역할을 담당한다.
+// StreamPublisher: 설정된 Redis 스트림으로 메시지를 발행(XADD)하는 역할을 담당합니다.
 type StreamPublisher struct {
 	client valkey.Client
 	logger *slog.Logger
 	cfg    StreamPublisherConfig
 }
 
-// NewStreamPublisher: 새로운 StreamPublisher 인스턴스를 생성한다.
+// NewStreamPublisher: 새로운 StreamPublisher 인스턴스를 생성합니다.
 func NewStreamPublisher(client valkey.Client, logger *slog.Logger, cfg StreamPublisherConfig) *StreamPublisher {
 	return &StreamPublisher{
 		client: client,
@@ -31,7 +31,7 @@ func NewStreamPublisher(client valkey.Client, logger *slog.Logger, cfg StreamPub
 	}
 }
 
-// Publish: 주어진 키-값 맵을 Redis 스트림 메시지로 변환하여 XADD 명령을 통해 발행한다. (MAXLEN 처리를 포함)
+// Publish: 주어진 키-값 맵을 Redis 스트림 메시지로 변환하여 XADD 명령을 통해 발행합니다. (MAXLEN 처리를 포함)
 func (p *StreamPublisher) Publish(ctx context.Context, values map[string]any) (string, error) {
 	// Build field-value pairs
 	fieldValues := make([]string, 0, len(values)*2)

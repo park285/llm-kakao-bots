@@ -17,14 +17,14 @@ const (
 	guessRateLimitTTL = 30 * time.Second // 30초 제한
 )
 
-// GuessRateLimiter: 정답 시도에 대한 개인별 Rate Limit를 관리한다.
+// GuessRateLimiter: 정답 시도에 대한 개인별 Rate Limit를 관리합니다.
 type GuessRateLimiter struct {
 	client   valkey.Client
 	prefix   string
 	registry *luautil.Registry
 }
 
-// NewGuessRateLimiter: 새로운 GuessRateLimiter를 생성한다.
+// NewGuessRateLimiter: 새로운 GuessRateLimiter를 생성합니다.
 func NewGuessRateLimiter(client valkey.Client, prefix string) *GuessRateLimiter {
 	registry := luautil.NewRegistry([]luautil.Script{
 		{Name: luautil.ScriptGuessRateLimit, Source: assets.GuessRateLimitLua},
@@ -37,12 +37,12 @@ func NewGuessRateLimiter(client valkey.Client, prefix string) *GuessRateLimiter 
 	}
 }
 
-// guessRateLimitKey: 사용자별 Rate Limit 키를 생성한다.
+// guessRateLimitKey: 사용자별 Rate Limit 키를 생성합니다.
 func (r *GuessRateLimiter) guessRateLimitKey(chatID, userID string) string {
 	return fmt.Sprintf("%s:guess_limit:%s:%s", r.prefix, chatID, userID)
 }
 
-// CheckAndSet: 정답 시도가 허용되는지 확인하고, 허용되면 Rate Limit를 설정한다.
+// CheckAndSet: 정답 시도가 허용되는지 확인하고, 허용되면 Rate Limit를 설정합니다.
 // 반환: (허용 여부, 남은 시간(초), 에러)
 func (r *GuessRateLimiter) CheckAndSet(ctx context.Context, chatID, userID string) (bool, int64, error) {
 	key := r.guessRateLimitKey(chatID, userID)
@@ -71,12 +71,12 @@ func (r *GuessRateLimiter) CheckAndSet(ctx context.Context, chatID, userID strin
 	return false, remainingSeconds, nil
 }
 
-// GetLimitSeconds: Rate Limit 제한 시간(초)을 반환한다.
+// GetLimitSeconds: Rate Limit 제한 시간(초)을 반환합니다.
 func (r *GuessRateLimiter) GetLimitSeconds() int64 {
 	return int64(guessRateLimitTTL.Seconds())
 }
 
-// GetRemainingTime: 남은 Rate Limit 시간을 확인한다.
+// GetRemainingTime: 남은 Rate Limit 시간을 확인합니다.
 func (r *GuessRateLimiter) GetRemainingTime(ctx context.Context, chatID, userID string) (int64, error) {
 	key := r.guessRateLimitKey(chatID, userID)
 	ttlResp := r.client.Do(ctx, r.client.B().Pttl().Key(key).Build())

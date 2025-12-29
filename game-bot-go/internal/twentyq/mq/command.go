@@ -54,8 +54,8 @@ type Command struct {
 	ModelOverride *string
 }
 
-// WaitingMessageKey: 명령어를 처리하는 동안 사용자에게 즉시 보여줄 '대기 중' 메시지의 키를 반환한다.
-// 반환값이 nil이면 별도의 대기 메시지를 보내지 않는다.
+// WaitingMessageKey: 명령어를 처리하는 동안 사용자에게 즉시 보여줄 '대기 중' 메시지의 키를 반환합니다.
+// 반환값이 nil이면 별도의 대기 메시지를 보내지 않습니다.
 func (c Command) WaitingMessageKey() *string {
 	switch c.Kind {
 	case CommandStart:

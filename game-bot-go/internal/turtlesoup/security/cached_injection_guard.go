@@ -1,25 +1,24 @@
 package security
 
 import (
-	"container/list"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 
+	commoncache "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/cache"
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
 // CachedInjectionGuard 는 타입이다.
 type CachedInjectionGuard struct {
 	inner  InjectionGuard
-	cache  *ttlLRUCache
+	cache  *commoncache.TTLLRUCache
 	logger *slog.Logger
 	sf     singleflight.Group
 }
@@ -36,7 +35,7 @@ func NewCachedInjectionGuard(
 	}
 	return &CachedInjectionGuard{
 		inner:  inner,
-		cache:  newTTLLRUCache(maxEntries, ttl),
+		cache:  commoncache.NewTTLLRUCache(maxEntries, ttl),
 		logger: logger,
 	}
 }
@@ -118,97 +117,4 @@ func (g *CachedInjectionGuard) ValidateOrThrow(ctx context.Context, input string
 func cacheKey(text string) string {
 	sum := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(sum[:])
-}
-
-type ttlLRUCache struct {
-	mu         sync.Mutex
-	maxEntries int
-	ttl        time.Duration
-	items      map[string]*list.Element
-	order      *list.List
-}
-
-type ttlLRUEntry struct {
-	key       string
-	value     bool
-	expiresAt time.Time
-}
-
-func newTTLLRUCache(maxEntries int, ttl time.Duration) *ttlLRUCache {
-	if maxEntries <= 0 || ttl <= 0 {
-		return nil
-	}
-	return &ttlLRUCache{
-		maxEntries: maxEntries,
-		ttl:        ttl,
-		items:      make(map[string]*list.Element, maxEntries),
-		order:      list.New(),
-	}
-}
-
-func (c *ttlLRUCache) Get(key string) (bool, bool) {
-	if c == nil {
-		return false, false
-	}
-
-	now := time.Now()
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	elem, ok := c.items[key]
-	if !ok {
-		return false, false
-	}
-
-	entry := elem.Value.(ttlLRUEntry)
-	if !entry.expiresAt.After(now) {
-		c.removeElement(elem)
-		return false, false
-	}
-
-	c.order.MoveToFront(elem)
-	return entry.value, true
-}
-
-func (c *ttlLRUCache) Set(key string, value bool) {
-	if c == nil {
-		return
-	}
-
-	expiresAt := time.Now().Add(c.ttl)
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if elem, ok := c.items[key]; ok {
-		c.order.MoveToFront(elem)
-		elem.Value = ttlLRUEntry{
-			key:       key,
-			value:     value,
-			expiresAt: expiresAt,
-		}
-		return
-	}
-
-	elem := c.order.PushFront(ttlLRUEntry{
-		key:       key,
-		value:     value,
-		expiresAt: expiresAt,
-	})
-	c.items[key] = elem
-
-	for len(c.items) > c.maxEntries {
-		back := c.order.Back()
-		if back == nil {
-			break
-		}
-		c.removeElement(back)
-	}
-}
-
-func (c *ttlLRUCache) removeElement(elem *list.Element) {
-	entry := elem.Value.(ttlLRUEntry)
-	delete(c.items, entry.key)
-	c.order.Remove(elem)
 }

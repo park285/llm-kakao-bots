@@ -19,7 +19,7 @@ type LogConfigGetter[C any] func(*C) commonconfig.LogConfig
 type AppInitializer[C any] func(context.Context, *C, *slog.Logger) (*ServerApp, func(), error)
 
 // RunBotEntrypoint: 봇 애플리케이션의 공통 시작점.
-// .env 로드, 설정 로드, 로거 설정, 앱 초기화 및 실행을 담당한다.
+// .env 로드, 설정 로드, 로거 설정, 앱 초기화 및 실행을 담당합니다.
 func RunBotEntrypoint[C any](
 	ctx context.Context,
 	logger *slog.Logger,

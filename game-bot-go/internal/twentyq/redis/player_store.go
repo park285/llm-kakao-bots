@@ -22,7 +22,7 @@ type PlayerStore struct {
 	logger *slog.Logger
 }
 
-// NewPlayerStore: 새로운 PlayerStore 인스턴스를 생성한다.
+// NewPlayerStore: 새로운 PlayerStore 인스턴스를 생성합니다.
 func NewPlayerStore(client valkey.Client, logger *slog.Logger) *PlayerStore {
 	return &PlayerStore{
 		client: client,
@@ -30,8 +30,8 @@ func NewPlayerStore(client valkey.Client, logger *slog.Logger) *PlayerStore {
 	}
 }
 
-// Add: 특정 플레이어를 참여자 목록에 추가한다. 이미 존재하는 경우 정보를 갱신한다.
-// 목록 전체를 조회 후 수정하여 덮어쓰는 방식을 사용한다. (Lock 필요 레벨에서 동시성 제어 권장)
+// Add: 특정 플레이어를 참여자 목록에 추가합니다. 이미 존재하는 경우 정보를 갱신합니다.
+// 목록 전체를 조회 후 수정하여 덮어쓰는 방식을 사용합니다. (Lock 필요 레벨에서 동시성 제어 권장)
 func (s *PlayerStore) Add(ctx context.Context, chatID string, userID string, sender string) (bool, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
@@ -75,7 +75,7 @@ func (s *PlayerStore) Add(ctx context.Context, chatID string, userID string, sen
 	return isNew, nil
 }
 
-// GetAll: Redis에 저장된 JSON 형태의 플레이어 목록을 파싱하여 반환한다.
+// GetAll: Redis에 저장된 JSON 형태의 플레이어 목록을 파싱하여 반환합니다.
 func (s *PlayerStore) GetAll(ctx context.Context, chatID string) ([]qmodel.PlayerInfo, error) {
 	key := playersKey(chatID)
 
@@ -95,7 +95,7 @@ func (s *PlayerStore) GetAll(ctx context.Context, chatID string) ([]qmodel.Playe
 	return out, nil
 }
 
-// Clear: 게임 종료 시 참여자 목록 데이터를 삭제한다.
+// Clear: 게임 종료 시 참여자 목록 데이터를 삭제합니다.
 func (s *PlayerStore) Clear(ctx context.Context, chatID string) error {
 	key := playersKey(chatID)
 	cmd := s.client.B().Del().Key(key).Build()

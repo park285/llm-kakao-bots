@@ -5,7 +5,7 @@ import (
 	"unicode/utf8"
 )
 
-// ChunkByLines 는 동작을 수행한다.
+// ChunkByLines: 입력된 문자열을 최대 길이에 맞춰 라인 단위로 분할합니다.
 func ChunkByLines(input string, maxLength int) []string {
 	if maxLength <= 0 {
 		return []string{input}

@@ -35,7 +35,7 @@ type GameCompletionParams struct {
 	Now                    time.Time
 }
 
-// RecordGameStart: 게임 시작 정보를 기록한다 (사용자 통계 초기화 등).
+// RecordGameStart: 게임 시작 정보를 기록합니다 (사용자 통계 초기화 등).
 func (r *Repository) RecordGameStart(ctx context.Context, chatID string, userID string, now time.Time) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")
@@ -73,7 +73,7 @@ func (r *Repository) RecordGameStart(ctx context.Context, chatID string, userID 
 	return nil
 }
 
-// RecordGameCompletion: 게임 완료 정보를 기록하고 관련 통계를 업데이트한다.
+// RecordGameCompletion: 게임 완료 정보를 기록하고 관련 통계를 업데이트합니다.
 func (r *Repository) RecordGameCompletion(ctx context.Context, p GameCompletionParams) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")

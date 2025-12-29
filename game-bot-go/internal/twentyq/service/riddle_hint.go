@@ -12,7 +12,7 @@ import (
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
-// GenerateHint: LLM을 통해 힌트를 생성하고 저장한다. 힌트 횟수를 차감한다.
+// GenerateHint: LLM을 통해 힌트를 생성하고 저장합니다. 힌트 횟수를 차감합니다.
 func (s *RiddleService) GenerateHint(ctx context.Context, chatID string) (string, error) {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {
@@ -82,7 +82,7 @@ func (s *RiddleService) GenerateHint(ctx context.Context, chatID string) (string
 	return out, nil
 }
 
-// CanGenerateHint: 현재 힌트를 생성할 수 있는 상태인지(횟수 제한 등) 확인한다.
+// CanGenerateHint: 현재 힌트를 생성할 수 있는 상태인지(횟수 제한 등) 확인합니다.
 func (s *RiddleService) CanGenerateHint(ctx context.Context, chatID string) (bool, error) {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {

@@ -15,7 +15,7 @@ const (
 	GeminiModelFlash30
 )
 
-// ParseGeminiModel: 문자열 모델명을 GeminiModel Enum으로 파싱한다.
+// ParseGeminiModel: 문자열 모델명을 GeminiModel Enum으로 파싱합니다.
 func ParseGeminiModel(value *string) GeminiModel {
 	if value == nil {
 		return GeminiModelFlash25
@@ -52,7 +52,7 @@ func ParseGeminiModel(value *string) GeminiModel {
 	}
 }
 
-// ResolveGeminiModel: 사용자 override와 서버 설정 중 우선순위에 따라 모델을 결정한다.
+// ResolveGeminiModel: 사용자 override와 서버 설정 중 우선순위에 따라 모델을 결정합니다.
 func ResolveGeminiModel(modelOverride *string, serverModel *string) GeminiModel {
 	if modelOverride != nil && strings.TrimSpace(*modelOverride) != "" {
 		return ParseGeminiModel(modelOverride)
@@ -63,7 +63,7 @@ func ResolveGeminiModel(modelOverride *string, serverModel *string) GeminiModel 
 	return GeminiModelFlash25
 }
 
-// DisplayName: 사용자에게 표시할 모델 이름을 반환한다.
+// DisplayName: 사용자에게 표시할 모델 이름을 반환합니다.
 func (m GeminiModel) DisplayName() string {
 	switch m {
 	case GeminiModelFlash30:
@@ -90,7 +90,7 @@ func (m GeminiModel) prices() (inputPrice float64, outputPrice float64) {
 	}
 }
 
-// CalculateCostUsd: 사용한 토큰 양에 따른 예상 비용(USD)을 계산한다.
+// CalculateCostUsd: 사용한 토큰 양에 따른 예상 비용(USD)을 계산합니다.
 func (m GeminiModel) CalculateCostUsd(inputTokens int64, outputTokens int64, reasoningTokens int64) float64 {
 	inputPrice, outputPrice := m.prices()
 	totalOutput := float64(outputTokens)

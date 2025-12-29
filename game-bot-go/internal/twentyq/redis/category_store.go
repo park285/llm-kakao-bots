@@ -19,7 +19,7 @@ type CategoryStore struct {
 	logger *slog.Logger
 }
 
-// NewCategoryStore: 새로운 CategoryStore 인스턴스를 생성한다.
+// NewCategoryStore: 새로운 CategoryStore 인스턴스를 생성합니다.
 func NewCategoryStore(client valkey.Client, logger *slog.Logger) *CategoryStore {
 	return &CategoryStore{
 		client: client,
@@ -27,7 +27,7 @@ func NewCategoryStore(client valkey.Client, logger *slog.Logger) *CategoryStore 
 	}
 }
 
-// Save: 현재 게임의 카테고리를 저장한다.
+// Save: 현재 게임의 카테고리를 저장합니다.
 func (s *CategoryStore) Save(ctx context.Context, chatID string, category *string) error {
 	key := categoryKey(chatID)
 
@@ -48,7 +48,7 @@ func (s *CategoryStore) Save(ctx context.Context, chatID string, category *strin
 	return nil
 }
 
-// Get: 현재 설정된 카테고리를 조회한다.
+// Get: 현재 설정된 카테고리를 조회합니다.
 func (s *CategoryStore) Get(ctx context.Context, chatID string) (*string, error) {
 	key := categoryKey(chatID)
 

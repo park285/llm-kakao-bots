@@ -12,8 +12,8 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
-// ToValkeyDataConfig: 데이터 저장소 연결을 위한 Valkey 설정 객체를 생성한다.
-// 프로덕션 환경 효율성을 위해 클라이언트 사이드 캐싱이 활성화된다.
+// ToValkeyDataConfig: 데이터 저장소 연결을 위한 Valkey 설정 객체를 생성합니다.
+// 프로덕션 환경 효율성을 위해 클라이언트 사이드 캐싱이 활성화됩니다.
 func ToValkeyDataConfig(cfg commonconfig.RedisConfig) valkeyx.Config {
 	return valkeyx.Config{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
@@ -28,8 +28,8 @@ func ToValkeyDataConfig(cfg commonconfig.RedisConfig) valkeyx.Config {
 	}
 }
 
-// ToValkeyMQConfig: 메시지 큐(MQ) 용도의 Valkey 설정 객체를 생성한다.
-// 큐 데이터의 실시간성을 보장하기 위해 클라이언트 캐싱을 비활성화한다.
+// ToValkeyMQConfig: 메시지 큐(MQ) 용도의 Valkey 설정 객체를 생성합니다.
+// 큐 데이터의 실시간성을 보장하기 위해 클라이언트 캐싱을 비활성화합니다.
 func ToValkeyMQConfig(cfg commonconfig.ValkeyMQConfig) valkeyx.Config {
 	return valkeyx.Config{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
@@ -44,8 +44,8 @@ func ToValkeyMQConfig(cfg commonconfig.ValkeyMQConfig) valkeyx.Config {
 	}
 }
 
-// NewAndPingValkeyClient: Valkey 클라이언트를 생성하고 Ping 테스트를 통해 연결 연결성을 확인한다.
-// 연결 실패 시 생성된 리소스를 정리하고 에러를 반환한다.
+// NewAndPingValkeyClient: Valkey 클라이언트를 생성하고 Ping 테스트를 통해 연결 연결성을 확인합니다.
+// 연결 실패 시 생성된 리소스를 정리하고 에러를 반환합니다.
 func NewAndPingValkeyClient(
 	ctx context.Context,
 	cfg valkeyx.Config,
@@ -71,7 +71,7 @@ func NewAndPingValkeyClient(
 	return client, closeFn, nil
 }
 
-// NewAndPingDataValkeyClient: 메인 데이터 저장소용 Valkey 클라이언트를 생성 및 초기화한다.
+// NewAndPingDataValkeyClient: 메인 데이터 저장소용 Valkey 클라이언트를 생성 및 초기화합니다.
 func NewAndPingDataValkeyClient(
 	ctx context.Context,
 	cfg commonconfig.RedisConfig,
@@ -90,7 +90,7 @@ func NewAndPingDataValkeyClient(
 	return di.DataValkeyClient{Client: client}, closeFn, nil
 }
 
-// NewAndPingMQValkeyClient: 메시지 큐 전용 Valkey 클라이언트를 생성 및 초기화한다.
+// NewAndPingMQValkeyClient: 메시지 큐 전용 Valkey 클라이언트를 생성 및 초기화합니다.
 func NewAndPingMQValkeyClient(
 	ctx context.Context,
 	cfg commonconfig.ValkeyMQConfig,

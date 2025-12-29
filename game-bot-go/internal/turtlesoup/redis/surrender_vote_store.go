@@ -21,7 +21,7 @@ type SurrenderVoteStore struct {
 	logger *slog.Logger
 }
 
-// NewSurrenderVoteStore: 새로운 SurrenderVoteStore 인스턴스를 생성한다.
+// NewSurrenderVoteStore: 새로운 SurrenderVoteStore 인스턴스를 생성합니다.
 func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *SurrenderVoteStore {
 	return &SurrenderVoteStore{
 		client: client,
@@ -29,7 +29,7 @@ func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *Surrender
 	}
 }
 
-// Get: 현재 활성화된 투표 상태를 조회한다. 투표가 없으면 nil을 반환한다.
+// Get: 현재 활성화된 투표 상태를 조회합니다. 투표가 없으면 nil을 반환합니다.
 func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*tsmodel.SurrenderVote, error) {
 	key := voteKey(chatID)
 
@@ -48,7 +48,7 @@ func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*tsmodel.S
 	return &vote, nil
 }
 
-// Save: 변경된 투표 상태 객체를 Redis에 저장하고 TTL을 갱신한다.
+// Save: 변경된 투표 상태 객체를 Redis에 저장하고 TTL을 갱신합니다.
 func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote tsmodel.SurrenderVote) error {
 	key := voteKey(chatID)
 
@@ -65,7 +65,7 @@ func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote tsmod
 	return nil
 }
 
-// Approve: 특정 사용자의 '찬성' 의사를 투표에 반영하고, 갱신된 투표 상태를 반환한다.
+// Approve: 특정 사용자의 '찬성' 의사를 투표에 반영하고, 갱신된 투표 상태를 반환합니다.
 func (s *SurrenderVoteStore) Approve(ctx context.Context, chatID string, userID string) (*tsmodel.SurrenderVote, error) {
 	vote, err := s.Get(ctx, chatID)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *SurrenderVoteStore) Approve(ctx context.Context, chatID string, userID 
 	return &updated, nil
 }
 
-// Clear: 투표 상태를 Redis에서 삭제한다. (투표 완료 또는 취소 시)
+// Clear: 투표 상태를 Redis에서 삭제합니다. (투표 완료 또는 취소 시)
 func (s *SurrenderVoteStore) Clear(ctx context.Context, chatID string) error {
 	key := voteKey(chatID)
 

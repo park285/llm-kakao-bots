@@ -4,7 +4,7 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// NewFromConfig 는 동작을 수행한다.
+// NewFromConfig: 설정 객체로부터 새로운 Client 인스턴스를 생성합니다.
 func NewFromConfig(cfg commonconfig.LlmRestConfig) (*Client, error) {
 	return New(Config{
 		BaseURL:          cfg.BaseURL,

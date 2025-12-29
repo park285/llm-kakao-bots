@@ -21,12 +21,12 @@ type Repository struct {
 	db *gorm.DB
 }
 
-// New: 새로운 Repository 인스턴스를 생성한다.
+// New: 새로운 Repository 인스턴스를 생성합니다.
 func New(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// AutoMigrate: 자동으로 DB 테이블 스키마를 마이그레이션한다.
+// AutoMigrate: 자동으로 DB 테이블 스키마를 마이그레이션합니다.
 func (r *Repository) AutoMigrate(ctx context.Context) error {
 	if r == nil || r.db == nil {
 		return fmt.Errorf("db is nil")

@@ -12,13 +12,13 @@ import (
 )
 
 // PuzzleDedupStore: 생성된 퍼즐의 내용(Signature)을 기반으로 중복 생성을 감지하고 방지하는 저장소
-// 전역 범위(Global)와 채팅방 범위(Chat) 두 가지 레벨에서 중복을 체크한다.
+// 전역 범위(Global)와 채팅방 범위(Chat) 두 가지 레벨에서 중복을 체크합니다.
 type PuzzleDedupStore struct {
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewPuzzleDedupStore: 새로운 PuzzleDedupStore 인스턴스를 생성한다.
+// NewPuzzleDedupStore: 새로운 PuzzleDedupStore 인스턴스를 생성합니다.
 func NewPuzzleDedupStore(client valkey.Client, logger *slog.Logger) *PuzzleDedupStore {
 	return &PuzzleDedupStore{
 		client: client,
@@ -26,7 +26,7 @@ func NewPuzzleDedupStore(client valkey.Client, logger *slog.Logger) *PuzzleDedup
 	}
 }
 
-// IsDuplicate: 주어진 퍼즐 서명(Signature)이 전역적으로 또는 현재 채팅방 내에서 이미 사용된 적이 있는지 확인한다.
+// IsDuplicate: 주어진 퍼즐 서명(Signature)이 전역적으로 또는 현재 채팅방 내에서 이미 사용된 적이 있는지 확인합니다.
 func (s *PuzzleDedupStore) IsDuplicate(ctx context.Context, signature string, chatID string) (bool, error) {
 	globalKey := tsconfig.RedisKeyPuzzleGlobal
 	chatKey := puzzleChatKey(chatID)
@@ -48,8 +48,8 @@ func (s *PuzzleDedupStore) IsDuplicate(ctx context.Context, signature string, ch
 	return chatExists, nil
 }
 
-// MarkUsed: 생성된 퍼즐을 '사용됨' 상태로 Redis Set에 등록하여 이후 중복 생성을 방지한다.
-// 전역 관리 셋과 채팅방 관리 셋에 각각 TTL을 적용하여 저장한다.
+// MarkUsed: 생성된 퍼즐을 '사용됨' 상태로 Redis Set에 등록하여 이후 중복 생성을 방지합니다.
+// 전역 관리 셋과 채팅방 관리 셋에 각각 TTL을 적용하여 저장합니다.
 func (s *PuzzleDedupStore) MarkUsed(ctx context.Context, signature string, chatID string) error {
 	globalKey := tsconfig.RedisKeyPuzzleGlobal
 	chatKey := puzzleChatKey(chatID)

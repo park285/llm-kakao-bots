@@ -17,7 +17,7 @@ import (
 )
 
 // LockManager: Redis와 Lua 스크립트를 사용하여 분산 락(Distributed Lock)을 구현한 관리자
-// Reentrancy(재진입)를 지원하며, Context 스코프 기반의 자동 락 관리를 제공한다.
+// Reentrancy(재진입)를 지원하며, Context 스코프 기반의 자동 락 관리를 제공합니다.
 type LockManager struct {
 	client valkey.Client
 	logger *slog.Logger
@@ -26,7 +26,7 @@ type LockManager struct {
 	redisCallTimeout time.Duration
 }
 
-// NewLockManager: 새로운 LockManager 인스턴스를 생성한다.
+// NewLockManager: 새로운 LockManager 인스턴스를 생성합니다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	registry := luautil.NewRegistry([]luautil.Script{
 		{Name: luautil.ScriptTurtleLockRelease, Source: tsassets.LockReleaseLua},
@@ -42,8 +42,8 @@ func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	}
 }
 
-// TryAcquireSharedLock: 여러 사용자가 동시에 접근 가능한 '공유 락(Shared Lock)' 획득을 시도한다. (주로 읽기 작업용)
-// 이미 락이 존재하더라도 획득 성공으로 간주하거나, 별도의 키를 사용하여 동시성을 제어한다.
+// TryAcquireSharedLock: 여러 사용자가 동시에 접근 가능한 '공유 락(Shared Lock)' 획득을 시도합니다. (주로 읽기 작업용)
+// 이미 락이 존재하더라도 획득 성공으로 간주하거나, 별도의 키를 사용하여 동시성을 제어합니다.
 func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, ttlSeconds int64) (bool, error) {
 	acquired, err := lockutil.TryAcquireSharedLock(ctx, m.client, lockKey, ttlSeconds)
 	if err != nil {
@@ -52,7 +52,7 @@ func (m *LockManager) TryAcquireSharedLock(ctx context.Context, lockKey string, 
 	return acquired, nil
 }
 
-// ReleaseSharedLock: 공유 락을 해제한다. (DEL)
+// ReleaseSharedLock: 공유 락을 해제합니다. (DEL)
 func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) error {
 	if err := lockutil.ReleaseSharedLock(ctx, m.client, lockKey); err != nil {
 		return fmt.Errorf("release shared lock: %w", err)
@@ -60,8 +60,8 @@ func (m *LockManager) ReleaseSharedLock(ctx context.Context, lockKey string) err
 	return nil
 }
 
-// WithLock: 배타적 락(Write Lock)을 획득한 상태에서 주어진 함수(block)를 실행한다.
-// 락 획득 실패 시 에러를 반환하며, 실행 완료 후 자동으로 락을 해제한다. 재진입(Reentry)을 지원한다.
+// WithLock: 배타적 락(Write Lock)을 획득한 상태에서 주어진 함수(block)를 실행합니다.
+// 락 획득 실패 시 에러를 반환하며, 실행 완료 후 자동으로 락을 해제합니다. 재진입(Reentry)을 지원합니다.
 func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName *string, block func(ctx context.Context) error) error {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
@@ -132,5 +132,5 @@ func (m *LockManager) WithLock(ctx context.Context, sessionID string, holderName
 }
 
 // 락 획득 재시도 설정
-// acquire: Redis의 SET NX 명령과 고유 토큰을 사용하여 락 획득을 시도한다.
-// 실패 시 지수 백오프(Exponential Backoff) 전략으로 재시도한다.
+// acquire: Redis의 SET NX 명령과 고유 토큰을 사용하여 락 획득을 시도합니다.
+// 실패 시 지수 백오프(Exponential Backoff) 전략으로 재시도합니다.

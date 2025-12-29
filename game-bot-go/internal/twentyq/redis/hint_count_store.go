@@ -18,7 +18,7 @@ type HintCountStore struct {
 	logger *slog.Logger
 }
 
-// NewHintCountStore: 새로운 HintCountStore 인스턴스를 생성한다.
+// NewHintCountStore: 새로운 HintCountStore 인스턴스를 생성합니다.
 func NewHintCountStore(client valkey.Client, logger *slog.Logger) *HintCountStore {
 	return &HintCountStore{
 		client: client,
@@ -26,7 +26,7 @@ func NewHintCountStore(client valkey.Client, logger *slog.Logger) *HintCountStor
 	}
 }
 
-// Get: 현재까지 사용된 힌트 횟수를 조회한다.
+// Get: 현재까지 사용된 힌트 횟수를 조회합니다.
 func (s *HintCountStore) Get(ctx context.Context, chatID string) (int, error) {
 	key := hintCountKey(chatID)
 
@@ -61,7 +61,7 @@ func (s *HintCountStore) Increment(ctx context.Context, chatID string) (int, err
 	return int(value), nil
 }
 
-// Delete: 힌트 카운트 정보를 삭제한다.
+// Delete: 힌트 카운트 정보를 삭제합니다.
 func (s *HintCountStore) Delete(ctx context.Context, chatID string) error {
 	key := hintCountKey(chatID)
 	cmd := s.client.B().Del().Key(key).Build()
@@ -71,5 +71,5 @@ func (s *HintCountStore) Delete(ctx context.Context, chatID string) error {
 	return nil
 }
 
-// compile-time assertion to ensure time package is used (for TTL calculations)
+// 컴파일 타임 검증: time 패키지 사용 확인 (TTL 계산용)
 var _ = time.Second

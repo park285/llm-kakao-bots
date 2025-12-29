@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// ServerApp 는 타입이다.
+// ServerApp: HTTP 서버와 백그라운드 작업을 포함하는 애플리케이션 실행 단위입니다.
 type ServerApp struct {
 	Bot             string
 	Logger          *slog.Logger
@@ -16,7 +16,7 @@ type ServerApp struct {
 	BackgroundTasks []BackgroundTask
 }
 
-// NewServerApp 는 동작을 수행한다.
+// NewServerApp: 새로운 ServerApp 인스턴스를 생성합니다.
 func NewServerApp(
 	bot string,
 	logger *slog.Logger,
@@ -33,7 +33,7 @@ func NewServerApp(
 	}
 }
 
-// Run 는 동작을 수행한다.
+// Run: 애플리케이션(HTTP 서버 및 백그라운드 작업)을 실행합니다.
 func (a *ServerApp) Run(ctx context.Context) error {
 	if a == nil {
 		return nil

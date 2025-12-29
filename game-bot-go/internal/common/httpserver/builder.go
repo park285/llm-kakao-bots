@@ -13,7 +13,7 @@ type ServerOptions struct {
 	MaxHeaderBytes    int
 }
 
-// NewServer: 옵션에 따라 구성된 새로운 HTTP 서버 인스턴스를 생성한다.
+// NewServer: 옵션에 따라 구성된 새로운 HTTP 서버 인스턴스를 생성합니다.
 func NewServer(addr string, handler http.Handler, opts ServerOptions) *http.Server {
 	if handler == nil {
 		handler = http.NewServeMux()

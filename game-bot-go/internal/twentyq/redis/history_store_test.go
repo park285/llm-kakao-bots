@@ -95,10 +95,10 @@ func TestHistoryStore_CorruptedData_Ignored(t *testing.T) {
 	ctx := context.Background()
 	chatID := prefix + "room_history_corrupt"
 
-	// Add valid and invalid data
+	// 유효한 데이터와 무효한 데이터 추가함
 	store.Add(ctx, chatID, qmodel.QuestionHistory{QuestionNumber: 1})
-	// Note: Can't easily inject invalid JSON without direct Redis access
-	// This test verifies the store handles normal data correctly
+	// NOTE: Redis 직접 접근 없이 잘못된 JSON 주입 어려움
+	// 이 테스트는 스토어가 정상 데이터를 올바르게 처리하는지 검증함
 	store.Add(ctx, chatID, qmodel.QuestionHistory{QuestionNumber: 3})
 
 	history, err := store.Get(ctx, chatID)

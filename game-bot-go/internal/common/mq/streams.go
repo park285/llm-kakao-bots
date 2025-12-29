@@ -45,7 +45,7 @@ type StreamConsumer struct {
 	cfg    StreamConsumerConfig
 }
 
-// NewStreamConsumer: 새로운 StreamConsumer 인스턴스를 생성한다.
+// NewStreamConsumer: 새로운 StreamConsumer 인스턴스를 생성합니다.
 func NewStreamConsumer(client valkey.Client, logger *slog.Logger, cfg StreamConsumerConfig) *StreamConsumer {
 	return &StreamConsumer{
 		client: client,
@@ -54,7 +54,7 @@ func NewStreamConsumer(client valkey.Client, logger *slog.Logger, cfg StreamCons
 	}
 }
 
-// Run: 메시지 소비 루프를 실행한다. (블로킹 방식)
+// Run: 메시지 소비 루프를 실행합니다. (블로킹 방식)
 func (c *StreamConsumer) Run(ctx context.Context, handler func(ctx context.Context, msg XMessage) error) error {
 	cfg, err := c.normalizedConfig()
 	if err != nil {

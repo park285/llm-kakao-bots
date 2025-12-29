@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Serve 는 동작을 수행한다.
+// Serve: HTTP 서버를 시작하고 종료 시그널을 적절히 처리하여 우아하게 종료(Graceful Shutdown)합니다.
 func Serve(ctx context.Context, server *http.Server, shutdownTimeout time.Duration) error {
 	errCh := make(chan error, 1)
 

@@ -31,7 +31,7 @@ type CommandParser struct {
 	usageRe            *regexp.Regexp
 }
 
-// NewCommandParser: 주어진 접두사(prefix)를 기반으로 정규식 패턴들을 초기화하여 새로운 CommandParser를 생성한다.
+// NewCommandParser: 주어진 접두사(prefix)를 기반으로 정규식 패턴들을 초기화하여 새로운 CommandParser를 생성합니다.
 func NewCommandParser(prefix string) *CommandParser {
 	base := parser.NewBaseParser(prefix, "/20q")
 	p := &CommandParser{BaseParser: base}
@@ -62,7 +62,7 @@ func NewCommandParser(prefix string) *CommandParser {
 	return p
 }
 
-// Parse: 입력된 메시지 문자열을 분석하여 해당하는 Command 객체로 반환한다.
+// Parse: 입력된 메시지 문자열을 분석하여 해당하는 Command 객체로 반환합니다.
 func (p *CommandParser) Parse(message string) *Command {
 	text := p.TrimMessage(message)
 	if text == "" {
@@ -196,7 +196,7 @@ func (p *CommandParser) parseModelInfo(text string) *Command {
 	return nil
 }
 
-// parseChainedQuestion: 쉼표(,)로 구분된 여러 질문을 포함하는 '체인 질문'을 파싱한다.
+// parseChainedQuestion: 쉼표(,)로 구분된 여러 질문을 포함하는 '체인 질문'을 파싱합니다.
 func (p *CommandParser) parseChainedQuestion(text string) *Command {
 	// 조건부 체인 질문: /스자 if 질문1, 질문2, ...
 	if body := parser.ExtractFirstGroup(p.chainConditionalRe, text); body != "" {
@@ -235,7 +235,7 @@ func (p *CommandParser) parseAsk(text string) *Command {
 	return nil
 }
 
-// parseAdmin: 관리자 전용 명령어를 파싱한다.
+// parseAdmin: 관리자 전용 명령어를 파싱합니다.
 func (p *CommandParser) parseAdmin(text string) *Command {
 	if parser.MatchSimple(p.adminForceEndRe, text) {
 		return &Command{Kind: CommandAdminForceEnd}
@@ -246,7 +246,7 @@ func (p *CommandParser) parseAdmin(text string) *Command {
 	return nil
 }
 
-// parseUserStats: 개인 전적 또는 채팅방 전체 전적 조회 명령을 파싱한다.
+// parseUserStats: 개인 전적 또는 채팅방 전체 전적 조회 명령을 파싱합니다.
 func (p *CommandParser) parseUserStats(text string) *Command {
 	// 방 전적 조회 먼저 (더 구체적인 패턴)
 	if m := p.roomStatsRe.FindStringSubmatch(text); m != nil {
@@ -277,7 +277,7 @@ func (p *CommandParser) parseUserStats(text string) *Command {
 	return nil
 }
 
-// parseUsage: 토큰 사용량 조회 명령을 파싱한다.
+// parseUsage: 토큰 사용량 조회 명령을 파싱합니다.
 func (p *CommandParser) parseUsage(text string) *Command {
 	m := p.usageRe.FindStringSubmatch(text)
 	if m == nil {

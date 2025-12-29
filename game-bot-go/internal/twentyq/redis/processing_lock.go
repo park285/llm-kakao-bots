@@ -17,7 +17,7 @@ type ProcessingLockService struct {
 	service *processinglock.Service
 }
 
-// NewProcessingLockService: 새로운 ProcessingLockService 인스턴스를 생성한다.
+// NewProcessingLockService: 새로운 ProcessingLockService 인스턴스를 생성합니다.
 func NewProcessingLockService(client valkey.Client, logger *slog.Logger) *ProcessingLockService {
 	return &ProcessingLockService{
 		service: processinglock.New(
@@ -29,7 +29,7 @@ func NewProcessingLockService(client valkey.Client, logger *slog.Logger) *Proces
 	}
 }
 
-// StartProcessing: 메시지 처리를 위한 락을 획득한다. 이미 처리 중이면 에러를 반환한다.
+// StartProcessing: 메시지 처리를 위한 락을 획득합니다. 이미 처리 중이면 에러를 반환합니다.
 func (s *ProcessingLockService) StartProcessing(ctx context.Context, chatID string) error {
 	if err := s.service.Start(ctx, chatID); err != nil {
 		return cerrors.RedisError{Operation: "processing_start", Err: err}
@@ -37,7 +37,7 @@ func (s *ProcessingLockService) StartProcessing(ctx context.Context, chatID stri
 	return nil
 }
 
-// FinishProcessing: 메시지 처리가 완료되면 락을 해제한다.
+// FinishProcessing: 메시지 처리가 완료되면 락을 해제합니다.
 func (s *ProcessingLockService) FinishProcessing(ctx context.Context, chatID string) error {
 	if err := s.service.Finish(ctx, chatID); err != nil {
 		return cerrors.RedisError{Operation: "processing_finish", Err: err}
@@ -45,7 +45,7 @@ func (s *ProcessingLockService) FinishProcessing(ctx context.Context, chatID str
 	return nil
 }
 
-// IsProcessing: 현재 해당 채팅방에서 메시지가 처리 중인지 확인한다.
+// IsProcessing: 현재 해당 채팅방에서 메시지가 처리 중인지 확인합니다.
 func (s *ProcessingLockService) IsProcessing(ctx context.Context, chatID string) (bool, error) {
 	processing, err := s.service.IsProcessing(ctx, chatID)
 	if err != nil {

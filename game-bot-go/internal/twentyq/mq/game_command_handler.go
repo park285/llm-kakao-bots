@@ -27,7 +27,7 @@ type GameCommandHandler struct {
 
 type commandHandlerFunc func(context.Context, mqmsg.InboundMessage, Command) ([]string, error)
 
-// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성하고 명령어별 핸들러를 등록한다.
+// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성하고 명령어별 핸들러를 등록합니다.
 func NewGameCommandHandler(
 	gameService *qsvc.RiddleService,
 	statsService *qsvc.StatsService,
@@ -68,7 +68,7 @@ func NewGameCommandHandler(
 	return h
 }
 
-// ProcessCommand: 인입된 메시지와 파싱된 명령어를 바탕으로 적절한 핸들러를 실행하여 응답을 반환한다.
+// ProcessCommand: 인입된 메시지와 파싱된 명령어를 바탕으로 적절한 핸들러를 실행하여 응답을 반환합니다.
 func (h *GameCommandHandler) ProcessCommand(ctx context.Context, message mqmsg.InboundMessage, command Command) ([]string, error) {
 	handler, ok := h.handlers[command.Kind]
 	if !ok {
@@ -233,7 +233,7 @@ func isAnswerCommand(question string) bool {
 	return strings.HasPrefix(strings.ToLower(question), "정답")
 }
 
-// shouldShowHint: 힌트 라인을 표시할지 결정한다.
+// shouldShowHint: 힌트 라인을 표시할지 결정합니다.
 // HintDisplayInterval이 0이면 항상 표시, 양수면 해당 질문 횟수마다 표시.
 func shouldShowHint(hint string, questionCount int) bool {
 	if hint == "" {

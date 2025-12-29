@@ -19,7 +19,7 @@ type HistoryStore struct {
 	logger *slog.Logger
 }
 
-// NewHistoryStore: 새로운 HistoryStore 인스턴스를 생성한다.
+// NewHistoryStore: 새로운 HistoryStore 인스턴스를 생성합니다.
 func NewHistoryStore(client valkey.Client, logger *slog.Logger) *HistoryStore {
 	return &HistoryStore{
 		client: client,
@@ -27,7 +27,7 @@ func NewHistoryStore(client valkey.Client, logger *slog.Logger) *HistoryStore {
 	}
 }
 
-// Get: Redis List(Lrange)를 사용하여 저장된 모든 질문/답변 이력을 시간 순으로 조회한다.
+// Get: Redis List(Lrange)를 사용하여 저장된 모든 질문/답변 이력을 시간 순으로 조회합니다.
 func (s *HistoryStore) Get(ctx context.Context, chatID string) ([]qmodel.QuestionHistory, error) {
 	key := historyKey(chatID)
 
@@ -49,8 +49,8 @@ func (s *HistoryStore) Get(ctx context.Context, chatID string) ([]qmodel.Questio
 	return history, nil
 }
 
-// Add: 새로운 질문/답변 이력을 Redis List의 끝(RPUSH)에 추가하고 TTL을 갱신한다.
-// 원자성을 위해 파이프라인(DoMulti)을 사용한다.
+// Add: 새로운 질문/답변 이력을 Redis List의 끝(RPUSH)에 추가하고 TTL을 갱신합니다.
+// 원자성을 위해 파이프라인(DoMulti)을 사용합니다.
 func (s *HistoryStore) Add(ctx context.Context, chatID string, item qmodel.QuestionHistory) error {
 	key := historyKey(chatID)
 
@@ -72,7 +72,7 @@ func (s *HistoryStore) Add(ctx context.Context, chatID string, item qmodel.Quest
 	return nil
 }
 
-// Clear: 게임 종료나 초기화 시 해당 채팅방의 모든 이력 정보를 삭제한다.
+// Clear: 게임 종료나 초기화 시 해당 채팅방의 모든 이력 정보를 삭제합니다.
 func (s *HistoryStore) Clear(ctx context.Context, chatID string) error {
 	key := historyKey(chatID)
 

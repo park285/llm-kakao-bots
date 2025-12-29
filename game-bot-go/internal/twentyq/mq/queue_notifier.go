@@ -17,7 +17,7 @@ type MessageQueueNotifier struct {
 	logger        *slog.Logger
 }
 
-// NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성한다.
+// NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성합니다.
 func NewMessageQueueNotifier(provider *messageprovider.Provider, commandPrefix string, logger *slog.Logger) *MessageQueueNotifier {
 	return &MessageQueueNotifier{
 		provider:      provider,
@@ -26,7 +26,7 @@ func NewMessageQueueNotifier(provider *messageprovider.Provider, commandPrefix s
 	}
 }
 
-// NotifyProcessingStart: 요청 처리가 시작되었음을 알린다. (주로 긴 작업이 예상될 때)
+// NotifyProcessingStart: 요청 처리가 시작되었음을 알립니다. (주로 긴 작업이 예상될 때)
 func (n *MessageQueueNotifier) NotifyProcessingStart(
 	_ context.Context,
 	chatID string,
@@ -38,7 +38,7 @@ func (n *MessageQueueNotifier) NotifyProcessingStart(
 	return emit(mqmsg.NewWaiting(chatID, notifyText, pending.ThreadID))
 }
 
-// NotifyRetry: 락 획득 실패 등으로 인해 처리가 지연되고 있음을 알린다.
+// NotifyRetry: 락 획득 실패 등으로 인해 처리가 지연되고 있음을 알립니다.
 func (n *MessageQueueNotifier) NotifyRetry(
 	_ context.Context,
 	chatID string,
@@ -50,7 +50,7 @@ func (n *MessageQueueNotifier) NotifyRetry(
 	return emit(mqmsg.NewWaiting(chatID, retryText, pending.ThreadID))
 }
 
-// NotifyDuplicate: 중복된 요청이 큐에 있어 처리 순서를 조정하거나 대기 중임을 알린다.
+// NotifyDuplicate: 중복된 요청이 큐에 있어 처리 순서를 조정하거나 대기 중임을 알립니다.
 func (n *MessageQueueNotifier) NotifyDuplicate(
 	_ context.Context,
 	chatID string,
@@ -62,7 +62,7 @@ func (n *MessageQueueNotifier) NotifyDuplicate(
 	return emit(mqmsg.NewWaiting(chatID, dupText, pending.ThreadID))
 }
 
-// NotifyFailed: 요청 처리가 최종적으로 실패했음을 알린다. (대기열 가득 참 등)
+// NotifyFailed: 요청 처리가 최종적으로 실패했음을 알립니다. (대기열 가득 참 등)
 func (n *MessageQueueNotifier) NotifyFailed(
 	_ context.Context,
 	chatID string,
@@ -74,7 +74,7 @@ func (n *MessageQueueNotifier) NotifyFailed(
 	return emit(mqmsg.NewFinal(chatID, failedText, pending.ThreadID))
 }
 
-// NotifyError: 처리 도중 발생한 에러를 사용자 친화적인 메시지로 변환하여 알린다.
+// NotifyError: 처리 도중 발생한 에러를 사용자 친화적인 메시지로 변환하여 알립니다.
 func (n *MessageQueueNotifier) NotifyError(
 	_ context.Context,
 	chatID string,

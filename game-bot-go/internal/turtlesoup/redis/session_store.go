@@ -20,7 +20,7 @@ type SessionStore struct {
 	logger *slog.Logger
 }
 
-// NewSessionStore: 새로운 SessionStore 인스턴스를 생성한다.
+// NewSessionStore: 새로운 SessionStore 인스턴스를 생성합니다.
 func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	return &SessionStore{
 		client: client,
@@ -28,7 +28,7 @@ func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	}
 }
 
-// SaveGameState: 현재 게임 상태 객체(GameState)를 JSON으로 직렬화하여 Redis에 저장한다. (TTL 갱신 포함)
+// SaveGameState: 현재 게임 상태 객체(GameState)를 JSON으로 직렬화하여 Redis에 저장합니다. (TTL 갱신 포함)
 func (s *SessionStore) SaveGameState(ctx context.Context, state tsmodel.GameState) error {
 	key := sessionKey(state.SessionID)
 
@@ -46,8 +46,8 @@ func (s *SessionStore) SaveGameState(ctx context.Context, state tsmodel.GameStat
 	return nil
 }
 
-// LoadGameState: Redis에 저장된 JSON 데이터를 조회하여 GameState 객체로 역직렬화한다.
-// 데이터가 없거나 만료된 경우 nil을 반환한다.
+// LoadGameState: Redis에 저장된 JSON 데이터를 조회하여 GameState 객체로 역직렬화합니다.
+// 데이터가 없거나 만료된 경우 nil을 반환합니다.
 func (s *SessionStore) LoadGameState(ctx context.Context, sessionID string) (*tsmodel.GameState, error) {
 	key := sessionKey(sessionID)
 
@@ -66,7 +66,7 @@ func (s *SessionStore) LoadGameState(ctx context.Context, sessionID string) (*ts
 	return &state, nil
 }
 
-// DeleteSession: 게임 종료 시 해당 게임 세션의 데이터를 Redis에서 영구 삭제한다.
+// DeleteSession: 게임 종료 시 해당 게임 세션의 데이터를 Redis에서 영구 삭제합니다.
 func (s *SessionStore) DeleteSession(ctx context.Context, sessionID string) error {
 	key := sessionKey(sessionID)
 
@@ -77,7 +77,7 @@ func (s *SessionStore) DeleteSession(ctx context.Context, sessionID string) erro
 	return nil
 }
 
-// SessionExists: 세션이 존재하는지 확인한다.
+// SessionExists: 세션이 존재하는지 확인합니다.
 func (s *SessionStore) SessionExists(ctx context.Context, sessionID string) (bool, error) {
 	key := sessionKey(sessionID)
 
@@ -89,7 +89,7 @@ func (s *SessionStore) SessionExists(ctx context.Context, sessionID string) (boo
 	return n > 0, nil
 }
 
-// RefreshTTL: 세션의 TTL을 연장한다.
+// RefreshTTL: 세션의 TTL을 연장합니다.
 func (s *SessionStore) RefreshTTL(ctx context.Context, sessionID string) (bool, error) {
 	key := sessionKey(sessionID)
 

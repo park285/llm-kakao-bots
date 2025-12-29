@@ -22,7 +22,7 @@ type SessionStore struct {
 	logger *slog.Logger
 }
 
-// NewSessionStore: 새로운 SessionStore 인스턴스를 생성한다.
+// NewSessionStore: 새로운 SessionStore 인스턴스를 생성합니다.
 func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	return &SessionStore{
 		client: client,
@@ -30,7 +30,7 @@ func NewSessionStore(client valkey.Client, logger *slog.Logger) *SessionStore {
 	}
 }
 
-// SaveSecret: 게임의 정답(비밀) 정보를 Redis에 저장한다. (TTL 설정됨)
+// SaveSecret: 게임의 정답(비밀) 정보를 Redis에 저장합니다. (TTL 설정됨)
 func (s *SessionStore) SaveSecret(ctx context.Context, chatID string, secret qmodel.RiddleSecret) error {
 	key := sessionKey(chatID)
 
@@ -48,7 +48,7 @@ func (s *SessionStore) SaveSecret(ctx context.Context, chatID string, secret qmo
 	return nil
 }
 
-// GetSecret: 현재 진행 중인 게임의 정답 정보를 조회한다. (없으면 nil 반환)
+// GetSecret: 현재 진행 중인 게임의 정답 정보를 조회합니다. (없으면 nil 반환)
 func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.RiddleSecret, error) {
 	key := sessionKey(chatID)
 
@@ -67,7 +67,7 @@ func (s *SessionStore) GetSecret(ctx context.Context, chatID string) (*qmodel.Ri
 	return &secret, nil
 }
 
-// Delete: 게임 세션(정답 정보)을 삭제한다. (게임 종료 시)
+// Delete: 게임 세션(정답 정보)을 삭제합니다. (게임 종료 시)
 func (s *SessionStore) Delete(ctx context.Context, chatID string) error {
 	key := sessionKey(chatID)
 
@@ -78,7 +78,7 @@ func (s *SessionStore) Delete(ctx context.Context, chatID string) error {
 	return nil
 }
 
-// Exists: 특정 채팅방에 진행 중인 게임 세션이 존재하는지 확인한다.
+// Exists: 특정 채팅방에 진행 중인 게임 세션이 존재하는지 확인합니다.
 func (s *SessionStore) Exists(ctx context.Context, chatID string) (bool, error) {
 	key := sessionKey(chatID)
 
@@ -90,7 +90,7 @@ func (s *SessionStore) Exists(ctx context.Context, chatID string) (bool, error) 
 	return n > 0, nil
 }
 
-// RefreshTTL: 세션의 유효 기간(TTL)을 초기화하여 연장한다.
+// RefreshTTL: 세션의 유효 기간(TTL)을 초기화하여 연장합니다.
 func (s *SessionStore) RefreshTTL(ctx context.Context, chatID string) (bool, error) {
 	key := sessionKey(chatID)
 
@@ -102,7 +102,7 @@ func (s *SessionStore) RefreshTTL(ctx context.Context, chatID string) (bool, err
 	return ok, nil
 }
 
-// Get: GetSecret의 별칭으로, 세션 정보를 조회한다.
+// Get: GetSecret의 별칭으로, 세션 정보를 조회합니다.
 func (s *SessionStore) Get(ctx context.Context, chatID string) (*qmodel.RiddleSecret, error) {
 	return s.GetSecret(ctx, chatID)
 }
@@ -113,8 +113,8 @@ type PlayerInfo struct {
 	Sender string
 }
 
-// GetPlayerByNickname: 현재 세션의 참여자 목록에서 닉네임(Sender)을 기준으로 플레이어 정보를 조회한다.
-// 닉네임 매칭은 대소문자를 구분하지 않으며, 일치하는 사용자가 없거나 조회 실패 시 nil을 반환한다.
+// GetPlayerByNickname: 현재 세션의 참여자 목록에서 닉네임(Sender)을 기준으로 플레이어 정보를 조회합니다.
+// 닉네임 매칭은 대소문자를 구분하지 않으며, 일치하는 사용자가 없거나 조회 실패 시 nil을 반환합니다.
 func (s *SessionStore) GetPlayerByNickname(ctx context.Context, chatID string, nickname string) *PlayerInfo {
 	nickname = strings.TrimSpace(nickname)
 	if nickname == "" {
@@ -148,7 +148,7 @@ func (s *SessionStore) GetPlayerByNickname(ctx context.Context, chatID string, n
 	return nil
 }
 
-// ClearAllData: 채팅방에 연관된 모든 스무고개/바다거북스프 관련 Redis 데이터(세션, 히스토리, 락 등)를 삭제한다. (초기화)
+// ClearAllData: 채팅방에 연관된 모든 스무고개/바다거북스프 관련 Redis 데이터(세션, 히스토리, 락 등)를 삭제합니다. (초기화)
 func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {

@@ -20,7 +20,7 @@ type LockManager struct {
 	redisCallTimeout time.Duration
 }
 
-// NewLockManager: 새로운 LockManager 인스턴스를 생성하고 Redis 클라이언트를 설정한다.
+// NewLockManager: 새로운 LockManager 인스턴스를 생성하고 Redis 클라이언트를 설정합니다.
 func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	registry := luautil.NewRegistry([]luautil.Script{
 		{Name: luautil.ScriptLockAcquire, Source: qassets.LockAcquireLua},
@@ -38,7 +38,7 @@ func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 	}
 }
 
-// WithLock: 배타적 락을 획득한 상태에서 작업을 수행한다. (재진입 가능, Context Scope)
+// WithLock: 배타적 락을 획득한 상태에서 작업을 수행합니다. (재진입 가능, Context Scope)
 func (m *LockManager) WithLock(ctx context.Context, chatID string, holderName *string, block func(ctx context.Context) error) error {
 	return m.withLock(ctx, chatID, holderName, block)
 }

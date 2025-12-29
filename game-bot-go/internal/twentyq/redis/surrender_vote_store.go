@@ -22,7 +22,7 @@ type SurrenderVoteStore struct {
 	logger *slog.Logger
 }
 
-// NewSurrenderVoteStore: 새로운 SurrenderVoteStore 인스턴스를 생성한다.
+// NewSurrenderVoteStore: 새로운 SurrenderVoteStore 인스턴스를 생성합니다.
 func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *SurrenderVoteStore {
 	return &SurrenderVoteStore{
 		client: client,
@@ -30,7 +30,7 @@ func NewSurrenderVoteStore(client valkey.Client, logger *slog.Logger) *Surrender
 	}
 }
 
-// Get: 현재 진행 중인 투표 상태(찬성자 목록, 만료 시간 등)를 조회한다.
+// Get: 현재 진행 중인 투표 상태(찬성자 목록, 만료 시간 등)를 조회합니다.
 func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*qmodel.SurrenderVote, error) {
 	key := voteKey(chatID)
 
@@ -49,7 +49,7 @@ func (s *SurrenderVoteStore) Get(ctx context.Context, chatID string) (*qmodel.Su
 	return &vote, nil
 }
 
-// Save: 변경된 투표 상태를 Redis에 저장(덮어쓰기)하고 TTL을 설정한다.
+// Save: 변경된 투표 상태를 Redis에 저장(덮어쓰기)하고 TTL을 설정합니다.
 func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote qmodel.SurrenderVote) error {
 	key := voteKey(chatID)
 
@@ -65,7 +65,7 @@ func (s *SurrenderVoteStore) Save(ctx context.Context, chatID string, vote qmode
 	return nil
 }
 
-// Clear: 투표가 종료되거나 취소되었을 때 데이터를 삭제한다.
+// Clear: 투표가 종료되거나 취소되었을 때 데이터를 삭제합니다.
 func (s *SurrenderVoteStore) Clear(ctx context.Context, chatID string) error {
 	key := voteKey(chatID)
 	if err := valkeyx.DeleteKeys(ctx, s.client, key); err != nil {
@@ -74,7 +74,7 @@ func (s *SurrenderVoteStore) Clear(ctx context.Context, chatID string) error {
 	return nil
 }
 
-// Exists: 현재 활성화된(진행 중인) 투표가 있는지 키 존재 여부로 확인한다.
+// Exists: 현재 활성화된(진행 중인) 투표가 있는지 키 존재 여부로 확인합니다.
 func (s *SurrenderVoteStore) Exists(ctx context.Context, chatID string) (bool, error) {
 	key := voteKey(chatID)
 	cmd := s.client.B().Exists().Key(key).Build()
@@ -85,8 +85,8 @@ func (s *SurrenderVoteStore) Exists(ctx context.Context, chatID string) (bool, e
 	return n > 0, nil
 }
 
-// Approve: 특정 사용자의 '찬성' 의사를 투표 상태에 반영한다.
-// 투표 상태를 조회(Get)하고, 찬성 처리(Approve) 후, 다시 저장(Save)하는 과정을 수행한다.
+// Approve: 특정 사용자의 '찬성' 의사를 투표 상태에 반영합니다.
+// 투표 상태를 조회(Get)하고, 찬성 처리(Approve) 후, 다시 저장(Save)하는 과정을 수행합니다.
 func (s *SurrenderVoteStore) Approve(ctx context.Context, chatID string, userID string) (*qmodel.SurrenderVote, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

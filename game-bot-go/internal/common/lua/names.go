@@ -2,8 +2,9 @@ package lua
 
 // 공통 스크립트 이름 상수.
 const (
-	ScriptPendingEnqueue = "pending_enqueue"
-	ScriptPendingDequeue = "pending_dequeue"
+	ScriptPendingEnqueue      = "pending_enqueue"
+	ScriptPendingDequeue      = "pending_dequeue"
+	ScriptPendingDequeueBatch = "pending_dequeue_batch"
 )
 
 // twentyq 스크립트 이름 상수.

@@ -26,14 +26,14 @@ type Config struct {
 	MinIdleConns int
 
 	// DisableCache: 클라이언트 사이드 캐싱(Client Side Caching) 기능을 비활성화할지 여부.
-	// 일반적으로 로컬 테스트 환경이나 miniredis 사용 시 true로 설정한다.
+	// 일반적으로 로컬 테스트 환경이나 miniredis 사용 시 true로 설정합니다.
 	DisableCache bool
 
 	// UseTLS: TLS(SSL) 연결 사용 여부.
 	UseTLS bool
 }
 
-// NewClient: 주어진 설정을 바탕으로 Valkey 클라이언트 인스턴스를 생성하고 초기화한다.
+// NewClient: 주어진 설정을 바탕으로 Valkey 클라이언트 인스턴스를 생성하고 초기화합니다.
 func NewClient(cfg Config) (valkey.Client, error) {
 	addr := strings.TrimSpace(cfg.Addr)
 	if addr == "" {
@@ -66,7 +66,7 @@ func NewClient(cfg Config) (valkey.Client, error) {
 		opts.Dialer.Timeout = cfg.DialTimeout
 	}
 
-	// PoolSize/MinIdleConns는 BlockingPool 설정으로 매핑한다.
+	// PoolSize/MinIdleConns는 BlockingPool 설정으로 매핑합니다.
 	if cfg.PoolSize > 0 {
 		opts.BlockingPoolSize = cfg.PoolSize
 	}
@@ -90,7 +90,7 @@ func NewClient(cfg Config) (valkey.Client, error) {
 	return client, nil
 }
 
-// Ping: Valkey 서버와의 연결 상태를 점검한다. (PING 명령 전송)
+// Ping: Valkey 서버와의 연결 상태를 점검합니다. (PING 명령 전송)
 func Ping(ctx context.Context, client valkey.Client) error {
 	if client == nil {
 		return errors.New("valkey client is nil")
@@ -102,8 +102,8 @@ func Ping(ctx context.Context, client valkey.Client) error {
 	return nil
 }
 
-// IsNil: 발생한 에러가 Valkey nil(키가 없음) 에러인지 확인한다.
-// 에러 래핑을 고려하여 언래핑 후 검사를 수행한다.
+// IsNil: 발생한 에러가 Valkey nil(키가 없음) 에러인지 확인합니다.
+// 에러 래핑을 고려하여 언래핑 후 검사를 수행합니다.
 func IsNil(err error) bool {
 	if valkey.IsValkeyNil(err) {
 		return true
@@ -119,20 +119,20 @@ func IsNil(err error) bool {
 	return false
 }
 
-// IsNoScript: Lua 스크립트 SHA가 서버에 존재하지 않을 때 발생하는 NOSCRIPT 에러인지 확인한다.
-// 에러 래핑을 고려하여 언래핑 후 검사를 수행한다.
+// IsNoScript: Lua 스크립트 SHA가 서버에 존재하지 않을 때 발생하는 NOSCRIPT 에러인지 확인합니다.
+// 에러 래핑을 고려하여 언래핑 후 검사를 수행합니다.
 func IsNoScript(err error) bool {
 	return containsValkeyErrorPrefix(err, "NOSCRIPT")
 }
 
-// IsBusyGroup: 소비자 그룹이 이미 존재할 때 발생하는 BUSYGROUP 에러인지 확인한다.
-// Redis Streams의 XGROUP CREATE 명령어 실행 시 발생할 수 있다.
+// IsBusyGroup: 소비자 그룹이 이미 존재할 때 발생하는 BUSYGROUP 에러인지 확인합니다.
+// Redis Streams의 XGROUP CREATE 명령어 실행 시 발생할 수 있습니다.
 func IsBusyGroup(err error) bool {
 	return containsValkeyErrorPrefix(err, "BUSYGROUP")
 }
 
-// containsValkeyErrorPrefix: Valkey 에러 메시지가 특정 접두사로 시작하는지 확인한다.
-// valkey-go의 ValkeyError 타입을 활용하여 에러 체크를 수행한다.
+// containsValkeyErrorPrefix: Valkey 에러 메시지가 특정 접두사로 시작하는지 확인합니다.
+// valkey-go의 ValkeyError 타입을 활용하여 에러 체크를 수행합니다.
 func containsValkeyErrorPrefix(err error, prefix string) bool {
 	if err == nil {
 		return false
@@ -150,15 +150,15 @@ func containsValkeyErrorPrefix(err error, prefix string) bool {
 	return strings.Contains(err.Error(), prefix)
 }
 
-// Close: Valkey 클라이언트 연결을 안전하게 종료한다.
+// Close: Valkey 클라이언트 연결을 안전하게 종료합니다.
 func Close(client valkey.Client) {
 	if client != nil {
 		client.Close()
 	}
 }
 
-// GetBytes 는 Valkey에서 key 값을 bytes로 조회한다.
-// 키가 없으면 (nil, false, nil)을 반환한다.
+// GetBytes: Valkey에서 key 값을 bytes로 조회합니다.
+// 키가 없으면 (nil, false, nil)을 반환합니다.
 func GetBytes(ctx context.Context, client valkey.Client, key string) ([]byte, bool, error) {
 	if client == nil {
 		return nil, false, errors.New("valkey client is nil")
@@ -175,7 +175,7 @@ func GetBytes(ctx context.Context, client valkey.Client, key string) ([]byte, bo
 	return raw, true, nil
 }
 
-// SetStringEX 는 Valkey에 값을 저장하고 ttl이 0보다 크면 TTL을 설정한다.
+// SetStringEX: Valkey에 값을 저장하고 ttl이 0보다 크면 TTL을 설정합니다.
 func SetStringEX(ctx context.Context, client valkey.Client, key string, value string, ttl time.Duration) error {
 	if client == nil {
 		return errors.New("valkey client is nil")
@@ -194,7 +194,7 @@ func SetStringEX(ctx context.Context, client valkey.Client, key string, value st
 	return nil
 }
 
-// DeleteKeys 는 지정한 key 목록을 삭제한다.
+// DeleteKeys: 지정한 key 목록을 삭제합니다.
 func DeleteKeys(ctx context.Context, client valkey.Client, keys ...string) error {
 	if client == nil {
 		return errors.New("valkey client is nil")

@@ -7,7 +7,7 @@ import (
 // ReplyPublisher: commonmq.ReplyPublisher alias
 type ReplyPublisher = commonmq.ReplyPublisher
 
-// NewReplyPublisher: 새로운 ReplyPublisher 인스턴스를 생성한다.
+// NewReplyPublisher: 새로운 ReplyPublisher 인스턴스를 생성합니다.
 func NewReplyPublisher(publisher *commonmq.StreamPublisher) *ReplyPublisher {
 	return commonmq.NewReplyPublisher(publisher)
 }

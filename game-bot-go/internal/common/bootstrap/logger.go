@@ -15,7 +15,7 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// NewLogger 는 동작을 수행한다.
+// NewLogger: 기본 slog 로거를 생성합니다. (stdout, tint 핸들러 사용)
 func NewLogger() *slog.Logger {
 	return slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelInfo,
@@ -24,7 +24,7 @@ func NewLogger() *slog.Logger {
 	}))
 }
 
-// EnableFileLogging 는 동작을 수행한다.
+// EnableFileLogging: 파일 로깅을 활성화하고, 파일과 stdout에 동시에 출력하는 로거를 반환합니다.
 func EnableFileLogging(cfg commonconfig.LogConfig, fileName string) (*slog.Logger, error) {
 	logDir := strings.TrimSpace(cfg.Dir)
 	if logDir == "" {

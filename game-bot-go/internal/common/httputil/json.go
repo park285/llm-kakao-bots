@@ -23,7 +23,7 @@ const (
 // ErrEmptyBody: 요청 바디가 비어있을 때 발생하는 에러
 var ErrEmptyBody = errors.New("empty request body")
 
-// ReadJSON: HTTP 요청 바디에서 JSON을 읽어 대상 구조체로 디코딩한다.
+// ReadJSON: HTTP 요청 바디에서 JSON을 읽어 대상 구조체로 디코딩합니다.
 func ReadJSON(r *http.Request, out any, maxBytes int64) error {
 	if r.Body == nil {
 		return ErrEmptyBody
@@ -41,7 +41,7 @@ func ReadJSON(r *http.Request, out any, maxBytes int64) error {
 	return nil
 }
 
-// WriteJSON: 데이터를 JSON으로 인코딩하여 HTTP 응답으로 전송한다.
+// WriteJSON: 데이터를 JSON으로 인코딩하여 HTTP 응답으로 전송합니다.
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.Header().Set("Content-Type", ContentTypeJSON)
 	w.WriteHeader(status)
@@ -60,7 +60,7 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
-// WriteErrorJSON: 에러 코드와 메시지를 포함한 표준 에러 응답을 전송한다.
+// WriteErrorJSON: 에러 코드와 메시지를 포함한 표준 에러 응답을 전송합니다.
 func WriteErrorJSON(w http.ResponseWriter, status int, code string, message string) error {
 	return WriteJSON(w, status, ErrorResponse{
 		Error:   strings.TrimSpace(code),

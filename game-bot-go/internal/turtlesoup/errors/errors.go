@@ -1,5 +1,5 @@
-// Package errors: 바다거북스프(Turtle Soup) 게임에 특화된 에러 타입들을 정의한다.
-// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용한다.
+// Package errors: 바다거북스프(Turtle Soup) 게임에 특화된 에러 타입들을 정의합니다.
+// 공통 에러 타입(RedisError, LockError 등)은 common/errors 패키지를 직접 사용합니다.
 package errors
 
 import (
@@ -66,7 +66,7 @@ func (e PuzzleGenerationError) Error() string {
 
 func (e PuzzleGenerationError) Unwrap() error { return e.Err }
 
-// IsExpectedUserBehavior: 에러가 사용자의 정상적인(예상된) 패턴 내의 실수인지 확인한다.
+// IsExpectedUserBehavior: 에러가 사용자의 정상적인(예상된) 패턴 내의 실수인지 확인합니다.
 // (로그 레벨을 낮추거나 사용자에게 친절한 메시지를 보내는 용도)
 func IsExpectedUserBehavior(err error) bool {
 	if err == nil {

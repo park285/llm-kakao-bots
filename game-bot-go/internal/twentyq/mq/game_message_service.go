@@ -21,7 +21,7 @@ import (
 )
 
 // GameMessageService: 스무고개/바다거북스프 게임의 메시지 흐름을 총괄하는 오케스트레이터
-// 명령어 파싱, 락 관리, 비즈니스 로직 실행, 대기열 처리 및 응답 전송을 조정한다.
+// 명령어 파싱, 락 관리, 비즈니스 로직 실행, 대기열 처리 및 응답 전송을 조정합니다.
 type GameMessageService struct {
 	commandHandler         *GameCommandHandler
 	playerRegistrar        PlayerRegistrar
@@ -49,7 +49,7 @@ type hintAvailabilityChecker interface {
 	CanGenerateHint(ctx context.Context, chatID string) (bool, error)
 }
 
-// NewGameMessageService: 모든 종속성을 주입받아 GameMessageService 인스턴스를 생성한다.
+// NewGameMessageService: 모든 종속성을 주입받아 GameMessageService 인스턴스를 생성합니다.
 func NewGameMessageService(
 	commandHandler *GameCommandHandler,
 	playerRegistrar PlayerRegistrar,
@@ -83,8 +83,8 @@ func NewGameMessageService(
 	}
 }
 
-// HandleMessage: Kafka/Streams 등으로부터 수신된 인바운드 메시지를 처리한다.
-// 명령어를 파싱하고, 권한 및 세션을 확인한 뒤, 적절한 처리 과정(즉시 실행 또는 큐잉)으로 라우팅한다.
+// HandleMessage: Kafka/Streams 등으로부터 수신된 인바운드 메시지를 처리합니다.
+// 명령어를 파싱하고, 권한 및 세션을 확인한 뒤, 적절한 처리 과정(즉시 실행 또는 큐잉)으로 라우팅합니다.
 func (s *GameMessageService) HandleMessage(ctx context.Context, message mqmsg.InboundMessage) {
 	cmd := s.commandParser.Parse(message.Content)
 	if cmd == nil {
@@ -161,7 +161,7 @@ func (s *GameMessageService) handleCommand(ctx context.Context, message mqmsg.In
 	s.processQueuedMessages(ctx, chatID)
 }
 
-// enqueueMessage: 현재 요청을 처리할 수 없는 상황(락 획득 실패, 처리 중 등)일 때 Redis 대기열에 메시지를 추가한다.
+// enqueueMessage: 현재 요청을 처리할 수 없는 상황(락 획득 실패, 처리 중 등)일 때 Redis 대기열에 메시지를 추가합니다.
 func (s *GameMessageService) enqueueMessage(ctx context.Context, message mqmsg.InboundMessage) {
 	s.logger.Debug("message_enqueued", "chat_id", message.ChatID, "user_id", message.UserID)
 	_ = s.queueProcessor.EnqueueAndNotify(ctx, message.ChatID, message.UserID, message.Content, message.ThreadID, message.Sender, func(out mqmsg.OutboundMessage) error {
@@ -323,8 +323,8 @@ func (s *GameMessageService) sendFinalResponses(ctx context.Context, message mqm
 	return nil
 }
 
-// HandleQueuedCommand: 대기열(Pending Queue)에서 꺼낸 명령어를 처리한다.
-// 락을 이미 획득했거나 처리 가능한 상태라고 가정하고 실행한다.
+// HandleQueuedCommand: 대기열(Pending Queue)에서 꺼낸 명령어를 처리합니다.
+// 락을 이미 획득했거나 처리 가능한 상태라고 가정하고 실행합니다.
 func (s *GameMessageService) HandleQueuedCommand(
 	ctx context.Context,
 	message mqmsg.InboundMessage,
@@ -380,7 +380,7 @@ func emitChunkedResponses(chatID string, threadID *string, responses []string, e
 	return nil
 }
 
-// HandleQueuedChainBatch: 대기열에서 꺼낸 연쇄 질문(Chain Question) 배치 그룹을 처리한다.
+// HandleQueuedChainBatch: 대기열에서 꺼낸 연쇄 질문(Chain Question) 배치 그룹을 처리합니다.
 func (s *GameMessageService) HandleQueuedChainBatch(
 	ctx context.Context,
 	chatID string,

@@ -68,7 +68,7 @@ type TwentyQSynonymResponse struct {
 	RawText string  `json:"raw_text"`
 }
 
-// TwentyQGenerateHints: 힌트를 생성 요청을 전송한다.
+// TwentyQGenerateHints: 힌트를 생성 요청을 전송합니다.
 func (c *Client) TwentyQGenerateHints(ctx context.Context, target string, category string, details map[string]any) (*TwentyQHintsResponse, error) {
 	req := TwentyQHintsRequest{Target: target, Category: category, Details: details}
 	var out TwentyQHintsResponse
@@ -78,7 +78,7 @@ func (c *Client) TwentyQGenerateHints(ctx context.Context, target string, catego
 	return &out, nil
 }
 
-// TwentyQAnswerQuestion: 질문에 대한 답변 요청을 전송한다.
+// TwentyQAnswerQuestion: 질문에 대한 답변 요청을 전송합니다.
 func (c *Client) TwentyQAnswerQuestion(
 	ctx context.Context,
 	chatID string,
@@ -104,7 +104,7 @@ func (c *Client) TwentyQAnswerQuestion(
 	return &out, nil
 }
 
-// TwentyQVerifyGuess: 정답 추측 검증 요청을 전송한다.
+// TwentyQVerifyGuess: 정답 추측 검증 요청을 전송합니다.
 func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess string) (*TwentyQVerifyResponse, error) {
 	req := TwentyQVerifyRequest{Target: target, Guess: guess}
 	var out TwentyQVerifyResponse
@@ -114,7 +114,7 @@ func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess st
 	return &out, nil
 }
 
-// TwentyQNormalizeQuestion: 질문 정규화 요청을 전송한다.
+// TwentyQNormalizeQuestion: 질문 정규화 요청을 전송합니다.
 func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) (*TwentyQNormalizeResponse, error) {
 	req := TwentyQNormalizeRequest{Question: question}
 	var out TwentyQNormalizeResponse
@@ -124,7 +124,7 @@ func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) 
 	return &out, nil
 }
 
-// TwentyQCheckSynonym: 동의어 여부 확인 요청을 전송한다.
+// TwentyQCheckSynonym: 동의어 여부 확인 요청을 전송합니다.
 func (c *Client) TwentyQCheckSynonym(ctx context.Context, target string, guess string) (*TwentyQSynonymResponse, error) {
 	req := TwentyQSynonymRequest{Target: target, Guess: guess}
 	var out TwentyQSynonymResponse
@@ -153,7 +153,7 @@ type TwentyQCategoriesResponse struct {
 	Categories []string `json:"categories"`
 }
 
-// TwentyQSelectTopic: 조건에 맞는 토픽을 선택 요청한다.
+// TwentyQSelectTopic: 조건에 맞는 토픽을 선택 요청합니다.
 func (c *Client) TwentyQSelectTopic(ctx context.Context, category string, bannedTopics []string, excludedCategories []string) (*TwentyQSelectTopicResponse, error) {
 	req := TwentyQSelectTopicRequest{
 		Category:           category,
@@ -167,7 +167,7 @@ func (c *Client) TwentyQSelectTopic(ctx context.Context, category string, banned
 	return &out, nil
 }
 
-// TwentyQGetCategories: 사용 가능한 카테고리 목록을 조회한다.
+// TwentyQGetCategories: 사용 가능한 카테고리 목록을 조회합니다.
 func (c *Client) TwentyQGetCategories(ctx context.Context) (*TwentyQCategoriesResponse, error) {
 	var out TwentyQCategoriesResponse
 	if err := c.Get(ctx, "/api/twentyq/topics/categories", &out); err != nil {

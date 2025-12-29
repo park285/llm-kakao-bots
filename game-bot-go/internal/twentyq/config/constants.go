@@ -12,6 +12,7 @@ const (
 	MQReadTimeoutMS           = commonconfig.MQReadTimeoutMS
 	MQStreamMaxLen            = commonconfig.MQStreamMaxLen
 	QueueMaxDequeueIterations = commonconfig.QueueMaxDequeueIterations
+	QueueDequeueBatchSize     = commonconfig.QueueDequeueBatchSize
 	RedisVoteTTLSeconds       = commonconfig.RedisVoteTTLSeconds
 	RedisQueueTTLSeconds      = commonconfig.RedisQueueTTLSeconds
 	RedisMaxQueueSize         = commonconfig.RedisMaxQueueSize

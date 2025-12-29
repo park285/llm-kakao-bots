@@ -8,7 +8,7 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 )
 
-// Initialize 는 TwentyQ 애플리케이션 의존성을 초기화하고 ServerApp을 반환한다.
+// Initialize: TwentyQ 애플리케이션 의존성을 초기화하고 ServerApp을 반환합니다.
 func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*bootstrap.ServerApp, func(), error) {
 	restClient, err := newTwentyQRestClient(cfg)
 	if err != nil {

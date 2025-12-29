@@ -40,7 +40,7 @@ type Client struct {
 	retryDelay       time.Duration
 }
 
-// New: 새로운 Client 인스턴스를 생성하고 초기화한다.
+// New: 새로운 Client 인스턴스를 생성하고 초기화합니다.
 func New(cfg Config) (*Client, error) {
 	parsedBaseURL, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
 	if err != nil {
@@ -124,22 +124,22 @@ func responseBodyReader(resp *http.Response) (io.Reader, func(), error) {
 	return gzipReader, func() { _ = gzipReader.Close() }, nil
 }
 
-// Get: HTTP GET 요청을 전송한다.
+// Get: HTTP GET 요청을 전송합니다.
 func (c *Client) Get(ctx context.Context, path string, out any) error {
 	return c.doJSON(ctx, http.MethodGet, path, nil, nil, out)
 }
 
-// Post: HTTP POST 요청을 전송한다.
+// Post: HTTP POST 요청을 전송합니다.
 func (c *Client) Post(ctx context.Context, path string, in any, out any) error {
 	return c.doJSON(ctx, http.MethodPost, path, in, nil, out)
 }
 
-// Delete: HTTP DELETE 요청을 전송한다.
+// Delete: HTTP DELETE 요청을 전송합니다.
 func (c *Client) Delete(ctx context.Context, path string, out any) error {
 	return c.doJSON(ctx, http.MethodDelete, path, nil, nil, out)
 }
 
-// GetWithHeaders: 헤더를 포함하여 HTTP GET 요청을 전송한다.
+// GetWithHeaders: 헤더를 포함하여 HTTP GET 요청을 전송합니다.
 func (c *Client) GetWithHeaders(ctx context.Context, path string, headers map[string]string, out any) error {
 	return c.doJSON(ctx, http.MethodGet, path, nil, headers, out)
 }
@@ -183,7 +183,7 @@ func (c *Client) doJSON(
 		}
 
 		if c.retryDelay > 0 {
-			// Jitter: Thundering Herd 문제를 방지하기 위해 0.8~1.2 배수의 무작위 지연 시간을 적용한다.
+			// Jitter: Thundering Herd 문제를 방지하기 위해 0.8~1.2 배수의 무작위 지연 시간을 적용합니다.
 			jitter := time.Duration(float64(c.retryDelay) * (0.8 + rand.Float64()*0.4))
 			timer := time.NewTimer(jitter)
 			select {
@@ -206,7 +206,7 @@ func (c *Client) doJSONOnce(
 	headers map[string]string,
 	out any,
 ) error {
-	// JoinPath: URL 경로를 안전하게 결합하고 슬래시를 정리한다.
+	// JoinPath: URL 경로를 안전하게 결합하고 슬래시를 정리합니다.
 	fullURL := c.baseURL.JoinPath(path)
 
 	var body io.Reader

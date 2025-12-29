@@ -14,7 +14,7 @@ import (
 )
 
 // Store: 대기 메시지 큐(Pending Message Queue)를 Redis에 저장하고 관리하는 공통 저장소 구현체
-// Valkey(Redis) 클라이언트와 Lua 스크립트를 사용하여 원자적(Atomic) 연산을 수행한다.
+// Valkey(Redis) 클라이언트와 Lua 스크립트를 사용하여 원자적(Atomic) 연산을 수행합니다.
 type Store struct {
 	client   valkey.Client
 	logger   *slog.Logger
@@ -22,11 +22,12 @@ type Store struct {
 	registry *luautil.Registry
 }
 
-// NewStore: 새로운 Store 인스턴스를 생성한다.
+// NewStore: 새로운 Store 인스턴스를 생성합니다.
 func NewStore(client valkey.Client, logger *slog.Logger, config Config) *Store {
 	registry := luautil.NewRegistry([]luautil.Script{
 		{Name: luautil.ScriptPendingEnqueue, Source: enqueueLua},
 		{Name: luautil.ScriptPendingDequeue, Source: dequeueLua},
+		{Name: luautil.ScriptPendingDequeueBatch, Source: dequeueBatchLua},
 	})
 	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
 		logger.Warn("lua_preload_failed", "component", "pending_store", "err", err)
@@ -50,13 +51,13 @@ type DequeueResult struct {
 	RawJSON string
 }
 
-// Enqueue: 메시지를 JSON 형태로 대기열에 추가한다.
-// Lua 스크립트를 사용하여 중복 체크(UserID 기준)와 용량 제한을 원자적으로 처리한다.
+// Enqueue: 메시지를 JSON 형태로 대기열에 추가합니다.
+// Lua 스크립트를 사용하여 중복 체크(UserID 기준)와 용량 제한을 원자적으로 처리합니다.
 func (s *Store) Enqueue(ctx context.Context, chatID string, userID string, timestamp int64, jsonValue string) (EnqueueResult, error) {
 	return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, false)
 }
 
-// EnqueueReplacingDuplicate: 메시지를 대기열에 추가하되, 동일 UserID의 중복 메시지가 있다면 최신 메시지로 교체한다.
+// EnqueueReplacingDuplicate: 메시지를 대기열에 추가하되, 동일 UserID의 중복 메시지가 있다면 최신 메시지로 교체합니다.
 func (s *Store) EnqueueReplacingDuplicate(ctx context.Context, chatID string, userID string, timestamp int64, jsonValue string) (EnqueueResult, error) {
 	return s.enqueueInternal(ctx, chatID, userID, timestamp, jsonValue, true)
 }
@@ -110,8 +111,8 @@ func (s *Store) enqueueInternal(
 	}
 }
 
-// Dequeue: 대기열에서 가장 오래된 메시지(stale 메시지 포함)를 꺼내어 반환한다.
-// 성공 시 RawJSON 필드에 원본 데이터가 포함된다.
+// Dequeue: 대기열에서 가장 오래된 메시지(stale 메시지 포함)를 꺼내어 반환합니다.
+// 성공 시 RawJSON 필드에 원본 데이터가 포함됩니다.
 func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, error) {
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)
@@ -168,7 +169,82 @@ func (s *Store) Dequeue(ctx context.Context, chatID string) (DequeueResult, erro
 	return DequeueResult{Status: DequeueSuccess, UserID: strings.TrimSpace(userID), Timestamp: timestamp, RawJSON: raw}, nil
 }
 
-// Size: 현재 대기열에 쌓여 있는 메시지의 개수를 반환한다. (ZCard 사용)
+// DequeueBatch: 대기열에서 여러 메시지를 한번에 꺼내어 반환합니다.
+func (s *Store) DequeueBatch(ctx context.Context, chatID string, limit int) ([]DequeueResult, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+
+	dataKey := s.dataKey(chatID)
+	orderKey := s.orderKey(chatID)
+
+	resp, err := s.registry.Exec(ctx, s.client, luautil.ScriptPendingDequeueBatch, []string{dataKey, orderKey}, []string{
+		strconv.Itoa(limit),
+	})
+	if err != nil {
+		return nil, wrapRedisError("pending_dequeue_batch_exec", err)
+	}
+
+	if respErr := resp.Error(); respErr != nil {
+		if valkeyx.IsNil(respErr) {
+			s.logger.Debug("dequeue_empty", "chat_id", chatID)
+			return nil, nil
+		}
+		return nil, wrapRedisError("pending_dequeue_batch", respErr)
+	}
+
+	rawValues, err := resp.ToArray()
+	if err != nil {
+		return nil, wrapRedisError("pending_dequeue_batch_parse_array", err)
+	}
+	if len(rawValues) == 0 {
+		return nil, nil
+	}
+
+	results := make([]DequeueResult, 0, len(rawValues)/3)
+	for i := 0; i < len(rawValues); {
+		firstVal, err := rawValues[i].ToString()
+		if err != nil {
+			return nil, fmt.Errorf("pending dequeue batch parse user id failed: %w", err)
+		}
+		if firstVal == luaStatusInconsistent {
+			if i+1 >= len(rawValues) {
+				return nil, fmt.Errorf("pending dequeue batch inconsistent payload truncated: %d", len(rawValues))
+			}
+			userID, _ := rawValues[i+1].ToString()
+			s.logger.Warn("dequeue_inconsistent", "chat_id", chatID, "user_id", userID)
+			i += 2
+			continue
+		}
+		if i+2 >= len(rawValues) {
+			return nil, fmt.Errorf("pending dequeue batch payload truncated: %d", len(rawValues))
+		}
+
+		timestamp, err := valkeyx.ParseLuaScoreToInt64(rawValues[i+1])
+		if err != nil {
+			return nil, fmt.Errorf("pending dequeue batch parse score failed: %w", err)
+		}
+		raw, err := rawValues[i+2].ToString()
+		if err != nil {
+			return nil, fmt.Errorf("pending dequeue batch parse json failed: %w", err)
+		}
+
+		results = append(results, DequeueResult{
+			Status:    DequeueSuccess,
+			UserID:    strings.TrimSpace(firstVal),
+			Timestamp: timestamp,
+			RawJSON:   raw,
+		})
+		i += 3
+	}
+
+	if len(results) > 0 {
+		s.logger.Debug("dequeue_batch_success", "chat_id", chatID, "count", len(results))
+	}
+	return results, nil
+}
+
+// Size: 현재 대기열에 쌓여 있는 메시지의 개수를 반환합니다. (ZCard 사용)
 func (s *Store) Size(ctx context.Context, chatID string) (int, error) {
 	orderKey := s.orderKey(chatID)
 	cmd := s.client.B().Zcard().Key(orderKey).Build()
@@ -182,7 +258,7 @@ func (s *Store) Size(ctx context.Context, chatID string) (int, error) {
 	return int(n), nil
 }
 
-// HasPending 대기 메시지 존재 여부.
+// HasPending: 대기 메시지 존재 여부를 확인합니다.
 func (s *Store) HasPending(ctx context.Context, chatID string) (bool, error) {
 	n, err := s.Size(ctx, chatID)
 	if err != nil {
@@ -191,8 +267,8 @@ func (s *Store) HasPending(ctx context.Context, chatID string) (bool, error) {
 	return n > 0, nil
 }
 
-// GetRawEntries 큐의 모든 원본 메시지 조회 (순서대로).
-// 호출자가 직접 파싱하여 사용.
+// GetRawEntries: 큐의 모든 원본 메시지를 순서대로 조회합니다.
+// 호출자가 직접 파싱하여 사용해야 합니다.
 func (s *Store) GetRawEntries(ctx context.Context, chatID string) ([]string, error) {
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)
@@ -230,7 +306,7 @@ func (s *Store) GetRawEntries(ctx context.Context, chatID string) ([]string, err
 	return result, nil
 }
 
-// Clear: 대기열의 데이터와 순서 정보를 모두 삭제하여 초기화한다.
+// Clear: 대기열의 데이터와 순서 정보를 모두 삭제하여 초기화합니다.
 func (s *Store) Clear(ctx context.Context, chatID string) error {
 	dataKey := s.dataKey(chatID)
 	orderKey := s.orderKey(chatID)

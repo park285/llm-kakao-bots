@@ -21,7 +21,7 @@ type BackgroundTask struct {
 	Run         func(ctx context.Context) error
 }
 
-// RunHTTPServer: HTTP 서버와 백그라운드 작업들을 실행하고 OS 시그널을 처리하여 우아하게 종료한다.
+// RunHTTPServer: HTTP 서버와 백그라운드 작업들을 실행하고 OS 시그널을 처리하여 우아하게 종료합니다.
 func RunHTTPServer(
 	ctx context.Context,
 	logger *slog.Logger,

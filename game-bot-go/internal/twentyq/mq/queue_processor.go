@@ -30,7 +30,7 @@ type MessageQueueProcessor struct {
 	logger                *slog.Logger
 }
 
-// NewMessageQueueProcessor: 새로운 MessageQueueProcessor 인스턴스를 생성한다.
+// NewMessageQueueProcessor: 새로운 MessageQueueProcessor 인스턴스를 생성합니다.
 func NewMessageQueueProcessor(
 	queueCoordinator *MessageQueueCoordinator,
 	lockManager *qredis.LockManager,
@@ -53,12 +53,12 @@ func NewMessageQueueProcessor(
 	}
 }
 
-// HasPending: 대기 중인 메시지가 있는지 확인한다.
+// HasPending: 대기 중인 메시지가 있는지 확인합니다.
 func (p *MessageQueueProcessor) HasPending(ctx context.Context, chatID string) (bool, error) {
 	return p.queueCoordinator.HasPending(ctx, chatID)
 }
 
-// EnqueueAndNotify: 메시지를 대기열에 추가하고 사용자에게 현재 대기열 상태 등을 알린다.
+// EnqueueAndNotify: 메시지를 대기열에 추가하고 사용자에게 현재 대기열 상태 등을 알립니다.
 func (p *MessageQueueProcessor) EnqueueAndNotify(
 	ctx context.Context,
 	chatID string,
@@ -133,36 +133,41 @@ func (p *MessageQueueProcessor) buildQueueMessage(
 	}
 }
 
-// ProcessQueuedMessages: 대기열에 쌓인 메시지들을 순차적으로 처리한다. (최대 반복 횟수 제한)
+// ProcessQueuedMessages: 대기열에 쌓인 메시지들을 순차적으로 처리합니다. (최대 반복 횟수 제한)
 func (p *MessageQueueProcessor) ProcessQueuedMessages(ctx context.Context, chatID string, emit func(mqmsg.OutboundMessage) error) {
 	p.logger.Debug("queue_processing_start", "chat_id", chatID)
-	iterations := 0
-	for iterations < qconfig.MQMaxQueueIterations {
-		iterations++
+	processed := 0
+	for processed < qconfig.MQMaxQueueIterations {
+		remaining := qconfig.MQMaxQueueIterations - processed
+		batchSize := qconfig.QueueDequeueBatchSize
+		if batchSize > remaining {
+			batchSize = remaining
+		}
 
-		dequeueResult, err := p.queueCoordinator.Dequeue(ctx, chatID)
+		messages, err := p.queueCoordinator.DequeueBatch(ctx, chatID, batchSize)
 		if err != nil {
-			p.logger.Warn("queue_dequeue_failed", "chat_id", chatID, "iteration", iterations, "err", err)
+			p.logger.Warn("queue_dequeue_failed", "chat_id", chatID, "batch_size", batchSize, "err", err)
+			if len(messages) == 0 {
+				return
+			}
+		}
+		if len(messages) == 0 {
 			return
 		}
-		p.logger.Debug("queue_dequeue_result", "chat_id", chatID, "status", dequeueResult.Status, "hasMessage", dequeueResult.Message != nil)
+		p.logger.Debug("queue_dequeue_result", "chat_id", chatID, "count", len(messages))
 
-		switch dequeueResult.Status {
-		case qredis.DequeueEmpty:
-			return
-		case qredis.DequeueSuccess:
-			if dequeueResult.Message == nil {
+		for _, message := range messages {
+			processed++
+			if cont := p.processSingleQueuedMessage(ctx, chatID, message, emit); !cont {
 				return
 			}
-			if cont := p.processSingleQueuedMessage(ctx, chatID, *dequeueResult.Message, emit); !cont {
-				return
+			if processed >= qconfig.MQMaxQueueIterations {
+				break
 			}
-		default:
-			return
 		}
 	}
 
-	p.logger.Warn("queue_processing_limit_reached", "chat_id", chatID, "max_iterations", iterations)
+	p.logger.Warn("queue_processing_limit_reached", "chat_id", chatID, "max_iterations", processed)
 }
 
 func (p *MessageQueueProcessor) processSingleQueuedMessage(

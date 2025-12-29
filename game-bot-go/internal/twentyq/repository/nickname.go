@@ -15,7 +15,7 @@ type NicknameEntry struct {
 	LastSender string
 }
 
-// UpsertNickname: 사용자 닉네임 정보를 삽입하거나 업데이트한다.
+// UpsertNickname: 사용자 닉네임 정보를 삽입하거나 업데이트합니다.
 func (r *Repository) UpsertNickname(
 	ctx context.Context,
 	chatID string,

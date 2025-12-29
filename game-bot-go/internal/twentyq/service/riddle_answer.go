@@ -25,7 +25,7 @@ type AnswerOutcome struct {
 	IsAnswerAttempt bool
 }
 
-// AnswerWithOutcome: 질문 처리 결과와 함께 답변 타입(정답 시도 여부 등)을 반환한다.
+// AnswerWithOutcome: 질문 처리 결과와 함께 답변 타입(정답 시도 여부 등)을 반환합니다.
 func (s *RiddleService) AnswerWithOutcome(
 	ctx context.Context,
 	chatID string,

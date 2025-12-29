@@ -57,7 +57,7 @@ type StatsRecorder struct {
 	dropLogOnQueueFull bool
 }
 
-// NewStatsRecorder: 새로운 StatsRecorder 인스턴스를 생성한다.
+// NewStatsRecorder: 새로운 StatsRecorder 인스턴스를 생성합니다.
 func NewStatsRecorder(repo *qrepo.Repository, logger *slog.Logger, cfg qconfig.StatsConfig) *StatsRecorder {
 	if repo == nil {
 		return nil
@@ -116,7 +116,7 @@ func (r *StatsRecorder) worker(id int) {
 	r.logger.Debug("stats_worker_stopped", "worker_id", id)
 }
 
-// RecordGameStart: 게임 시작 정보를 기록한다.
+// RecordGameStart: 게임 시작 정보를 기록합니다.
 func (r *StatsRecorder) RecordGameStart(ctx context.Context, chatID string, userID string) {
 	if r == nil || r.repo == nil {
 		return

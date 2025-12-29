@@ -12,13 +12,13 @@ type AccessControl struct {
 	control *accesscontrol.AccessControl
 }
 
-// NewAccessControl: 새로운 AccessControl 인스턴스를 생성한다.
+// NewAccessControl: 새로운 AccessControl 인스턴스를 생성합니다.
 func NewAccessControl(cfg qconfig.AccessConfig) *AccessControl {
 	return &AccessControl{control: accesscontrol.New(cfg)}
 }
 
-// GetDenialReason: 접근 거부 사유에 따른 오류 메시지를 반환한다.
-// 접근이 허용된 경우 nil을 반환한다.
+// GetDenialReason: 접근 거부 사유에 따른 오류 메시지를 반환합니다.
+// 접근이 허용된 경우 nil을 반환합니다.
 func (a *AccessControl) GetDenialReason(userID string, chatID string) *string {
 	switch a.control.DenialReason(userID, chatID) {
 	case accesscontrol.DenialReasonUserBlocked:

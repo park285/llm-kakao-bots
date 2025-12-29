@@ -30,7 +30,7 @@ func TestLockManager_WithLock(t *testing.T) {
 	ctx := context.Background()
 	chatID := prefix + "room_lock"
 
-	// 1. Acquire Lock
+	// 1. Lock 획득함
 	executed := false
 	err := lm.WithLock(ctx, chatID, nil, func(ctx context.Context) error {
 		executed = true
@@ -85,7 +85,7 @@ func TestLockManager_ConcurrentLocks(t *testing.T) {
 	ctx := context.Background()
 	chatID := prefix + "room_concurrent"
 
-	// Acquire Write Lock in goroutine
+	// goroutine에서 Write Lock 획득함
 	startCh := make(chan struct{})
 	doneCh := make(chan struct{})
 
@@ -101,7 +101,7 @@ func TestLockManager_ConcurrentLocks(t *testing.T) {
 	<-startCh
 	time.Sleep(20 * time.Millisecond) // Ensure goroutine got lock
 
-	// Wait for goroutine
+	// goroutine 대기함
 	<-doneCh
 }
 
@@ -116,7 +116,7 @@ func TestLockManager_Reentry(t *testing.T) {
 
 	executedInner := false
 	err := lm.WithLock(ctx, chatID, nil, func(ctx context.Context) error {
-		// Re-enter with same lock
+		// 동일한 락으로 재진입함
 		return lm.WithLock(ctx, chatID, nil, func(ctx context.Context) error {
 			executedInner = true
 			return nil

@@ -74,8 +74,8 @@ var fiveScaleTokenToValue = map[string]FiveScaleKo{
 	"정책 위반":          FiveScalePolicyViolation,
 }
 
-// ParseFiveScaleKo: AI의 답변 문자열을 분석하여 FiveScaleKo 열거형 값으로 변환한다.
-// 문장 부호 제거 및 정규화를 수행한 후 매핑한다.
+// ParseFiveScaleKo: AI의 답변 문자열을 분석하여 FiveScaleKo 열거형 값으로 변환합니다.
+// 문장 부호 제거 및 정규화를 수행한 후 매핑합니다.
 func ParseFiveScaleKo(raw string) (*FiveScaleKo, bool) {
 	cleaned := strings.TrimSpace(raw)
 	if cleaned == "" {
@@ -103,7 +103,7 @@ func ParseFiveScaleKo(raw string) (*FiveScaleKo, bool) {
 	return &value, true
 }
 
-// FiveScaleToken: FiveScaleKo 열거형 값을 해당하는 한국어 토큰 문자열로 변환한다.
+// FiveScaleToken: FiveScaleKo 열거형 값을 해당하는 한국어 토큰 문자열로 변환합니다.
 func FiveScaleToken(value FiveScaleKo) string {
 	for token, v := range fiveScaleTokenToValue {
 		if v == value {
@@ -123,7 +123,7 @@ const (
 	ChainConditionIfTrue
 )
 
-// ShouldContinue: 이전 질문의 답변(scale)에 따라 체인 질문을 계속 진행할지 여부를 결정한다.
+// ShouldContinue: 이전 질문의 답변(scale)에 따라 체인 질문을 계속 진행할지 여부를 결정합니다.
 func (c ChainCondition) ShouldContinue(scale FiveScaleKo) bool {
 	switch c {
 	case ChainConditionAlways:
