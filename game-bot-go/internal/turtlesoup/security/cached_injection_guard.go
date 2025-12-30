@@ -45,6 +45,9 @@ func (g *CachedInjectionGuard) IsMalicious(ctx context.Context, input string) (b
 	if g == nil || g.inner == nil {
 		return false, nil
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	normalized := strings.TrimSpace(input)
 	if normalized == "" {
@@ -69,7 +72,10 @@ func (g *CachedInjectionGuard) IsMalicious(ctx context.Context, input string) (b
 			}
 		}
 
-		malicious, err := g.inner.IsMalicious(ctx, input)
+		checkCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		defer cancel()
+
+		malicious, err := g.inner.IsMalicious(checkCtx, input)
 		if err != nil {
 			return false, fmt.Errorf("cached guard isMalicious failed: %w", err)
 		}

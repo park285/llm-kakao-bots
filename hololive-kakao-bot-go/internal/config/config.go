@@ -18,18 +18,20 @@ const maxHolodexAPIKeySlots = 5
 
 // Config: 홀로라이브 봇의 전체 동작에 필요한 설정을 담는 구조체
 type Config struct {
-	Iris         IrisConfig
-	ValkeyMQ     ValkeyMQConfig
-	Server       ServerConfig
-	Kakao        KakaoConfig
-	Holodex      HolodexConfig
-	YouTube      YouTubeConfig
-	Valkey       ValkeyConfig
-	Postgres     PostgresConfig
-	Notification NotificationConfig
-	Logging      LoggingConfig
-	Bot          BotConfig
-	Version      string
+	Iris                 IrisConfig
+	ValkeyMQ             ValkeyMQConfig
+	Server               ServerConfig
+	Kakao                KakaoConfig
+	Holodex              HolodexConfig
+	YouTube              YouTubeConfig
+	Valkey               ValkeyConfig
+	Postgres             PostgresConfig
+	Notification         NotificationConfig
+	Logging              LoggingConfig
+	Bot                  BotConfig
+	Services             ServicesConfig
+	SessionTokenRotation bool // 하트비트 시 세션 ID 갱신 여부 (토큰 탈취 피해 최소화)
+	Version              string
 }
 
 // IrisConfig: Iris 웹훅 서버 연결 및 메시지 전송 관련 설정
@@ -226,6 +228,13 @@ type BotConfig struct {
 	SelfUser string
 }
 
+// ServicesConfig: 외부 Go 서비스 연결 설정 (goroutine 통합 모니터링용)
+type ServicesConfig struct {
+	LLMServerHealthURL      string // mcp-llm-server-go health URL
+	GameBotTwentyQHealthURL string // game-bot-go twentyq health URL
+	GameBotTurtleHealthURL  string // game-bot-go turtlesoup health URL
+}
+
 // Load: .env 파일 및 환경 변수로부터 설정을 로드하고, 기본값을 적용하여 Config 객체를 생성한다.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
@@ -296,7 +305,13 @@ func Load() (*Config, error) {
 			Prefix:   getEnv("BOT_PREFIX", "!"),
 			SelfUser: util.TrimSpace(getEnv("BOT_SELF_USER", "iris")),
 		},
-		Version: util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
+		Services: ServicesConfig{
+			LLMServerHealthURL:      getEnv("SERVICES_LLM_SERVER_HEALTH_URL", ""),
+			GameBotTwentyQHealthURL: getEnv("SERVICES_GAME_BOT_TWENTYQ_HEALTH_URL", ""),
+			GameBotTurtleHealthURL:  getEnv("SERVICES_GAME_BOT_TURTLE_HEALTH_URL", ""),
+		},
+		SessionTokenRotation: getEnvBool("SESSION_TOKEN_ROTATION", constants.SessionConfig.TokenRotation),
+		Version:              util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
 	}
 
 	if err := cfg.Validate(); err != nil {

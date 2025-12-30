@@ -30,7 +30,7 @@ func BuildFetchProfilesRuntime(ctx context.Context) (*FetchProfilesRuntime, erro
 
 	runtime, cleanup, err := InitializeFetchProfilesRuntime(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("fetch profiles 런타임 초기화 실패: %w", err)
+		return nil, fmt.Errorf("failed to initialize fetch profiles runtime: %w", err)
 	}
 	runtime.cleanup = cleanup
 

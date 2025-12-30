@@ -16,22 +16,20 @@ type ModelConfigResponse struct {
 
 // SessionCreateRequest: 세션 생성 요청 파라미터
 type SessionCreateRequest struct {
-	SessionID *string `json:"session_id,omitempty"`
-	ChatID    *string `json:"chat_id,omitempty"`
-	Namespace *string `json:"namespace,omitempty"`
+	SystemPrompt *string `json:"system_prompt,omitempty"`
+	Model        *string `json:"model,omitempty"`
 }
 
 // SessionCreateResponse: 세션 생성 응답
 type SessionCreateResponse struct {
-	SessionID string `json:"session_id"`
-	Model     string `json:"model"`
-	Created   bool   `json:"created"`
+	ID    string `json:"id"`
+	Model string `json:"model,omitempty"`
 }
 
 // SessionEndResponse: 세션 종료 응답
 type SessionEndResponse struct {
-	SessionID string `json:"session_id"`
-	Removed   bool   `json:"removed"`
+	Message string `json:"message"`
+	ID      string `json:"id"`
 }
 
 // GuardRequest: 악성 입력 감지 요청 파라미터

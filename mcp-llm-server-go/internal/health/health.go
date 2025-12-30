@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"runtime"
 	"time"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
@@ -60,6 +61,7 @@ func buildAppStatus() Component {
 		Status: "ok",
 		Detail: map[string]any{
 			"uptime_seconds": uptimeSeconds,
+			"goroutines":     runtime.NumGoroutine(),
 		},
 	}
 }
@@ -95,62 +97,76 @@ func buildGeminiStatus(cfg *config.Config) Component {
 }
 
 func buildSessionStoreStatus(ctx context.Context, cfg *config.Config, deepChecks bool) Component {
-	reachability := false
-	backend := "memory"
 	storeEnabled := false
-	storeURL := ""
 	sessionTTL := 0
-	sessionCount := 0
-	sessionCountErr := ""
+	storeAddr := ""
+	storeAddrErr := ""
+	backend := "memory"
+	reachability := false
+	pingErr := ""
+	checked := false
 
 	if cfg != nil {
 		storeEnabled = cfg.SessionStore.Enabled
-		storeURL = cfg.SessionStore.URL
 		sessionTTL = cfg.Session.SessionTTLMinutes
+		if cfg.SessionStore.URL != "" {
+			addr, err := storeAddress(cfg.SessionStore.URL)
+			if err != nil {
+				storeAddrErr = err.Error()
+			} else {
+				storeAddr = addr
+			}
+		}
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if storeEnabled {
+		backend = "valkey"
+	}
 	if storeEnabled && deepChecks {
+		checked = true
 		checkCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 		defer cancel()
 
 		store, err := session.NewStore(cfg)
 		if err != nil {
-			sessionCountErr = err.Error()
+			pingErr = err.Error()
 		} else {
 			defer store.Close()
 			if err := store.Ping(checkCtx); err != nil {
-				sessionCountErr = err.Error()
+				pingErr = err.Error()
 			} else {
 				reachability = true
-				backend = "valkey"
-				count, err := store.SessionCount(checkCtx)
-				if err != nil {
-					sessionCountErr = err.Error()
-				} else {
-					sessionCount = count
-				}
 			}
 		}
 	}
 
 	status := "ok"
-	if storeEnabled && !reachability {
+	if storeEnabled && deepChecks && !reachability {
 		status = "degraded"
+	}
+
+	var storeConnected any
+	if checked {
+		storeConnected = reachability
+	} else {
+		storeConnected = nil
 	}
 
 	detail := map[string]any{
 		"store_enabled":       storeEnabled,
-		"store_connected":     reachability,
+		"store_connected":     storeConnected,
 		"backend":             backend,
-		"session_count":       sessionCount,
-		"store_url":           storeURL,
+		"store_address":       storeAddr,
 		"session_ttl_minutes": sessionTTL,
 		"deep_checked":        deepChecks,
 	}
-	if sessionCountErr != "" {
-		detail["session_count_error"] = sessionCountErr
+	if storeAddrErr != "" {
+		detail["store_address_error"] = storeAddrErr
+	}
+	if pingErr != "" {
+		detail["store_ping_error"] = pingErr
 	}
 
 	return Component{

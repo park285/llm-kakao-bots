@@ -301,7 +301,3 @@ func TestBestScoreUpdate(t *testing.T) {
 		t.Errorf("expected best target to be updated to 복수, got %v", catStat2.BestTarget)
 	}
 }
-
-func stringPtr(s string) *string {
-	return &s
-}

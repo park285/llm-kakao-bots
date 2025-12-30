@@ -26,6 +26,7 @@ type TopicLoader struct {
 	mu     sync.RWMutex
 	topics map[string][]TopicEntry
 	rng    *rand.Rand
+	rngMu  sync.Mutex
 }
 
 // topicItemRaw JSON 파싱용 중간 구조체.
@@ -147,7 +148,7 @@ func (l *TopicLoader) SelectTopic(category string, bannedTopics []string, exclud
 		return l.selectFromAllCategoriesExcluding(bannedTopics, excludedSet)
 	}
 
-	idx := l.rng.IntN(len(available))
+	idx := l.randIntN(len(available))
 	return available[idx], nil
 }
 
@@ -168,7 +169,7 @@ func (l *TopicLoader) selectRandomCategoryExcluding(excludedSet map[string]struc
 		return ""
 	}
 	if len(excludedSet) == 0 {
-		return categories[l.rng.IntN(len(categories))]
+		return categories[l.randIntN(len(categories))]
 	}
 
 	filtered := make([]string, 0, len(categories))
@@ -179,9 +180,9 @@ func (l *TopicLoader) selectRandomCategoryExcluding(excludedSet map[string]struc
 		filtered = append(filtered, cat)
 	}
 	if len(filtered) == 0 {
-		return categories[l.rng.IntN(len(categories))]
+		return categories[l.randIntN(len(categories))]
 	}
-	return filtered[l.rng.IntN(len(filtered))]
+	return filtered[l.randIntN(len(filtered))]
 }
 
 func (l *TopicLoader) selectFromAllCategories(bannedTopics []string) (TopicEntry, error) {
@@ -201,7 +202,13 @@ func (l *TopicLoader) selectFromAllCategoriesExcluding(bannedTopics []string, ex
 	if len(available) == 0 {
 		return TopicEntry{}, fmt.Errorf("no topics available after filtering")
 	}
-	return available[l.rng.IntN(len(available))], nil
+	return available[l.randIntN(len(available))], nil
+}
+
+func (l *TopicLoader) randIntN(n int) int {
+	l.rngMu.Lock()
+	defer l.rngMu.Unlock()
+	return l.rng.IntN(n)
 }
 
 func makeCategorySet(categories []string) map[string]struct{} {

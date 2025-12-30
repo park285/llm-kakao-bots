@@ -53,10 +53,10 @@ func (h *TwentyQHandler) handleVerify(c *gin.Context) {
 	requestID := middleware.GetRequestID(c)
 
 	if reasoning, ok := payload["reasoning"].(string); ok && reasoning != "" {
-		h.logger.Info("twentyq_verify_cot", "request_id", requestID, "reasoning", reasoning)
+		h.logger.Debug("twentyq_verify_cot", "request_id", requestID, "reasoning", reasoning)
 	}
 	if len(consensus.SearchQueries) > 0 {
-		h.logger.Info("twentyq_verify_search", "request_id", requestID, "queries", consensus.SearchQueries)
+		h.logger.Debug("twentyq_verify_search", "request_id", requestID, "queries", consensus.SearchQueries)
 	}
 	// 합의 정보 로깅
 	h.logger.Info("twentyq_verify_consensus",

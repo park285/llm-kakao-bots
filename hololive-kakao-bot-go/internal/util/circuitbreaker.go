@@ -205,7 +205,7 @@ func (cb *CircuitBreaker) GetStatus() CircuitBreakerStatus {
 	defer cb.mu.RUnlock()
 
 	status := CircuitBreakerStatus{
-		State:        cb.state, // Direct access (already locked)
+		State:        cb.state, // \uc9c1\uc811 \uc811\uadfc (\uc774\ubbf8 lock \ud68d\ub4dd \uc0c1\ud0dc)
 		FailureCount: cb.failureCount,
 	}
 

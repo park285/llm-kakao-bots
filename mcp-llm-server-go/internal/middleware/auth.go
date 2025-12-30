@@ -13,17 +13,27 @@ import (
 // APIKeyAuth 는 API 키 인증 미들웨어다.
 func APIKeyAuth(cfg *config.Config) gin.HandlerFunc {
 	expected := ""
+	required := false
 	if cfg != nil {
 		expected = strings.TrimSpace(cfg.HTTPAuth.APIKey)
+		required = cfg.HTTPAuth.Required
 	}
 
 	return func(c *gin.Context) {
-		if expected == "" {
+		if !shouldProtectPath(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
 
-		if !shouldProtectPath(c.Request.URL.Path) {
+		if expected == "" {
+			if required {
+				status, payload := httperror.Response(
+					httperror.NewInternalError("http api key required but not configured"),
+					GetRequestID(c),
+				)
+				c.AbortWithStatusJSON(status, payload)
+				return
+			}
 			c.Next()
 			return
 		}

@@ -1,4 +1,16 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { Button, Input, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, BaseModal } from '@/components/ui'
+import { Save, Youtube } from 'lucide-react'
+
+// Schema 정의
+const channelEditSchema = z.object({
+  channelId: z.string().trim().min(24, '채널 ID 형식이 올바르지 않습니다 (최소 24자).'),
+})
+
+type ChannelEditFormValues = z.infer<typeof channelEditSchema>
 
 interface ChannelEditModalProps {
   isOpen: boolean
@@ -9,101 +21,87 @@ interface ChannelEditModalProps {
   currentChannelId: string
 }
 
-const ChannelEditModal = ({
+export default function ChannelEditModal({
   isOpen,
   onClose,
   onSave,
   memberId,
   memberName,
   currentChannelId,
-}: ChannelEditModalProps) => {
-  const [channelId, setChannelId] = useState(currentChannelId)
+}: ChannelEditModalProps) {
+  const form = useForm<ChannelEditFormValues>({
+    resolver: zodResolver(channelEditSchema),
+    defaultValues: {
+      channelId: currentChannelId,
+    },
+  })
 
-  const handleSave = () => {
-    const trimmed = channelId.trim()
-    if (!trimmed || trimmed === currentChannelId) {
-      onClose()
-      return
+  // 모달이 열릴 때마다 form 리셋
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({ channelId: currentChannelId })
     }
-    onSave(trimmed)
+  }, [isOpen, currentChannelId, form])
+
+  const onSubmit = (data: ChannelEditFormValues) => {
+    onSave(data.channelId)
     onClose()
   }
 
-  // 모달이 열릴 때마다 현재 값으로 초기화
-  if (isOpen && channelId !== currentChannelId) {
-    setChannelId(currentChannelId)
-  }
-
-  if (!isOpen) return null
+  const title = (
+    <span className="flex items-center gap-2">
+      <Youtube className="text-red-600" size={20} />
+      채널 ID 수정
+    </span>
+  )
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* 헤더 */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            유튜브 채널 ID 수정
-          </h3>
-        </div>
-
-        {/* 본문 */}
-        <div className="px-6 py-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              멤버
-            </label>
-            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-600">
-              {memberName} (ID: {memberId})
+    <BaseModal isOpen={isOpen} onClose={onClose} title={title} showHeaderBorder>
+      <Form {...form}>
+        <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} className="space-y-4">
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">멤버 이름</span>
+              <span className="font-bold text-slate-800">{memberName}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">멤버 ID</span>
+              <span className="font-mono text-slate-600">{memberId}</span>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              현재 채널 ID
-            </label>
-            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-600 font-mono break-all">
-              {currentChannelId}
-            </div>
-          </div>
+          <FormField
+            control={form.control}
+            name="channelId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>YouTube 채널 ID</FormLabel>
+                <FormControl>
+                  <Input placeholder="UC..." className="font-mono" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              새 채널 ID
-            </label>
-            <input
-              type="text"
-              value={channelId}
-              onChange={(e) => { setChannelId(e.target.value) }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
-              placeholder="UC..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              autoFocus
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              💡 유튜브 채널 ID는 보통 UC로 시작합니다
-            </p>
+          <div className="mt-6 flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+            >
+              취소
+            </Button>
+            <Button
+              type="submit"
+              disabled={!form.formState.isDirty}
+              className="gap-2"
+            >
+              <Save size={16} /> 저장
+            </Button>
           </div>
-        </div>
-
-        {/* 푸터 */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!channelId.trim() || channelId === currentChannelId}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-          >
-            저장
-          </button>
-        </div>
-      </div>
-    </div>
+        </form>
+      </Form>
+    </BaseModal>
   )
 }
-
-export default ChannelEditModal

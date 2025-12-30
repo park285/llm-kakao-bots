@@ -9,34 +9,46 @@ import (
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
 // Scheduler: YouTube 데이터 수집(통계, 영상 등) 작업을 주기적으로 실행하는 스케줄러
 type Scheduler struct {
-	youtube      *Service
-	cache        *cache.Service
-	statsRepo    *StatsRepository
-	membersData  domain.MemberDataProvider
-	logger       *slog.Logger
-	ticker       *time.Ticker
-	stopCh       chan struct{}
-	currentBatch int
-	batchMu      sync.Mutex
+	youtube              *Service
+	holodex              *holodex.Service
+	cache                *cache.Service
+	statsRepo            *StatsRepository
+	membersData          domain.MemberDataProvider
+	logger               *slog.Logger
+	ticker               *time.Ticker
+	milestoneWatchTicker *time.Ticker
+	stopCh               chan struct{}
+	currentBatch         int
+	batchMu              sync.Mutex
 }
 
 const (
-	schedulerInterval = 12 * time.Hour
+	schedulerInterval       = 12 * time.Hour
+	milestoneWatchInterval  = 1 * time.Hour // 마일스톤 직전 멤버 빠른 체크
+	MilestoneThresholdRatio = 0.95          // 95% 이상이면 마일스톤 직전으로 간주
 
 	channelsPerBatch = 30 // 30 channels × 100 units = 3,000 units per batch
 	batchesPerDay    = 2  // 2 batches × 3,000 = 6,000 units
 	totalDailyQuota  = 6000
 )
 
+// SubscriberMilestones: 구독자 수 마일스톤 목록 (중복 정의 방지)
+var SubscriberMilestones = []uint64{
+	100000, 250000, 500000, 750000, 1000000,
+	1500000, 2000000, 2500000, 3000000, 4000000, 5000000,
+}
+
 // NewScheduler: YouTube 데이터 수집 스케줄러를 생성한다.
-func NewScheduler(youtubeSvc *Service, cacheSvc *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
+func NewScheduler(youtubeSvc *Service, holodexSvc *holodex.Service, cacheSvc *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
 	return &Scheduler{
 		youtube:      youtubeSvc,
+		holodex:      holodexSvc,
 		cache:        cacheSvc,
 		statsRepo:    statsRepo,
 		membersData:  membersData,
@@ -55,6 +67,7 @@ func (ys *Scheduler) Start(ctx context.Context) {
 		slog.Int("channels_per_batch", channelsPerBatch),
 		slog.Int("daily_quota_target", totalDailyQuota))
 
+	// 메인 스케줄러 (12시간 간격)
 	go func() {
 		for {
 			select {
@@ -69,12 +82,39 @@ func (ys *Scheduler) Start(ctx context.Context) {
 			}
 		}
 	}()
+
+	// 마일스톤 직전 멤버 빠른 체크 (1시간 간격, Holodex API 사용)
+	if ys.holodex != nil {
+		ys.milestoneWatchTicker = time.NewTicker(milestoneWatchInterval)
+		ys.logger.Info("Milestone watcher started",
+			slog.Duration("interval", milestoneWatchInterval),
+			slog.Float64("threshold_ratio", MilestoneThresholdRatio))
+
+		go func() {
+			// 시작 직후 첫 체크 실행
+			ys.watchNearMilestoneMembers(ctx)
+
+			for {
+				select {
+				case <-ys.milestoneWatchTicker.C:
+					ys.watchNearMilestoneMembers(ctx)
+				case <-ys.stopCh:
+					return
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
 }
 
 // Stop: 스케줄러를 중지한다.
 func (ys *Scheduler) Stop() {
 	if ys.ticker != nil {
 		ys.ticker.Stop()
+	}
+	if ys.milestoneWatchTicker != nil {
+		ys.milestoneWatchTicker.Stop()
 	}
 	close(ys.stopCh)
 }
@@ -128,12 +168,17 @@ func (ys *Scheduler) trackAllSubscribers(ctx context.Context) {
 		slog.Int("milestones", totalMilestones))
 }
 
-// 멤버 데이터에서 채널 ID 리스트와 채널-멤버 맵 생성
+// 멤버 데이터에서 채널 ID 리스트와 채널-멤버 맵 생성 (졸업 멤버 제외)
 func (ys *Scheduler) buildChannelMaps() ([]string, map[string]*domain.Member) {
-	channelIDs := make([]string, 0, len(ys.membersData.GetAllMembers()))
+	allMembers := ys.membersData.GetAllMembers()
+	channelIDs := make([]string, 0, len(allMembers))
 	channelToMember := make(map[string]*domain.Member)
 
-	for _, member := range ys.membersData.GetAllMembers() {
+	for _, member := range allMembers {
+		// 졸업 멤버는 마일스톤 추적에서 제외
+		if member.IsGraduated {
+			continue
+		}
 		channelIDs = append(channelIDs, member.ChannelID)
 		channelToMember[member.ChannelID] = member
 	}
@@ -161,10 +206,26 @@ func calculateStatsChanges(prev *domain.TimestampedStats, current *ChannelStats)
 	return
 }
 
-// 달성된 마일스톤들을 저장하고 달성 개수 반환
+// 달성된 마일스톤들을 저장하고 달성 개수 반환 (이미 달성한 마일스톤은 건너뜀)
 func (ys *Scheduler) processMilestones(ctx context.Context, channelID string, member *domain.Member, milestones []uint64, now time.Time) int {
 	achieved := 0
 	for _, milestone := range milestones {
+		// 이미 달성한 마일스톤인지 확인 (재달성 방지)
+		alreadyAchieved, err := ys.statsRepo.HasAchievedMilestone(ctx, channelID, domain.MilestoneSubscribers, milestone)
+		if err != nil {
+			ys.logger.Warn("Failed to check existing milestone",
+				slog.String("member", member.Name),
+				slog.Any("value", milestone),
+				slog.Any("error", err))
+			continue
+		}
+		if alreadyAchieved {
+			ys.logger.Debug("Milestone already achieved, skipping",
+				slog.String("member", member.Name),
+				slog.Any("value", milestone))
+			continue
+		}
+
 		milestoneRecord := &domain.Milestone{
 			ChannelID:  channelID,
 			MemberName: member.Name,
@@ -305,26 +366,11 @@ func (ys *Scheduler) getRotatingBatch(batchNum int, size int) []string {
 	return batch
 }
 
-// CheckMilestones: (내부용) 구독자 수 마일스톤 달성 여부를 확인하고 기록한다.
-func (ys *Scheduler) checkMilestones(prevCount, currentCount uint64) []uint64 {
-	milestones := []uint64{
-		100000,   // 10만
-		250000,   // 25만
-		500000,   // 50만
-		750000,   // 75만
-		1000000,  // 100만
-		1500000,  // 150만
-		2000000,  // 200만
-		2500000,  // 250만
-		3000000,  // 300만
-		4000000,  // 400만
-		5000000,  // 500만
-		10000000, // 1000만
-	}
-
+// checkSubscriberMilestones: 구독자 수가 마일스톤을 넘었는지 확인한다.
+func (ys *Scheduler) checkMilestones(previous, current uint64) []uint64 {
 	var achieved []uint64
-	for _, milestone := range milestones {
-		if prevCount < milestone && currentCount >= milestone {
+	for _, milestone := range SubscriberMilestones {
+		if previous < milestone && current >= milestone {
 			achieved = append(achieved, milestone)
 		}
 	}
@@ -411,7 +457,7 @@ func (ys *Scheduler) formatChangeMessage(change *domain.StatsChange) string {
 
 	milestones := ys.checkMilestones(change.PreviousStats.SubscriberCount, change.CurrentStats.SubscriberCount)
 	if len(milestones) > 0 {
-		milestone := milestones[0] // Take first milestone
+		milestone := milestones[0] // 첫 번째 milestone 사용
 		return fmt.Sprintf("🎉 %s님이 구독자 %s명을 달성했습니다!\n축하합니다! 🎊",
 			change.MemberName,
 			util.FormatKoreanNumber(int64(milestone)))
@@ -425,4 +471,74 @@ func (ys *Scheduler) formatChangeMessage(change *domain.StatsChange) string {
 	}
 
 	return ""
+}
+
+// watchNearMilestoneMembers: Holodex API를 사용하여 마일스톤 직전 멤버를 빠르게 체크한다.
+// 95% 이상 진행된 멤버만 체크하여 API 호출을 최소화한다.
+func (ys *Scheduler) watchNearMilestoneMembers(ctx context.Context) {
+	// 모든 채널의 마일스톤 직전 여부를 한 번에 조회 (threshold: 95%)
+	nearMembers, err := ys.statsRepo.GetNearMilestoneMembers(ctx, MilestoneThresholdRatio, SubscriberMilestones, 50)
+	if err != nil {
+		ys.logger.Error("Failed to get near milestone members", slog.Any("error", err))
+		return
+	}
+
+	if len(nearMembers) == 0 {
+		return
+	}
+
+	// channelID -> Member 맵 구성
+	_, channelToMember := ys.buildChannelMaps()
+
+	ys.logger.Info("Checking near-milestone members via Holodex",
+		slog.Int("count", len(nearMembers)))
+
+	now := time.Now()
+	for _, nm := range nearMembers {
+		// Member 객체 조회
+		member := channelToMember[nm.ChannelID]
+		if member == nil {
+			continue
+		}
+
+		// Holodex API로 최신 구독자 수 조회
+		channel, err := ys.holodex.GetChannel(ctx, nm.ChannelID)
+		if err != nil {
+			ys.logger.Warn("Failed to get channel from Holodex",
+				slog.String("channel", nm.ChannelID),
+				slog.Any("error", err))
+			continue
+		}
+		if channel == nil || channel.SubscriberCount == nil {
+			continue
+		}
+
+		currentSubs := uint64(*channel.SubscriberCount)
+		prevSubs := nm.CurrentSubs // DB에서 조회한 이전 구독자 수
+
+		// 마일스톤 달성 여부 확인
+		milestones := ys.checkMilestones(prevSubs, currentSubs)
+		if len(milestones) > 0 {
+			achieved := ys.processMilestones(ctx, nm.ChannelID, member, milestones, now)
+			if achieved > 0 {
+				ys.logger.Info("Milestone detected via Holodex watcher",
+					slog.String("member", member.Name),
+					slog.Any("milestones", milestones),
+					slog.Any("current_subs", currentSubs))
+
+				// 통계 저장 (Holodex 데이터로 업데이트)
+				stats := &domain.TimestampedStats{
+					ChannelID:       nm.ChannelID,
+					MemberName:      member.Name,
+					SubscriberCount: currentSubs,
+					Timestamp:       now,
+				}
+				if err := ys.statsRepo.SaveStats(ctx, stats); err != nil {
+					ys.logger.Warn("Failed to save Holodex stats",
+						slog.String("channel", nm.ChannelID),
+						slog.Any("error", err))
+				}
+			}
+		}
+	}
 }

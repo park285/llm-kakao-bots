@@ -211,16 +211,17 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| `GEMINI_MODEL` | 기본 모델 | `gemini-3.0-flash` |
-| `GEMINI_TEMPERATURE` | Temperature | `1.0` |
-| `GEMINI_TIMEOUT_SECONDS` | 타임아웃 | `60` |
-| `GEMINI_MAX_RETRIES` | 최대 재시도 | `3` |
+| `GEMINI_MODEL` | 기본 모델 | `gemini-3-flash-preview` |
+| `GEMINI_TEMPERATURE` | Temperature | `0.7` |
+| `GEMINI_TIMEOUT` | 타임아웃(초) | `60` |
+| `GEMINI_MAX_RETRIES` | 최대 재시도 | `6` |
 
 ### 보안 설정
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
 | `HTTP_API_KEY` | API 인증 키 | (비활성화) |
+| `HTTP_API_KEY_REQUIRED` | API 키 미설정 시 차단 | `false` |
 | `HTTP_RATE_LIMIT_RPM` | 분당 요청 제한 | (비활성화) |
 | `GUARD_ENABLED` | 인젝션 가드 | `true` |
 | `GUARD_THRESHOLD` | 가드 임계값 | `0.85` |
@@ -231,7 +232,7 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 |------|------|--------|
 | `SESSION_STORE_URL` | Valkey URL | `redis://valkey-cache:6379` |
 | `SESSION_STORE_ENABLED` | 세션 활성화 | `true` |
-| `SESSION_TTL_HOURS` | 세션 만료 시간 | `24` |
+| `SESSION_TTL_MINUTES` | 세션 만료 시간(분) | `1440` |
 
 ### 로깅 설정
 
@@ -239,8 +240,8 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 |------|------|--------|
 | `LOG_DIR` | 로그 디렉터리 | `/app/logs` |
 | `LOG_LEVEL` | 로그 레벨 | `info` |
-| `LOG_FILE_MAX_SIZE_MB` | 최대 파일 크기 | `100` |
-| `LOG_FILE_MAX_BACKUPS` | 백업 개수 | `3` |
+| `LOG_FILE_MAX_SIZE_MB` | 최대 파일 크기(MB) | `1` |
+| `LOG_FILE_MAX_BACKUPS` | 백업 개수 | `30` |
 
 ## 아키텍처
 

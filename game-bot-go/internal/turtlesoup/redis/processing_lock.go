@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -32,6 +33,9 @@ func NewProcessingLockService(client valkey.Client, logger *slog.Logger) *Proces
 // StartProcessing: 처리를 시작하고 락을 설정합니다.
 func (s *ProcessingLockService) StartProcessing(ctx context.Context, chatID string) error {
 	if err := s.service.Start(ctx, chatID); err != nil {
+		if errors.Is(err, processinglock.ErrAlreadyProcessing) {
+			return cerrors.LockError{SessionID: chatID, Description: "already processing"}
+		}
 		return cerrors.RedisError{Operation: "processing_start", Err: err}
 	}
 	return nil

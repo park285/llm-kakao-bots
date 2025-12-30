@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"runtime"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -16,6 +18,8 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/server"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/docker"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/settings"
 )
 
 // ProvideAdminAddr: 관리자 서버가 리슨할 주소를 반환한다.
@@ -43,6 +47,8 @@ func ProvideAdminRouter(
 	sessions *server.ValkeySessionStore,
 	securityCfg *server.SecurityConfig,
 	allowedCIDRs []*net.IPNet,
+	memberRepo *member.Repository,
+	settingsSvc *settings.Service,
 ) (*gin.Engine, error) {
 	router, err := newAdminRouter(ctx, logger)
 	if err != nil {
@@ -52,9 +58,14 @@ func ProvideAdminRouter(
 	logger.Info("Valkey session store initialized")
 
 	adminIPGuard := server.AdminIPAllowMiddleware(allowedCIDRs, logger)
-	logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
+	if len(allowedCIDRs) == 0 {
+		logger.Error("Admin IP allowlist is empty; denying all admin requests")
+	} else {
+		logger.Info("Admin IP allowlist applied", slog.Int("cidr_count", len(allowedCIDRs)))
+	}
 
-	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret)
+	//nolint:contextcheck // gin 미들웨어는 c.Request.Context()로 context 전달
+	adminAuth := server.AdminAuthMiddleware(sessions, securityCfg.SessionSecret, securityCfg.ForceHTTPS)
 	registerAdminRoutes(router, adminIPGuard, adminAuth, adminHandler)
 
 	// Docker 컨테이너 관리 API (선택적)
@@ -64,7 +75,17 @@ func ProvideAdminRouter(
 		logger.Info("Docker management API enabled")
 	}
 
-	registerAdminUIRoutes(router)
+	// SSR 데이터 인젝터 생성 및 HTML 캐시
+	ssrInjector := server.NewSSRDataInjector(memberRepo, settingsSvc, dockerSvc)
+	if htmlData, err := os.ReadFile(constants.AdminUIConfig.IndexPath); err == nil {
+		ssrInjector.SetHTMLCache(htmlData)
+		logger.Info("SSR data injector enabled", slog.String("path", constants.AdminUIConfig.IndexPath))
+	} else {
+		logger.Warn("SSR data injection disabled: failed to cache HTML", slog.Any("error", err))
+	}
+
+	//nolint:contextcheck // gin 핸들러는 c.Request.Context()로 context 전달
+	registerAdminUIRoutes(router, ssrInjector, sessions, securityCfg.SessionSecret)
 
 	return router, nil
 }
@@ -73,7 +94,7 @@ func newAdminRouter(ctx context.Context, logger *slog.Logger) (*gin.Engine, erro
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	if err := router.SetTrustedProxies(constants.ServerConfig.TrustedProxies); err != nil {
-		return nil, fmt.Errorf("trusted proxies 설정 실패: %w", err)
+		return nil, fmt.Errorf("failed to set trusted proxies: %w", err)
 	}
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.Use(gin.Recovery())
@@ -123,7 +144,10 @@ func newAdminStaticCacheMiddleware() gin.HandlerFunc {
 func registerAdminHealthRoutes(router *gin.Engine) {
 	// Health check 엔드포인트 (Gzip 비활성화 - 작은 응답)
 	router.GET("/health", func(c *gin.Context) {
-		c.Data(200, "application/json", []byte(`{"status":"ok"}`))
+		c.JSON(200, gin.H{
+			"status":     "ok",
+			"goroutines": runtime.NumGoroutine(),
+		})
 	})
 }
 
@@ -162,6 +186,14 @@ func registerAdminRoutes(
 	adminAPI.GET("/logs", adminHandler.GetLogs)
 	adminAPI.GET("/settings", adminHandler.GetSettings)
 	adminAPI.POST("/settings", adminHandler.UpdateSettings)
+
+	// 마일스톤 API
+	adminAPI.GET("/milestones", adminHandler.GetMilestones)
+	adminAPI.GET("/milestones/near", adminHandler.GetNearMilestoneMembers)
+	adminAPI.GET("/milestones/stats", adminHandler.GetMilestoneStats)
+
+	// WebSocket 라우트 (실시간 스트리밍)
+	adminAPI.GET("/ws/system-stats", adminHandler.StreamSystemStats)
 }
 
 func registerDockerRoutes(
@@ -176,26 +208,64 @@ func registerDockerRoutes(
 	dockerAPI.POST("/containers/:name/restart", dockerHandler.RestartContainer)
 	dockerAPI.POST("/containers/:name/stop", dockerHandler.StopContainer)
 	dockerAPI.POST("/containers/:name/start", dockerHandler.StartContainer)
+
+	// WebSocket 라우트 (실시간 로그 스트리밍)
+	dockerAPI.GET("/containers/:name/logs/stream", dockerHandler.StreamLogs)
 }
 
-func registerAdminUIRoutes(router *gin.Engine) {
+func registerAdminUIRoutes(
+	router *gin.Engine,
+	ssrInjector *server.SSRDataInjector,
+	sessions *server.ValkeySessionStore,
+	sessionSecret string,
+) {
 	// Serve React SPA (프로덕션용 React 빌드)
 	router.Static(constants.AdminUIConfig.AssetsRoute, constants.AdminUIConfig.AssetsDir)
 
-	// HTML은 항상 최신 버전을 받도록 캐시 금지 (업데이트 시 구버전 HTML 캐싱으로 인한 chunk mismatch 방지)
-	router.GET("/", func(c *gin.Context) {
+	// SSR 데이터 주입 핸들러 (인증 상태 확인 후 데이터 프리페칭)
+	serveWithSSR := func(c *gin.Context) {
 		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlHTML)
-		c.File(constants.AdminUIConfig.IndexPath)
-	})
+
+		// 인증 상태 확인 (세션 쿠키에서)
+		isAuthenticated := checkAuthFromCookie(c, sessions, sessionSecret)
+
+		// SSR 데이터 주입 시도
+		html, err := ssrInjector.InjectForPath(c.Request.Context(), c.Request.URL.Path, isAuthenticated)
+		if err != nil || len(html) == 0 {
+			// 폴백: 원본 HTML 파일 서빙
+			c.File(constants.AdminUIConfig.IndexPath)
+			return
+		}
+
+		c.Data(200, "text/html; charset=utf-8", html)
+	}
+
+	// HTML은 항상 최신 버전을 받도록 캐시 금지
+	router.GET("/", serveWithSSR)
 
 	// Favicon 서빙 (NoRoute에 걸리지 않도록 명시적 처리)
 	router.GET(constants.AdminUIConfig.FaviconRoute, func(c *gin.Context) {
-		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlFavicon) // 24시간 캐시
+		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlFavicon)
 		c.File(constants.AdminUIConfig.FaviconPath)
 	})
 
-	router.NoRoute(func(c *gin.Context) {
-		c.Header("Cache-Control", constants.AdminUIConfig.CacheControlHTML)
-		c.File(constants.AdminUIConfig.IndexPath)
-	})
+	router.NoRoute(serveWithSSR)
+}
+
+// checkAuthFromCookie: 세션 쿠키에서 인증 상태를 확인합니다. (SSR 전용)
+// 인증 미들웨어와 동일한 로직이지만 HTTP 오류 대신 bool을 반환합니다.
+func checkAuthFromCookie(c *gin.Context, sessions *server.ValkeySessionStore, sessionSecret string) bool {
+	signedSessionID, err := c.Cookie("admin_session")
+	if err != nil || signedSessionID == "" {
+		return false
+	}
+
+	// HMAC 서명 검증
+	sessionID, valid := server.ValidateSessionSignature(signedSessionID, sessionSecret)
+	if !valid {
+		return false
+	}
+
+	// Valkey 세션 존재 여부 확인
+	return sessions.ValidateSession(c.Request.Context(), sessionID)
 }

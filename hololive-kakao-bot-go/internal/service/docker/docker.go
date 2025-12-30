@@ -4,6 +4,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"sort"
 	"strings"
@@ -164,6 +165,32 @@ func (s *Service) StartContainer(ctx context.Context, name string) error {
 
 	s.logger.Info("container started successfully", slog.String("container", name))
 	return nil
+}
+
+// GetLogStream: 컨테이너의 로그 스트림(stdout, stderr)을 반환합니다.
+// Follow=true, Tail=100 설정으로 실시간 로그를 스트리밍합니다.
+func (s *Service) GetLogStream(ctx context.Context, name string) (io.ReadCloser, error) {
+	options := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Tail:       "100",
+		Timestamps: true,
+	}
+
+	reader, err := s.client.ContainerLogs(ctx, name, options)
+	if err != nil {
+		return nil, fmt.Errorf("container %s logs: %w", name, err)
+	}
+	return reader, nil
+}
+
+// IsManaged: 컨테이너가 관리 대상인지 확인합니다.
+func (s *Service) IsManaged(name string) bool {
+	if s == nil {
+		return false
+	}
+	return s.isManaged(name)
 }
 
 // isManaged: 컨테이너가 이 서비스의 관리 대상인지 확인함

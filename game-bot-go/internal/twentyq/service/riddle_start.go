@@ -76,10 +76,6 @@ func (s *RiddleService) Start(ctx context.Context, chatID string, userID string,
 			return fmt.Errorf("save category failed: %w", err)
 		}
 
-		if _, err := s.restClient.CreateSession(ctx, chatID, qconfig.LlmNamespace); err != nil {
-			s.logger.Warn("llm_session_create_failed", "chat_id", chatID, "err", err)
-		}
-
 		returnText = s.buildStartMessage(categoryToKorean(topicResp.Category), invalidInput)
 		return nil
 	})

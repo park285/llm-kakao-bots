@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"log/slog"
 	"net"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"

@@ -39,7 +39,11 @@ func NewIPAllowList(allowed []string) ([]*net.IPNet, error) {
 func AdminIPAllowMiddleware(allowed []*net.IPNet, logger *slog.Logger) gin.HandlerFunc {
 	if len(allowed) == 0 {
 		return func(c *gin.Context) {
-			c.Next()
+			if logger != nil {
+				logger.Error("Admin IP allowlist is empty; denying all admin requests")
+			}
+			c.JSON(403, gin.H{"error": "forbidden"})
+			c.Abort()
 		}
 	}
 	return func(c *gin.Context) {

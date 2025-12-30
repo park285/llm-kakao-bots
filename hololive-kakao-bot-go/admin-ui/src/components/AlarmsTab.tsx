@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { alarmsApi, namesApi } from '@/api'
+import { queryKeys } from '@/api/queryKeys'
 import type { Alarm } from '@/types'
 import EditNameModal from './EditNameModal'
+import { ConfirmModal } from './ConfirmModal'
+import { Card, Button, Input, Badge } from '@/components/ui'
+import { Search, Trash2, Edit2, ChevronDown, ChevronUp, Bell, MapPin, User } from 'lucide-react'
 
 interface AlarmGroup {
   roomId: string
@@ -16,6 +20,8 @@ const AlarmsTab = () => {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [alarmToDelete, setAlarmToDelete] = useState<Alarm | null>(null)
+
   const [editModal, setEditModal] = useState<{
     type: 'room' | 'user'
     id: string
@@ -23,14 +29,14 @@ const AlarmsTab = () => {
   } | null>(null)
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['alarms'],
+    queryKey: queryKeys.alarms.all,
     queryFn: alarmsApi.getAll,
   })
 
   const deleteAlarmMutation = useMutation({
     mutationFn: alarmsApi.delete,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['alarms'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alarms.all })
     },
   })
 
@@ -42,7 +48,7 @@ const AlarmsTab = () => {
       return namesApi.setUserName(id, name)
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['alarms'] })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.alarms.all })
     },
   })
 
@@ -100,14 +106,17 @@ const AlarmsTab = () => {
   const totalAlarms = filteredGroups.reduce((sum, g) => sum + g.alarms.length, 0)
 
   const handleDelete = (alarm: Alarm) => {
-    if (!confirm(`알람을 삭제하시겠습니까?
-채널: ${alarm.memberName || alarm.channelId}`)) return
+    setAlarmToDelete(alarm)
+  }
 
+  const confirmDelete = () => {
+    if (!alarmToDelete) return
     void deleteAlarmMutation.mutateAsync({
-      roomId: alarm.roomId,
-      userId: alarm.userId,
-      channelId: alarm.channelId,
+      roomId: alarmToDelete.roomId,
+      userId: alarmToDelete.userId,
+      channelId: alarmToDelete.channelId,
     })
+    setAlarmToDelete(null)
   }
 
   const handleEditName = (type: 'room' | 'user', id: string, currentName: string) => {
@@ -132,36 +141,33 @@ const AlarmsTab = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 검색 바 */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🔍</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value) }}
-            placeholder="방 이름, 유저 이름, 멤버 이름으로 검색..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {search && (
-            <button
-              onClick={() => { setSearch('') }}
-              className="px-3 py-2 text-gray-600 hover:text-gray-900"
-            >
-              ✕
-            </button>
-          )}
+      <Card className="p-4 bg-white shadow-sm border-slate-200">
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Input
+              placeholder="방 이름, 유저 이름, 멤버 이름..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="text-sm text-slate-500 font-medium">
+            총 <span className="text-slate-900 font-bold">{filteredGroups.length}</span>개 그룹 / <span className="text-slate-900 font-bold">{totalAlarms}</span>개 알람
+          </div>
         </div>
-        <div className="mt-2 text-sm text-gray-600">
-          총 {filteredGroups.length}개 그룹, {totalAlarms}개 알람
-        </div>
-      </div>
+      </Card>
 
       {/* 알람 그룹 목록 */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filteredGroups.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">검색 결과가 없습니다</div>
+          <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <Bell className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+            <h3 className="text-lg font-medium text-slate-900">알람이 없습니다</h3>
+            <p className="text-slate-500">새로운 알람을 등록하거나 검색어를 변경해보세요.</p>
+          </div>
         ) : (
           filteredGroups.map((group) => {
             const groupKey = `${group.roomId}:${group.userId}`
@@ -170,86 +176,102 @@ const AlarmsTab = () => {
             const hasMore = group.alarms.length > 5
 
             return (
-              <div key={groupKey} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                {/* 그룹 헤더 (클릭하여 펼침/접기) */}
+              <div key={groupKey} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all hover:shadow-md">
+                {/* 그룹 헤더 */}
                 <div
                   onClick={() => { toggleGroup(groupKey) }}
-                  className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-4 border-b border-gray-200 cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-colors"
+                  className="bg-slate-50/50 px-5 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors border-b border-slate-100"
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-gray-900 flex items-center gap-2">
-                        <span>📍</span>
-                        <span>{group.roomName}</span>
-                        <button
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 pr-3">
+                          <MapPin size={12} /> {group.roomName}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-slate-400 hover:text-blue-600"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleEditName('room', group.roomId, group.roomName)
                           }}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                          title="방 이름 편집"
                         >
-                          ✏️
-                        </button>
-                        <span className="text-gray-400">/</span>
-                        <span>👤</span>
-                        <span>{group.userName}</span>
-                        <button
+                          <Edit2 size={12} />
+                        </Button>
+
+                        <span className="text-slate-300">|</span>
+
+                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 gap-1 pr-3">
+                          <User size={12} /> {group.userName}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-slate-400 hover:text-indigo-600"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleEditName('user', group.userId, group.userName)
                           }}
-                          className="text-sm text-blue-600 hover:text-blue-800"
-                          title="유저 이름 편집"
                         >
-                          ✏️
-                        </button>
-                      </div>
-                      <div className="text-sm text-gray-600 mt-1">
-                        알람 {group.alarms.length}개
-                        {!isExpanded && hasMore && ` (${String(displayAlarms.length)}개 표시 중)`}
+                          <Edit2 size={12} />
+                        </Button>
                       </div>
                     </div>
-                    <button className="text-2xl text-gray-400 hover:text-gray-600">
-                      {isExpanded ? '▲' : '▼'}
-                    </button>
+
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                        {group.alarms.length}개
+                      </span>
+                      {isExpanded ? <ChevronUp className="text-slate-400" size={20} /> : <ChevronDown className="text-slate-400" size={20} />}
+                    </div>
                   </div>
                 </div>
 
                 {/* 알람 목록 */}
-                <div className="divide-y divide-gray-200">
+                <div className="divide-y divide-slate-100">
                   {displayAlarms.map((alarm: Alarm, index: number) => (
-                    <div key={`${alarm.channelId}-${String(index)}`} className="px-4 py-3 hover:bg-gray-50 flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">
-                          🎨 {alarm.memberName || '이름 없음'}
+                    <div key={`${alarm.channelId}-${String(index)}`} className="px-5 py-3 hover:bg-slate-50 flex items-center justify-between group transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs ring-2 ring-white">
+                          {alarm.memberName ? alarm.memberName[0] : '?'}
                         </div>
-                        <div className="text-xs text-gray-400 mt-1 font-mono">
-                          {alarm.channelId}
+                        <div>
+                          <div className="font-semibold text-slate-700 text-sm">
+                            {alarm.memberName || '이름 없음'}
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono">
+                            {alarm.channelId}
+                          </div>
                         </div>
                       </div>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDelete(alarm)
                         }}
                         disabled={deleteAlarmMutation.isPending}
-                        className="px-3 py-1.5 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 transition-colors"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                       >
-                        삭제
-                      </button>
+                        <Trash2 size={16} />
+                      </Button>
                     </div>
                   ))}
                 </div>
 
                 {/* 더보기 버튼 */}
                 {!isExpanded && hasMore && (
-                  <div className="bg-gray-50 px-4 py-3 text-center border-t border-gray-200">
+                  <div className="bg-slate-50/30 px-4 py-2 text-center border-t border-slate-100">
                     <button
-                      onClick={() => { toggleGroup(groupKey) }}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleGroup(groupKey)
+                      }}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
                     >
-                      더보기 ({String(group.alarms.length - displayAlarms.length)}개)
+                      +{group.alarms.length - displayAlarms.length}개 더보기
                     </button>
                   </div>
                 )}
@@ -268,6 +290,35 @@ const AlarmsTab = () => {
         currentName={editModal?.currentName || ''}
         onSave={handleSaveName}
       />
+
+      {/* 삭제 확인 모달 */}
+      <ConfirmModal
+        isOpen={alarmToDelete !== null}
+        onClose={() => setAlarmToDelete(null)}
+        onConfirm={confirmDelete}
+        title="알람 삭제"
+        message={
+          alarmToDelete
+            ? `다음 멤버의 알람 설정을 삭제하시겠습니까?`
+            : ''
+        }
+        confirmText="삭제"
+        confirmColor="danger"
+      >
+        {alarmToDelete && (
+          <div className="bg-slate-50 p-4 rounded-lg mt-2 border border-slate-100 flex flex-col gap-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500">멤버</span>
+              <span className="font-bold text-slate-800">{alarmToDelete.memberName || '이름 없음'}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-500">채널 ID</span>
+              <span className="font-mono text-slate-600 text-xs">{alarmToDelete.channelId}</span>
+            </div>
+          </div>
+        )}
+      </ConfirmModal>
+
     </div>
   )
 }

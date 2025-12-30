@@ -17,12 +17,9 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/settings"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/system"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
-
-// ----------------------------------------------------------------------------
-// BotRuntime Provider
-// ----------------------------------------------------------------------------
 
 // AdminCredentials: 관리자 계정 정보를 담는 구조체 (사용자명, 비밀번호 해시)
 type AdminCredentials struct {
@@ -34,7 +31,7 @@ type AdminCredentials struct {
 func ProvideBot(deps *bot.Dependencies) (*bot.Bot, error) {
 	created, err := bot.NewBot(deps)
 	if err != nil {
-		return nil, fmt.Errorf("봇 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
 	return created, nil
 }
@@ -49,7 +46,7 @@ func ProvideValkeyMQConsumer(
 ) (*mq.ValkeyMQConsumer, error) {
 	consumer := mq.NewValkeyMQConsumer(ctx, mqCfg, logger, kakaoBot, cacheSvc)
 	if consumer == nil {
-		return nil, fmt.Errorf("valkey MQ consumer 생성 실패")
+		return nil, fmt.Errorf("failed to create valkey MQ consumer")
 	}
 	return consumer, nil
 }
@@ -80,6 +77,16 @@ func ProvideAdminCredentials(cfg *config.Config) AdminCredentials {
 	}
 }
 
+// ProvideSystemCollector: 시스템 리소스 수집기를 생성하여 제공한다.
+func ProvideSystemCollector(cfg *config.Config) *system.Collector {
+	endpoints := []system.ServiceEndpoint{
+		{Name: "llm-server", URL: cfg.Services.LLMServerHealthURL},
+		{Name: "twentyq", URL: cfg.Services.GameBotTwentyQHealthURL},
+		{Name: "turtlesoup", URL: cfg.Services.GameBotTurtleHealthURL},
+	}
+	return system.NewCollector(endpoints)
+}
+
 // ProvideAdminHandler: 관리자 API 핸들러를 생성하여 제공한다. 모든 서비스 의존성을 주입받는다.
 func ProvideAdminHandler(
 	repo *member.Repository,
@@ -88,6 +95,7 @@ func ProvideAdminHandler(
 	alarm *notification.AlarmService,
 	holodexSvc *holodex.Service,
 	youtubeSvc *youtube.Service,
+	statsRepo *youtube.StatsRepository,
 	activityLogger *activity.Logger,
 	settingsSvc *settings.Service,
 	aclSvc *acl.Service,
@@ -96,6 +104,7 @@ func ProvideAdminHandler(
 	rateLimiter *server.LoginRateLimiter,
 	securityCfg *server.SecurityConfig,
 	adminCreds AdminCredentials,
+	systemSvc *system.Collector,
 	logger *slog.Logger,
 ) *server.AdminHandler {
 	return server.NewAdminHandler(
@@ -105,6 +114,7 @@ func ProvideAdminHandler(
 		alarm,
 		holodexSvc,
 		youtubeSvc,
+		statsRepo,
 		activityLogger,
 		settingsSvc,
 		aclSvc,
@@ -114,6 +124,7 @@ func ProvideAdminHandler(
 		securityCfg,
 		adminCreds.User,
 		adminCreds.PassHash,
+		systemSvc,
 		logger,
 	)
 }
@@ -122,7 +133,7 @@ func ProvideAdminHandler(
 func ProvideAdminAllowedCIDRs(cfg *config.Config) ([]*net.IPNet, error) {
 	allowed, err := server.NewIPAllowList(cfg.Server.AdminAllowedIPs)
 	if err != nil {
-		return nil, fmt.Errorf("admin allowlist 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create admin allowlist: %w", err)
 	}
 	return allowed, nil
 }

@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { logsApi } from '@/api'
-import { ScrollText, RefreshCw, AlertTriangle, Shield, Activity, ChevronDown, ChevronRight, Server } from 'lucide-react'
-import { useState } from 'react'
+import { logsApi, dockerApi } from '@/api'
+import { queryKeys } from '@/api/queryKeys'
+import { ScrollText, RefreshCw, AlertTriangle, Shield, Activity, ChevronDown, ChevronRight, Server, Terminal, LayoutList } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import type { LogEntry } from '@/types'
+import { LogTerminal } from '@/components/docker/LogTerminal'
+import { useSSRData } from '@/hooks/useSSRData'
+
+// --- 헬퍼 함수 & 서브 컴포넌트 ---
 
 const formatDetailValue = (value: unknown): string => {
     if (value === null) return 'null'
@@ -21,14 +26,8 @@ const formatDetailValue = (value: unknown): string => {
         case 'function':
             return '[function]'
         case 'object':
-            if (value instanceof Date) {
-                return value.toISOString()
-            }
-            try {
-                return JSON.stringify(value)
-            } catch {
-                return '[unserializable]'
-            }
+            if (value instanceof Date) return value.toISOString()
+            try { return JSON.stringify(value) } catch { return '[unserializable]' }
         default:
             return ''
     }
@@ -60,7 +59,6 @@ const LogItem = ({ log }: { log: LogEntry }) => {
                     setExpanded((prev) => !prev)
                 }}
             >
-                {/* 1. Time */}
                 <div className="font-mono text-xs text-slate-400 pt-0.5">
                     {new Date(log.timestamp).toLocaleString('ko-KR', {
                         year: '2-digit', month: '2-digit', day: '2-digit',
@@ -68,8 +66,6 @@ const LogItem = ({ log }: { log: LogEntry }) => {
                         hour12: false
                     })}
                 </div>
-
-                {/* 2. Type (Mobile: hidden or merged, Desktop: column) */}
                 <div className="hidden md:flex items-center gap-1.5">
                     <div className={clsx("p-1 rounded bg-white border shrink-0", border)}>
                         <Icon size={12} className={color} />
@@ -78,8 +74,6 @@ const LogItem = ({ log }: { log: LogEntry }) => {
                         {log.type.replace(/_/g, ' ')}
                     </span>
                 </div>
-
-                {/* 3. Summary & Details Indicator */}
                 <div className="min-w-0 flex items-center gap-2">
                     <div className="md:hidden shrink-0">
                         <Icon size={14} className={color} />
@@ -92,8 +86,6 @@ const LogItem = ({ log }: { log: LogEntry }) => {
                     )}
                 </div>
             </div>
-
-            {/* Expanded Details */}
             {expanded && hasDetails && (
                 <div className="px-3 pb-3 pl-[28px] md:pl-[306px]">
                     <div className="bg-slate-100 rounded-lg p-3 border border-slate-200 text-xs font-mono overflow-x-auto">
@@ -116,71 +108,152 @@ const LogItem = ({ log }: { log: LogEntry }) => {
     )
 }
 
+// --- 메인 컴포넌트 ---
+
 const LogsTab = () => {
-    const { data: logsData, isLoading, refetch, isRefetching } = useQuery({
-        queryKey: ['logs'],
+    const [viewMode, setViewMode] = useState<'audit' | 'console'>('audit')
+    const [selectedContainer, setSelectedContainer] = useState<string>('')
+
+    // --- Audit 로그 데이터 fetching ---
+    const { data: logsData, isLoading: logsLoading, refetch: refetchLogs, isRefetching: logsRefetching } = useQuery({
+        queryKey: queryKeys.logs.all,
         queryFn: logsApi.get,
-        refetchInterval: 5000
+        refetchInterval: 5000,
+        enabled: viewMode === 'audit'
     })
 
-    return (
-        <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-200px)] overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white z-10">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-indigo-50 p-2 rounded-lg">
-                            <ScrollText className="text-indigo-600" size={20} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-800">System Logs</h3>
-                            <p className="text-xs text-slate-500">
-                                최근 {logsData?.logs.length ?? 0}개의 활동 로그
-                            </p>
-                        </div>
-                    </div>
+    // --- Data Fetching for Docker Containers (useSSRData 훅 활용) ---
+    const ssrContainersData = useSSRData('containers', (data) =>
+        data?.status === 'ok' && Array.isArray(data.containers)
+            ? { status: data.status, containers: data.containers }
+            : undefined
+    )
 
+    const { data: containersData } = useQuery({
+        queryKey: queryKeys.docker.containers,
+        queryFn: dockerApi.getContainers,
+        refetchInterval: 15000,
+        initialData: ssrContainersData,
+        enabled: viewMode === 'console'
+    })
+
+    const containers = containersData?.containers ?? []
+    const managedContainers = containers.filter(c => c.managed)
+
+    // 선택된 컨테이너 없을 시 첫 번째 managed 컨테이너 자동 선택
+    useEffect(() => {
+        if (viewMode !== 'console') return
+        if (selectedContainer) return
+        const [first] = managedContainers
+        if (!first) return
+        setSelectedContainer(first.name)
+    }, [managedContainers, selectedContainer, viewMode])
+
+    return (
+        <div className="space-y-4 max-w-full h-[calc(100vh-140px)] flex flex-col">
+            {/* Top Toolbar / Tabs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
                     <button
-                        onClick={() => { void refetch() }}
-                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
-                        title="Refresh Logs"
+                        onClick={() => { setViewMode('audit') }}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all flex-1 sm:flex-none justify-center",
+                            viewMode === 'audit'
+                                ? "bg-white text-indigo-600 shadow-sm"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        )}
                     >
-                        <RefreshCw size={18} className={isRefetching ? "animate-spin" : ""} />
+                        <LayoutList size={16} />
+                        활동 기록
+                    </button>
+                    <button
+                        onClick={() => { setViewMode('console') }}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all flex-1 sm:flex-none justify-center",
+                            viewMode === 'console'
+                                ? "bg-white text-sky-600 shadow-sm"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        )}
+                    >
+                        <Terminal size={16} />
+                        실시간 콘솔
                     </button>
                 </div>
 
-                {/* Log List */}
-                <div className="flex-1 overflow-auto bg-slate-50 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                            <RefreshCw className="animate-spin opacity-50" />
-                            <span className="text-sm">로그를 불러오는 중...</span>
-                        </div>
-                    ) : (!logsData?.logs || logsData.logs.length === 0) ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-                                <ScrollText className="text-slate-300" />
-                            </div>
-                            <p className="text-sm font-medium">기록된 로그가 없습니다.</p>
-                        </div>
-                    ) : (
-                        <div className="bg-white">
-                            <div className="hidden pid-header border-b border-slate-100 bg-slate-50 p-2 text-xs font-bold text-slate-500 uppercase tracking-wider md:grid md:grid-cols-[150px_140px_1fr] pl-3">
-                                <div>Timestamp</div>
-                                <div>Type</div>
-                                <div>Activity</div>
-                            </div>
-                            {[...(logsData.logs)].reverse().map((log, idx) => (
-                                <LogItem key={`${log.timestamp}-${String(idx)}`} log={log} />
+                {viewMode === 'audit' ? (
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end px-2">
+                        <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                            최근 {logsData?.logs.length ?? 0}개의 활동
+                        </span>
+                        <button
+                            onClick={() => { void refetchLogs() }}
+                            className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors border border-transparent hover:border-slate-200"
+                            title="새로고침"
+                        >
+                            <RefreshCw size={18} className={logsRefetching ? "animate-spin text-indigo-500" : ""} />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3 w-full sm:w-auto px-2">
+                        <span className="text-xs text-slate-500 font-medium whitespace-nowrap hidden sm:inline">대상 컨테이너:</span>
+                        <select
+                            value={selectedContainer}
+                            onChange={(e) => { setSelectedContainer(e.target.value) }}
+                            className="bg-slate-50 text-slate-700 text-sm font-medium rounded-lg px-3 py-2 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 w-full sm:w-auto"
+                        >
+                            {managedContainers.map(c => (
+                                <option key={c.name} value={c.name}>
+                                    {c.name} ({c.state})
+                                </option>
                             ))}
-                        </div>
-                    )}
-                </div>
+                        </select>
+                    </div>
+                )}
+            </div>
 
-                {/* Footer */}
-                <div className="p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-400 text-center shrink-0 font-medium">
-                    Showing last 100 entries • Auto-refreshing every 5s
-                </div>
+            {/* Main Content Area */}
+            <div className="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden relative">
+
+                {viewMode === 'audit' && (
+                    <>
+                        <div className="flex-1 overflow-auto bg-slate-50 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                            {logsLoading ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+                                    <RefreshCw className="animate-spin opacity-50" />
+                                    <span className="text-sm">로그를 불러오는 중...</span>
+                                </div>
+                            ) : (!logsData?.logs || logsData.logs.length === 0) ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                                        <ScrollText className="text-slate-300" />
+                                    </div>
+                                    <p className="text-sm font-medium">기록된 로그가 없습니다.</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white min-w-[600px] md:min-w-0">
+                                    <div className="hidden md:grid md:grid-cols-[150px_140px_1fr] border-b border-slate-100 bg-slate-50/50 p-2 pl-3 text-xs font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
+                                        <div>Timestamp</div>
+                                        <div>Type</div>
+                                        <div>Activity</div>
+                                    </div>
+                                    {[...(logsData.logs)].reverse().map((log, idx) => (
+                                        <LogItem key={`${log.timestamp}-${String(idx)}`} log={log} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-2 border-t border-slate-100 bg-white text-[11px] text-slate-400 text-center shrink-0">
+                            Updates automatically every 5s • Showing last 100 system events
+                        </div>
+                    </>
+                )}
+
+                {viewMode === 'console' && (
+                    <div className="flex-1 p-0 bg-black flex flex-col min-h-0">
+                        {/* LogTerminal 컴포넌트 (자체 포함형) */}
+                        <LogTerminal containerName={selectedContainer} />
+                    </div>
+                )}
             </div>
         </div>
     )

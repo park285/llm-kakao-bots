@@ -2,15 +2,21 @@ package processinglock
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/valkey-io/valkey-go"
+
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
 // KeyFunc: 채팅방 ID를 기반으로 락 키를 생성하는 함수 타입
 type KeyFunc func(chatID string) string
+
+// ErrAlreadyProcessing: 이미 해당 채팅방에서 처리가 진행 중일 때 반환되는 에러
+var ErrAlreadyProcessing = errors.New("already processing")
 
 // Service: Redis를 사용하여 동시 처리를 제어하는 락 서비스
 type Service struct {
@@ -33,11 +39,15 @@ func New(client valkey.Client, logger *slog.Logger, keyFunc KeyFunc, ttl time.Du
 	}
 }
 
-// Start: 처리 락을 설정합니다. (이미 존재하더라도 덮어씀, TTL 갱신)
+// Start: 처리 락을 획득합니다. (SET NX)
+// 이미 락이 존재하면 ErrAlreadyProcessing 을 반환합니다.
 func (s *Service) Start(ctx context.Context, chatID string) error {
 	key := s.keyFunc(chatID)
-	cmd := s.client.B().Set().Key(key).Value("1").Ex(s.ttl).Build()
+	cmd := s.client.B().Set().Key(key).Value("1").Nx().Ex(s.ttl).Build()
 	if err := s.client.Do(ctx, cmd).Error(); err != nil {
+		if valkeyx.IsNil(err) {
+			return ErrAlreadyProcessing
+		}
 		return fmt.Errorf("set processing lock failed: %w", err)
 	}
 	s.logger.Debug("processing_started", "chat_id", chatID)

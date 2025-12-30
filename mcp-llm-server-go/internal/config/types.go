@@ -42,7 +42,6 @@ type GeminiConfig struct {
 	Thinking         ThinkingConfig
 	MaxRetries       int
 	TimeoutSeconds   int
-	ModelCacheSize   int
 	FailoverAttempts int
 }
 
@@ -126,7 +125,8 @@ type HTTPConfig struct {
 
 // HTTPAuthConfig 는 API 키 인증 설정이다.
 type HTTPAuthConfig struct {
-	APIKey string
+	APIKey   string
+	Required bool
 }
 
 // HTTPRateLimitConfig 는 요청 제한 설정이다.

@@ -3,10 +3,10 @@ package member
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
+	"github.com/goccy/go-json"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
@@ -249,12 +249,12 @@ func (r *Repository) GetAllMembers(ctx context.Context) ([]*domain.Member, error
 // scanMember: DB 조회 결과를 domain.Member로 변환함
 func (r *Repository) scanMember(
 	id int,
-	slug string,
+	_ string, // slug: domain.Member에서 미사용
 	channelID sql.NullString,
 	englishName string,
 	japaneseName sql.NullString,
 	koreanName sql.NullString,
-	status string,
+	_ string, // status: domain.Member에서 미사용
 	isGraduated bool,
 	aliasesJSON []byte,
 ) (*domain.Member, error) {

@@ -63,6 +63,15 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface HeartbeatResponse {
+  status?: string
+  rotated?: boolean
+  absolute_expires_at?: number
+  idle_rejected?: boolean
+  absolute_expired?: boolean
+  error?: string
+}
+
 // Mutation Request Types
 export interface AddAliasRequest {
   type: 'ko' | 'ja'
@@ -149,4 +158,79 @@ export interface Settings {
 export interface SettingsResponse {
   status: string
   settings: Settings
+}
+
+export interface ServiceGoroutines {
+  name: string
+  goroutines: number
+  available: boolean
+}
+
+export interface SystemStats {
+  cpuUsage: number
+  memoryUsage: number
+  memoryTotal: number
+  memoryUsed: number
+  goroutines: number
+  totalGoroutines: number
+  serviceGoroutines: ServiceGoroutines[]
+}
+
+// Docker Types
+export interface DockerContainer {
+  name: string
+  id: string
+  image: string
+  state: string
+  status: string
+  health: string
+  managed: boolean
+  paused: boolean
+  startedAt?: string
+}
+
+// Milestone Types
+export interface Milestone {
+  channelId: string
+  memberName: string
+  type: string
+  value: number
+  achievedAt: string
+  notified: boolean
+}
+
+export interface MilestonesResponse {
+  status: string
+  milestones: Milestone[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface NearMilestone {
+  channelId: string
+  memberName: string
+  currentSubs: number
+  nextMilestone: number
+  remaining: number
+  progressPct: number
+}
+
+export interface NearMilestonesResponse {
+  status: string
+  members: NearMilestone[]
+  count: number
+  threshold: number
+}
+
+export interface MilestoneStats {
+  totalAchieved: number
+  totalNearMilestone: number
+  recentAchievements: number
+  notNotifiedCount: number
+}
+
+export interface MilestoneStatsResponse {
+  status: string
+  stats: MilestoneStats
 }

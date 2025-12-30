@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -30,7 +31,10 @@ const maxBodyBytes = 1 << 20
 // Register 는 동작을 수행한다.
 func Register(mux *http.ServeMux, llmCfg tsconfig.LlmRestConfig, restClient *llmrest.Client, gameService *tssvc.GameService, logger *slog.Logger) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]any{
+			"status":     "ok",
+			"goroutines": runtime.NumGoroutine(),
+		})
 	})
 
 	mux.HandleFunc("GET /debug/models", func(w http.ResponseWriter, r *http.Request) {

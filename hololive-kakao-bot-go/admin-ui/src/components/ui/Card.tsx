@@ -1,52 +1,86 @@
-import type { ComponentProps, ReactNode } from 'react'
-import { cn } from '@/lib/utils'
+import * as React from "react"
+import { cn } from "@/lib/utils"
 
-interface CardProps extends ComponentProps<'div'> {
-  children: ReactNode
-  hover?: boolean
-}
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { hover?: boolean }
+>(({ className, hover, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border bg-card text-card-foreground shadow",
+      hover && "hover:shadow-md transition-shadow",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-interface CardHeaderProps extends ComponentProps<'div'> {
-  children: ReactNode
-}
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
 
-interface CardBodyProps extends ComponentProps<'div'> {
-  children: ReactNode
-}
+const CardTitle = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("font-semibold leading-none tracking-tight", className)}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
 
-function CardRoot({ children, hover = false, className, ...props }: CardProps) {
-  return (
-    <div
-      className={cn(
-        'bg-white border border-gray-200 rounded-lg p-4',
-        hover && 'hover:shadow-md transition-shadow',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}
+const CardDescription = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
 
-function CardHeader({ children, className, ...props }: CardHeaderProps) {
-  return (
-    <div className={cn('mb-3', className)} {...props}>
-      {children}
-    </div>
-  )
-}
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
 
-function CardBody({ children, className, ...props }: CardBodyProps) {
-  return (
-    <div className={cn('space-y-3', className)} {...props}>
-      {children}
-    </div>
-  )
-}
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
 
-// Compound Component Export
-export const Card = Object.assign(CardRoot, {
+// Backward Compatibility via Object.assign for existing usage of Card.Header / Card.Body
+const CardWithSubComponents = Object.assign(Card, {
   Header: CardHeader,
-  Body: CardBody,
+  Body: CardContent,
+  Footer: CardFooter,
+  Title: CardTitle,
+  Description: CardDescription,
+  Content: CardContent
 })
+
+export { CardWithSubComponents as Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

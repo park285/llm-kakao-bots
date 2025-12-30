@@ -62,7 +62,7 @@ func BuildRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logger) 
 
 	runtime, cleanup, err := InitializeBotRuntime(ctx, cfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("런타임 초기화 실패: %w", err)
+		return nil, fmt.Errorf("failed to initialize runtime: %w", err)
 	}
 	runtime.cleanup = cleanup
 

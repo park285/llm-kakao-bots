@@ -1,75 +1,41 @@
 import { useState, useOptimistic } from 'react'
-import ConfirmModal from './ConfirmModal'
+import { ConfirmModal } from './ConfirmModal'
 import ChannelEditModal from './ChannelEditModal'
 import AddMemberModal from './AddMemberModal'
 import EditNameModal from './EditNameModal'
 import MemberCard from './MemberCard'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { membersApi } from '@/api'
-import type { Member } from '@/types'
+import { queryKeys } from '@/api/queryKeys'
+import type { Member, MembersResponse } from '@/types'
 import { Button } from '@/components/ui'
 import { Search, Plus } from 'lucide-react'
+import { useSSRData } from '@/hooks/useSSRData'
+import { useMemberMutations, optimisticMemberReducer } from '@/hooks/useMemberMutations'
 
 const MembersTab = () => {
-  const queryClient = useQueryClient()
+  // SSR 데이터 소비 (useSSRData 훅 활용)
+  const ssrInitialData = useSSRData('members', (data) =>
+    data?.status === 'ok' && data.members ? (data as MembersResponse) : undefined
+  )
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['members'],
+    queryKey: queryKeys.members.all,
     queryFn: membersApi.getAll,
+    initialData: ssrInitialData,
   })
 
-  // Mutations (unchanged logic)
-  const addAliasMutation = useMutation({
-    mutationFn: ({ memberId, type, alias }: { memberId: number; type: 'ko' | 'ja'; alias: string }) =>
-      membersApi.addAlias(memberId, { type, alias }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-  })
+  // Mutations (useMemberMutations 훅으로 중앙화)
+  const {
+    addAlias: addAliasMutation,
+    removeAlias: removeAliasMutation,
+    updateChannel: updateChannelMutation,
+    updateName: updateNameMutation,
+    setGraduation: setGraduationMutation,
+    addMember: addMemberMutation,
+  } = useMemberMutations()
 
-  const removeAliasMutation = useMutation({
-    mutationFn: ({ memberId, type, alias }: { memberId: number; type: 'ko' | 'ja'; alias: string }) =>
-      membersApi.removeAlias(memberId, { type, alias }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-  })
-
-  const updateChannelMutation = useMutation({
-    mutationFn: ({ memberId, channelId }: { memberId: number; channelId: string }) =>
-      membersApi.updateChannel(memberId, { channelId }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-  })
-
-  const updateNameMutation = useMutation({
-    mutationFn: ({ memberId, name }: { memberId: number; name: string }) =>
-      membersApi.updateName(memberId, name),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-  })
-
-  const setGraduationMutation = useMutation({
-    mutationFn: ({ memberId, isGraduated }: { memberId: number; isGraduated: boolean }) =>
-      membersApi.setGraduation(memberId, { isGraduated }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-  })
-
-  const addMemberMutation = useMutation({
-    mutationFn: membersApi.add,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['members'] })
-    },
-    onError: (err: Error) => {
-      alert(`Failed to add member: ${err.message}`)
-    }
-  })
-
-  // State management
+  // 상태 관리
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [hideGraduated, setHideGraduated] = useState<boolean>(() => {
@@ -77,7 +43,7 @@ const MembersTab = () => {
     return saved !== null ? saved === 'true' : true
   })
 
-  // Modal state
+  // 모달 상태
   type ModalState =
     | { type: 'none' }
     | { type: 'removeAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
@@ -88,7 +54,7 @@ const MembersTab = () => {
   const [modal, setModal] = useState<ModalState>({ type: 'none' })
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  // Optimistic updates setup (unchanged logic)
+  // Optimistic 업데이트 설정
   const allMembers = (response?.members ?? []).map((m: Member) => ({
     ...m,
     aliases: {
@@ -97,58 +63,10 @@ const MembersTab = () => {
     },
   }))
 
-  type OptimisticUpdate =
-    | { type: 'graduation'; memberId: number; isGraduated: boolean }
-    | { type: 'addAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
-    | { type: 'removeAlias'; memberId: number; aliasType: 'ko' | 'ja'; alias: string }
-    | { type: 'updateChannel'; memberId: number; channelId: string }
-    | { type: 'updateName'; memberId: number; name: string }
-
+  // optimisticMemberReducer를 훅에서 import하여 사용
   const [optimisticMembers, setOptimisticMembers] = useOptimistic(
     allMembers,
-    (state: typeof allMembers, update: OptimisticUpdate) => {
-      type MemberItem = typeof allMembers[number]
-      switch (update.type) {
-        case 'graduation':
-          return state.map((m: MemberItem) =>
-            m.id === update.memberId ? { ...m, isGraduated: update.isGraduated } : m
-          )
-        case 'addAlias':
-          return state.map((m: MemberItem) =>
-            m.id === update.memberId
-              ? {
-                ...m,
-                aliases: {
-                  ...m.aliases,
-                  [update.aliasType]: [...m.aliases[update.aliasType], update.alias],
-                },
-              }
-              : m
-          )
-        case 'removeAlias':
-          return state.map((m: MemberItem) =>
-            m.id === update.memberId
-              ? {
-                ...m,
-                aliases: {
-                  ...m.aliases,
-                  [update.aliasType]: m.aliases[update.aliasType].filter(
-                    (a: string) => a !== update.alias
-                  ),
-                },
-              }
-              : m
-          )
-        case 'updateChannel':
-          return state.map((m: MemberItem) =>
-            m.id === update.memberId ? { ...m, channelId: update.channelId } : m
-          )
-        case 'updateName':
-          return state.map((m: MemberItem) =>
-            m.id === update.memberId ? { ...m, name: update.name } : m
-          )
-      }
-    }
+    optimisticMemberReducer
   )
 
   const toggleHideGraduated = () => {
@@ -308,7 +226,7 @@ const MembersTab = () => {
         title="별명 삭제"
         message={modal.type === 'removeAlias' ? `정말 삭제하시겠습니까?` : ''}
         confirmText="삭제"
-        confirmColor="red"
+        confirmColor="danger"
       >
         {modal.type === 'removeAlias' && (
           <div className="mt-2 p-3 bg-slate-50 rounded-lg text-center font-bold text-slate-700">
@@ -325,7 +243,7 @@ const MembersTab = () => {
         title={modal.type === 'graduation' ? (modal.currentStatus ? '졸업 해제 (복귀)' : '졸업 처리') : ''}
         message={modal.type === 'graduation' ? `${modal.memberName}을(를) ${modal.currentStatus ? '졸업 해제' : '졸업 처리'}하시겠습니까?` : ''}
         confirmText="확인"
-        confirmColor={modal.type === 'graduation' && modal.currentStatus ? 'blue' : 'red'}
+        confirmColor={modal.type === 'graduation' && modal.currentStatus ? 'primary' : 'danger'}
       />
 
       {/* 채널 ID 수정 모달 */}
@@ -351,11 +269,9 @@ const MembersTab = () => {
         isOpen={isAddModalOpen}
         onClose={() => { setIsAddModalOpen(false); }}
         onAdd={(data) => {
-          // Transform data as needed or pass directly if API expects it
-          // API expects Partial<Member>.
-          // Data from modal: { name, channelId, nameKo, nameJa }
-          // API needs aliases: { ko: [nameKo], ja: [nameJa] } ?
-          // Let's adjust data structure
+          // 모달 데이터를 API 형식(Partial<Member>)에 맞게 변환함
+          // 모달: { name, channelId, nameKo, nameJa }
+          // API: aliases: { ko: [...], ja: [...] } 형태 필요
           const memberData: Partial<Member> = {
             name: data.name,
             channelId: data.channelId,

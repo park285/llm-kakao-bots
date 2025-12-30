@@ -49,7 +49,7 @@ func (m *LockManager) acquire(ctx context.Context, sessionID string, token strin
 			return false, wrapRedisError("lock_acquire", err)
 		}
 
-		// Lock acquired
+		// Lock \ud68d\ub4dd \uc644\ub8cc
 		break
 	}
 

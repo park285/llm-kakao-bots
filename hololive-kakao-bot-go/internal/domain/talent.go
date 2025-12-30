@@ -2,11 +2,12 @@ package domain
 
 import (
 	_ "embed" // 인재 데이터 임베드용
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"path"
 	"strings"
+
+	"github.com/goccy/go-json"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )

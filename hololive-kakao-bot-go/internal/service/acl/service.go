@@ -2,12 +2,12 @@ package acl
 
 import (
 	"context"
-	"encoding/json"
 	stdErrors "errors"
 	"fmt"
 	"log/slog"
 	"sync"
 
+	"github.com/goccy/go-json"
 	"gorm.io/gorm"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"

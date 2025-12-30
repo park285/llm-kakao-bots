@@ -2,13 +2,13 @@ package cache
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"

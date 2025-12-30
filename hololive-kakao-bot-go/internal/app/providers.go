@@ -28,10 +28,6 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// ----------------------------------------------------------------------------
-// 인프라스트럭처 Provider
-// ----------------------------------------------------------------------------
-
 // ProvideValkeyConfig - 설정에서 Valkey 캐시 설정 추출
 func ProvideValkeyConfig(cfg *config.Config) config.ValkeyConfig {
 	return cfg.Valkey
@@ -46,7 +42,7 @@ func ProvidePostgresConfig(cfg *config.Config) config.PostgresConfig {
 func ProvideCacheResources(cfg config.ValkeyConfig, logger *slog.Logger) (*bootstrap.CacheResources, func(), error) {
 	resources, err := bootstrap.NewCacheResources(cfg, logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("캐시 리소스 생성 실패: %w", err)
+		return nil, nil, fmt.Errorf("failed to create cache resources: %w", err)
 	}
 	return resources, resources.Close, nil
 }
@@ -60,7 +56,7 @@ func ProvideCacheService(resources *bootstrap.CacheResources) *cache.Service {
 func ProvideDatabaseResources(cfg config.PostgresConfig, logger *slog.Logger) (*bootstrap.DatabaseResources, func(), error) {
 	resources, err := bootstrap.NewDatabaseResources(cfg, logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("데이터베이스 리소스 생성 실패: %w", err)
+		return nil, nil, fmt.Errorf("failed to create database resources: %w", err)
 	}
 	return resources, resources.Close, nil
 }
@@ -69,10 +65,6 @@ func ProvideDatabaseResources(cfg config.PostgresConfig, logger *slog.Logger) (*
 func ProvidePostgresService(resources *bootstrap.DatabaseResources) *database.PostgresService {
 	return resources.Service
 }
-
-// ----------------------------------------------------------------------------
-// 메시지 큐 Provider
-// ----------------------------------------------------------------------------
 
 // ProvideValkeyMQConfig - 설정에서 MQ 설정 생성
 func ProvideValkeyMQConfig(cfg *config.Config) mq.ValkeyMQConfig {
@@ -94,10 +86,6 @@ func ProvideIrisClient(ctx context.Context, mqCfg mq.ValkeyMQConfig, logger *slo
 	return mq.NewValkeyMQClient(ctx, mqCfg, logger)
 }
 
-// ----------------------------------------------------------------------------
-// 멤버 서비스 Provider
-// ----------------------------------------------------------------------------
-
 // ProvideMemberRepository - 멤버 저장소 생성
 func ProvideMemberRepository(postgres *database.PostgresService, logger *slog.Logger) *member.Repository {
 	return member.NewMemberRepository(postgres, logger)
@@ -114,7 +102,7 @@ func buildMemberCache(
 		ValkeyTTL: constants.MemberCacheDefaults.ValkeyTTL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("멤버 캐시 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create member cache: %w", err)
 	}
 	return memberCache, nil
 }
@@ -152,7 +140,7 @@ func ProvideMemberCache(
 	}
 
 	if err := cacheSvc.InitializeMemberDatabase(ctx, memberMap); err != nil {
-		return nil, fmt.Errorf("멤버 데이터베이스 초기화 실패: %w", err)
+		return nil, fmt.Errorf("failed to initialize member database: %w", err)
 	}
 
 	return memberCache, nil
@@ -177,10 +165,6 @@ func ProvideMembersData(adapterSvc *member.ServiceAdapter) domain.MemberDataProv
 	return adapterSvc
 }
 
-// ----------------------------------------------------------------------------
-// Holodex Provider
-// ----------------------------------------------------------------------------
-
 // ProvideHolodexAPIKeys - 설정에서 API 키 추출
 func ProvideHolodexAPIKeys(cfg *config.Config) []string {
 	return cfg.Holodex.APIKeys
@@ -204,14 +188,10 @@ func ProvideHolodexService(
 ) (*holodex.Service, error) {
 	svc, err := holodex.NewHolodexService(apiKeys, cacheSvc, scraper, logger)
 	if err != nil {
-		return nil, fmt.Errorf("holodex 서비스 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create holodex service: %w", err)
 	}
 	return svc, nil
 }
-
-// ----------------------------------------------------------------------------
-// 프로필 및 매칭 Provider
-// ----------------------------------------------------------------------------
 
 // ProvideProfileService - 프로필 서비스 생성 (번역 사전 로드 포함)
 func ProvideProfileService(
@@ -222,7 +202,7 @@ func ProvideProfileService(
 ) (*member.ProfileService, error) {
 	svc, err := member.NewProfileService(cacheSvc, members, logger)
 	if err != nil {
-		return nil, fmt.Errorf("프로필 서비스 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create profile service: %w", err)
 	}
 	svc.PreloadTranslations(ctx)
 	return svc, nil
@@ -239,10 +219,6 @@ func ProvideMemberMatcher(
 	// selector는 nil (Gemini AI 채널 선택 미사용)
 	return matcher.NewMemberMatcher(ctx, membersData, cacheSvc, holodexSvc, nil, logger)
 }
-
-// ----------------------------------------------------------------------------
-// 알림 Provider
-// ----------------------------------------------------------------------------
 
 // ProvideAlarmRepository - 알람 저장소 생성 (DB 영속화)
 func ProvideAlarmRepository(
@@ -269,10 +245,6 @@ func ProvideAlarmService(
 	)
 }
 
-// ----------------------------------------------------------------------------
-// YouTube Provider
-// ----------------------------------------------------------------------------
-
 // ProvideYouTubeStatsRepository - YouTube 통계 저장소 생성
 func ProvideYouTubeStatsRepository(
 	postgres *database.PostgresService,
@@ -293,23 +265,24 @@ func ProvideYouTubeStack(
 	ctx context.Context,
 	cfg *config.Config,
 	cacheSvc *cache.Service,
+	holodexSvc *holodex.Service,
 	members *member.ServiceAdapter,
 	statsRepo *youtube.StatsRepository,
 	logger *slog.Logger,
 ) *YouTubeStack {
 	if !cfg.YouTube.EnableQuotaBuilding || cfg.YouTube.APIKey == "" {
-		logger.Info("YouTube 쿼터 빌딩 비활성화; 통계 저장소만 사용 가능")
+		logger.Info("YouTube quota building disabled; stats repository only")
 		return &YouTubeStack{StatsRepo: statsRepo}
 	}
 
 	svc, err := youtube.NewYouTubeService(ctx, cfg.YouTube.APIKey, cacheSvc, logger)
 	if err != nil {
-		logger.Warn("YouTube 서비스 초기화 실패 (선택적 기능)", slog.Any("error", err))
+		logger.Warn("YouTube service init failed (optional feature)", slog.Any("error", err))
 		return &YouTubeStack{StatsRepo: statsRepo}
 	}
 
-	scheduler := youtube.NewScheduler(svc, cacheSvc, statsRepo, members, logger)
-	logger.Info("YouTube 쿼터 빌딩 활성화",
+	scheduler := youtube.NewScheduler(svc, holodexSvc, cacheSvc, statsRepo, members, logger)
+	logger.Info("YouTube quota building enabled",
 		slog.String("mode", "API Key"),
 		slog.Int("daily_target", 9192))
 
@@ -319,10 +292,6 @@ func ProvideYouTubeStack(
 		StatsRepo: statsRepo,
 	}
 }
-
-// ----------------------------------------------------------------------------
-// 애플리케이션 서비스 Provider
-// ----------------------------------------------------------------------------
 
 // ProvideActivityLogger - 활동 로거 생성
 func ProvideActivityLogger(cfg *config.Config, logger *slog.Logger) *activity.Logger {
@@ -344,10 +313,10 @@ func ProvideSettingsService(logger *slog.Logger) *settings.Service {
 func ProvideDockerService(logger *slog.Logger) *docker.Service {
 	svc, err := docker.NewService(logger, "20q-kakao-bot")
 	if err != nil {
-		logger.Warn("Docker 서비스 초기화 실패 (컨테이너 관리 비활성화)", slog.Any("error", err))
+		logger.Warn("Docker service init failed (container management disabled)", slog.Any("error", err))
 		return nil
 	}
-	logger.Info("Docker 관리 서비스 활성화")
+	logger.Info("Docker management service enabled")
 	return svc
 }
 
@@ -368,14 +337,10 @@ func ProvideACLService(
 		cfg.Kakao.Rooms,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("ACL 서비스 생성 실패: %w", err)
+		return nil, fmt.Errorf("failed to create ACL service: %w", err)
 	}
 	return svc, nil
 }
-
-// ----------------------------------------------------------------------------
-// 메시지 스택 Provider
-// ----------------------------------------------------------------------------
 
 // MessageStack - 메시지 어댑터와 포매터 묶음
 type MessageStack struct {
@@ -391,10 +356,6 @@ func ProvideMessageStack(cfg *config.Config) *MessageStack {
 		Formatter: formatter,
 	}
 }
-
-// ----------------------------------------------------------------------------
-// Bot 의존성 조립
-// ----------------------------------------------------------------------------
 
 // ProvideBotDependencies - 모든 의존성을 bot.Dependencies로 조립
 func ProvideBotDependencies(

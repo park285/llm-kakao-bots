@@ -118,9 +118,9 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 		if strings.Contains(path, "/api/sessions") {
 			if r.Method == http.MethodDelete {
-				json.NewEncoder(w).Encode(llmrest.SessionEndResponse{Removed: true})
+				json.NewEncoder(w).Encode(llmrest.SessionEndResponse{Message: "ended", ID: "sess1"})
 			} else {
-				json.NewEncoder(w).Encode(llmrest.SessionCreateResponse{Created: true, SessionID: "sess1"})
+				json.NewEncoder(w).Encode(llmrest.SessionCreateResponse{ID: "sess1", Model: "test"})
 			}
 			return
 		}

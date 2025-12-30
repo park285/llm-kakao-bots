@@ -1,13 +1,14 @@
 package activity
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 // LogEntry: 활동 로그의 한 항목을 나타내는 구조체

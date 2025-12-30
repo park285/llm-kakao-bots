@@ -17,10 +17,9 @@ func (c *Client) GetModelConfig(ctx context.Context) (*ModelConfigResponse, erro
 }
 
 // CreateSession: 새로운 세션을 생성합니다.
-func (c *Client) CreateSession(ctx context.Context, chatID string, namespace string) (*SessionCreateResponse, error) {
-	req := SessionCreateRequest{ChatID: &chatID, Namespace: &namespace}
+func (c *Client) CreateSession(ctx context.Context) (*SessionCreateResponse, error) {
 	var out SessionCreateResponse
-	if err := c.Post(ctx, "/api/sessions", req, &out); err != nil {
+	if err := c.Post(ctx, "/api/sessions", SessionCreateRequest{}, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

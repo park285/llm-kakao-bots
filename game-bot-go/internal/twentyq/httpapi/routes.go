@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -36,7 +37,10 @@ func Register(
 ) {
 	// GET /health - 헬스체크
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		respondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		respondJSON(w, http.StatusOK, map[string]any{
+			"status":     "ok",
+			"goroutines": runtime.NumGoroutine(),
+		})
 	})
 
 	// POST /api/twentyq/riddles - 게임 시작

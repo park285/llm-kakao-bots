@@ -49,7 +49,50 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 		"members": len(members),
 		"alarms":  len(alarmKeys),
 		"rooms":   roomCount,
-		"version": "v1.1.0-go",
+		"version": "v2.0.0-go",
 		"uptime":  uptime,
 	})
+}
+
+// StreamSystemStats: WebSocket을 통해 시스템 리소스 사용량을 실시간 스트리밍합니다.
+// 2초마다 CPU/메모리 통계를 전송합니다.
+func (h *AdminHandler) StreamSystemStats(c *gin.Context) {
+	if h.systemStats == nil {
+		c.JSON(400, gin.H{
+			"status":  "error",
+			"message": "System stats collector not available",
+		})
+		return
+	}
+
+	// WebSocket 업그레이드
+	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		return
+	}
+	defer func() { _ = conn.Close() }()
+
+	ctx := c.Request.Context()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	// 최초 1회 즉시 전송
+	if stats, err := h.systemStats.GetCurrentStats(ctx); err == nil {
+		_ = conn.WriteJSON(stats)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			stats, err := h.systemStats.GetCurrentStats(ctx)
+			if err != nil {
+				continue
+			}
+			if err := conn.WriteJSON(stats); err != nil {
+				return
+			}
+		}
+	}
 }

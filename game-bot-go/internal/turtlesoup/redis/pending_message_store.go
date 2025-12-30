@@ -68,7 +68,7 @@ func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, messag
 		return EnqueueQueueFull, fmt.Errorf("marshal pending message failed: %w", err)
 	}
 
-	// Assuming message has UserID and Timestamp
+	// message\uc5d0\uc11c UserID\uc640 Timestamp \uc0ac\uc6a9
 	result, err := s.store.Enqueue(ctx, chatID, message.UserID, message.Timestamp, string(jsonValue))
 	if err != nil {
 		return result, fmt.Errorf("pending enqueue failed: %w", err)

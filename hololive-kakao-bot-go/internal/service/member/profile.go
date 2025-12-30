@@ -13,7 +13,6 @@ import (
 const (
 	translationLocale         = "ko"
 	cacheKeyProfileTranslated = "hololive:profile:translated:%s:%s"
-	maxPromptDataEntries      = 10
 )
 
 // ProfileService: 탤런트 상세 프로필 정보를 관리하는 서비스
@@ -96,7 +95,7 @@ func NewProfileService(cacheSvc *cache.Service, membersData domain.MemberDataPro
 // GetWithTranslation: 영문 이름으로 프로필을 조회하고, 번역된 정보가 있다면 함께 반환한다.
 func (s *ProfileService) GetWithTranslation(ctx context.Context, englishName string) (*domain.TalentProfile, *domain.Translated, error) {
 	if util.TrimSpace(englishName) == "" {
-		return nil, nil, fmt.Errorf("멤버 이름이 필요합니다")
+		return nil, nil, fmt.Errorf("member name is required")
 	}
 
 	profile, err := s.GetByEnglish(englishName)
@@ -117,7 +116,7 @@ func (s *ProfileService) GetByEnglish(englishName string) (*domain.TalentProfile
 	if profile, ok := s.byEnglish(englishName); ok {
 		return profile, nil
 	}
-	return nil, fmt.Errorf("'%s' 멤버의 공식 프로필 정보를 찾을 수 없습니다", englishName)
+	return nil, fmt.Errorf("official profile not found for member '%s'", englishName)
 }
 
 // GetByChannel: 채널 ID로 원본 프로필 정보를 조회한다.
@@ -127,11 +126,11 @@ func (s *ProfileService) GetByChannel(channelID string) (*domain.TalentProfile, 
 	}
 	slug, ok := s.channelToSlug[util.Normalize(channelID)]
 	if !ok {
-		return nil, fmt.Errorf("채널ID '%s'에 대한 공식 프로필이 없습니다", channelID)
+		return nil, fmt.Errorf("no official profile for channel ID '%s'", channelID)
 	}
 	profile, ok := s.profiles[slug]
 	if !ok || profile == nil {
-		return nil, fmt.Errorf("'%s' 슬러그에 대한 프로필 데이터가 없습니다", slug)
+		return nil, fmt.Errorf("no profile data for slug '%s'", slug)
 	}
 	return profile, nil
 }
@@ -184,7 +183,7 @@ func (s *ProfileService) getTranslated(ctx context.Context, raw *domain.TalentPr
 		return cloned, nil
 	}
 
-	// Fallback: build simple translation from raw profile (no AI)
+	// Fallback: raw profile에서 단순 번역 생성 (AI 미사용)
 	fallback := &domain.Translated{
 		DisplayName: raw.EnglishName,
 		Catchphrase: raw.Catchphrase,

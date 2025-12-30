@@ -33,6 +33,7 @@ type PuzzleLoader struct {
 	byDifficulty map[int][]PuzzlePreset
 	byID         map[int]PuzzlePreset
 	rnd          *rand.Rand
+	rndMu        sync.Mutex
 }
 
 // NewPuzzleLoader: 퍼즐 로더를 초기화합니다.
@@ -80,7 +81,7 @@ func (l *PuzzleLoader) GetRandomPuzzle() (PuzzlePreset, error) {
 	if len(l.all) == 0 {
 		return PuzzlePreset{}, errors.New("no puzzles loaded")
 	}
-	return l.all[l.rnd.IntN(len(l.all))], nil
+	return l.all[l.randIntN(len(l.all))], nil
 }
 
 // GetRandomPuzzleByDifficulty: 난이도 기준 랜덤 퍼즐을 반환합니다.
@@ -91,7 +92,7 @@ func (l *PuzzleLoader) GetRandomPuzzleByDifficulty(difficulty int) (PuzzlePreset
 	if len(puzzles) == 0 {
 		return PuzzlePreset{}, fmt.Errorf("no puzzle for difficulty %d", difficulty)
 	}
-	return puzzles[l.rnd.IntN(len(puzzles))], nil
+	return puzzles[l.randIntN(len(puzzles))], nil
 }
 
 // GetPuzzleByID: ID로 퍼즐을 조회합니다.
@@ -121,13 +122,25 @@ func (l *PuzzleLoader) GetExamples(difficulty int, maxExamples int) []PuzzlePres
 		return append([]PuzzlePreset(nil), candidates...)
 	}
 
-	indexes := l.rnd.Perm(len(candidates))[:maxExamples]
+	indexes := l.randPerm(len(candidates))[:maxExamples]
 	slices.Sort(indexes)
 	out := make([]PuzzlePreset, 0, len(indexes))
 	for _, idx := range indexes {
 		out = append(out, candidates[idx])
 	}
 	return out
+}
+
+func (l *PuzzleLoader) randIntN(n int) int {
+	l.rndMu.Lock()
+	defer l.rndMu.Unlock()
+	return l.rnd.IntN(n)
+}
+
+func (l *PuzzleLoader) randPerm(n int) []int {
+	l.rndMu.Lock()
+	defer l.rndMu.Unlock()
+	return l.rnd.Perm(n)
 }
 
 func (l *PuzzleLoader) reloadLocked() (int, error) {

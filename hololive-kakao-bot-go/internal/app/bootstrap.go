@@ -75,7 +75,7 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 	memberDataProvider := ProvideMembersData(memberServiceAdapter)
 	memberMatcher := ProvideMemberMatcher(ctx, memberDataProvider, cacheService, holodexService, logger)
 	youTubeStatsRepository := ProvideYouTubeStatsRepository(postgresService, logger)
-	youTubeStack := ProvideYouTubeStack(ctx, cfg, cacheService, memberServiceAdapter, youTubeStatsRepository, logger)
+	youTubeStack := ProvideYouTubeStack(ctx, cfg, cacheService, holodexService, memberServiceAdapter, youTubeStatsRepository, logger)
 	activityLogger := ProvideActivityLogger(cfg, logger)
 	settingsService := ProvideSettingsService(logger)
 
@@ -154,8 +154,9 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 	loginRateLimiter := ProvideLoginRateLimiter()
 	securityConfig := ProvideSecurityConfig(cfg)
 	adminCredentials := ProvideAdminCredentials(cfg)
+	systemCollector := ProvideSystemCollector(cfg)
 
-	adminHandler := ProvideAdminHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Alarm, deps.Holodex, youTubeService, deps.Activity, deps.Settings, deps.ACL, cfg, valkeySessionStore, loginRateLimiter, securityConfig, adminCredentials, logger)
+	adminHandler := ProvideAdminHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Alarm, deps.Holodex, youTubeService, infra.ytStack.StatsRepo, deps.Activity, deps.Settings, deps.ACL, cfg, valkeySessionStore, loginRateLimiter, securityConfig, adminCredentials, systemCollector, logger)
 
 	adminAllowedCIDRs, err := ProvideAdminAllowedCIDRs(cfg)
 	if err != nil {
@@ -165,7 +166,7 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 	// Docker 서비스 (선택적 - 소켓 마운트 필요)
 	dockerService := ProvideDockerService(logger)
 
-	adminRouter, err := ProvideAdminRouter(ctx, logger, adminHandler, dockerService, valkeySessionStore, securityConfig, adminAllowedCIDRs)
+	adminRouter, err := ProvideAdminRouter(ctx, logger, adminHandler, dockerService, valkeySessionStore, securityConfig, adminAllowedCIDRs, deps.MemberRepo, deps.Settings)
 	if err != nil {
 		return nil, err
 	}

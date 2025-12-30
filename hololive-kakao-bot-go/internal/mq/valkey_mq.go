@@ -301,8 +301,10 @@ func (c *ValkeyMQConsumer) run(ctx context.Context) {
 		// Worker pool로 병렬 처리
 		for streamName, messages := range streams {
 			for _, msg := range messages {
+				streamNameCopy := streamName
+				msgCopy := msg
 				workerPool.Go(func() {
-					c.handleEntry(ctx, streamName, group, msg)
+					c.handleEntry(ctx, streamNameCopy, group, msgCopy)
 				})
 			}
 		}
@@ -350,7 +352,6 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	text := getField(fields, "text")
 	room := getField(fields, "room")
 	sender := getField(fields, "sender")
-	threadID := getField(fields, "threadId")
 
 	if text == "" || room == "" {
 		c.logger.Warn("MQ_MESSAGE_SKIPPED",
@@ -361,41 +362,9 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 		return
 	}
 
-	// 멱등성 키 생성
-	idempotencyKey := fmt.Sprintf("mq:processed:%s", msg.ID)
-
-	// Lua 스크립트로 원자적 중복 체크 + 처리 마킹
-	ttlArg := fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyTTL.Seconds()))
-	resp, err := mqLuaRegistry.Exec(
-		ctx,
-		c.client,
-		scriptProcessWithIdempotency,
-		[]string{idempotencyKey, streamKey},
-		[]string{group, msg.ID, ttlArg},
-	)
-	if err != nil {
-		c.logger.Error("MQ_IDEMPOTENCY_SCRIPT_MISSING",
-			slog.String("stream", streamKey),
-			slog.String("id", msg.ID),
-			slog.Any("error", err),
-		)
-		return
-	}
-	shouldProcess, err := resp.AsInt64()
-	if err != nil {
-		c.logger.Error("MQ_IDEMPOTENCY_CHECK_FAILED",
-			slog.String("stream", streamKey),
-			slog.String("id", msg.ID),
-			slog.Any("error", err),
-		)
-		return
-	}
-
-	if shouldProcess == 0 {
-		c.logger.Debug("MQ_MESSAGE_ALREADY_PROCESSED",
-			slog.String("stream", streamKey),
-			slog.String("id", msg.ID),
-		)
+	// 멱등성 체크 및 처리 시작
+	shouldProcess := c.checkIdempotency(ctx, streamKey, group, msg.ID)
+	if shouldProcess != 1 {
 		return
 	}
 
@@ -406,12 +375,63 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 		slog.String("sender", sender),
 	)
 
+	// 메시지 처리
+	c.processMessage(ctx, streamKey, group, msg.ID, text, room, sender)
+}
+
+// checkIdempotency: 멱등성 체크 (1=처리 필요, 0=이미 완료, -1=처리 중)
+func (c *ValkeyMQConsumer) checkIdempotency(ctx context.Context, streamKey, group, msgID string) int64 {
+	idempotencyKey := fmt.Sprintf("mq:processed:%s", msgID)
+
+	processingTTLArg := fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyProcessingTTL.Seconds()))
+	resp, err := mqLuaRegistry.Exec(
+		ctx,
+		c.client,
+		scriptProcessWithIdempotency,
+		[]string{idempotencyKey, streamKey},
+		[]string{group, msgID, processingTTLArg},
+	)
+	if err != nil {
+		c.logger.Error("MQ_IDEMPOTENCY_SCRIPT_MISSING",
+			slog.String("stream", streamKey),
+			slog.String("id", msgID),
+			slog.Any("error", err),
+		)
+		return 0
+	}
+
+	shouldProcess, err := resp.AsInt64()
+	if err != nil {
+		c.logger.Error("MQ_IDEMPOTENCY_CHECK_FAILED",
+			slog.String("stream", streamKey),
+			slog.String("id", msgID),
+			slog.Any("error", err),
+		)
+		return 0
+	}
+
+	switch shouldProcess {
+	case 0:
+		c.logger.Debug("MQ_MESSAGE_ALREADY_PROCESSED",
+			slog.String("stream", streamKey),
+			slog.String("id", msgID),
+		)
+	case -1:
+		c.logger.Debug("MQ_MESSAGE_ALREADY_PROCESSING",
+			slog.String("stream", streamKey),
+			slog.String("id", msgID),
+		)
+	}
+
+	return shouldProcess
+}
+
+// processMessage: 실제 메시지 처리 및 완료 마킹
+func (c *ValkeyMQConsumer) processMessage(ctx context.Context, streamKey, group, msgID, text, room, sender string) {
 	var senderPtr *string
 	if sender != "" {
 		senderPtr = &sender
 	}
-
-	_ = threadID
 
 	irisMsg := &iris.Message{
 		Msg:    text,
@@ -422,18 +442,26 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	// 메시지 처리
 	c.bot.HandleMessage(ctx, irisMsg)
 
-	// 처리 완료 + ACK (Lua 스크립트로 원자적 실행)
+	// 처리 완료 + ACK
+	c.markComplete(ctx, streamKey, group, msgID)
+}
+
+// markComplete: 처리 완료 마킹 및 ACK
+func (c *ValkeyMQConsumer) markComplete(ctx context.Context, streamKey, group, msgID string) {
+	idempotencyKey := fmt.Sprintf("mq:processed:%s", msgID)
+	retentionTTLArg := fmt.Sprintf("%d", int64(constants.MQConfig.IdempotencyTTL.Seconds()))
+
 	completeResp, err := mqLuaRegistry.Exec(
 		ctx,
 		c.client,
 		scriptCompleteProcessing,
 		[]string{idempotencyKey, streamKey},
-		[]string{group, msg.ID, ttlArg},
+		[]string{group, msgID, retentionTTLArg},
 	)
 	if err != nil {
 		c.logger.Error("MQ_COMPLETE_SCRIPT_MISSING",
 			slog.String("stream", streamKey),
-			slog.String("id", msg.ID),
+			slog.String("id", msgID),
 			slog.Any("error", err),
 		)
 		return
@@ -441,7 +469,7 @@ func (c *ValkeyMQConsumer) handleEntry(ctx context.Context, streamKey, group str
 	if err := completeResp.Error(); err != nil {
 		c.logger.Error("MQ_COMPLETE_PROCESSING_FAILED",
 			slog.String("stream", streamKey),
-			slog.String("id", msg.ID),
+			slog.String("id", msgID),
 			slog.Any("error", err),
 		)
 	}

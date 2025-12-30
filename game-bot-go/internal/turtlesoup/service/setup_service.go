@@ -52,35 +52,43 @@ func (s *GameSetupService) PrepareNewGame(
 ) (GameSetupResult, error) {
 	existing, err := s.sessionManager.Load(ctx, sessionID)
 	if err != nil {
-		return GameSetupResult{}, err
+		return GameSetupResult{}, fmt.Errorf("load session: %w", err)
 	}
 	if existing != nil {
 		if existing.IsSolved {
 			if deleteErr := s.sessionManager.Delete(ctx, sessionID); deleteErr != nil {
-				return GameSetupResult{}, deleteErr
+				return GameSetupResult{}, fmt.Errorf("delete solved session: %w", deleteErr)
 			}
 		} else {
 			return GameSetupResult{}, tserrors.GameAlreadyStartedError{SessionID: sessionID}
 		}
 	}
 
+	validatedDifficulty := difficulty
+	if difficulty == nil {
+		defaultDifficulty := tsconfig.PuzzleDefaultDifficulty
+		validatedDifficulty = &defaultDifficulty
+	} else if *difficulty < tsconfig.PuzzleMinDifficulty || *difficulty > tsconfig.PuzzleMaxDifficulty {
+		return GameSetupResult{}, fmt.Errorf(
+			"difficulty out of range (%d..%d): %d",
+			tsconfig.PuzzleMinDifficulty,
+			tsconfig.PuzzleMaxDifficulty,
+			*difficulty,
+		)
+	}
+
 	puzzle, err := s.puzzleService.GeneratePuzzle(ctx, PuzzleGenerationRequest{
 		Category:   category,
-		Difficulty: difficulty,
+		Difficulty: validatedDifficulty,
 		Theme:      theme,
 	}, chatID)
 	if err != nil {
-		return GameSetupResult{}, err
+		return GameSetupResult{}, fmt.Errorf("generate puzzle: %w", err)
 	}
-
-	if _, createErr := s.restClient.CreateSession(ctx, chatID, tsconfig.LlmNamespace); createErr != nil {
-		return GameSetupResult{}, fmt.Errorf("create llm session failed: %w", createErr)
-	}
-	s.logger.Info("llm_session_created", "chat_id", chatID)
 
 	state := tsmodel.NewInitialState(sessionID, userID, chatID, puzzle)
 	if err := s.sessionManager.Save(ctx, state); err != nil {
-		return GameSetupResult{}, err
+		return GameSetupResult{}, fmt.Errorf("save session: %w", err)
 	}
 
 	return GameSetupResult{State: state, Puzzle: puzzle}, nil

@@ -3,8 +3,9 @@ package domain
 import (
 	"context"
 	_ "embed" // 멤버 데이터 임베드용
-	"encoding/json"
 	"fmt"
+
+	"github.com/goccy/go-json"
 )
 
 // Aliases: 멤버의 국가별(한국어, 일본어) 별명 목록

@@ -41,7 +41,7 @@ func BuildDBIntegrationRuntime(
 
 	runtime, cleanup, err := InitializeDBIntegrationRuntime(ctx, pgCfg, logger)
 	if err != nil {
-		return nil, fmt.Errorf("DB integration 런타임 초기화 실패: %w", err)
+		return nil, fmt.Errorf("failed to initialize DB integration runtime: %w", err)
 	}
 	runtime.cleanup = cleanup
 

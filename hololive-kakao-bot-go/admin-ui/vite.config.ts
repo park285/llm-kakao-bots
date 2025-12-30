@@ -14,6 +14,7 @@ export default defineConfig({
       '@/stores': path.resolve(__dirname, './src/stores'),
       '@/types': path.resolve(__dirname, './src/types'),
       '@/lib': path.resolve(__dirname, './src/lib'),
+      '@/hooks': path.resolve(__dirname, './src/hooks'),
     },
   },
   plugins: [
@@ -28,16 +29,20 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // React core
+          // React 코어
           'vendor-react': ['react', 'react-dom'],
-          // Routing
+          // 라우팅
           'vendor-router': ['react-router-dom'],
-          // Animation
+          // 애니메이션
           'vendor-motion': ['framer-motion'],
-          // Data fetching
+          // 데이터 fetching
           'vendor-query': ['@tanstack/react-query'],
-          // Icons
+          // 아이콘
           'vendor-icons': ['lucide-react'],
+          // 폼 & 유효성 검사
+          'vendor-forms': ['react-hook-form', 'zod', '@hookform/resolvers'],
+          // UI 프리미티브
+          'vendor-ui': ['@headlessui/react', '@radix-ui/react-label', '@radix-ui/react-slot'],
         },
       },
     },

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"math/rand/v2"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -242,7 +245,7 @@ func (c *Client) structuredInternal(ctx context.Context, req Request, schema map
 	c.metrics.RecordSuccess(time.Since(start), usageStats)
 	c.recordUsage(ctx, usageStats)
 
-	// Extract search queries from grounding metadata
+	// grounding metadata에서 검색 쿼리 추출
 	searchQueries := extractSearchQueries(response)
 
 	payload := response.Text()
@@ -259,6 +262,15 @@ func (c *Client) structuredInternal(ctx context.Context, req Request, schema map
 }
 
 func (c *Client) recordUsage(ctx context.Context, usageStats llm.Usage) {
+	// 캐시 적중 시 DEBUG 로그 출력
+	if usageStats.CachedTokens > 0 {
+		slog.DebugContext(ctx, "cache_hit",
+			"cached_tokens", usageStats.CachedTokens,
+			"input_tokens", usageStats.InputTokens,
+			"hit_ratio", fmt.Sprintf("%.1f%%", usageStats.CacheHitRatio()*100),
+		)
+	}
+
 	if c.usageRecorder == nil {
 		return
 	}
@@ -272,11 +284,6 @@ func (c *Client) generateWithTools(
 	responseSchema map[string]any,
 	enableSearch bool,
 ) (*genai.GenerateContentResponse, string, error) {
-	client, err := c.selectClient(ctx)
-	if err != nil {
-		return nil, "", err
-	}
-
 	model, err := c.resolveModel(req.Model, req.Task)
 	if err != nil {
 		return nil, model, err
@@ -292,11 +299,40 @@ func (c *Client) generateWithTools(
 	}
 
 	contents := buildContents(req.Prompt, req.History)
-	response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
-	if err != nil {
-		return nil, model, fmt.Errorf("generate content: %w", err)
+
+	maxAttempts := max(1, c.cfg.Gemini.MaxRetries)
+	if c.cfg.Gemini.FailoverAttempts > 0 && len(c.apiKeys) > 0 {
+		maxAttempts = min(maxAttempts, c.cfg.Gemini.FailoverAttempts*len(c.apiKeys))
 	}
-	return response, model, nil
+
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			if err := sleepWithContext(ctx, retryDelay(attempt)); err != nil {
+				return nil, model, err
+			}
+		}
+
+		client, err := c.selectClient(ctx)
+		if err != nil {
+			return nil, model, err
+		}
+
+		response, err := client.Models.GenerateContent(ctx, model, contents, genConfig)
+		if err == nil {
+			return response, model, nil
+		}
+
+		lastErr = err
+		if !isRetryableGenerateError(err) {
+			break
+		}
+	}
+
+	if lastErr == nil {
+		lastErr = errors.New("unknown generate content error")
+	}
+	return nil, model, fmt.Errorf("generate content: %w", lastErr)
 }
 
 func (c *Client) generate(
@@ -485,4 +521,73 @@ func extractSearchQueries(response *genai.GenerateContentResponse) []string {
 		return nil
 	}
 	return gm.WebSearchQueries
+}
+
+func isRetryableGenerateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+
+	var apiErr genai.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.Code {
+		case 408, 429, 500, 502, 503, 504:
+			return true
+		default:
+			return false
+		}
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return true
+		}
+		if temporary, ok := any(netErr).(interface{ Temporary() bool }); ok && temporary.Temporary() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func retryDelay(attempt int) time.Duration {
+	// attempt=1부터 backoff 적용 (attempt=0은 최초 호출)
+	base := 200 * time.Millisecond
+	maxDelay := 2 * time.Second
+
+	exp := attempt - 1
+	if exp > 6 {
+		exp = 6
+	}
+	delay := base * time.Duration(1<<exp)
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
+	// ±20% jitter
+	jitterRange := int64(delay / 5)
+	if jitterRange <= 0 {
+		return delay
+	}
+	jitter := time.Duration(rand.Int64N(jitterRange*2) - jitterRange)
+	return delay + jitter
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("sleep canceled: %w", ctx.Err())
+	case <-timer.C:
+		return nil
+	}
 }

@@ -19,6 +19,10 @@ import type {
   SettingsResponse,
   Settings,
   Member,
+  MilestonesResponse,
+  NearMilestonesResponse,
+  MilestoneStatsResponse,
+  HeartbeatResponse,
 } from '@/types'
 
 // Auth API
@@ -35,12 +39,15 @@ export const authApi = {
     await apiClient.get('/logout')
   },
 
-  heartbeat: async (): Promise<boolean> => {
+  heartbeat: async (idle = false): Promise<HeartbeatResponse> => {
     try {
-      await apiClient.post('/heartbeat')
-      return true
-    } catch {
-      return false // 세션 만료
+      const response = await apiClient.post<HeartbeatResponse>('/heartbeat', { idle })
+      return response.data
+    } catch (error: any) {
+      if (error.response?.data) {
+        return error.response.data as HeartbeatResponse
+      }
+      throw error
     }
   },
 }
@@ -202,17 +209,9 @@ export const namesApi = {
 }
 
 // Docker API (컨테이너 관리)
-export interface DockerContainer {
-  name: string
-  id: string
-  image: string
-  state: string
-  status: string
-  health: string
-  managed: boolean
-  paused: boolean
-  startedAt?: string
-}
+// DockerContainer 타입은 @/types에서 import
+import type { DockerContainer } from '@/types'
+export type { DockerContainer }
 
 export const dockerApi = {
   checkHealth: async () => {
@@ -237,6 +236,38 @@ export const dockerApi = {
 
   startContainer: async (name: string) => {
     const response = await apiClient.post<ApiResponse>(`/docker/containers/${name}/start`)
+    return response.data
+  },
+}
+
+// Milestones API
+export interface GetMilestonesParams {
+  limit?: number
+  offset?: number
+  channelId?: string
+  memberName?: string
+}
+
+export const milestonesApi = {
+  getAchieved: async (params?: GetMilestonesParams) => {
+    const response = await apiClient.get<MilestonesResponse>('/milestones', {
+      params: {
+        limit: 50,
+        ...params
+      },
+    })
+    return response.data
+  },
+
+  getNear: async (threshold = 0.9) => {
+    const response = await apiClient.get<NearMilestonesResponse>('/milestones/near', {
+      params: { threshold },
+    })
+    return response.data
+  },
+
+  getStats: async () => {
+    const response = await apiClient.get<MilestoneStatsResponse>('/milestones/stats')
     return response.data
   },
 }

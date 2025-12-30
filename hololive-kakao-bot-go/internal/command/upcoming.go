@@ -33,7 +33,7 @@ func (c *UpcomingCommand) Execute(ctx context.Context, cmdCtx *domain.CommandCon
 	if err := c.ensureDeps(); err != nil {
 		return err
 	}
-	hours := 24 // Default
+	hours := 24 // \uae30\ubcf8\uac12
 
 	if h, ok := params["hours"]; ok {
 		switch v := h.(type) {

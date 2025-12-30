@@ -21,7 +21,7 @@ func NewMemberServiceAdapter(cache *Cache) *ServiceAdapter {
 	}
 }
 
-// FindMemberByChannelID implements MembersData interface
+// FindMemberByChannelID: MembersData 인터페이스 구현
 func (a *ServiceAdapter) FindMemberByChannelID(channelID string) *domain.Member {
 	member, err := a.cache.GetByChannelID(a.ctx, channelID)
 	if err != nil {
@@ -30,7 +30,7 @@ func (a *ServiceAdapter) FindMemberByChannelID(channelID string) *domain.Member 
 	return member
 }
 
-// FindMemberByName implements MembersData interface
+// FindMemberByName: MembersData 인터페이스 구현
 func (a *ServiceAdapter) FindMemberByName(name string) *domain.Member {
 	member, err := a.cache.GetByName(a.ctx, name)
 	if err != nil {
@@ -39,7 +39,7 @@ func (a *ServiceAdapter) FindMemberByName(name string) *domain.Member {
 	return member
 }
 
-// FindMemberByAlias implements MembersData interface
+// FindMemberByAlias: MembersData 인터페이스 구현
 func (a *ServiceAdapter) FindMemberByAlias(alias string) *domain.Member {
 	member, err := a.cache.FindByAlias(a.ctx, alias)
 	if err != nil {
@@ -48,7 +48,7 @@ func (a *ServiceAdapter) FindMemberByAlias(alias string) *domain.Member {
 	return member
 }
 
-// GetChannelIDs implements MemberDataProvider interface
+// GetChannelIDs: MemberDataProvider 인터페이스 구현
 func (a *ServiceAdapter) GetChannelIDs() []string {
 	channelIDs, err := a.cache.GetAllChannelIDs(a.ctx)
 	if err != nil {
@@ -57,7 +57,7 @@ func (a *ServiceAdapter) GetChannelIDs() []string {
 	return channelIDs
 }
 
-// GetAllMembers implements MemberDataProvider interface
+// GetAllMembers: MemberDataProvider 인터페이스 구현
 func (a *ServiceAdapter) GetAllMembers() []*domain.Member {
 	members, err := a.cache.repo.GetAllMembers(a.ctx)
 	if err != nil {
@@ -66,7 +66,7 @@ func (a *ServiceAdapter) GetAllMembers() []*domain.Member {
 	return members
 }
 
-// WithContext creates a new adapter with custom context
+// WithContext: 커스텀 context를 가진 새 adapter를 생성한다.
 func (a *ServiceAdapter) WithContext(ctx context.Context) domain.MemberDataProvider {
 	if ctx == nil {
 		ctx = context.Background()

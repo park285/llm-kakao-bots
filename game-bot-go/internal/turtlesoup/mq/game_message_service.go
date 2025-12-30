@@ -95,7 +95,15 @@ func (s *GameMessageService) enqueueMessage(ctx context.Context, message mqmsg.I
 func (s *GameMessageService) executeWithQueue(ctx context.Context, message mqmsg.InboundMessage, command Command) {
 	chatID := message.ChatID
 
-	_ = s.processingLockService.StartProcessing(ctx, chatID)
+	if err := s.processingLockService.StartProcessing(ctx, chatID); err != nil {
+		var lockErr cerrors.LockError
+		if errors.As(err, &lockErr) {
+			s.enqueueMessage(ctx, message)
+			return
+		}
+		s.handleDirectFailure(ctx, message, err)
+		return
+	}
 	s.executeCommand(ctx, message, command)
 	_ = s.processingLockService.FinishProcessing(ctx, chatID)
 
@@ -153,7 +161,7 @@ func (s *GameMessageService) handleDirectFailure(ctx context.Context, message mq
 		return
 	}
 
-	var lockErr *cerrors.LockError
+	var lockErr cerrors.LockError
 	if errors.As(err, &lockErr) {
 		_ = s.messageSender.SendLockError(ctx, message, lockErr.HolderName)
 		return

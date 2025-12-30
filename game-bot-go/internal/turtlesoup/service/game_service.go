@@ -127,9 +127,14 @@ func (s *GameService) AskQuestion(ctx context.Context, sessionID string, questio
 			return tserrors.GameNotStartedError{SessionID: sessionID}
 		}
 
+		chatID := loaded.ChatID
+		if chatID == "" {
+			chatID = sessionID
+		}
+
 		result, restErr := s.restClient.TurtleSoupAnswerQuestion(
 			ctx,
-			sessionID,
+			chatID,
 			tsconfig.LlmNamespace,
 			loaded.Puzzle.Scenario,
 			loaded.Puzzle.Solution,
@@ -202,7 +207,12 @@ func (s *GameService) SubmitSolution(ctx context.Context, sessionID string, play
 			return tserrors.GameNotStartedError{SessionID: sessionID}
 		}
 
-		res, validateErr := s.restClient.TurtleSoupValidateSolution(ctx, sessionID, tsconfig.LlmNamespace, loaded.Puzzle.Solution, sanitizedAnswer)
+		chatID := loaded.ChatID
+		if chatID == "" {
+			chatID = sessionID
+		}
+
+		res, validateErr := s.restClient.TurtleSoupValidateSolution(ctx, chatID, tsconfig.LlmNamespace, loaded.Puzzle.Solution, sanitizedAnswer)
 		if validateErr != nil {
 			return fmt.Errorf("llm validate solution failed: %w", validateErr)
 		}
@@ -230,7 +240,7 @@ func (s *GameService) SubmitSolution(ctx context.Context, sessionID string, play
 				return deleteErr
 			}
 
-			_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, sessionID)
+			_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, chatID)
 
 			s.logger.Info("game_ended", "session_id", sessionID, "reason", "solved", "question_count", loaded.QuestionCount, "hints_used", loaded.HintsUsed)
 		}
@@ -284,7 +294,12 @@ func (s *GameService) RequestHint(ctx context.Context, sessionID string) (tsmode
 			return tserrors.GameNotStartedError{SessionID: sessionID}
 		}
 
-		res, hintErr := s.restClient.TurtleSoupGenerateHint(ctx, sessionID, tsconfig.LlmNamespace, loaded.Puzzle.Scenario, loaded.Puzzle.Solution, loaded.HintsUsed+1)
+		chatID := loaded.ChatID
+		if chatID == "" {
+			chatID = sessionID
+		}
+
+		res, hintErr := s.restClient.TurtleSoupGenerateHint(ctx, chatID, tsconfig.LlmNamespace, loaded.Puzzle.Scenario, loaded.Puzzle.Solution, loaded.HintsUsed+1)
 		if hintErr != nil {
 			return fmt.Errorf("llm generate hint failed: %w", hintErr)
 		}
@@ -321,10 +336,15 @@ func (s *GameService) Surrender(ctx context.Context, sessionID string) (tsmodel.
 			return tserrors.GameNotStartedError{SessionID: sessionID}
 		}
 
+		chatID := state.ChatID
+		if chatID == "" {
+			chatID = sessionID
+		}
+
 		if err := s.sessionManager.Delete(ctx, sessionID); err != nil {
 			return err
 		}
-		_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, sessionID)
+		_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, chatID)
 
 		s.logger.Info("game_surrendered", "session_id", sessionID, "question_count", state.QuestionCount, "hints_used", state.HintsUsed)
 
@@ -348,8 +368,18 @@ func (s *GameService) GetGameState(ctx context.Context, sessionID string) (tsmod
 // EndGame 는 동작을 수행한다.
 func (s *GameService) EndGame(ctx context.Context, sessionID string) error {
 	err := s.sessionManager.WithOwnerLock(ctx, sessionID, func(ctx context.Context) error {
+		loaded, loadErr := s.sessionManager.Load(ctx, sessionID)
+		if loadErr != nil {
+			s.logger.Warn("load_session_failed", "session_id", sessionID, "err", loadErr)
+		}
+
+		chatID := sessionID
+		if loaded != nil && loaded.ChatID != "" {
+			chatID = loaded.ChatID
+		}
+
 		_ = s.sessionManager.Delete(ctx, sessionID)
-		_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, sessionID)
+		_, _ = s.restClient.EndSessionByChat(ctx, tsconfig.LlmNamespace, chatID)
 		s.logger.Info("game_ended", "session_id", sessionID)
 		return nil
 	})

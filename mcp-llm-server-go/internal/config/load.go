@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -40,6 +41,9 @@ func (c *Config) Validate() error {
 	if c == nil {
 		return errors.New("config is nil")
 	}
+	if c.HTTPAuth.Required && strings.TrimSpace(c.HTTPAuth.APIKey) == "" {
+		return errors.New("http api key required but not configured")
+	}
 	models := []string{
 		c.Gemini.DefaultModel,
 		c.Gemini.HintsModel,
@@ -72,7 +76,7 @@ func LogEnvStatus(cfg *Config, logger *slog.Logger) {
 		"primary_key", primaryKey,
 		"model", cfg.Gemini.DefaultModel,
 		"timeout", cfg.Gemini.TimeoutSeconds,
-		"session_store_url", cfg.SessionStore.URL,
+		"session_store_enabled", cfg.SessionStore.Enabled,
 		"db_host", cfg.Database.Host,
 		"db_name", cfg.Database.Name,
 		"session_ttl", cfg.Session.SessionTTLMinutes,
@@ -102,7 +106,6 @@ func buildConfig() *Config {
 			},
 			MaxRetries:       max(1, getEnvInt("GEMINI_MAX_RETRIES", 6)),
 			TimeoutSeconds:   getEnvInt("GEMINI_TIMEOUT", 60),
-			ModelCacheSize:   getEnvInt("GEMINI_MODEL_CACHE_SIZE", 20),
 			FailoverAttempts: max(1, getEnvInt("GEMINI_FAILOVER_ATTEMPTS", 2)),
 		},
 		Session: SessionConfig{
@@ -142,7 +145,8 @@ func buildConfig() *Config {
 			HTTP2Enabled: getEnvBool("HTTP2_ENABLED", true),
 		},
 		HTTPAuth: HTTPAuthConfig{
-			APIKey: getEnvString("HTTP_API_KEY", ""),
+			APIKey:   getEnvString("HTTP_API_KEY", ""),
+			Required: getEnvBool("HTTP_API_KEY_REQUIRED", false),
 		},
 		HTTPRateLimit: HTTPRateLimitConfig{
 			RequestsPerMinute: getEnvNonNegativeInt("HTTP_RATE_LIMIT_RPM", 0),

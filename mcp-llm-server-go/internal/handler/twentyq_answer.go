@@ -202,7 +202,7 @@ func (h *TwentyQHandler) logAnswerRequest(sessionID string, historyCount int, qu
 		"session", sessionLabel,
 		"count", questionCount,
 		"history_count", historyCount,
-		"q", question,
+		"q_len", len(question),
 	)
 }
 
@@ -221,14 +221,14 @@ func (h *TwentyQHandler) getAnswerText(c *gin.Context, system string, userConten
 
 	requestID := middleware.GetRequestID(c)
 
-	// Log Chain of Thought reasoning
+	// Chain of Thought reasoning 로그 출력
 	if reasoning, ok := result.Payload["reasoning"].(string); ok && reasoning != "" {
-		h.logger.Info("twentyq_cot", "request_id", requestID, "reasoning", reasoning)
+		h.logger.Debug("twentyq_cot", "request_id", requestID, "reasoning", reasoning)
 	}
 
-	// Log Google Search usage if any
+	// Google Search 사용 시 로그 출력
 	if len(result.SearchQueries) > 0 {
-		h.logger.Info("twentyq_search", "request_id", requestID, "queries", result.SearchQueries)
+		h.logger.Debug("twentyq_search", "request_id", requestID, "queries", result.SearchQueries)
 	}
 
 	rawValue, ok := result.Payload["answer"].(string)

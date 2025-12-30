@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +27,6 @@ func RateLimit(cfg *config.Config) gin.HandlerFunc {
 	}
 
 	counter := cache.NewTTLCache[string, int](cacheSize, cacheTTL)
-	var mu sync.Mutex
 
 	return func(c *gin.Context) {
 		if limit <= 0 {
@@ -45,11 +43,11 @@ func RateLimit(cfg *config.Config) gin.HandlerFunc {
 		window := time.Now().Unix() / 60
 		key := fmt.Sprintf("%s:%d", identity, window)
 
-		mu.Lock()
-		count, _ := counter.Get(key)
-		count++
-		counter.Set(key, count)
-		mu.Unlock()
+		count, ok := counter.Modify(key, func(current int, _ bool) int { return current + 1 })
+		if !ok {
+			c.Next()
+			return
+		}
 
 		if count > limit {
 			details := map[string]any{

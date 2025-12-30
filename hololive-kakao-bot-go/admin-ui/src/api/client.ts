@@ -1,14 +1,15 @@
 import axios, { AxiosError } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { CONFIG } from '@/config/constants'
 
 // API 클라이언트 생성
 const apiClient = axios.create({
-  baseURL: '/admin/api',
+  baseURL: CONFIG.api.baseUrl,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30초 타임아웃
+  timeout: CONFIG.api.timeoutMs,
 })
 
 // Request interceptor: 민감한 정보 URL 파라미터 방지
@@ -21,7 +22,7 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-// Response interceptor
+// Response interceptor: \uc5d0\ub7ec \ubc0f \uc778\uc99d \ucc98\ub9ac
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ retry_after?: number }>) => {

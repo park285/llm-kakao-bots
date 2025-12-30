@@ -2,12 +2,13 @@ package domain
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"path"
 	"strings"
 	"sync"
+
+	"github.com/goccy/go-json"
 )
 
 //go:embed data/official_profiles_raw/*.json

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/goccy/go-json"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"

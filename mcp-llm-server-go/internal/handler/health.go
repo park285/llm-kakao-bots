@@ -26,7 +26,8 @@ type ModelConfigResponse struct {
 // RegisterHealthRoutes: 상태 확인 라우트를 등록합니다.
 func RegisterHealthRoutes(router *gin.Engine, cfg *config.Config) {
 	router.GET("/health", func(c *gin.Context) {
-		payload := health.Collect(c.Request.Context(), cfg, true)
+		// Liveness: 외부 의존성(Valkey/DB 등) 상태로 인해 다운 판정되지 않도록 shallow로 유지합니다.
+		payload := health.Collect(c.Request.Context(), cfg, false)
 		c.JSON(http.StatusOK, payload)
 	})
 

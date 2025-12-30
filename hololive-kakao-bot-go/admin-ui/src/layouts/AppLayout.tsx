@@ -14,7 +14,8 @@ import {
     Play,
     Radio,
     ScrollText,
-    Settings
+    Settings,
+    Trophy
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
@@ -30,7 +31,7 @@ export const AppLayout = () => {
             try {
                 await authApi.logout();
             } catch {
-                // Ignore errors
+                // 에러 무시
             }
             logout();
             void navigate('/login');
@@ -41,6 +42,7 @@ export const AppLayout = () => {
         { id: 'stats', label: '대시보드', icon: LayoutDashboard, path: '/dashboard/stats' },
         { id: 'streams', label: '방송 현황', icon: Radio, path: '/dashboard/streams' },
         { id: 'members', label: '멤버 관리', icon: Users, path: '/dashboard/members' },
+        { id: 'milestones', label: '마일스톤', icon: Trophy, path: '/dashboard/milestones' },
         { id: 'alarms', label: '알람 관리', icon: Bell, path: '/dashboard/alarms' },
         { id: 'rooms', label: '방 관리', icon: MessageSquare, path: '/dashboard/rooms' },
         { id: 'logs', label: '로그', icon: ScrollText, path: '/dashboard/logs' },
@@ -49,18 +51,18 @@ export const AppLayout = () => {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden font-display selection:bg-sky-200">
-            {/* Dynamic Background (Subtle) */}
+            {/* 동적 배경 (미묘한 효과) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-sky-50/50 to-transparent"></div>
             </div>
 
-            {/* Sidebar */}
+            {/* 사이드바 */}
             <motion.aside
                 initial={false}
                 animate={{ width: isSidebarOpen ? 260 : 80 }}
                 className="bg-white/80 backdrop-blur-xl border-r border-slate-200 z-20 flex flex-col transition-all duration-300 relative shadow-sm"
             >
-                {/* Logo Area */}
+                {/* 로고 영역 */}
                 <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
                     <AnimatePresence mode="wait">
                         {isSidebarOpen ? (
@@ -108,7 +110,7 @@ export const AppLayout = () => {
                     </div>
                 )}
 
-                {/* Navigation */}
+                {/* 네비게이션 */}
                 <nav className="flex-1 py-6 px-3 space-y-1.5 overflow-y-auto scrollbar-hide">
                     {navItems.map((item) => (
                         <NavLink
@@ -146,7 +148,7 @@ export const AppLayout = () => {
                     ))}
                 </nav>
 
-                {/* User Profile / Logout */}
+                {/* 유저 프로필 / 로그아웃 */}
                 <div className="p-4 border-t border-slate-100">
                     <button
                         onClick={handleLogout}
@@ -161,9 +163,9 @@ export const AppLayout = () => {
                 </div>
             </motion.aside>
 
-            {/* Main Content */}
+            {/* 메인 콘텐츠 */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
-                {/* Header - Glass effect */}
+                {/* 헤더 - Glass 효과 */}
                 <header className="h-20 bg-white/60 backdrop-blur-md border-b border-slate-200/50 flex items-center justify-between px-8 sticky top-0 z-20">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">

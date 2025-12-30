@@ -1,11 +1,12 @@
 package settings
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"sync"
+
+	"github.com/goccy/go-json"
 )
 
 // Settings: 봇의 동적 설정을 담는 구조체 (예: 알림 전송 시점)

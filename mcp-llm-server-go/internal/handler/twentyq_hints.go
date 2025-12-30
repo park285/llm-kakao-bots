@@ -61,9 +61,9 @@ func (h *TwentyQHandler) handleHints(c *gin.Context) {
 		return
 	}
 
-	// Log Chain of Thought reasoning
+	// Chain of Thought reasoning \ub85c\uadf8 \ucd9c\ub825
 	if reasoning, ok := payload["reasoning"].(string); ok && reasoning != "" {
-		h.logger.Info("twentyq_hints_cot", "request_id", middleware.GetRequestID(c), "reasoning", reasoning)
+		h.logger.Debug("twentyq_hints_cot", "request_id", middleware.GetRequestID(c), "reasoning", reasoning)
 	}
 
 	hints, err := shared.ParseStringSlice(payload, "hints")

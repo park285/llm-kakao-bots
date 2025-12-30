@@ -3,6 +3,23 @@
 ARG GO_VERSION=1.25.5
 ARG ALPINE_VERSION=3.23
 
+# ==========================================
+# Stage 1: Build Frontend
+# ==========================================
+FROM node:22-alpine AS frontend-builder
+WORKDIR /app/admin-ui
+
+# Install dependencies first for caching
+COPY admin-ui/package.json admin-ui/package-lock.json ./
+RUN npm install
+
+# Copy source and build
+COPY admin-ui/ .
+RUN npm run build
+
+# ==========================================
+# Stage 2: Build Backend
+# ==========================================
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 WORKDIR /app
@@ -11,6 +28,9 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download
 
 COPY . .
+
+# Copy built frontend assets from frontend-builder
+COPY --from=frontend-builder /app/admin-ui/dist ./admin-ui/dist
 
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOEXPERIMENT=greenteagc \

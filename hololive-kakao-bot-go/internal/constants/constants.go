@@ -187,31 +187,33 @@ var StringLimits = struct {
 
 // MQConfig 는 패키지 변수다.
 var MQConfig = struct {
-	ReplyStreamKey    string
-	ConsumerGroup     string
-	ConnWriteTimeout  time.Duration
-	BlockingPoolSize  int
-	PipelineMultiplex int
-	DialTimeout       time.Duration
-	BlockTimeout      time.Duration
-	ReadCount         int64
-	WorkerCount       int
-	IdempotencyTTL    time.Duration
-	InitRetryCount    int
-	RetryDelay        time.Duration
+	ReplyStreamKey           string
+	ConsumerGroup            string
+	ConnWriteTimeout         time.Duration
+	BlockingPoolSize         int
+	PipelineMultiplex        int
+	DialTimeout              time.Duration
+	BlockTimeout             time.Duration
+	ReadCount                int64
+	WorkerCount              int
+	IdempotencyProcessingTTL time.Duration
+	IdempotencyTTL           time.Duration
+	InitRetryCount           int
+	RetryDelay               time.Duration
 }{
-	ReplyStreamKey:    "kakao:bot:reply",
-	ConsumerGroup:     "hololive-bot-group",
-	ConnWriteTimeout:  3 * time.Second,
-	BlockingPoolSize:  50,
-	PipelineMultiplex: 4,
-	DialTimeout:       5 * time.Second,
-	BlockTimeout:      5 * time.Second,
-	ReadCount:         50,
-	WorkerCount:       10,
-	IdempotencyTTL:    24 * time.Hour,
-	InitRetryCount:    10,
-	RetryDelay:        1 * time.Second,
+	ReplyStreamKey:           "kakao:bot:reply",
+	ConsumerGroup:            "hololive-bot-group",
+	ConnWriteTimeout:         3 * time.Second,
+	BlockingPoolSize:         50,
+	PipelineMultiplex:        4,
+	DialTimeout:              5 * time.Second,
+	BlockTimeout:             5 * time.Second,
+	ReadCount:                50,
+	WorkerCount:              10,
+	IdempotencyProcessingTTL: 10 * time.Minute, // 처리 중 락 TTL
+	IdempotencyTTL:           24 * time.Hour,
+	InitRetryCount:           10,
+	RetryDelay:               1 * time.Second,
 }
 
 // AppTimeout 는 앱 빌드/종료 타임아웃 설정이다.
@@ -292,13 +294,28 @@ var RequestTimeout = struct {
 
 // SessionConfig 는 세션 관련 설정이다.
 // ExpiryDuration: 세션 TTL (heartbeat 미수신 시 만료)
-// HeartbeatInterval: 프론트엔드 heartbeat 주기
+// HeartbeatInterval: 프론트엔드 heartbeat 주기 (반드시 IdleTimeout보다 짧아야 함)
+// IdleTimeout: 클라이언트 유휴 상태 타임아웃 (idle 상태에서는 세션 즉시 만료)
+// AbsoluteTimeout: 절대 만료 시간 (OWASP 권고: 최초 로그인 후 재인증 강제)
+// TokenRotation: 하트비트 시 세션 ID 갱신 여부 (토큰 탈취 피해 최소화)
+// GracePeriod: Token Rotation 시 기존 세션 유예 시간 (Race Condition 방지)
+// IdleSessionTTL: idle=true 수신 시 세션 TTL 단축값 (즉시 만료 유도)
 var SessionConfig = struct {
 	ExpiryDuration    time.Duration
 	HeartbeatInterval time.Duration
+	IdleTimeout       time.Duration
+	AbsoluteTimeout   time.Duration
+	TokenRotation     bool
+	GracePeriod       time.Duration
+	IdleSessionTTL    time.Duration
 }{
 	ExpiryDuration:    1 * time.Hour,    // 브라우저 닫기 → 1시간 후 Valkey 세션 만료
-	HeartbeatInterval: 15 * time.Minute, // 프론트엔드 heartbeat 주기
+	HeartbeatInterval: 5 * time.Minute,  // 프론트엔드 heartbeat 주기 (IdleTimeout의 절반)
+	IdleTimeout:       10 * time.Minute, // 10분 유휴 → 세션 즉시 만료
+	AbsoluteTimeout:   8 * time.Hour,    // 8시간 후 무조건 재로그인 강제 (OWASP)
+	TokenRotation:     true,             // 하트비트 시 새 세션 ID 발급
+	GracePeriod:       30 * time.Second, // Token Rotation 시 기존 세션 30초 유지 (병렬 요청 보호)
+	IdleSessionTTL:    10 * time.Second, // idle=true 시 세션 TTL 10초로 단축
 }
 
 // DatabaseConfig 는 데이터베이스 연결 설정이다.
@@ -320,9 +337,9 @@ var DatabaseDefaults = struct {
 	Password string
 	Database string
 }{
-	Host:     "localhost",
+	Host:     "postgres",
 	Port:     5432,
-	User:     "holo_user",
-	Password: "holo_password",
-	Database: "holo_oshi_db",
+	User:     "twentyq_app",
+	Password: "",         // 반드시 환경변수로 설정 필요
+	Database: "hololive", // hololive-kakao-bot-go 전용 DB
 }

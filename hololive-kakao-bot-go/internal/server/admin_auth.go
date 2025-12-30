@@ -2,6 +2,7 @@ package server
 
 import (
 	"log/slog"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -55,7 +56,15 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	h.rateLimiter.RecordSuccess(ip)
 
 	// 세션 생성 및 HMAC 서명
-	session := h.sessions.CreateSession(c.Request.Context())
+	session, err := h.sessions.CreateSession(c.Request.Context())
+	if err != nil {
+		h.logger.Error("Failed to create admin session",
+			slog.String("ip", ip),
+			slog.Any("error", err),
+		)
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Session store unavailable"})
+		return
+	}
 	signedSessionID := SignSessionID(session.ID, h.securityCfg.SessionSecret)
 	SetSecureCookie(c, sessionCookieName, signedSessionID, 0, h.securityCfg.ForceHTTPS) // 0 = 세션 쿠키 (브라우저 종료 시 삭제)
 
@@ -102,7 +111,7 @@ func (h *AdminHandler) HandleLogout(c *gin.Context) {
 	if signedSessionID != "" {
 		// 서명 검증 후 삭제
 		if sessionID, valid := ValidateSessionSignature(signedSessionID, h.securityCfg.SessionSecret); valid {
-			h.sessions.DeleteSession(sessionID)
+			h.sessions.DeleteSession(c.Request.Context(), sessionID)
 		}
 	}
 
@@ -118,7 +127,24 @@ func (h *AdminHandler) HandleLogout(c *gin.Context) {
 	})
 }
 
+// heartbeatRequest: 하트비트 요청 구조체
+type heartbeatRequest struct {
+	Idle bool `json:"idle"` // 클라이언트 유휴 상태 여부
+}
+
+// heartbeatResponse: 하트비트 응답 구조체
+type heartbeatResponse struct {
+	Status            string `json:"status"`
+	Rotated           bool   `json:"rotated,omitempty"`             // 세션 ID가 갱신되었는지 여부
+	AbsoluteExpiresAt int64  `json:"absolute_expires_at,omitempty"` // Unix timestamp (절대 만료 시간)
+	IdleRejected      bool   `json:"idle_rejected,omitempty"`       // 유휴 상태로 갱신 거부됨
+}
+
 // HandleHeartbeat: 세션 TTL을 갱신합니다. (프론트엔드에서 주기적으로 호출)
+// 보안 강화 사항:
+// 1. idle=true면 세션 갱신 거부 (클라이언트에서 로그아웃 유도)
+// 2. 절대 만료 시간 초과 시 세션 즉시 삭제 및 401 반환
+// 3. TokenRotation 활성화 시 새 세션 ID 발급 (토큰 탈취 피해 최소화)
 func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
 	signedSessionID, err := c.Cookie(sessionCookieName)
 	if err != nil || signedSessionID == "" {
@@ -132,12 +158,69 @@ func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
 		return
 	}
 
-	if !h.sessions.RefreshSession(sessionID) {
-		// 세션이 이미 만료됨
+	// 요청 파싱 (idle 플래그)
+	var req heartbeatRequest
+	// JSON 바디가 없어도 허용 (하위 호환성)
+	_ = c.ShouldBindJSON(&req)
+
+	ctx := c.Request.Context()
+
+	// RefreshSessionWithValidation 호출 (idle 검증, 절대 만료 검증)
+	refreshed, absoluteExpired, err := h.sessions.RefreshSessionWithValidation(ctx, sessionID, req.Idle)
+	if err != nil {
+		h.logger.Error("Heartbeat refresh error",
+			slog.String("session_id", truncateSessionID(sessionID)),
+			slog.Any("error", err),
+		)
+		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	// 절대 만료 시간 초과
+	if absoluteExpired {
+		ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
+		c.JSON(401, gin.H{
+			"error":            "Session expired",
+			"absolute_expired": true,
+		})
+		return
+	}
+
+	// 유휴 상태로 갱신 거부됨
+	if req.Idle && !refreshed {
+		c.JSON(200, heartbeatResponse{
+			Status:       "idle",
+			IdleRejected: true,
+		})
+		return
+	}
+
+	// 세션이 없거나 만료됨
+	if !refreshed {
 		ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
 		c.JSON(401, gin.H{"error": "Session expired"})
 		return
 	}
 
-	c.JSON(200, gin.H{"status": "ok"})
+	// 토큰 갱신 (설정 활성화 시)
+	response := heartbeatResponse{Status: "ok"}
+
+	if h.config.SessionTokenRotation {
+		newSession, rotateErr := h.sessions.RotateSession(ctx, sessionID)
+		if rotateErr != nil {
+			h.logger.Warn("Session rotation failed, keeping existing session",
+				slog.String("session_id", truncateSessionID(sessionID)),
+				slog.Any("error", rotateErr),
+			)
+			// 실패해도 기존 세션 유지 (graceful degradation)
+		} else {
+			// 새 세션 ID로 쿠키 갱신
+			newSignedSessionID := SignSessionID(newSession.ID, h.securityCfg.SessionSecret)
+			SetSecureCookie(c, sessionCookieName, newSignedSessionID, 0, h.securityCfg.ForceHTTPS)
+			response.Rotated = true
+			response.AbsoluteExpiresAt = newSession.AbsoluteExpiresAt.Unix()
+		}
+	}
+
+	c.JSON(200, response)
 }

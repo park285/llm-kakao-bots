@@ -12,6 +12,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/settings"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/system"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
@@ -24,6 +25,7 @@ import (
 //   - admin_stream.go: 스트림/채널 통계
 //   - admin_stats.go: 봇 통계
 //   - admin_settings.go: 설정/로그/이름매핑
+//   - admin_milestone.go: 마일스톤 조회
 type AdminHandler struct {
 	repo          *member.Repository
 	memberCache   *member.Cache
@@ -31,6 +33,7 @@ type AdminHandler struct {
 	alarm         *notification.AlarmService
 	holodex       *holodex.Service
 	youtube       *youtube.Service
+	statsRepo     *youtube.StatsRepository
 	activity      *activity.Logger
 	settings      *settings.Service
 	acl           *acl.Service
@@ -41,6 +44,7 @@ type AdminHandler struct {
 	adminUser     string
 	adminPassHash string
 	logger        *slog.Logger
+	systemStats   *system.Collector
 	startTime     time.Time
 }
 
@@ -52,6 +56,7 @@ func NewAdminHandler(
 	alarm *notification.AlarmService,
 	holodexSvc *holodex.Service,
 	youtubeSvc *youtube.Service,
+	statsRepo *youtube.StatsRepository,
 	activityLogger *activity.Logger,
 	settingsSvc *settings.Service,
 	aclSvc *acl.Service,
@@ -60,6 +65,7 @@ func NewAdminHandler(
 	rateLimiter *LoginRateLimiter,
 	securityCfg *SecurityConfig,
 	adminUser, adminPassHash string,
+	systemSvc *system.Collector,
 	logger *slog.Logger,
 ) *AdminHandler {
 	return &AdminHandler{
@@ -69,6 +75,7 @@ func NewAdminHandler(
 		alarm:         alarm,
 		holodex:       holodexSvc,
 		youtube:       youtubeSvc,
+		statsRepo:     statsRepo,
 		activity:      activityLogger,
 		settings:      settingsSvc,
 		acl:           aclSvc,
@@ -78,6 +85,7 @@ func NewAdminHandler(
 		securityCfg:   securityCfg,
 		adminUser:     adminUser,
 		adminPassHash: adminPassHash,
+		systemStats:   systemSvc,
 		logger:        logger,
 		startTime:     time.Now(),
 	}
