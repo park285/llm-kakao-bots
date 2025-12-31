@@ -69,3 +69,27 @@ func (as *AlarmService) GetAllAlarmKeys(ctx context.Context) ([]*AlarmEntry, err
 
 	return alarms, nil
 }
+
+// GetDistinctRooms: 알람이 설정된 고유한 방 ID 목록을 반환합니다.
+func (as *AlarmService) GetDistinctRooms(ctx context.Context) ([]string, error) {
+	registryKeys, err := as.cache.SMembers(ctx, AlarmRegistryKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get alarm registry: %w", err)
+	}
+
+	roomSet := make(map[string]struct{})
+	for _, registryKey := range registryKeys {
+		parts := splitRegistryKey(registryKey)
+		if len(parts) != 2 {
+			continue
+		}
+		roomSet[parts[0]] = struct{}{}
+	}
+
+	rooms := make([]string, 0, len(roomSet))
+	for roomID := range roomSet {
+		rooms = append(rooms, roomID)
+	}
+
+	return rooms, nil
+}

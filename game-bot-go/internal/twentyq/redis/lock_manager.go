@@ -27,7 +27,10 @@ func NewLockManager(client valkey.Client, logger *slog.Logger) *LockManager {
 		{Name: luautil.ScriptLockRelease, Source: qassets.LockReleaseLua},
 		{Name: luautil.ScriptLockRenewWrite, Source: qassets.LockRenewWriteLua},
 	})
-	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
+
+	preloadCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := registry.Preload(preloadCtx, client); err != nil && logger != nil {
 		logger.Warn("lua_preload_failed", "component", "twentyq_lock_manager", "err", err)
 	}
 	return &LockManager{

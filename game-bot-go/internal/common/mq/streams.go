@@ -30,6 +30,11 @@ type StreamConsumerConfig struct {
 	AckMaxRetries  int
 	AckRetryDelay  time.Duration
 	GroupStartFrom string
+
+	// Backoff: 연결 에러 재시도 설정
+	BackoffInitial time.Duration // 초기 대기 시간 (기본: 1초)
+	BackoffMax     time.Duration // 최대 대기 시간 (기본: 30초)
+	BackoffFactor  float64       // 대기 시간 증가 배수 (기본: 2.0)
 }
 
 // XMessage: Redis 스트림에서 읽어온 메시지 구조체
@@ -69,6 +74,9 @@ func (c *StreamConsumer) Run(ctx context.Context, handler func(ctx context.Conte
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
+	// 지수 백오프 상태
+	backoff := cfg.BackoffInitial
+
 	for {
 		if ctx.Err() != nil {
 			return nil
@@ -77,14 +85,27 @@ func (c *StreamConsumer) Run(ctx context.Context, handler func(ctx context.Conte
 		messages, err := c.readBatch(ctx, cfg)
 		if err != nil {
 			if valkeyx.IsNil(err) || (errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil) {
+				backoff = cfg.BackoffInitial // 타임아웃은 정상 상황, 리셋
 				continue
 			}
 			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
 				return nil
 			}
-			c.logger.Warn("xreadgroup_failed", "err", err, "stream", cfg.Stream, "group", cfg.Group)
+			c.logger.Warn("xreadgroup_failed", "err", err, "stream", cfg.Stream, "group", cfg.Group, "backoff", backoff)
+
+			// 지수 백오프 대기 후 재시도
+			if !sleepWithContext(ctx, backoff) {
+				return nil // context 취소 시 종료
+			}
+			backoff = time.Duration(float64(backoff) * cfg.BackoffFactor)
+			if backoff > cfg.BackoffMax {
+				backoff = cfg.BackoffMax
+			}
 			continue
 		}
+
+		// 연결 성공 시 backoff 리셋
+		backoff = cfg.BackoffInitial
 
 		for _, msg := range messages {
 			if ctx.Err() != nil {
@@ -198,6 +219,16 @@ func (c *StreamConsumer) normalizedConfig() (StreamConsumerConfig, error) {
 	if strings.TrimSpace(cfg.GroupStartFrom) == "" {
 		cfg.GroupStartFrom = "$"
 	}
+	// Backoff 기본값 설정
+	if cfg.BackoffInitial <= 0 {
+		cfg.BackoffInitial = 1 * time.Second
+	}
+	if cfg.BackoffMax <= 0 {
+		cfg.BackoffMax = 30 * time.Second
+	}
+	if cfg.BackoffFactor <= 0 {
+		cfg.BackoffFactor = 2.0
+	}
 	return cfg, nil
 }
 
@@ -258,4 +289,17 @@ func isNoGroupOrNoStreamErr(err error) bool {
 	}
 	msg := err.Error()
 	return strings.Contains(msg, "NOGROUP") || strings.Contains(strings.ToLower(msg), "no such key") || strings.Contains(msg, "requires the key to exist")
+}
+
+// sleepWithContext: context 취소를 지원하는 sleep
+// 정상 대기 완료 시 true, context 취소 시 false 반환
+func sleepWithContext(ctx context.Context, delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

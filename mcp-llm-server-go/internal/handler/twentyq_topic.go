@@ -5,9 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/twentyq"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
 )
 
 // SelectTopicRequest: 토픽 선택 요청입니다.
@@ -36,19 +36,12 @@ func (h *TwentyQHandler) handleSelectTopic(c *gin.Context) {
 		return
 	}
 
-	topic, err := h.topicLoader.SelectTopic(req.Category, req.BannedTopics, req.ExcludedCategories)
+	topic, err := h.usecase.SelectTopic(c.Request.Context(), middleware.GetRequestID(c), req.Category, req.BannedTopics, req.ExcludedCategories)
 	if err != nil {
 		h.logError(err)
-		shared.WriteError(c, httperror.NewInternalError("topic selection failed"))
+		shared.WriteError(c, err)
 		return
 	}
-
-	h.logger.Info("twentyq_topic_selected",
-		"category", topic.Category,
-		"topic", topic.Name,
-		"banned_count", len(req.BannedTopics),
-		"excluded_categories", len(req.ExcludedCategories),
-	)
 
 	c.JSON(http.StatusOK, SelectTopicResponse{
 		Name:     topic.Name,
@@ -59,6 +52,6 @@ func (h *TwentyQHandler) handleSelectTopic(c *gin.Context) {
 
 func (h *TwentyQHandler) handleCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, CategoriesResponse{
-		Categories: twentyq.AllCategories,
+		Categories: h.usecase.Categories(),
 	})
 }

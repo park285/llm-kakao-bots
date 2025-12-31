@@ -14,18 +14,6 @@ type ModelConfigResponse struct {
 	TransportMode         *string  `json:"transport_mode,omitempty"`
 }
 
-// SessionCreateRequest: 세션 생성 요청 파라미터
-type SessionCreateRequest struct {
-	SystemPrompt *string `json:"system_prompt,omitempty"`
-	Model        *string `json:"model,omitempty"`
-}
-
-// SessionCreateResponse: 세션 생성 응답
-type SessionCreateResponse struct {
-	ID    string `json:"id"`
-	Model string `json:"model,omitempty"`
-}
-
 // SessionEndResponse: 세션 종료 응답
 type SessionEndResponse struct {
 	Message string `json:"message"`

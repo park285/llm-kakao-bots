@@ -29,7 +29,7 @@ const (
 const maxBodyBytes = 1 << 20
 
 // Register 는 동작을 수행한다.
-func Register(mux *http.ServeMux, llmCfg tsconfig.LlmRestConfig, restClient *llmrest.Client, gameService *tssvc.GameService, logger *slog.Logger) {
+func Register(mux *http.ServeMux, llmCfg tsconfig.LlmConfig, restClient *llmrest.Client, gameService *tssvc.GameService, logger *slog.Logger) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]any{
 			"status":     "ok",
@@ -61,7 +61,7 @@ func Register(mux *http.ServeMux, llmCfg tsconfig.LlmRestConfig, restClient *llm
 	})
 }
 
-func handleDebugModels(w http.ResponseWriter, r *http.Request, llmCfg tsconfig.LlmRestConfig, restClient *llmrest.Client, logger *slog.Logger) {
+func handleDebugModels(w http.ResponseWriter, r *http.Request, llmCfg tsconfig.LlmConfig, restClient *llmrest.Client, logger *slog.Logger) {
 	transport := LlmDebugTransport{
 		BaseURL:               llmCfg.BaseURL,
 		HTTP2Enabled:          llmCfg.HTTP2Enabled,

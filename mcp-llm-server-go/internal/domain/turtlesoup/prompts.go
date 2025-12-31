@@ -13,16 +13,16 @@ var promptsFS embed.FS
 
 // Prompts 는 Turtle Soup 프롬프트 모음이다.
 type Prompts struct {
-	prompts map[string]map[string]string
+	bundle *prompt.Bundle
 }
 
 // NewPrompts: Turtle Soup 프롬프트를 로드합니다.
 func NewPrompts() (*Prompts, error) {
-	loaded, err := prompt.LoadYAMLDir(promptsFS, "prompts")
+	bundle, err := prompt.LoadBundle(promptsFS, "prompts", "turtlesoup")
 	if err != nil {
 		return nil, fmt.Errorf("load turtlesoup prompts: %w", err)
 	}
-	return &Prompts{prompts: loaded}, nil
+	return &Prompts{bundle: bundle}, nil
 }
 
 // AnswerSystem: 정답 시스템 프롬프트를 반환합니다.
@@ -31,7 +31,7 @@ func (p *Prompts) AnswerSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "answer.system")
+	return p.field(data, "system", "answer.system")
 }
 
 // AnswerSystemWithPuzzle: 퍼즐 정보를 포함한 시스템 프롬프트를 반환합니다.
@@ -53,7 +53,7 @@ func (p *Prompts) AnswerUser(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "answer.user")
+	template, err := p.field(data, "user", "answer.user")
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (p *Prompts) HintSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "hint.system")
+	return p.field(data, "system", "hint.system")
 }
 
 // HintUser: 힌트 유저 프롬프트를 반환합니다.
@@ -81,7 +81,7 @@ func (p *Prompts) HintUser(puzzle string, level int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "hint.user")
+	template, err := p.field(data, "user", "hint.user")
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func (p *Prompts) ValidateSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "validate.system")
+	return p.field(data, "system", "validate.system")
 }
 
 // ValidateUser: 검증 유저 프롬프트를 반환합니다.
@@ -110,7 +110,7 @@ func (p *Prompts) ValidateUser(solution string, playerAnswer string) (string, er
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "validate.user")
+	template, err := p.field(data, "user", "validate.user")
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +130,7 @@ func (p *Prompts) RevealSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "reveal.system")
+	return p.field(data, "system", "reveal.system")
 }
 
 // RevealUser: 해설 유저 프롬프트를 반환합니다.
@@ -139,7 +139,7 @@ func (p *Prompts) RevealUser(puzzle string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "reveal.user")
+	template, err := p.field(data, "user", "reveal.user")
 	if err != nil {
 		return "", err
 	}
@@ -158,7 +158,7 @@ func (p *Prompts) GenerateSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "generate.system")
+	return p.field(data, "system", "generate.system")
 }
 
 // GenerateUser: 퍼즐 생성 유저 프롬프트를 반환합니다.
@@ -167,7 +167,7 @@ func (p *Prompts) GenerateUser(category string, difficulty int, theme string, ex
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "generate.user")
+	template, err := p.field(data, "user", "generate.user")
 	if err != nil {
 		return "", err
 	}
@@ -189,7 +189,7 @@ func (p *Prompts) RewriteSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "rewrite.system")
+	return p.field(data, "system", "rewrite.system")
 }
 
 // RewriteUser: 리라이트 유저 프롬프트를 반환합니다.
@@ -198,7 +198,7 @@ func (p *Prompts) RewriteUser(title string, scenario string, solution string, di
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "rewrite.user")
+	template, err := p.field(data, "user", "rewrite.user")
 	if err != nil {
 		return "", err
 	}
@@ -218,15 +218,24 @@ func (p *Prompts) getPrompt(name string) (map[string]string, error) {
 	if p == nil {
 		return nil, fmt.Errorf("turtlesoup prompts not initialized")
 	}
-	promptMap, err := prompt.Get(p.prompts, name, "turtlesoup")
+	if p.bundle == nil {
+		return nil, fmt.Errorf("turtlesoup prompts not initialized")
+	}
+	promptMap, err := p.bundle.Prompt(name)
 	if err != nil {
 		return nil, fmt.Errorf("get turtlesoup prompt %s: %w", name, err)
 	}
 	return promptMap, nil
 }
 
-func promptField(data map[string]string, key string, label string) (string, error) {
-	value, err := prompt.Field(data, key, label)
+func (p *Prompts) field(data map[string]string, key string, label string) (string, error) {
+	if p == nil {
+		return "", fmt.Errorf("turtlesoup prompts not initialized")
+	}
+	if p.bundle == nil {
+		return "", fmt.Errorf("turtlesoup prompts not initialized")
+	}
+	value, err := p.bundle.Field(data, key, label)
 	if err != nil {
 		return "", fmt.Errorf("get turtlesoup prompt field %s: %w", label, err)
 	}

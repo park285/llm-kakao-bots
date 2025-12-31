@@ -1,93 +1,44 @@
 package mq
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
+	commonmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mq"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
+	domainmodels "github.com/park285/llm-kakao-bots/game-bot-go/internal/domain/models"
 	tserrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/errors"
 	tsmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/messages"
-	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
-// MessageQueueNotifier: 메시지 큐 처리 상태(대기, 재시도, 실패 등)를 사용자에게 알리는 역할
-type MessageQueueNotifier struct {
-	provider *messageprovider.Provider
-	logger   *slog.Logger
-}
+// MessageQueueNotifier: turtlesoup 전용 큐 알림을 위한 공통 notifier alias 입니다.
+type MessageQueueNotifier = commonmq.MessageQueueNotifier
 
 // NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성한다.
 func NewMessageQueueNotifier(provider *messageprovider.Provider, logger *slog.Logger) *MessageQueueNotifier {
-	return &MessageQueueNotifier{
-		provider: provider,
-		logger:   logger,
+	cfg := commonmq.QueueNotifierConfig{
+		UserAnonymousKey: tsmessages.UserAnonymous,
+		DefaultErrorKey:  tsmessages.ErrorInternal,
+
+		QueueProcessingKey:     tsmessages.QueueProcessing,
+		QueueRetryKey:          tsmessages.QueueRetry,
+		QueueRetryDuplicateKey: tsmessages.QueueRetryDuplicate,
+		QueueRetryFailedKey:    tsmessages.QueueRetryFailed,
+
+		ProcessingStartFactory: mqmsg.NewWaiting,
+		RetryFactory:           mqmsg.NewWaiting,
+		DuplicateFactory:       mqmsg.NewWaiting,
+		FailedFactory:          mqmsg.NewError,
+		ErrorFactory:           mqmsg.NewError,
 	}
-}
-
-// NotifyProcessingStart: 메시지 처리가 시작됨을 알리는 메시지를 전송한다.
-func (n *MessageQueueNotifier) NotifyProcessingStart(
-	_ context.Context,
-	chatID string,
-	pending tsmodel.PendingMessage,
-	emit func(mqmsg.OutboundMessage) error,
-) error {
-	userName := pending.DisplayName(chatID, n.provider.Get(tsmessages.UserAnonymous))
-	notifyText := n.provider.Get(tsmessages.QueueProcessing, messageprovider.P("user", userName))
-	return emit(mqmsg.NewWaiting(chatID, notifyText, pending.ThreadID))
-}
-
-// NotifyRetry: 메시지 처리가 지연되어 재시도 중임을 알리는 메시지를 전송한다.
-func (n *MessageQueueNotifier) NotifyRetry(
-	_ context.Context,
-	chatID string,
-	pending tsmodel.PendingMessage,
-	emit func(mqmsg.OutboundMessage) error,
-) error {
-	userName := pending.DisplayName(chatID, n.provider.Get(tsmessages.UserAnonymous))
-	retryText := n.provider.Get(tsmessages.QueueRetry, messageprovider.P("user", userName))
-	return emit(mqmsg.NewWaiting(chatID, retryText, pending.ThreadID))
-}
-
-// NotifyDuplicate: 중복된 요청임을 알리는 메시지를 전송한다.
-func (n *MessageQueueNotifier) NotifyDuplicate(
-	_ context.Context,
-	chatID string,
-	pending tsmodel.PendingMessage,
-	emit func(mqmsg.OutboundMessage) error,
-) error {
-	userName := pending.DisplayName(chatID, n.provider.Get(tsmessages.UserAnonymous))
-	dupText := n.provider.Get(tsmessages.QueueRetryDuplicate, messageprovider.P("user", userName))
-	return emit(mqmsg.NewWaiting(chatID, dupText, pending.ThreadID))
-}
-
-// NotifyFailed: 큐잉된 메시지 처리가 최종 실패했음을 알리는 메시지를 전송한다.
-func (n *MessageQueueNotifier) NotifyFailed(
-	_ context.Context,
-	chatID string,
-	pending tsmodel.PendingMessage,
-	emit func(mqmsg.OutboundMessage) error,
-) error {
-	userName := pending.DisplayName(chatID, n.provider.Get(tsmessages.UserAnonymous))
-	failedText := n.provider.Get(tsmessages.QueueRetryFailed, messageprovider.P("user", userName))
-	return emit(mqmsg.NewError(chatID, failedText, pending.ThreadID))
-}
-
-// NotifyError: 처리 중 발생한 에러 내용을 사용자에게 알리는 메시지를 전송한다.
-func (n *MessageQueueNotifier) NotifyError(
-	_ context.Context,
-	chatID string,
-	pending tsmodel.PendingMessage,
-	err error,
-	emit func(mqmsg.OutboundMessage) error,
-) error {
-	n.logger.Error("queue_processing_error", "chat_id", chatID, "user_id", pending.UserID, "err", err)
-
-	if tserrors.IsExpectedUserBehavior(err) {
-		n.logger.Warn("queue_domain_error", "chat_id", chatID, "err", err)
+	mapper := func(err error) (string, []messageprovider.Param) {
+		mapping := GetErrorMapping(err)
+		return mapping.Key, mapping.Params
 	}
-
-	mapping := GetErrorMapping(err)
-	text := n.provider.Get(mapping.Key, mapping.Params...)
-	return emit(mqmsg.NewError(chatID, text, pending.ThreadID))
+	hook := func(logger *slog.Logger, chatID string, _ domainmodels.PendingMessage, err error) {
+		if tserrors.IsExpectedUserBehavior(err) {
+			logger.Warn("queue_domain_error", "chat_id", chatID, "err", err)
+		}
+	}
+	return commonmq.NewMessageQueueNotifier(provider, logger, cfg, mapper, hook)
 }

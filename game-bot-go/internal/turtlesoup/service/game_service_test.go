@@ -117,11 +117,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 		}
 
 		if strings.Contains(path, "/api/sessions") {
-			if r.Method == http.MethodDelete {
-				json.NewEncoder(w).Encode(llmrest.SessionEndResponse{Message: "ended", ID: "sess1"})
-			} else {
-				json.NewEncoder(w).Encode(llmrest.SessionCreateResponse{ID: "sess1", Model: "test"})
-			}
+			// DELETE /api/sessions/:id 만 지원
+			json.NewEncoder(w).Encode(llmrest.SessionEndResponse{Message: "ended", ID: "sess1"})
 			return
 		}
 

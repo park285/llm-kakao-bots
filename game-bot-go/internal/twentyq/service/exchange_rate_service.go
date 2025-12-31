@@ -19,7 +19,6 @@ import (
 
 const (
 	defaultUsdKrwRate           = 1400.0
-	exchangeRateAPIURL          = "https://api.frankfurter.app/latest?from=USD&to=KRW"
 	exchangeRateCacheTTL        = time.Hour
 	exchangeRateSingleflightKey = "exchange_rate_usd_krw"
 )
@@ -45,13 +44,13 @@ type FrankfurterExchangeRateService struct {
 }
 
 // NewFrankfurterExchangeRateService: 새로운 FrankfurterExchangeRateService 인스턴스를 생성합니다.
-func NewFrankfurterExchangeRateService(logger *slog.Logger) *FrankfurterExchangeRateService {
+func NewFrankfurterExchangeRateService(logger *slog.Logger, apiURL string) *FrankfurterExchangeRateService {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	return &FrankfurterExchangeRateService{
 		client:  &http.Client{Timeout: 10 * time.Second},
-		apiURL:  exchangeRateAPIURL,
+		apiURL:  strings.TrimSpace(apiURL),
 		logger:  logger,
 		printer: message.NewPrinter(language.Korean),
 	}

@@ -28,6 +28,8 @@ const (
 	CommandMemberInfo CommandType = "member_info"
 	// CommandStats: 통계 정보 조회 명령어
 	CommandStats CommandType = "stats"
+	// CommandSubscriber: 특정 멤버의 구독자 수 조회 명령어
+	CommandSubscriber CommandType = "subscriber"
 	// CommandUnknown: 인식할 수 없는 명령어
 	CommandUnknown CommandType = "unknown"
 )
@@ -41,7 +43,7 @@ func (c CommandType) IsValid() bool {
 	switch c {
 	case CommandLive, CommandUpcoming, CommandSchedule, CommandHelp,
 		CommandAlarmAdd, CommandAlarmRemove, CommandAlarmList, CommandAlarmClear, CommandAlarmInvalid,
-		CommandMemberInfo, CommandStats, CommandUnknown:
+		CommandMemberInfo, CommandStats, CommandSubscriber, CommandUnknown:
 		return true
 	default:
 		return false

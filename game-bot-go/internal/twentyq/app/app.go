@@ -107,7 +107,8 @@ func newTwentyQAdminServices(
 ) *twentyQAdminServices {
 	statsService := qsvc.NewStatsService(db, stores.sessionStore, msgProvider, logger)
 	adminHandler := qsvc.NewAdminHandler(cfg.Admin.UserIDs, riddleService, stores.sessionStore, msgProvider, logger)
-	usageHandler := qsvc.NewUsageHandler(cfg.Admin.UserIDs, restClient, msgProvider, nil, logger)
+	exchangeRate := qsvc.NewFrankfurterExchangeRateService(logger, cfg.Usage.ExchangeRateAPIURL)
+	usageHandler := qsvc.NewUsageHandler(cfg.Admin.UserIDs, restClient, msgProvider, exchangeRate, logger)
 	return &twentyQAdminServices{
 		statsService: statsService,
 		adminHandler: adminHandler,
@@ -281,7 +282,7 @@ func newTwentyQMQValkey(
 }
 
 func newTwentyQRestClient(cfg *qconfig.Config) (*llmrest.Client, error) {
-	client, err := llmrest.NewFromConfig(cfg.LlmRest)
+	client, err := llmrest.NewFromConfig(cfg.Llm)
 	if err != nil {
 		return nil, fmt.Errorf("create llm rest client failed: %w", err)
 	}

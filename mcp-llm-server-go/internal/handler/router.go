@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
@@ -28,6 +29,7 @@ func NewRouter(
 		middleware.RequestID(),
 		middleware.RequestLogger(logger),
 		gin.Recovery(),
+		gzip.Gzip(gzip.DefaultCompression),
 		middleware.APIKeyAuth(cfg),
 		middleware.RateLimit(cfg),
 	)

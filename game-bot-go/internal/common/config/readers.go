@@ -6,39 +6,45 @@ import (
 	"time"
 )
 
-// ReadLlmRestConfigFromEnv 는 동작을 수행한다.
-func ReadLlmRestConfigFromEnv() (LlmRestConfig, error) {
-	llmTimeoutSeconds, err := Int64FromEnv("LLM_REST_TIMEOUT_SECONDS", 30)
+// ReadLlmConfigFromEnv: LLM 서버 통신 설정을 환경 변수에서 읽어옵니다.
+func ReadLlmConfigFromEnv() (LlmConfig, error) {
+	llmTimeoutSeconds, err := Int64FromEnv("LLM_TIMEOUT_SECONDS", 30)
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read LLM_REST_TIMEOUT_SECONDS failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read LLM_TIMEOUT_SECONDS failed: %w", err)
 	}
 
-	llmConnectTimeoutSeconds, err := Int64FromEnv("LLM_REST_CONNECT_TIMEOUT_SECONDS", 10)
+	llmConnectTimeoutSeconds, err := Int64FromEnv("LLM_CONNECT_TIMEOUT_SECONDS", 10)
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf(
-			"read LLM_REST_CONNECT_TIMEOUT_SECONDS failed: %w",
+		return LlmConfig{}, fmt.Errorf(
+			"read LLM_CONNECT_TIMEOUT_SECONDS failed: %w",
 			err,
 		)
 	}
 
-	llmHTTP2Enabled, err := BoolFromEnv("LLM_REST_HTTP2_ENABLED", true)
+	llmRequireGRPC, err := BoolFromEnv("LLM_REQUIRE_GRPC", true)
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read LLM_REST_HTTP2_ENABLED failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read LLM_REQUIRE_GRPC failed: %w", err)
 	}
 
-	llmRetryMaxAttempts, err := IntFromEnv("LLM_REST_RETRY_MAX_ATTEMPTS", 2)
+	llmHTTP2Enabled, err := BoolFromEnv("LLM_HTTP2_ENABLED", true)
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read LLM_REST_RETRY_MAX_ATTEMPTS failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read LLM_HTTP2_ENABLED failed: %w", err)
 	}
 
-	llmRetryDelay, err := DurationMillisFromEnv("LLM_REST_RETRY_DELAY_MS", 200)
+	llmRetryMaxAttempts, err := IntFromEnv("LLM_RETRY_MAX_ATTEMPTS", 2)
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read LLM_REST_RETRY_DELAY_MS failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read LLM_RETRY_MAX_ATTEMPTS failed: %w", err)
 	}
 
-	return LlmRestConfig{
-		BaseURL:          StringFromEnv("LLM_REST_BASE_URL", "http://localhost:40527"),
-		APIKey:           StringFromEnvFirstNonEmpty([]string{"LLM_REST_API_KEY", "HTTP_API_KEY"}, ""),
+	llmRetryDelay, err := DurationMillisFromEnv("LLM_RETRY_DELAY_MS", 200)
+	if err != nil {
+		return LlmConfig{}, fmt.Errorf("read LLM_RETRY_DELAY_MS failed: %w", err)
+	}
+
+	return LlmConfig{
+		BaseURL:          StringFromEnv("LLM_BASE_URL", "grpc://localhost:40528"),
+		RequireGRPC:      llmRequireGRPC,
+		APIKey:           StringFromEnvFirstNonEmpty([]string{"LLM_API_KEY", "HTTP_API_KEY"}, ""),
 		Timeout:          time.Duration(llmTimeoutSeconds) * time.Second,
 		ConnectTimeout:   time.Duration(llmConnectTimeoutSeconds) * time.Second,
 		HTTP2Enabled:     llmHTTP2Enabled,
@@ -60,7 +66,7 @@ func ReadServerConfigFromEnv(defaultPort int) (ServerConfig, error) {
 	}, nil
 }
 
-// ReadServerTuningConfigFromEnv 는 동작을 수행한다.
+// ReadServerTuningConfigFromEnv: HTTP 서버 튜닝 설정(Timeouts, Limits)을 환경 변수에서 읽어옵니다.
 func ReadServerTuningConfigFromEnv() (ServerTuningConfig, error) {
 	readHeaderTimeout, err := DurationSecondsFromEnv("SERVER_READ_HEADER_TIMEOUT_SECONDS", 5)
 	if err != nil {
@@ -70,12 +76,13 @@ func ReadServerTuningConfigFromEnv() (ServerTuningConfig, error) {
 		)
 	}
 
-	idleTimeout, err := DurationSecondsFromEnv("SERVER_IDLE_TIMEOUT_SECONDS", 0)
+	// 보안/안정성 기본값 적용함 (명시적으로 0을 주면 비활성화 가능)
+	idleTimeout, err := DurationSecondsFromEnv("SERVER_IDLE_TIMEOUT_SECONDS", 90)
 	if err != nil {
 		return ServerTuningConfig{}, fmt.Errorf("read SERVER_IDLE_TIMEOUT_SECONDS failed: %w", err)
 	}
 
-	maxHeaderBytes, err := IntFromEnv("SERVER_MAX_HEADER_BYTES", 0)
+	maxHeaderBytes, err := IntFromEnv("SERVER_MAX_HEADER_BYTES", 1<<20) // 1MiB
 	if err != nil {
 		return ServerTuningConfig{}, fmt.Errorf("read SERVER_MAX_HEADER_BYTES failed: %w", err)
 	}

@@ -10,14 +10,15 @@ import (
 	"golang.org/x/net/http2"
 )
 
-// Config 는 타입이다.
+// Config: HTTP 클라이언트 생성 설정입니다.
+// HTTP2Enabled=true인 경우 H2C(HTTP/2 Cleartext) 통신을 위해 http2.Transport를 사용합니다.
 type Config struct {
 	Timeout        time.Duration
 	ConnectTimeout time.Duration
 	HTTP2Enabled   bool
 }
 
-// New 는 동작을 수행한다.
+// New: 설정에 따라 *http.Client를 생성합니다.
 func New(cfg Config) *http.Client {
 	dialer := &net.Dialer{
 		Timeout:   cfg.ConnectTimeout,

@@ -33,8 +33,10 @@ type RiddleService struct {
 	statsRecorder *StatsRecorder
 	logger        *slog.Logger
 
-	playerRegistrationOnce  sync.Once
-	playerRegistrationTasks chan playerRegistrationTask
+	playerRegistrationOnce    sync.Once
+	playerRegistrationTasks   chan playerRegistrationTask
+	playerRegistrationWg      sync.WaitGroup
+	playerRegistrationStopped chan struct{}
 }
 
 // NewRiddleService: 새로운 RiddleService 인스턴스를 생성합니다.

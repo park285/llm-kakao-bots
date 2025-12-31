@@ -1,8 +1,15 @@
 package llmrest
 
-import "context"
+import (
+	"context"
+	"fmt"
 
-// TwentyQHintsRequest: 스무고개 힌트 생성 요청 파라미터
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/structpb"
+
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
+)
+
 type TwentyQHintsRequest struct {
 	Target   string         `json:"target"`
 	Category string         `json:"category"`
@@ -70,6 +77,33 @@ type TwentyQSynonymResponse struct {
 
 // TwentyQGenerateHints: 힌트를 생성 요청을 전송합니다.
 func (c *Client) TwentyQGenerateHints(ctx context.Context, target string, category string, details map[string]any) (*TwentyQHintsResponse, error) {
+	if c.grpcClient != nil {
+		var detailsStruct *structpb.Struct
+		if len(details) > 0 {
+			st, err := structpb.NewStruct(details)
+			if err != nil {
+				return nil, fmt.Errorf("convert details failed: %w", err)
+			}
+			detailsStruct = st
+		}
+
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQGenerateHints(callCtx, &llmv1.TwentyQGenerateHintsRequest{
+			Target:   target,
+			Category: category,
+			Details:  detailsStruct,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq generate hints failed: %w", err)
+		}
+		return &TwentyQHintsResponse{
+			Hints:            resp.Hints,
+			ThoughtSignature: resp.ThoughtSignature,
+		}, nil
+	}
+
 	req := TwentyQHintsRequest{Target: target, Category: category, Details: details}
 	var out TwentyQHintsResponse
 	if err := c.Post(ctx, "/api/twentyq/hints", req, &out); err != nil {
@@ -88,6 +122,38 @@ func (c *Client) TwentyQAnswerQuestion(
 	question string,
 	details map[string]any,
 ) (*TwentyQAnswerResponse, error) {
+	if c.grpcClient != nil {
+		var detailsStruct *structpb.Struct
+		if len(details) > 0 {
+			st, err := structpb.NewStruct(details)
+			if err != nil {
+				return nil, fmt.Errorf("convert details failed: %w", err)
+			}
+			detailsStruct = st
+		}
+
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TwentyQAnswerQuestionRequest{
+			ChatId:    &chatID,
+			Namespace: &namespace,
+			Target:    target,
+			Category:  category,
+			Question:  question,
+			Details:   detailsStruct,
+		}
+		resp, err := c.grpcClient.TwentyQAnswerQuestion(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq answer failed: %w", err)
+		}
+		return &TwentyQAnswerResponse{
+			Scale:            resp.Scale,
+			RawText:          resp.RawText,
+			ThoughtSignature: resp.ThoughtSignature,
+		}, nil
+	}
+
 	req := TwentyQAnswerRequest{
 		ChatID:    &chatID,
 		Namespace: &namespace,
@@ -106,6 +172,17 @@ func (c *Client) TwentyQAnswerQuestion(
 
 // TwentyQVerifyGuess: 정답 추측 검증 요청을 전송합니다.
 func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess string) (*TwentyQVerifyResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQVerifyGuess(callCtx, &llmv1.TwentyQVerifyGuessRequest{Target: target, Guess: guess})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq verify failed: %w", err)
+		}
+		return &TwentyQVerifyResponse{Result: resp.Result, RawText: resp.RawText}, nil
+	}
+
 	req := TwentyQVerifyRequest{Target: target, Guess: guess}
 	var out TwentyQVerifyResponse
 	if err := c.Post(ctx, "/api/twentyq/verifications", req, &out); err != nil {
@@ -116,6 +193,17 @@ func (c *Client) TwentyQVerifyGuess(ctx context.Context, target string, guess st
 
 // TwentyQNormalizeQuestion: 질문 정규화 요청을 전송합니다.
 func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) (*TwentyQNormalizeResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQNormalizeQuestion(callCtx, &llmv1.TwentyQNormalizeQuestionRequest{Question: question})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq normalize failed: %w", err)
+		}
+		return &TwentyQNormalizeResponse{Normalized: resp.Normalized, Original: resp.Original}, nil
+	}
+
 	req := TwentyQNormalizeRequest{Question: question}
 	var out TwentyQNormalizeResponse
 	if err := c.Post(ctx, "/api/twentyq/normalizations", req, &out); err != nil {
@@ -126,6 +214,17 @@ func (c *Client) TwentyQNormalizeQuestion(ctx context.Context, question string) 
 
 // TwentyQCheckSynonym: 동의어 여부 확인 요청을 전송합니다.
 func (c *Client) TwentyQCheckSynonym(ctx context.Context, target string, guess string) (*TwentyQSynonymResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQCheckSynonym(callCtx, &llmv1.TwentyQCheckSynonymRequest{Target: target, Guess: guess})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq synonym check failed: %w", err)
+		}
+		return &TwentyQSynonymResponse{Result: resp.Result, RawText: resp.RawText}, nil
+	}
+
 	req := TwentyQSynonymRequest{Target: target, Guess: guess}
 	var out TwentyQSynonymResponse
 	if err := c.Post(ctx, "/api/twentyq/synonym-checks", req, &out); err != nil {
@@ -155,6 +254,31 @@ type TwentyQCategoriesResponse struct {
 
 // TwentyQSelectTopic: 조건에 맞는 토픽을 선택 요청합니다.
 func (c *Client) TwentyQSelectTopic(ctx context.Context, category string, bannedTopics []string, excludedCategories []string) (*TwentyQSelectTopicResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQSelectTopic(callCtx, &llmv1.TwentyQSelectTopicRequest{
+			Category:           category,
+			BannedTopics:       bannedTopics,
+			ExcludedCategories: excludedCategories,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq select topic failed: %w", err)
+		}
+
+		details := map[string]any(nil)
+		if resp.Details != nil {
+			details = resp.Details.AsMap()
+		}
+
+		return &TwentyQSelectTopicResponse{
+			Name:     resp.Name,
+			Category: resp.Category,
+			Details:  details,
+		}, nil
+	}
+
 	req := TwentyQSelectTopicRequest{
 		Category:           category,
 		BannedTopics:       bannedTopics,
@@ -169,6 +293,17 @@ func (c *Client) TwentyQSelectTopic(ctx context.Context, category string, banned
 
 // TwentyQGetCategories: 사용 가능한 카테고리 목록을 조회합니다.
 func (c *Client) TwentyQGetCategories(ctx context.Context) (*TwentyQCategoriesResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		resp, err := c.grpcClient.TwentyQGetCategories(callCtx, &emptypb.Empty{})
+		if err != nil {
+			return nil, fmt.Errorf("grpc twentyq get categories failed: %w", err)
+		}
+		return &TwentyQCategoriesResponse{Categories: resp.Categories}, nil
+	}
+
 	var out TwentyQCategoriesResponse
 	if err := c.Get(ctx, "/api/twentyq/topics/categories", &out); err != nil {
 		return nil, err

@@ -13,9 +13,10 @@ type CommandsConfig struct {
 	Prefix string
 }
 
-// LlmRestConfig 는 타입이다.
-type LlmRestConfig struct {
+// LlmConfig: LLM 서버 통신 설정입니다.
+type LlmConfig struct {
 	BaseURL          string
+	RequireGRPC      bool
 	APIKey           string
 	Timeout          time.Duration
 	ConnectTimeout   time.Duration
@@ -81,7 +82,7 @@ type LogConfig struct {
 	Compress   bool
 }
 
-// ServerTuningConfig 는 타입이다.
+// ServerTuningConfig: HTTP 서버 튜닝 설정(Timeouts, Limits)입니다.
 type ServerTuningConfig struct {
 	ReadHeaderTimeout time.Duration
 	IdleTimeout       time.Duration

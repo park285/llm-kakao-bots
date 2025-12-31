@@ -120,6 +120,9 @@ linters:
       ignore-package-globs:
         - github.com/valkey-io/valkey-go
         - github.com/valkey-io/valkey-go/*
+        # gRPC status.Error wrapping 금지(상태 추출 실패 방지)
+        - google.golang.org/grpc/status
+        - google.golang.org/grpc/status/*
 
   exclusions:
     rules:

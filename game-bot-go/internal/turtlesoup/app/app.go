@@ -229,7 +229,7 @@ func newTurtleSoupMQValkey(
 }
 
 func newTurtleSoupRestClient(cfg *tsconfig.Config) (*llmrest.Client, error) {
-	client, err := llmrest.NewFromConfig(cfg.LlmRest)
+	client, err := llmrest.NewFromConfig(cfg.Llm)
 	if err != nil {
 		return nil, fmt.Errorf("create llm rest client failed: %w", err)
 	}
@@ -262,7 +262,7 @@ func newTurtleSoupHTTPMux(
 	logger *slog.Logger,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
-	httpapi.Register(mux, cfg.LlmRest, restClient, gameService, logger)
+	httpapi.Register(mux, cfg.Llm, restClient, gameService, logger)
 	return mux
 }
 

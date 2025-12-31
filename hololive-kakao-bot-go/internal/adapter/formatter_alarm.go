@@ -338,3 +338,37 @@ func (f *ResponseFormatter) AlarmNotificationGroup(minutesUntil int, notificatio
 
 	return util.ApplyKakaoSeeMorePadding(content, instruction)
 }
+
+// milestoneAchievedTemplateData: 마일스톤 달성 알림 템플릿 데이터
+type milestoneAchievedTemplateData struct {
+	MemberName string
+	Milestone  string
+}
+
+// milestoneApproachingTemplateData: 마일스톤 예고 알림 템플릿 데이터
+type milestoneApproachingTemplateData struct {
+	MemberName string
+	Milestone  string
+	Remaining  string
+}
+
+// FormatMilestoneAchieved: 마일스톤 달성 알림 메시지를 생성한다.
+func FormatMilestoneAchieved(memberName, milestone string) (string, error) {
+	data := milestoneAchievedTemplateData{
+		MemberName: memberName,
+		Milestone:  milestone,
+	}
+
+	return executeFormatterTemplate("milestone_achieved.tmpl", data)
+}
+
+// FormatMilestoneApproaching: 마일스톤 예고 알림 메시지를 생성한다.
+func FormatMilestoneApproaching(memberName, milestone, remaining string) (string, error) {
+	data := milestoneApproachingTemplateData{
+		MemberName: memberName,
+		Milestone:  milestone,
+		Remaining:  remaining,
+	}
+
+	return executeFormatterTemplate("milestone_approaching.tmpl", data)
+}

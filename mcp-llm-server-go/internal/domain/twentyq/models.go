@@ -104,8 +104,9 @@ type NormalizeOutput struct {
 
 // VerifyOutput: 검증 출력 스키마입니다.
 type VerifyOutput struct {
-	Reasoning string `json:"reasoning"`
-	Result    string `json:"result"`
+	Reasoning  string  `json:"reasoning"`
+	Result     string  `json:"result"`
+	Confidence float64 `json:"confidence"`
 }
 
 // SynonymOutput: 유사어 출력 스키마입니다.
@@ -148,8 +149,14 @@ var verifySchema = map[string]any{
 				string(VerifyReject),
 			},
 		},
+		"confidence": map[string]any{
+			"type":        "number",
+			"minimum":     0.0,
+			"maximum":     1.0,
+			"description": "Confidence level 0.0-1.0. Use < 0.5 if uncertain, prefer 근접 when in doubt.",
+		},
 	},
-	"required": []string{"reasoning", "result"},
+	"required": []string{"reasoning", "result", "confidence"},
 }
 
 var synonymSchema = domainmodels.RequiredStringFieldSchema("result")

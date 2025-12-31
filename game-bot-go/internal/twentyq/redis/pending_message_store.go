@@ -42,9 +42,7 @@ type DequeueResult struct {
 }
 
 type pendingMessagePayload struct {
-	Content  string  `json:"content"`
-	ThreadID *string `json:"threadId,omitempty"`
-	Sender   *string `json:"sender,omitempty"`
+	pending.BaseMessagePayload
 	// 체인 질문 배치 처리용
 	IsChainBatch   bool     `json:"isChainBatch,omitempty"`
 	BatchQuestions []string `json:"batchQuestions,omitempty"`
@@ -77,9 +75,11 @@ func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingM
 // Enqueue: 메시지를 JSON으로 변환하여 대기열에 추가하고 결과를 반환합니다.
 func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, message qmodel.PendingMessage) (EnqueueResult, error) {
 	payload := pendingMessagePayload{
-		Content:        message.Content,
-		ThreadID:       message.ThreadID,
-		Sender:         message.Sender,
+		BaseMessagePayload: pending.BaseMessagePayload{
+			Content:  message.Content,
+			ThreadID: message.ThreadID,
+			Sender:   message.Sender,
+		},
 		IsChainBatch:   message.IsChainBatch,
 		BatchQuestions: message.BatchQuestions,
 	}
@@ -98,9 +98,11 @@ func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, messag
 // EnqueueReplacingDuplicate: 중복 메시지가 있을 경우 기존 메시지를 삭제하고 최신 메시지로 대체하여 대기열에 추가합니다.
 func (s *PendingMessageStore) EnqueueReplacingDuplicate(ctx context.Context, chatID string, message qmodel.PendingMessage) (EnqueueResult, error) {
 	payload := pendingMessagePayload{
-		Content:        message.Content,
-		ThreadID:       message.ThreadID,
-		Sender:         message.Sender,
+		BaseMessagePayload: pending.BaseMessagePayload{
+			Content:  message.Content,
+			ThreadID: message.ThreadID,
+			Sender:   message.Sender,
+		},
 		IsChainBatch:   message.IsChainBatch,
 		BatchQuestions: message.BatchQuestions,
 	}
@@ -218,30 +220,21 @@ func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string
 		return "", nil
 	}
 
-	lines := make([]string, 0, len(entries))
-	for idx, entry := range entries {
-		entryUserID, jsonPart, ok := pending.ExtractUserIDAndJSON(entry)
-		if !ok {
-			continue
-		}
-
+	details := pending.FormatQueueDetails(entries, domainmodels.DisplayNameFromUser, func(jsonPart string) (pending.QueueDetailsItem, bool) {
 		var payload pendingMessagePayload
 		if err := json.Unmarshal([]byte(jsonPart), &payload); err != nil {
-			continue
+			return pending.QueueDetailsItem{}, false
 		}
 
-		displayName := domainmodels.DisplayNameFromUser(entryUserID, payload.Sender)
-
-		// 체인 메시지 처리: batchQuestions 사용
+		// 체인 메시지 처리: `BatchQuestions`를 요약 문자열로 노출함
 		content := payload.Content
 		if payload.IsChainBatch && len(payload.BatchQuestions) > 0 {
 			content = strings.Join(payload.BatchQuestions, ", ")
 		}
 
-		lines = append(lines, fmt.Sprintf("%d. %s - %s", idx+1, displayName, content))
-	}
-
-	return strings.Join(lines, "\n"), nil
+		return pending.QueueDetailsItem{Sender: payload.Sender, Content: content}, true
+	})
+	return details, nil
 }
 
 // Clear: 대기열의 모든 메시지를 삭제합니다.

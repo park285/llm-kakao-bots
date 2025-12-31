@@ -18,6 +18,37 @@ const (
 	DenialReasonAccessDenied
 )
 
+// DenialReasonMessages: DenialReason에 대응하는 사용자 표시 메시지 묶음입니다.
+type DenialReasonMessages struct {
+	UserBlocked  string
+	ChatBlocked  string
+	AccessDenied string
+}
+
+// DenialReasonMessage: DenialReason에 해당하는 메시지를 반환합니다.
+// reason이 DenialReasonNone이거나 메시지가 비어있으면 ok=false를 반환합니다.
+func DenialReasonMessage(reason DenialReason, messages DenialReasonMessages) (msg string, ok bool) {
+	switch reason {
+	case DenialReasonUserBlocked:
+		if messages.UserBlocked == "" {
+			return "", false
+		}
+		return messages.UserBlocked, true
+	case DenialReasonChatBlocked:
+		if messages.ChatBlocked == "" {
+			return "", false
+		}
+		return messages.ChatBlocked, true
+	case DenialReasonAccessDenied:
+		if messages.AccessDenied == "" {
+			return "", false
+		}
+		return messages.AccessDenied, true
+	default:
+		return "", false
+	}
+}
+
 // AccessControl: 설정 기반의 사용자/채팅방 접근 제어 관리자
 type AccessControl struct {
 	cfg commonconfig.AccessConfig

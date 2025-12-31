@@ -148,7 +148,7 @@ func (s *SessionStore) GetPlayerByNickname(ctx context.Context, chatID string, n
 	return nil
 }
 
-// ClearAllData: 채팅방에 연관된 모든 스무고개/바다거북스프 관련 Redis 데이터(세션, 히스토리, 락 등)를 삭제합니다. (초기화)
+// ClearAllData: 채팅방에 연관된 스무고개 관련 Redis 데이터(세션, 히스토리, 락 등)를 삭제합니다. (초기화)
 func (s *SessionStore) ClearAllData(ctx context.Context, chatID string) error {
 	chatID = strings.TrimSpace(chatID)
 	if chatID == "" {

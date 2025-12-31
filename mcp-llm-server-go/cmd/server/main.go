@@ -31,32 +31,89 @@ func main() {
 		"http2", app.Config.HTTP.HTTP2Enabled,
 	)
 
-	serverErr := make(chan error, 1)
+	httpServerErr := make(chan error, 1)
 	go func() {
-		serverErr <- app.Server.ListenAndServe()
+		httpServerErr <- app.Server.ListenAndServe()
 	}()
+
+	grpcEnabled := app.GRPCServer != nil && app.GRPCListener != nil
+	var grpcServerErr chan error
+	if grpcEnabled {
+		app.Logger.Info(
+			"grpc_server_start",
+			"addr", app.GRPCListener.Addr().String(),
+			"tls_enabled", false,
+		)
+
+		grpcServerErr = make(chan error, 1)
+		go func() {
+			grpcServerErr <- app.GRPCServer.Serve(app.GRPCListener)
+		}()
+	}
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signalCh)
 
+	stopGRPC := func(ctx context.Context) {
+		if !grpcEnabled {
+			return
+		}
+
+		done := make(chan struct{})
+		go func() {
+			app.GRPCServer.GracefulStop()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+		case <-ctx.Done():
+			app.GRPCServer.Stop()
+		}
+	}
+
 	select {
-	case err = <-serverErr:
+	case err = <-httpServerErr:
+		if grpcEnabled {
+			app.Logger.Error("http_server_failed", "err", err)
+			app.GRPCServer.Stop()
+			<-grpcServerErr
+		}
 	case sig := <-signalCh:
 		app.Logger.Info("http_server_shutdown_signal", "signal", sig.String())
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		stopGRPC(shutdownCtx)
 		if shutdownErr := app.Server.Shutdown(shutdownCtx); shutdownErr != nil {
 			app.Logger.Error("http_server_shutdown_failed", "err", shutdownErr)
 			_ = app.Server.Close()
 		}
 
-		err = <-serverErr
+		err = <-httpServerErr
+		if grpcEnabled {
+			<-grpcServerErr
+		}
+	case err = <-grpcServerErr:
+		app.Logger.Error("grpc_server_failed", "err", err)
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if shutdownErr := app.Server.Shutdown(shutdownCtx); shutdownErr != nil {
+			app.Logger.Error("http_server_shutdown_failed", "err", shutdownErr)
+			_ = app.Server.Close()
+		}
+
+		httpErr := <-httpServerErr
+		if err == nil {
+			err = httpErr
+		}
 	}
 
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		app.Logger.Error("http_server_failed", "err", err)
 		os.Exit(1)
 	}
 }

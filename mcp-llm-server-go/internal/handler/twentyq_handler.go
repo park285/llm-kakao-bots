@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +11,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/guard"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
+	twentyquc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/twentyq"
 )
 
 // TwentyQHandler: TwentyQ API 핸들러입니다.
@@ -22,6 +22,7 @@ type TwentyQHandler struct {
 	store       *session.Store
 	prompts     *twentyq.Prompts
 	topicLoader *twentyq.TopicLoader
+	usecase     *twentyquc.Service
 	logger      *slog.Logger
 }
 
@@ -35,7 +36,7 @@ func NewTwentyQHandler(
 	topicLoader *twentyq.TopicLoader,
 	logger *slog.Logger,
 ) *TwentyQHandler {
-	return &TwentyQHandler{
+	h := &TwentyQHandler{
 		cfg:         cfg,
 		client:      client,
 		guard:       injectionGuard,
@@ -44,6 +45,8 @@ func NewTwentyQHandler(
 		topicLoader: topicLoader,
 		logger:      logger,
 	}
+	h.usecase = twentyquc.New(cfg, client, injectionGuard, store, prompts, topicLoader, logger)
+	return h
 }
 
 // RegisterRoutes: TwentyQ 라우트를 등록합니다.
@@ -56,16 +59,6 @@ func (h *TwentyQHandler) RegisterRoutes(router *gin.Engine) {
 	group.POST("/synonym-checks", h.handleSynonym)
 	group.POST("/topics/select", h.handleSelectTopic)
 	group.GET("/topics/categories", h.handleCategories)
-}
-
-func (h *TwentyQHandler) ensureSafeDetails(detailsJSON string) error {
-	if detailsJSON == "" {
-		return nil
-	}
-	if err := h.guard.EnsureSafe(detailsJSON); err != nil {
-		return fmt.Errorf("guard details: %w", err)
-	}
-	return nil
 }
 
 func (h *TwentyQHandler) logError(err error) {

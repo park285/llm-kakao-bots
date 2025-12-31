@@ -134,7 +134,7 @@ func (s *ValkeySessionStore) GetSession(ctx context.Context, sessionID string) (
 			slog.String("session_id", truncateSessionID(sessionID)),
 			slog.Any("error", err),
 		)
-		return nil, err
+		return nil, fmt.Errorf("unmarshal session: %w", err)
 	}
 	return &session, nil
 }
@@ -175,7 +175,6 @@ func (s *ValkeySessionStore) DeleteSession(ctx context.Context, sessionID string
 }
 
 // RefreshSession: 세션의 TTL을 연장합니다. (Heartbeat, 하위 호환성 유지)
-// Deprecated: RefreshSessionWithValidation 사용 권장
 func (s *ValkeySessionStore) RefreshSession(ctx context.Context, sessionID string) bool {
 	refreshed, _, _ := s.RefreshSessionWithValidation(ctx, sessionID, false)
 	return refreshed
@@ -249,8 +248,14 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 		return nil, fmt.Errorf("session not found")
 	}
 
-	// [중복 회전 방지] 기존 세션의 남은 TTL 확인
-	// GracePeriod(30초) + 여유분(5초) 이내라면 이미 회전된 세션으로 간주하고 회전 중단
+	// [방어적 코드: 중복 회전 방지]
+	// 기존 세션의 남은 TTL 확인.
+	// GracePeriod(30초) + 여유분(5초) 이내라면 이미 회전된 세션으로 간주하고 회전 중단.
+	//
+	// NOTE: 현재 HandleHeartbeat 흐름에서는 RefreshSessionWithValidation이 먼저 호출되어
+	// TTL을 1시간으로 연장하므로, 정상 흐름에서는 이 조건이 실행되지 않습니다.
+	// 다만, 향후 Refresh 로직 변경이나 직접 RotateSession 호출 시를 대비한 방어적 코드입니다.
+	// 삭제해도 보안상 문제는 없으나, 네트워크 지연/병렬 요청 시 이중 회전이 발생할 수 있습니다.
 	key := sessionKeyPrefix + oldSessionID
 	ttlResp := s.client.Do(ctx, s.client.B().Ttl().Key(key).Build())
 	if ttl, err := ttlResp.AsInt64(); err == nil && ttl > 0 {

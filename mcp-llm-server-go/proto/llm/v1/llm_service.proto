@@ -1,0 +1,261 @@
+syntax = "proto3";
+
+package llm.v1;
+
+option go_package = "github.com/park285/llm-kakao-bots/llm-kakao-bots-proto/llm/v1;llmv1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
+service LLMService {
+  rpc GetModelConfig(google.protobuf.Empty) returns (ModelConfigResponse);
+
+  rpc GuardIsMalicious(GuardIsMaliciousRequest) returns (GuardIsMaliciousResponse);
+
+  rpc EndSession(EndSessionRequest) returns (EndSessionResponse);
+
+  rpc TwentyQSelectTopic(TwentyQSelectTopicRequest) returns (TwentyQSelectTopicResponse);
+  rpc TwentyQGetCategories(google.protobuf.Empty) returns (TwentyQGetCategoriesResponse);
+  rpc TwentyQGenerateHints(TwentyQGenerateHintsRequest) returns (TwentyQGenerateHintsResponse);
+  rpc TwentyQAnswerQuestion(TwentyQAnswerQuestionRequest) returns (TwentyQAnswerQuestionResponse);
+  rpc TwentyQVerifyGuess(TwentyQVerifyGuessRequest) returns (TwentyQVerifyGuessResponse);
+  rpc TwentyQNormalizeQuestion(TwentyQNormalizeQuestionRequest) returns (TwentyQNormalizeQuestionResponse);
+  rpc TwentyQCheckSynonym(TwentyQCheckSynonymRequest) returns (TwentyQCheckSynonymResponse);
+
+  rpc TurtleSoupGeneratePuzzle(TurtleSoupGeneratePuzzleRequest) returns (TurtleSoupGeneratePuzzleResponse);
+  rpc TurtleSoupGetRandomPuzzle(TurtleSoupGetRandomPuzzleRequest) returns (TurtleSoupGetRandomPuzzleResponse);
+  rpc TurtleSoupRewriteScenario(TurtleSoupRewriteScenarioRequest) returns (TurtleSoupRewriteScenarioResponse);
+  rpc TurtleSoupAnswerQuestion(TurtleSoupAnswerQuestionRequest) returns (TurtleSoupAnswerQuestionResponse);
+  rpc TurtleSoupValidateSolution(TurtleSoupValidateSolutionRequest) returns (TurtleSoupValidateSolutionResponse);
+  rpc TurtleSoupGenerateHint(TurtleSoupGenerateHintRequest) returns (TurtleSoupGenerateHintResponse);
+
+  rpc GetDailyUsage(google.protobuf.Empty) returns (DailyUsageResponse);
+  rpc GetRecentUsage(GetRecentUsageRequest) returns (UsageListResponse);
+  rpc GetTotalUsage(GetTotalUsageRequest) returns (UsageResponse);
+}
+
+message ModelConfigResponse {
+  string model_default = 1;
+  optional string model_hints = 2;
+  optional string model_answer = 3;
+  optional string model_verify = 4;
+  double temperature = 5;
+  optional double configured_temperature = 6;
+  int32 timeout_seconds = 7;
+  int32 max_retries = 8;
+  bool http2_enabled = 9;
+  optional string transport_mode = 10;
+}
+
+message GuardIsMaliciousRequest {
+  string input_text = 1;
+}
+
+message GuardIsMaliciousResponse {
+  bool malicious = 1;
+}
+
+message EndSessionRequest {
+  string session_id = 1;
+}
+
+message EndSessionResponse {
+  string message = 1;
+  string id = 2;
+}
+
+message TwentyQSelectTopicRequest {
+  string category = 1;
+  repeated string banned_topics = 2;
+  repeated string excluded_categories = 3;
+}
+
+message TwentyQSelectTopicResponse {
+  string name = 1;
+  string category = 2;
+  google.protobuf.Struct details = 3;
+}
+
+message TwentyQGetCategoriesResponse {
+  repeated string categories = 1;
+}
+
+message TwentyQGenerateHintsRequest {
+  string target = 1;
+  string category = 2;
+  google.protobuf.Struct details = 3;
+}
+
+message TwentyQGenerateHintsResponse {
+  repeated string hints = 1;
+  optional string thought_signature = 2;
+}
+
+message TwentyQAnswerQuestionRequest {
+  optional string session_id = 1;
+  optional string chat_id = 2;
+  optional string namespace = 3;
+  string target = 4;
+  string category = 5;
+  string question = 6;
+  google.protobuf.Struct details = 7;
+}
+
+message TwentyQAnswerQuestionResponse {
+  optional string scale = 1;
+  string raw_text = 2;
+  optional string thought_signature = 3;
+}
+
+message TwentyQVerifyGuessRequest {
+  string target = 1;
+  string guess = 2;
+}
+
+message TwentyQVerifyGuessResponse {
+  optional string result = 1;
+  string raw_text = 2;
+}
+
+message TwentyQNormalizeQuestionRequest {
+  string question = 1;
+}
+
+message TwentyQNormalizeQuestionResponse {
+  string normalized = 1;
+  string original = 2;
+}
+
+message TwentyQCheckSynonymRequest {
+  string target = 1;
+  string guess = 2;
+}
+
+message TwentyQCheckSynonymResponse {
+  optional string result = 1;
+  string raw_text = 2;
+}
+
+message TurtleSoupGeneratePuzzleRequest {
+  optional string category = 1;
+  optional int32 difficulty = 2;
+  optional string theme = 3;
+}
+
+message TurtleSoupGeneratePuzzleResponse {
+  string title = 1;
+  string scenario = 2;
+  string solution = 3;
+  string category = 4;
+  int32 difficulty = 5;
+  repeated string hints = 6;
+}
+
+message TurtleSoupGetRandomPuzzleRequest {
+  optional int32 difficulty = 1;
+}
+
+message TurtleSoupGetRandomPuzzleResponse {
+  optional int32 id = 1;
+  optional string title = 2;
+  optional string question = 3;
+  optional string answer = 4;
+  optional int32 difficulty = 5;
+}
+
+message TurtleSoupRewriteScenarioRequest {
+  string title = 1;
+  string scenario = 2;
+  string solution = 3;
+  int32 difficulty = 4;
+}
+
+message TurtleSoupRewriteScenarioResponse {
+  string scenario = 1;
+  string solution = 2;
+  string original_scenario = 3;
+  string original_solution = 4;
+}
+
+message TurtleSoupHistoryItem {
+  string question = 1;
+  string answer = 2;
+}
+
+message TurtleSoupAnswerQuestionRequest {
+  optional string session_id = 1;
+  optional string chat_id = 2;
+  optional string namespace = 3;
+  string scenario = 4;
+  string solution = 5;
+  string question = 6;
+}
+
+message TurtleSoupAnswerQuestionResponse {
+  string answer = 1;
+  string raw_text = 2;
+  int32 question_count = 3;
+  repeated TurtleSoupHistoryItem history = 4;
+}
+
+message TurtleSoupValidateSolutionRequest {
+  optional string session_id = 1;
+  optional string chat_id = 2;
+  optional string namespace = 3;
+  string solution = 4;
+  string player_answer = 5;
+}
+
+message TurtleSoupValidateSolutionResponse {
+  string result = 1;
+  string raw_text = 2;
+}
+
+message TurtleSoupGenerateHintRequest {
+  optional string session_id = 1;
+  optional string chat_id = 2;
+  optional string namespace = 3;
+  string scenario = 4;
+  string solution = 5;
+  int32 level = 6;
+}
+
+message TurtleSoupGenerateHintResponse {
+  string hint = 1;
+  int32 level = 2;
+}
+
+message DailyUsageResponse {
+  string usage_date = 1;
+  int64 input_tokens = 2;
+  int64 output_tokens = 3;
+  int64 total_tokens = 4;
+  int64 reasoning_tokens = 5;
+  int64 request_count = 6;
+  string model = 7;
+}
+
+message UsageResponse {
+  int64 input_tokens = 1;
+  int64 output_tokens = 2;
+  int64 total_tokens = 3;
+  int64 reasoning_tokens = 4;
+  string model = 5;
+}
+
+message GetRecentUsageRequest {
+  int32 days = 1;
+}
+
+message UsageListResponse {
+  repeated DailyUsageResponse usages = 1;
+  int64 total_input_tokens = 2;
+  int64 total_output_tokens = 3;
+  int64 total_tokens = 4;
+  int64 total_request_count = 5;
+  string model = 6;
+}
+
+message GetTotalUsageRequest {
+  int32 days = 1;
+}

@@ -61,6 +61,7 @@ func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 	serverApp := newTwentyQServerApp(logger, httpServer, mqPipeline)
 
 	cleanup := func() {
+		riddleService.ShutdownPlayerRegistration()
 		cleanupMQValkey()
 		cleanupStats()
 		cleanupDB()

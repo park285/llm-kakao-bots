@@ -268,6 +268,8 @@ func ProvideYouTubeStack(
 	holodexSvc *holodex.Service,
 	members *member.ServiceAdapter,
 	statsRepo *youtube.StatsRepository,
+	alarmSvc *notification.AlarmService,
+	irisClient iris.Client,
 	logger *slog.Logger,
 ) *YouTubeStack {
 	if !cfg.YouTube.EnableQuotaBuilding || cfg.YouTube.APIKey == "" {
@@ -281,7 +283,7 @@ func ProvideYouTubeStack(
 		return &YouTubeStack{StatsRepo: statsRepo}
 	}
 
-	scheduler := youtube.NewScheduler(svc, holodexSvc, cacheSvc, statsRepo, members, logger)
+	scheduler := youtube.NewScheduler(svc, holodexSvc, cacheSvc, statsRepo, members, alarmSvc, irisClient, logger)
 	logger.Info("YouTube quota building enabled",
 		slog.String("mode", "API Key"),
 		slog.Int("daily_target", 9192))

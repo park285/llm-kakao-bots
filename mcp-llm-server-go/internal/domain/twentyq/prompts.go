@@ -13,16 +13,16 @@ var promptsFS embed.FS
 
 // Prompts: TwentyQ 프롬프트 모음입니다.
 type Prompts struct {
-	prompts map[string]map[string]string
+	bundle *prompt.Bundle
 }
 
 // NewPrompts: TwentyQ 프롬프트를 로드합니다.
 func NewPrompts() (*Prompts, error) {
-	loaded, err := prompt.LoadYAMLDir(promptsFS, "prompts")
+	bundle, err := prompt.LoadBundle(promptsFS, "prompts", "twentyq")
 	if err != nil {
 		return nil, fmt.Errorf("load twentyq prompts: %w", err)
 	}
-	return &Prompts{prompts: loaded}, nil
+	return &Prompts{bundle: bundle}, nil
 }
 
 // HintsSystem: 힌트 시스템 프롬프트를 반환합니다.
@@ -31,7 +31,7 @@ func (p *Prompts) HintsSystem(category string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	system, err := promptField(data, "system", "hints.system")
+	system, err := p.field(data, "system", "hints.system")
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +62,7 @@ func (p *Prompts) HintsUser(secret string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "hints.user")
+	template, err := p.field(data, "user", "hints.user")
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +81,7 @@ func (p *Prompts) AnswerSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "answer.system")
+	return p.field(data, "system", "answer.system")
 }
 
 // AnswerSystemWithSecret: Secret 정보를 포함한 시스템 프롬프트를 반환합니다.
@@ -103,7 +103,7 @@ func (p *Prompts) AnswerUser(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "answer.user")
+	template, err := p.field(data, "user", "answer.user")
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +122,7 @@ func (p *Prompts) VerifySystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "verify-answer.system")
+	return p.field(data, "system", "verify-answer.system")
 }
 
 // VerifyUser: 검증 유저 프롬프트를 반환합니다.
@@ -131,7 +131,7 @@ func (p *Prompts) VerifyUser(target string, guess string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "verify-answer.user")
+	template, err := p.field(data, "user", "verify-answer.user")
 	if err != nil {
 		return "", err
 	}
@@ -151,7 +151,7 @@ func (p *Prompts) NormalizeSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "normalize.system")
+	return p.field(data, "system", "normalize.system")
 }
 
 // NormalizeUser: 정규화 유저 프롬프트를 반환합니다.
@@ -160,7 +160,7 @@ func (p *Prompts) NormalizeUser(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "normalize.user")
+	template, err := p.field(data, "user", "normalize.user")
 	if err != nil {
 		return "", err
 	}
@@ -179,7 +179,7 @@ func (p *Prompts) SynonymSystem() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return promptField(data, "system", "synonym-check.system")
+	return p.field(data, "system", "synonym-check.system")
 }
 
 // SynonymUser: 유사어 유저 프롬프트를 반환합니다.
@@ -188,7 +188,7 @@ func (p *Prompts) SynonymUser(target string, guess string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	template, err := promptField(data, "user", "synonym-check.user")
+	template, err := p.field(data, "user", "synonym-check.user")
 	if err != nil {
 		return "", err
 	}
@@ -206,15 +206,24 @@ func (p *Prompts) getPrompt(name string) (map[string]string, error) {
 	if p == nil {
 		return nil, fmt.Errorf("twentyq prompts not initialized")
 	}
-	promptMap, err := prompt.Get(p.prompts, name, "twentyq")
+	if p.bundle == nil {
+		return nil, fmt.Errorf("twentyq prompts not initialized")
+	}
+	promptMap, err := p.bundle.Prompt(name)
 	if err != nil {
 		return nil, fmt.Errorf("get twentyq prompt %s: %w", name, err)
 	}
 	return promptMap, nil
 }
 
-func promptField(data map[string]string, key string, label string) (string, error) {
-	value, err := prompt.Field(data, key, label)
+func (p *Prompts) field(data map[string]string, key string, label string) (string, error) {
+	if p == nil {
+		return "", fmt.Errorf("twentyq prompts not initialized")
+	}
+	if p.bundle == nil {
+		return "", fmt.Errorf("twentyq prompts not initialized")
+	}
+	value, err := p.bundle.Field(data, key, label)
 	if err != nil {
 		return "", fmt.Errorf("get twentyq prompt field %s: %w", label, err)
 	}

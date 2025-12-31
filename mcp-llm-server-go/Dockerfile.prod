@@ -36,7 +36,7 @@ COPY --from=builder --link --chown=appuser:appuser /app/rulepacks ./rulepacks
 
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 
-EXPOSE 40527
+EXPOSE 40527 40528
 
 # GC 최적화
 ENV GOGC=200 \
@@ -44,6 +44,9 @@ ENV GOGC=200 \
     HTTP_HOST=0.0.0.0 \
     HTTP_PORT=40527 \
     HTTP2_ENABLED=true \
+    GRPC_HOST=0.0.0.0 \
+    GRPC_PORT=40528 \
+    GRPC_ENABLED=true \
     RULEPACKS_DIR=/app/rulepacks \
     LOG_DIR=/app/logs
 
@@ -54,4 +57,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 USER appuser
 
 CMD ["./bin/server"]
-

@@ -208,24 +208,6 @@ func (c *Service) DelMany(ctx context.Context, keys []string) (int64, error) {
 	return deleted, nil
 }
 
-// Keys: 주어진 패턴과 일치하는 모든 키를 찾아서 반환한다. (주의: 대량 검색 시 부하 발생 가능)
-//
-// Deprecated: ScanKeys 사용을 권장한다.
-func (c *Service) Keys(ctx context.Context, pattern string) ([]string, error) {
-	resp := c.client.Do(ctx, c.client.B().Keys().Pattern(pattern).Build())
-	if resp.Error() != nil {
-		c.logger.Error("Cache keys search failed", slog.String("pattern", pattern), slog.Any("error", resp.Error()))
-		return []string{}, errors.NewCacheError("keys search failed", "keys", pattern, resp.Error())
-	}
-
-	keys, err := resp.AsStrSlice()
-	if err != nil {
-		return []string{}, errors.NewCacheError("keys conversion failed", "keys", pattern, err)
-	}
-
-	return keys, nil
-}
-
 // ScanKeys: SCAN 명령을 사용하여 패턴과 일치하는 키를 점진적으로 조회한다.
 // KEYS와 달리 Redis를 블로킹하지 않아 대량 키 조회에 안전하다.
 // 단, 비원자적이므로 스캔 중 키 변경 시 누락/중복이 발생할 수 있다.

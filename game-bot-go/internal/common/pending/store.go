@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/valkey-io/valkey-go"
 
@@ -29,7 +30,10 @@ func NewStore(client valkey.Client, logger *slog.Logger, config Config) *Store {
 		{Name: luautil.ScriptPendingDequeue, Source: dequeueLua},
 		{Name: luautil.ScriptPendingDequeueBatch, Source: dequeueBatchLua},
 	})
-	if err := registry.Preload(context.Background(), client); err != nil && logger != nil {
+
+	preloadCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := registry.Preload(preloadCtx, client); err != nil && logger != nil {
 		logger.Warn("lua_preload_failed", "component", "pending_store", "err", err)
 	}
 	return &Store{

@@ -16,8 +16,8 @@ type ServerTuningConfig = commonconfig.ServerTuningConfig
 // CommandsConfig 는 타입이다.
 type CommandsConfig = commonconfig.CommandsConfig
 
-// LlmRestConfig 는 타입이다.
-type LlmRestConfig = commonconfig.LlmRestConfig
+// LlmConfig: LLM 서버 통신 설정 alias
+type LlmConfig = commonconfig.LlmConfig
 
 // PuzzleConfig 는 타입이다.
 type PuzzleConfig struct {
@@ -47,7 +47,7 @@ type Config struct {
 	Server         ServerConfig
 	ServerTuning   ServerTuningConfig
 	Commands       CommandsConfig
-	LlmRest        LlmRestConfig
+	Llm            LlmConfig
 	Puzzle         PuzzleConfig
 	Redis          RedisConfig
 	Valkey         ValkeyMQConfig
@@ -67,7 +67,7 @@ func LoadFromEnv() (*Config, error) {
 		return nil, err
 	}
 	commands := readCommandsConfig()
-	llmRest, err := readLlmRestConfig()
+	llmCfg, err := readLlmConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func LoadFromEnv() (*Config, error) {
 		Server:         server,
 		ServerTuning:   serverTuning,
 		Commands:       commands,
-		LlmRest:        llmRest,
+		Llm:            llmCfg,
 		Puzzle:         puzzle,
 		Redis:          redis,
 		Valkey:         valkey,
@@ -132,10 +132,10 @@ func readCommandsConfig() CommandsConfig {
 	}
 }
 
-func readLlmRestConfig() (LlmRestConfig, error) {
-	cfg, err := commonconfig.ReadLlmRestConfigFromEnv()
+func readLlmConfig() (LlmConfig, error) {
+	cfg, err := commonconfig.ReadLlmConfigFromEnv()
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read llm rest config failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read llm config failed: %w", err)
 	}
 	return cfg, nil
 }

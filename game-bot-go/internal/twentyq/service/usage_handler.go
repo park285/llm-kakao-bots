@@ -38,7 +38,7 @@ func NewUsageHandler(
 	logger *slog.Logger,
 ) *UsageHandler {
 	if exchangeRate == nil {
-		exchangeRate = NewFrankfurterExchangeRateService(logger)
+		exchangeRate = NewFrankfurterExchangeRateService(logger, "")
 	}
 	return &UsageHandler{
 		adminUserIDs: adminUserIDs,

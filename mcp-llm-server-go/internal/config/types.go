@@ -123,6 +123,13 @@ type HTTPConfig struct {
 	HTTP2Enabled bool
 }
 
+// GRPCConfig 는 gRPC 서버 설정이다.
+type GRPCConfig struct {
+	Host    string
+	Port    int
+	Enabled bool
+}
+
 // HTTPAuthConfig 는 API 키 인증 설정이다.
 type HTTPAuthConfig struct {
 	APIKey   string
@@ -179,6 +186,7 @@ type Config struct {
 	Guard         GuardConfig
 	Logging       LoggingConfig
 	HTTP          HTTPConfig
+	GRPC          GRPCConfig
 	HTTPAuth      HTTPAuthConfig
 	HTTPRateLimit HTTPRateLimitConfig
 	Database      DatabaseConfig

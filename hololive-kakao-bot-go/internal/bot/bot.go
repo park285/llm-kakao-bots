@@ -161,6 +161,7 @@ func (b *Bot) initializeCommands() {
 		command.NewScheduleCommand(deps),
 		command.NewAlarmCommand(deps),
 		command.NewMemberInfoCommand(deps),
+		command.NewSubscriberCommand(deps),
 	}
 
 	if deps.StatsRepo != nil {

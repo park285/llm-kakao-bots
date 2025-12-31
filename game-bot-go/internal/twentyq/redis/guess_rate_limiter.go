@@ -29,7 +29,9 @@ func NewGuessRateLimiter(client valkey.Client, prefix string) *GuessRateLimiter 
 	registry := luautil.NewRegistry([]luautil.Script{
 		{Name: luautil.ScriptGuessRateLimit, Source: assets.GuessRateLimitLua},
 	})
-	_ = registry.Preload(context.Background(), client)
+	preloadCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = registry.Preload(preloadCtx, client)
 	return &GuessRateLimiter{
 		client:   client,
 		prefix:   prefix,

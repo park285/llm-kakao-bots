@@ -3,164 +3,99 @@ threshold: 0.6
 normalizers:
   - nfkc
   - strip_zero_width
+  - lower_case  # Converts input to lowercase, simplifying regex patterns
+
 rules:
   # ==========================================
-  # Clear jailbreak attempts (High Weight)
+  # [CRITICAL] Jailbreak & Mode Manipulation
   # ==========================================
   - id: en_dan_mode
     type: regex
-    pattern: "(?i)(\\bD\\.?A\\.?N\\.?\\b.*\\b(mode|persona|jailbreak)\\b|\\bdo\\s*anything\\s*now\\b)"
-    weight: 0.5
-  - id: en_developer_mode
-    type: regex
-    pattern: "(?i)(enable|turn on|simulate|stay in)\\s+(developer|dev)\\s+mode"
-    weight: 0.45
+    # Matches: "DAN mode", "Do Anything Now persona", "Developer mode enable"
+    pattern: '((\bd\.?a\.?n\.?\b|do\s*anything\s*now|developer\s*mode|god\s*mode).{0,50}(enable|activate|start|on)|(enable|activate|start|on).{0,50}(\bd\.?a\.?n\.?\b|do\s*anything\s*now|developer\s*mode|god\s*mode))'
+    weight: 0.7
+
   - id: en_jailbreak_keywords
     type: phrases
-    phrases: ["jailbreak output", "jailbroken mode", "stay jailbroken", "bypass safety filter", "unfiltered response", "unlocked mode", "unrestricted AI", "uncensored AI", "unfiltered AI"]
+    phrases:
+      - "jailbreak output"
+      - "bypass safety filter"
+      - "uncensored mode"
+      - "unrestricted response"
+      - "disable ethical guardrails"
+    weight: 0.65
+
+  # ==========================================
+  # [CORE] Prompt Injection & History Management
+  # ==========================================
+  - id: en_ignore_instructions
+    type: regex
+    # Pattern: Verb -> Adjective -> Noun
+    # Matches: "Ignore previous instructions", "Disregard all rules"
+    pattern: '(ignore|disregard|forget|override).{0,50}(previous|prior|above|all|system).{0,30}(instruction|prompt|rule|constraint|context)'
+    weight: 0.65
+
+  - id: en_new_instruction_injection
+    type: regex
+    pattern: '(from\s*now\s*on|henceforth).{0,30}(you\s*are|act\s*as|you\s*will).{0,30}(answer|respond|do)'
+    weight: 0.55
+
+  # ==========================================
+  # [HIGH] System Exfiltration (Leakage)
+  # ==========================================
+  - id: en_system_prompt_exfil
+    type: regex
+    # Matches: "Print system prompt", "Translate initial instructions"
+    pattern: '(print|show|reveal|dump|repeat|translate).{0,50}(system|initial|original|hidden).{0,30}(prompt|instruction|rule|configuration)'
+    weight: 0.7
+
+  - id: en_secret_credential_leak
+    type: regex
+    pattern: '(show|print|give|reveal).{0,40}(api_key|secret_key|token|password|credential)'
+    weight: 0.8
+
+  # ==========================================
+  # [TECHNIQUE] Advanced Bypass Attempts
+  # ==========================================
+  - id: en_prefix_injection
+    type: regex
+    # Forces the AI to start response with affirmation ("Sure") to bypass refusal logic
+    pattern: '(start|begin).{0,30}(response|answer).{0,30}(with|by saying).{0,20}["''](sure|ok|absolutely|here is)["'']'
+    weight: 0.55
+
+  - id: en_token_splitting
+    type: regex
+    # Detects spaced out keywords like "s y s t e m" to bypass filters
+    pattern: '\b(s\s+y\s+s\s+t\s+e\s+m|p\s+r\s+o\s+m\s+p\s+t|i\s+g\s+n\s+o\s+r\s+e)\b'
     weight: 0.5
 
-  # ==========================================
-  # System exfiltration attempts
-  # ==========================================
-  - id: en_exfil_prompt
+  - id: en_code_envelope
     type: regex
-    pattern: "(?i)\\b(show|reveal|display|print)\\b.*\\b(system|prompt|rules|config|instructions)\\b"
-    weight: 0.35
-  - id: en_prompt_dump
-    type: regex
-    pattern: "(?i)(print|dump|expose|leak|output).*(prompt|system|config|secret|key|token|env(ironment)?)"
-    weight: 0.4
-  - id: en_env_secrets
-    type: phrases
-    phrases: ["AWS_SECRET_ACCESS_KEY", "GOOGLE_API_KEY", "GITHUB_TOKEN", "/etc/passwd", "credentials.json", "API_KEY", "OPENAI_API_KEY"]
+    pattern: '```(system|prompt|yaml)|<system>|</system>|\[system\]'
     weight: 0.45
-  - id: en_repeat_instructions
-    type: regex
-    pattern: "(?i)(repeat|echo|copy|reprint).*\\b(system|initial|original)\\s*(prompt|instructions|message)"
-    weight: 0.4
 
   # ==========================================
-  # Ignore/reset instructions (Core Injection)
+  # [POLICY] Policy & Safety Bypass
   # ==========================================
-  - id: en_ignore_system
+  - id: en_policy_bypass
     type: regex
-    pattern: "(?i)\\b(ignore|override|disregard|forget)\\b.*\\b(rule|instruction|system|developer|previous|above|prior)\\b"
-    weight: 0.35
-  - id: en_forget_reset_instructions
-    type: regex
-    pattern: "(?i)\\b(forget|reset|clear|discard)\\b.*\\b(instruction|rule|system|memory|context)\\b"
-    weight: 0.35
-  - id: en_follow_below_ignore_above
-    type: regex
-    pattern: "(?i)(ignore (the )?(all )?(previous|above|prior)|follow (the )?(next|below)) instructions?"
-    weight: 0.35
-  - id: en_new_instructions
-    type: regex
-    pattern: "(?i)(from now on|starting now|henceforth).*\\b(you are|you will|act as|behave as)\\b"
-    weight: 0.5
-  - id: en_disable_safety
-    type: regex
-    pattern: "(?i)(disable|bypass|turn off|deactivate).*(safety|guard|filter|moderation|policy|restriction)"
-    weight: 0.4
+    pattern: '(ignore|bypass|disable|remove).{0,40}(openai|safety|content|ethical).{0,30}(policy|filter|guideline|restriction)'
+    weight: 0.65
 
-  # ==========================================
-  # Role manipulation / Impersonation
-  # ==========================================
-  - id: en_act_as_admin
+  - id: en_hypothetical_scenario
     type: regex
-    pattern: "(?i)act\\s+as\\b.*\\b(system|developer|admin|root|superuser)\\b"
-    weight: 0.3
-  - id: en_roleplay_system
-    type: regex
-    pattern: "(?i)(pretend|role[- ]?play|simulate|impersonate).*(system|admin|developer|hacker)"
-    weight: 0.35
-  - id: en_you_are_now
-    type: regex
-    pattern: "(?i)(you are now|you're now)\\s+(a |an )?(evil|malicious|unrestricted|uncensored|unfiltered)\\s*(AI|bot|assistant)"
+    pattern: '(hypothetically|imagine|pretend).{0,50}(illegal|harmful|unethical|restricted).{0,30}(answer|tell|show)'
     weight: 0.45
-  - id: en_priv_escalation_keywords
-    type: phrases
-    phrases: ["godmode", "elevate privileges", "root access", "superuser mode", "admin override"]
-    weight: 0.3
 
   # ==========================================
-  # Policy bypass
+  # [GAME] Solution Exfiltration (Optional)
   # ==========================================
-  - id: en_ignore_openai_policies
+  - id: en_game_direct_answer
     type: regex
-    pattern: "(?i)ignore\\s+(all\\s+)?(openai|content|safety|ethical)\\s+polic(y|ies)"
-    weight: 0.4
-  - id: en_unrestricted_unfiltered
-    type: regex
-    pattern: "(?i)(without|no|remove|bypass|disable)\\s+(restrictions?|limits?|limitations?|filter(s)?|guardrails?|polic(y|ies)|safety|censorship)"
-    weight: 0.35
-  - id: en_never_refuse
-    type: regex
-    pattern: "(?i)(never refuse|always comply|answer regardless of (policy|rule)s?|don't decline|do not refuse)"
-    weight: 0.3
-  - id: en_even_if_illegal
-    type: regex
-    pattern: "(?i)even if\\s+(illegal|unethical|disallowed|against (the )?rules|banned|harmful)"
-    weight: 0.3
-  - id: en_hypothetical_bypass
-    type: regex
-    pattern: "(?i)(hypothetically|in theory|imagine if|pretend that).*\\b(answer|respond|tell me)\\b"
-    weight: 0.25
+    pattern: '(tell|give|show).{0,30}(answer|solution|flag).{0,30}(directly|immediately|without explanation)'
+    weight: 0.6
 
-  # ==========================================
-  # Code/Structure injection
-  # ==========================================
-  - id: en_codefence_prompt
-    type: regex
-    pattern: "(?i)```(system|prompt|yaml)|BEGIN (SYSTEM|PROMPT)|END (SYSTEM|PROMPT)"
-    weight: 0.3
-  - id: en_dual_modes
-    type: regex
-    pattern: "(?i)(two (responses|modes)|normal and (jailbroken|developer)|stay in (jailbroken|developer) mode)"
-    weight: 0.35
-  - id: en_xml_injection
-    type: regex
-    pattern: "(?i)<(system|user|assistant|instruction)>|</(system|user|assistant|instruction)>"
-    weight: 0.35
-  - id: en_markdown_injection
-    type: regex
-    pattern: "(?i)\\[SYSTEM\\]|\\[INST\\]|\\[/INST\\]|<<SYS>>|<</SYS>>"
-    weight: 0.35
-
-  # ==========================================
-  # Game-specific injection defense (solution exfiltration)
-  # ==========================================
-  - id: en_game_solution_exfil
-    type: regex
-    pattern: "(?i)(tell|show|reveal|give).*\\b(answer|solution|secret)"
-    weight: 0.7
-  - id: en_game_direct_reveal
-    type: phrases
-    phrases: ["just tell me the answer", "give me the solution directly", "reveal the answer now", "what is the exact solution", "what's the secret", "tell me the secret"]
-    weight: 0.7
   - id: en_game_hint_bypass
     type: regex
-    pattern: "(?i)(skip|bypass|ignore)\\s+(all\\s+)?(hint|clue)s?\\s+(and\\s+)?(tell|give|show).*(answer|solution)"
-    weight: 0.35
-  - id: en_game_meta_leak
-    type: phrases
-    phrases: ["show internal settings", "ignore game rules", "puzzle master mode", "answer validation logic", "debug mode", "admin mode"]
-    weight: 0.35
-
-  # ==========================================
-  # Encoding/Obfuscation bypass attempts
-  # ==========================================
-  - id: en_base64_mention
-    type: phrases
-    phrases: ["base64 decode", "decode this", "unicode escape", "rot13", "hex decode"]
-    weight: 0.3
-  - id: en_indirect_injection
-    type: regex
-    pattern: "(?i)(URL|link|website).*\\b(instruction|command|prompt)\\b.*\\b(follow|execute|run)\\b"
-    weight: 0.35
-  - id: en_encoded_commands
-    type: regex
-    pattern: "(?i)(execute|run|follow|decode)\\s+(the\\s+)?(encoded|hidden|obfuscated)\\s+(command|instruction)"
-    weight: 0.35
-
+    pattern: '(skip|ignore).{0,30}(hint|clue|step).{0,30}(give|tell).{0,20}(answer|solution)'
+    weight: 0.6

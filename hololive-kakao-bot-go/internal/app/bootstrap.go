@@ -75,7 +75,7 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 	memberDataProvider := ProvideMembersData(memberServiceAdapter)
 	memberMatcher := ProvideMemberMatcher(ctx, memberDataProvider, cacheService, holodexService, logger)
 	youTubeStatsRepository := ProvideYouTubeStatsRepository(postgresService, logger)
-	youTubeStack := ProvideYouTubeStack(ctx, cfg, cacheService, holodexService, memberServiceAdapter, youTubeStatsRepository, logger)
+	youTubeStack := ProvideYouTubeStack(ctx, cfg, cacheService, holodexService, memberServiceAdapter, youTubeStatsRepository, alarmService, irisClient, logger)
 	activityLogger := ProvideActivityLogger(cfg, logger)
 	settingsService := ProvideSettingsService(logger)
 

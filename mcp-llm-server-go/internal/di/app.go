@@ -2,7 +2,10 @@ package di
 
 import (
 	"log/slog"
+	"net"
 	"net/http"
+
+	"google.golang.org/grpc"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
@@ -12,6 +15,8 @@ import (
 // App 은 애플리케이션 구성 요소를 묶는다.
 type App struct {
 	Server          *http.Server
+	GRPCServer      *grpc.Server
+	GRPCListener    net.Listener
 	Logger          *slog.Logger
 	Config          *config.Config
 	SessionStore    *session.Store
@@ -22,6 +27,8 @@ type App struct {
 // NewApp: App 인스턴스를 생성합니다.
 func NewApp(
 	server *http.Server,
+	grpcServer *grpc.Server,
+	grpcListener net.Listener,
 	logger *slog.Logger,
 	cfg *config.Config,
 	sessionStore *session.Store,
@@ -30,6 +37,8 @@ func NewApp(
 ) *App {
 	return &App{
 		Server:          server,
+		GRPCServer:      grpcServer,
+		GRPCListener:    grpcListener,
 		Logger:          logger,
 		Config:          cfg,
 		SessionStore:    sessionStore,
@@ -40,6 +49,12 @@ func NewApp(
 
 // Close 앱 리소스 정리
 func (a *App) Close() {
+	if a.GRPCServer != nil {
+		a.GRPCServer.Stop()
+	}
+	if a.GRPCListener != nil {
+		_ = a.GRPCListener.Close()
+	}
 	if a.SessionStore != nil {
 		a.SessionStore.Close()
 	}

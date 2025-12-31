@@ -148,3 +148,60 @@ func TestResolveModel(t *testing.T) {
 		t.Fatalf("expected empty invalid model, got model=%s err=%v", model, err)
 	}
 }
+
+func TestPickConsensusWinner(t *testing.T) {
+	tests := []struct {
+		name          string
+		scores        map[string]consensusScore
+		expectedValue string
+	}{
+		{
+			name:   "empty",
+			scores: map[string]consensusScore{
+				// empty
+			},
+			expectedValue: "",
+		},
+		{
+			name: "by_weight",
+			scores: map[string]consensusScore{
+				"A": {Count: 3, WeightSum: 1.0, MaxConfidence: 0.4},
+				"B": {Count: 1, WeightSum: 1.5, MaxConfidence: 0.9},
+			},
+			expectedValue: "B",
+		},
+		{
+			name: "tie_break_by_count",
+			scores: map[string]consensusScore{
+				"A": {Count: 1, WeightSum: 1.0, MaxConfidence: 1.0},
+				"B": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.5},
+			},
+			expectedValue: "B",
+		},
+		{
+			name: "tie_break_by_max_confidence",
+			scores: map[string]consensusScore{
+				"A": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.6},
+				"B": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.8},
+			},
+			expectedValue: "B",
+		},
+		{
+			name: "tie_break_by_value",
+			scores: map[string]consensusScore{
+				"a": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+				"b": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+			},
+			expectedValue: "a",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			value, _ := pickConsensusWinner(tc.scores)
+			if value != tc.expectedValue {
+				t.Fatalf("expected %q, got %q", tc.expectedValue, value)
+			}
+		})
+	}
+}

@@ -9,10 +9,10 @@ import (
 
 	"github.com/valkey-io/valkey-go"
 
+	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
-// KeyFunc: 채팅방 ID를 기반으로 락 키를 생성하는 함수 타입
 type KeyFunc func(chatID string) string
 
 // ErrAlreadyProcessing: 이미 해당 채팅방에서 처리가 진행 중일 때 반환되는 에러
@@ -74,4 +74,28 @@ func (s *Service) IsProcessing(ctx context.Context, chatID string) (bool, error)
 		return false, fmt.Errorf("check processing lock exists failed: %w", err)
 	}
 	return n > 0, nil
+}
+
+func WrapStartProcessingError(chatID string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, ErrAlreadyProcessing) {
+		return cerrors.LockError{SessionID: chatID, Description: "already processing"}
+	}
+	return cerrors.RedisError{Operation: "processing_start", Err: err}
+}
+
+func WrapFinishProcessingError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return cerrors.RedisError{Operation: "processing_finish", Err: err}
+}
+
+func WrapIsProcessingError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return cerrors.RedisError{Operation: "processing_exists", Err: err}
 }

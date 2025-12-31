@@ -34,6 +34,7 @@ type ChannelSelector interface {
 // MemberMatcher: 사용자 검색어(이름, 별명 등)를 기반으로 Hololive 멤버(채널)를 식별하고 매칭하는 서비스
 // 다양한 매칭 전략(정확 일치, 부분 일치, 별명 검색 등)을 순차적으로 시도한다.
 type MemberMatcher struct {
+	ctx                   context.Context
 	membersData           domain.MemberDataProvider
 	fallbackData          domain.MemberDataProvider
 	cache                 *cache.Service
@@ -67,6 +68,7 @@ func NewMemberMatcher(
 	}
 
 	mm := &MemberMatcher{
+		ctx:                   ctx,
 		membersData:           membersData,
 		fallbackData:          fallbackProvider,
 		cache:                 cacheSvc,
@@ -428,7 +430,11 @@ func (mm *MemberMatcher) findBestMatchImpl(ctx context.Context, query string) (*
 
 // GetAllMembers: 등록된 모든 멤버 정보를 반환한다.
 func (mm *MemberMatcher) GetAllMembers() []*domain.Member {
-	return mm.membersData.WithContext(context.Background()).GetAllMembers()
+	ctx := mm.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return mm.membersData.WithContext(ctx).GetAllMembers()
 }
 
 // GetMemberByChannelID: 채널 ID를 사용하여 멤버 정보를 조회한다.

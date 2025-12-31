@@ -106,10 +106,12 @@ func (h *AdminHandler) handleLoginFailure(c *gin.Context, ip, username, reason s
 }
 
 // HandleLogout: 관리자 로그아웃을 처리합니다. (JSON API)
+// 명시적 로그아웃 시에는 Grace Period를 적용하지 않고 DeleteSession으로 즉시 삭제합니다.
+// RotateSession이나 expireSession을 사용하면 안 됩니다.
 func (h *AdminHandler) HandleLogout(c *gin.Context) {
 	signedSessionID, _ := c.Cookie(sessionCookieName)
 	if signedSessionID != "" {
-		// 서명 검증 후 삭제
+		// 서명 검증 후 즉시 삭제 (Grace Period 없음)
 		if sessionID, valid := ValidateSessionSignature(signedSessionID, h.securityCfg.SessionSecret); valid {
 			h.sessions.DeleteSession(c.Request.Context(), sessionID)
 		}

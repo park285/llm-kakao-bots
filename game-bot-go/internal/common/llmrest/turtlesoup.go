@@ -3,9 +3,10 @@ package llmrest
 import (
 	"context"
 	"fmt"
+
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 )
 
-// TurtleSoupAnswerRequest: 바다거북 요청 답변 요청 파라미터
 type TurtleSoupAnswerRequest struct {
 	SessionID *string `json:"session_id,omitempty"`
 	ChatID    *string `json:"chat_id,omitempty"`
@@ -111,6 +112,38 @@ func (c *Client) TurtleSoupAnswerQuestion(
 	solution string,
 	question string,
 ) (*TurtleSoupAnswerResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TurtleSoupAnswerQuestionRequest{
+			ChatId:    &chatID,
+			Namespace: &namespace,
+			Scenario:  scenario,
+			Solution:  solution,
+			Question:  question,
+		}
+		resp, err := c.grpcClient.TurtleSoupAnswerQuestion(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup answer failed: %w", err)
+		}
+
+		history := make([]TurtleSoupHistoryItem, 0, len(resp.History))
+		for _, item := range resp.History {
+			if item == nil {
+				continue
+			}
+			history = append(history, TurtleSoupHistoryItem{Question: item.Question, Answer: item.Answer})
+		}
+
+		return &TurtleSoupAnswerResponse{
+			Answer:        resp.Answer,
+			RawText:       resp.RawText,
+			QuestionCount: int(resp.QuestionCount),
+			History:       history,
+		}, nil
+	}
+
 	req := TurtleSoupAnswerRequest{
 		ChatID:    &chatID,
 		Namespace: &namespace,
@@ -135,6 +168,25 @@ func (c *Client) TurtleSoupGenerateHint(
 	solution string,
 	level int,
 ) (*TurtleSoupHintResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TurtleSoupGenerateHintRequest{
+			ChatId:    &chatID,
+			Namespace: &namespace,
+			Scenario:  scenario,
+			Solution:  solution,
+			Level:     int32(level),
+		}
+		resp, err := c.grpcClient.TurtleSoupGenerateHint(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup hint failed: %w", err)
+		}
+
+		return &TurtleSoupHintResponse{Hint: resp.Hint, Level: int(resp.Level)}, nil
+	}
+
 	req := TurtleSoupHintRequest{
 		ChatID:    &chatID,
 		Namespace: &namespace,
@@ -158,6 +210,24 @@ func (c *Client) TurtleSoupValidateSolution(
 	solution string,
 	playerAnswer string,
 ) (*TurtleSoupValidateResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TurtleSoupValidateSolutionRequest{
+			ChatId:       &chatID,
+			Namespace:    &namespace,
+			Solution:     solution,
+			PlayerAnswer: playerAnswer,
+		}
+		resp, err := c.grpcClient.TurtleSoupValidateSolution(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup validate failed: %w", err)
+		}
+
+		return &TurtleSoupValidateResponse{Result: resp.Result, RawText: resp.RawText}, nil
+	}
+
 	req := TurtleSoupValidateRequest{
 		ChatID:       &chatID,
 		Namespace:    &namespace,
@@ -180,6 +250,29 @@ func (c *Client) TurtleSoupRewriteScenario(
 	solution string,
 	difficulty int,
 ) (*TurtleSoupRewriteResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TurtleSoupRewriteScenarioRequest{
+			Title:      title,
+			Scenario:   scenario,
+			Solution:   solution,
+			Difficulty: int32(difficulty),
+		}
+		resp, err := c.grpcClient.TurtleSoupRewriteScenario(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup rewrite failed: %w", err)
+		}
+
+		return &TurtleSoupRewriteResponse{
+			Scenario:         resp.Scenario,
+			Solution:         resp.Solution,
+			OriginalScenario: resp.OriginalScenario,
+			OriginalSolution: resp.OriginalSolution,
+		}, nil
+	}
+
 	req := TurtleSoupRewriteRequest{
 		Title:      title,
 		Scenario:   scenario,
@@ -196,6 +289,34 @@ func (c *Client) TurtleSoupRewriteScenario(
 
 // TurtleSoupGeneratePuzzle: 새로운 퍼즐을 자동으로 생성합니다.
 func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuzzleGenerationRequest) (*TurtleSoupPuzzleGenerationResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		grpcReq := &llmv1.TurtleSoupGeneratePuzzleRequest{
+			Category: req.Category,
+			Theme:    req.Theme,
+		}
+		if req.Difficulty != nil {
+			value := int32(*req.Difficulty)
+			grpcReq.Difficulty = &value
+		}
+
+		resp, err := c.grpcClient.TurtleSoupGeneratePuzzle(callCtx, grpcReq)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup generate puzzle failed: %w", err)
+		}
+
+		return &TurtleSoupPuzzleGenerationResponse{
+			Title:      resp.Title,
+			Scenario:   resp.Scenario,
+			Solution:   resp.Solution,
+			Category:   resp.Category,
+			Difficulty: int(resp.Difficulty),
+			Hints:      resp.Hints,
+		}, nil
+	}
+
 	var out TurtleSoupPuzzleGenerationResponse
 	if err := c.Post(ctx, "/api/turtle-soup/puzzles", req, &out); err != nil {
 		return nil, err
@@ -205,6 +326,42 @@ func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuz
 
 // TurtleSoupGetRandomPuzzle: 프리셋 퍼즐 중 하나를 랜덤으로 가져옵니다.
 func (c *Client) TurtleSoupGetRandomPuzzle(ctx context.Context, difficulty *int) (*TurtleSoupPuzzlePresetResponse, error) {
+	if c.grpcClient != nil {
+		callCtx, cancel := c.grpcCallContext(ctx)
+		defer cancel()
+
+		req := &llmv1.TurtleSoupGetRandomPuzzleRequest{}
+		if difficulty != nil {
+			value := int32(*difficulty)
+			req.Difficulty = &value
+		}
+
+		resp, err := c.grpcClient.TurtleSoupGetRandomPuzzle(callCtx, req)
+		if err != nil {
+			return nil, fmt.Errorf("grpc turtlesoup get random puzzle failed: %w", err)
+		}
+
+		var id *int
+		if resp.Id != nil {
+			value := int(*resp.Id)
+			id = &value
+		}
+
+		var diff *int
+		if resp.Difficulty != nil {
+			value := int(*resp.Difficulty)
+			diff = &value
+		}
+
+		return &TurtleSoupPuzzlePresetResponse{
+			ID:         id,
+			Title:      resp.Title,
+			Question:   resp.Question,
+			Answer:     resp.Answer,
+			Difficulty: diff,
+		}, nil
+	}
+
 	path := "/api/turtle-soup/puzzles/random"
 	if difficulty != nil {
 		path = fmt.Sprintf("%s?difficulty=%d", path, *difficulty)

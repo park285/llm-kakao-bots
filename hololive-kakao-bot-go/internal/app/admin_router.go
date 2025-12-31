@@ -34,7 +34,10 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 		Addr:              addr,
 		Handler:           server.WrapH2C(router),
 		ReadHeaderTimeout: constants.ServerTimeout.ReadHeader,
+		ReadTimeout:       constants.ServerTimeout.Read,
+		WriteTimeout:      constants.ServerTimeout.Write,
 		IdleTimeout:       constants.ServerTimeout.Idle,
+		MaxHeaderBytes:    constants.ServerTimeout.MaxHeaderBytes,
 	}
 }
 

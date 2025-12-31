@@ -481,6 +481,234 @@ sequenceDiagram
 
 ---
 
+## 🔍 구현 체크리스트 (Implementation Notes)
+
+개발 시 반드시 확인해야 할 핵심 사항들입니다.
+
+### 1. ✅ 핸들러 로직 순서 (Critical)
+
+`HandleHeartbeat`에서 메서드 호출 순서가 매우 중요합니다.
+
+```go
+// ✅ 올바른 순서 (현재 구현: internal/server/admin_auth.go)
+func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
+    // ... 세션 검증 ...
+
+    // 1️⃣ 먼저 RefreshSessionWithValidation 호출 (TTL 1시간 복원)
+    refreshed, absoluteExpired, err := h.sessions.RefreshSessionWithValidation(ctx, sessionID, req.Idle)
+    if err != nil { /* 에러 처리 */ }
+
+    // 절대 만료 처리
+    if absoluteExpired {
+        c.JSON(401, gin.H{"error": "Session expired", "absolute_expired": true})
+        return
+    }
+
+    // 유휴 상태로 갱신 거부됨
+    if req.Idle && !refreshed {
+        c.JSON(200, heartbeatResponse{Status: "idle", IdleRejected: true})
+        return
+    }
+
+    // 2️⃣ 그 다음 RotateSession 호출 (새 세션 ID 발급)
+    if h.config.SessionTokenRotation {
+        newSession, rotateErr := h.sessions.RotateSession(ctx, sessionID)
+        if rotateErr == nil {
+            newSignedSessionID := SignSessionID(newSession.ID, h.securityCfg.SessionSecret)
+            SetSecureCookie(c, sessionCookieName, newSignedSessionID, 0, h.securityCfg.ForceHTTPS)
+            response.Rotated = true
+            response.AbsoluteExpiresAt = newSession.AbsoluteExpiresAt.Unix()
+        }
+    }
+
+    c.JSON(200, response)
+}
+```
+
+**이유**: 먼저 `RefreshSessionWithValidation`으로 TTL을 1시간으로 복원해야, `RotateSession` 내부의 `ttl <= GracePeriod` 검사(중복 회전 방지)를 통과하여 정상적으로 토큰이 교체됩니다.
+
+> **⚠️ 주의**: 순서가 바뀌면 "자연 만료 임박 세션"이 회전되지 않을 수 있습니다.
+
+---
+
+### 2. ✅ 멀티 탭 '팀킬(Team Kill)' 방지
+
+**문제**: 탭 A가 `idle=true`를 보내 TTL을 10초로 줄이면, 활발히 작업 중이던 탭 B가 (하트비트 주기가 오기 전이라면) 10초 뒤에 의도치 않게 로그아웃될 수 있습니다.
+
+**현재 구현** (`admin-ui/src/hooks/useActivityDetection.ts`):
+
+```typescript
+const CHANNEL_NAME = 'admin_session'
+
+export function useActivityDetection(idleTimeoutMs: number) {
+  const [isIdle, setIsIdle] = useState(false)
+  const timeoutRef = useRef<number | null>(null)
+  const channelRef = useRef<BroadcastChannel | null>(null)
+
+  // 타이머 리셋 (로컬 전용, 브로드캐스트 안 함)
+  const resetTimerInternal = useCallback(() => {
+    setIsIdle(false)
+    if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+    timeoutRef.current = window.setTimeout(() => setIsIdle(true), idleTimeoutMs)
+  }, [idleTimeoutMs])
+
+  // 타이머 리셋 + 다른 탭에 브로드캐스트
+  const resetTimer = useCallback(() => {
+    resetTimerInternal()
+    // 다른 탭에 활동 알림 (BroadcastChannel)
+    if (channelRef.current) {
+      channelRef.current.postMessage({ type: 'ACTIVITY', timestamp: Date.now() })
+    }
+  }, [resetTimerInternal])
+
+  // BroadcastChannel 설정
+  useEffect(() => {
+    // ⚠️ 호환성 체크: 구형 Safari(15.4 미만) 등에서는 미지원
+    if (typeof BroadcastChannel === 'undefined') return
+
+    channelRef.current = new BroadcastChannel(CHANNEL_NAME)
+
+    channelRef.current.onmessage = (event) => {
+      if (event.data.type === 'ACTIVITY') {
+        // 다른 탭에서 활동 감지 → 현재 탭 타이머 리셋
+        resetTimerInternal()
+      }
+    }
+
+    return () => channelRef.current?.close()
+  }, [resetTimerInternal])
+
+  // 이벤트 리스너 설정
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
+    events.forEach(event => document.addEventListener(event, resetTimer, { passive: true }))
+    resetTimerInternal()
+    return () => events.forEach(event => document.removeEventListener(event, resetTimer))
+  }, [resetTimer, resetTimerInternal])
+
+  return isIdle
+}
+```
+
+이 로직으로 **모든 탭이 동시에 Idle 상태일 때만** `idle=true`가 전송되어 안전합니다.
+
+---
+
+### 3. ✅ 명시적 로그아웃 처리
+
+사용자가 '로그아웃' 버튼을 직접 눌렀을 때는 Grace Period를 적용하면 **안 됩니다**.
+
+**현재 구현** (`internal/server/admin_auth.go`):
+
+```go
+// HandleLogout: 관리자 로그아웃을 처리합니다. (JSON API)
+// ⚠️ 명시적 로그아웃 시에는 Grace Period를 적용하지 않고 DeleteSession으로 즉시 삭제합니다.
+// RotateSession이나 expireSession을 사용하면 안 됩니다.
+func (h *AdminHandler) HandleLogout(c *gin.Context) {
+    signedSessionID, _ := c.Cookie(sessionCookieName)
+    if signedSessionID != "" {
+        // 서명 검증 후 즉시 삭제 (Grace Period 없음)
+        if sessionID, valid := ValidateSessionSignature(signedSessionID, h.securityCfg.SessionSecret); valid {
+            h.sessions.DeleteSession(c.Request.Context(), sessionID)  // ✅ 즉시 삭제 (DEL)
+        }
+    }
+
+    ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
+
+    c.JSON(200, gin.H{
+        "status":  "ok",
+        "message": "Logout successful",
+    })
+}
+```
+
+---
+
+### 4. ✅ 시간 단위 변환 (Seconds vs Milliseconds)
+
+| 구분 | 단위 | 예시 |
+|------|------|------|
+| **백엔드** | Unix Timestamp (초) | `1735568988` |
+| **프론트엔드 (JS/TS)** | 밀리초 | `Date.now()` → `1735568988000` |
+
+**현재 구현** (`admin-ui/src/lib/utils.ts`):
+
+```typescript
+/**
+ * 시간 변환 유틸리티
+ * 백엔드: Unix Timestamp (초 단위)
+ * 프론트엔드: JavaScript Date / 밀리초 단위
+ */
+
+/** Unix timestamp (초) → Date 객체 변환 */
+export function unixToDate(unixSeconds: number): Date {
+  return new Date(unixSeconds * 1000)
+}
+
+/** Unix timestamp (초) → 밀리초 변환 */
+export function unixToMs(unixSeconds: number): number {
+  return unixSeconds * 1000
+}
+
+/** Unix timestamp (초)까지 남은 시간 계산 (밀리초) */
+export function getRemainingMs(unixSeconds: number): number {
+  return unixSeconds * 1000 - Date.now()
+}
+
+/** Unix timestamp (초)까지 남은 시간 계산 (분) */
+export function getRemainingMinutes(unixSeconds: number): number {
+  return Math.floor(getRemainingMs(unixSeconds) / 1000 / 60)
+}
+```
+
+**사용 예시**:
+```typescript
+// 백엔드 응답의 absolute_expires_at 사용
+const response = await authApi.heartbeat(false)
+if (response.absolute_expires_at) {
+  const expiresAt = unixToDate(response.absolute_expires_at)
+  const remainingMin = getRemainingMinutes(response.absolute_expires_at)
+  
+  if (remainingMin < 5) {
+    showWarning(`세션이 ${remainingMin}분 후 만료됩니다.`)
+  }
+}
+```
+
+---
+
+### 5. 🛡️ 방어적 코드 (RotateSession 내 중복 회전 방지)
+
+**현재 구현** (`internal/server/session_valkey.go`):
+
+```go
+func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID string) (*Session, error) {
+    // 기존 세션 조회
+    oldSession, err := s.GetSession(ctx, oldSessionID)
+    if err != nil || oldSession == nil {
+        return nil, fmt.Errorf("session not found")
+    }
+
+    // [방어적 코드: 중복 회전 방지]
+    // ⚠️ NOTE: 현재 HandleHeartbeat 흐름에서는 RefreshSessionWithValidation이 먼저 호출되어
+    // TTL을 1시간으로 연장하므로, 정상 흐름에서는 이 조건이 실행되지 않습니다.
+    // 다만, 향후 Refresh 로직 변경이나 직접 RotateSession 호출 시를 대비한 방어적 코드입니다.
+    key := sessionKeyPrefix + oldSessionID
+    ttlResp := s.client.Do(ctx, s.client.B().Ttl().Key(key).Build())
+    if ttl, err := ttlResp.AsInt64(); err == nil && ttl > 0 {
+        graceThreshold := int64((constants.SessionConfig.GracePeriod + 5*time.Second).Seconds())
+        if ttl <= graceThreshold {
+            // 이미 회전 진행 중인 세션 → 중복 회전 방지
+            return oldSession, nil
+        }
+    }
+
+    // ... 새 세션 생성 및 Grace Period 적용 ...
+}
+```
+
+---
+
 ## 관련 파일
 
 | 파일 | 설명 |
@@ -502,3 +730,5 @@ sequenceDiagram
 | 2025-12-30 | idle=true 시 세션 TTL 10초 단축 (즉시 만료 유도) |
 | 2025-12-30 | 중복 회전 방지 로직 및 멀티 탭 TTL 복원 명시 |
 | 2025-12-30 | 프론트엔드 Pre-warning (사전 경고) 전략 가이드 추가 |
+| 2025-12-30 | 구현 체크리스트에 실제 코드 예시 추가 (5개 항목) |
+| 2025-12-30 | 방어적 코드 주석 추가 (RotateSession 내 Dead Code 설명) |

@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/randx"
 )
 
 //go:embed puzzles/*.json
@@ -32,8 +34,7 @@ type PuzzleLoader struct {
 	all          []PuzzlePreset
 	byDifficulty map[int][]PuzzlePreset
 	byID         map[int]PuzzlePreset
-	rnd          *rand.Rand
-	rndMu        sync.Mutex
+	rnd          *randx.LockedRand
 }
 
 // NewPuzzleLoader: 퍼즐 로더를 초기화합니다.
@@ -41,7 +42,7 @@ func NewPuzzleLoader() (*PuzzleLoader, error) {
 	loader := &PuzzleLoader{
 		byDifficulty: make(map[int][]PuzzlePreset),
 		byID:         make(map[int]PuzzlePreset),
-		rnd:          rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0)),
+		rnd:          randx.New(rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0))),
 	}
 	if _, err := loader.reloadLocked(); err != nil {
 		return nil, err
@@ -132,14 +133,10 @@ func (l *PuzzleLoader) GetExamples(difficulty int, maxExamples int) []PuzzlePres
 }
 
 func (l *PuzzleLoader) randIntN(n int) int {
-	l.rndMu.Lock()
-	defer l.rndMu.Unlock()
 	return l.rnd.IntN(n)
 }
 
 func (l *PuzzleLoader) randPerm(n int) []int {
-	l.rndMu.Lock()
-	defer l.rndMu.Unlock()
 	return l.rnd.Perm(n)
 }
 

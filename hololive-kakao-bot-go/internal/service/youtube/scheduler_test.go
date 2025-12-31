@@ -66,7 +66,7 @@ func TestNewScheduler(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	if scheduler == nil {
 		t.Fatal("expected scheduler to be created, got nil")
@@ -83,7 +83,7 @@ func TestScheduler_CheckMilestones(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	testCases := []struct {
 		name         string
@@ -167,7 +167,7 @@ func TestScheduler_GetRotatingBatch(t *testing.T) {
 		},
 	}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, smallMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, smallMembers, nil, nil, logger)
 
 	testCases := []struct {
 		name      string
@@ -222,7 +222,7 @@ func TestScheduler_GetRotatingBatch_EmptyMembers(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	emptyMembers := &mockMemberDataProvider{members: []*domain.Member{}}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, emptyMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, emptyMembers, nil, nil, logger)
 
 	batch := scheduler.getRotatingBatch(0, 10)
 	if len(batch) != 0 {
@@ -234,7 +234,7 @@ func TestScheduler_BuildChannelMaps(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	channelIDs, channelToMember := scheduler.buildChannelMaps()
 
@@ -256,7 +256,7 @@ func TestScheduler_StartStop(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -286,20 +286,22 @@ func TestScheduler_IsSignificantChange(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
-	testCases := []struct {
-		name   string
-		change *domain.StatsChange
-		want   bool
-	}{
-		{
-			name: "significant subscriber increase",
-			change: &domain.StatsChange{
-				SubscriberChange: 15000,
+		testCases := []struct {
+			name   string
+			change *domain.StatsChange
+			want   bool
+		}{
+			{
+				name: "large subscriber increase is not significant",
+				change: &domain.StatsChange{
+					SubscriberChange: 15000,
+					PreviousStats:    &domain.TimestampedStats{SubscriberCount: 110000},
+					CurrentStats:     &domain.TimestampedStats{SubscriberCount: 125000},
+				},
+				want: false,
 			},
-			want: true,
-		},
 		{
 			name: "small subscriber increase",
 			change: &domain.StatsChange{
@@ -341,7 +343,7 @@ func TestScheduler_FormatChangeMessage(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	testCases := []struct {
 		name      string
@@ -360,17 +362,16 @@ func TestScheduler_FormatChangeMessage(t *testing.T) {
 			wantEmpty: false,
 			contains:  "🎉",
 		},
-		{
-			name: "large subscriber increase message",
-			change: &domain.StatsChange{
-				MemberName:       "TestMember1",
-				SubscriberChange: 15000,
-				PreviousStats:    &domain.TimestampedStats{SubscriberCount: 110000},
-				CurrentStats:     &domain.TimestampedStats{SubscriberCount: 125000},
+			{
+				name: "no message for large gain without milestone",
+				change: &domain.StatsChange{
+					MemberName:       "TestMember1",
+					SubscriberChange: 15000,
+					PreviousStats:    &domain.TimestampedStats{SubscriberCount: 110000},
+					CurrentStats:     &domain.TimestampedStats{SubscriberCount: 125000},
+				},
+				wantEmpty: true,
 			},
-			wantEmpty: false,
-			contains:  "📈",
-		},
 		{
 			name: "no message for small change",
 			change: &domain.StatsChange{
@@ -661,14 +662,11 @@ func TestSendMilestoneAlerts_Integration(t *testing.T) {
 		t.Errorf("milestone message should contain member name, got: %s", msg)
 	}
 
-	// 3. 큰 구독자 증가 메시지 포맷 검증
-	msg2 := scheduler.formatChangeMessage(largeGainChange)
-	if msg2 == "" {
-		t.Error("expected large gain message, got empty")
-	}
-	if !containsStr(msg2, "📈") {
-		t.Errorf("large gain message should contain chart emoji, got: %s", msg2)
-	}
+		// 3. 큰 구독자 증가 메시지 포맷 검증
+		msg2 := scheduler.formatChangeMessage(largeGainChange)
+		if msg2 != "" {
+			t.Errorf("expected no large gain message, got: %s", msg2)
+		}
 
 	// 4. 작은 변화는 메시지 없음
 	msg3 := scheduler.formatChangeMessage(smallChange)
@@ -691,15 +689,15 @@ func TestSendMilestoneAlerts_Integration(t *testing.T) {
 		}
 	}
 
-	// 6. 메시지가 올바른 방에 발송되었는지 확인
-	// 2개 변경사항 × 2개 방 = 4개 메시지
-	if len(sentMessages) != 4 {
-		t.Errorf("expected 4 messages sent, got %d", len(sentMessages))
-	}
+		// 6. 메시지가 올바른 방에 발송되었는지 확인
+		// 1개 변경사항(마일스톤) × 2개 방 = 2개 메시지
+		if len(sentMessages) != 2 {
+			t.Errorf("expected 2 messages sent, got %d", len(sentMessages))
+		}
 
-	// 7. 각 방에 2개씩 발송되었는지 확인
-	room1Count := 0
-	room2Count := 0
+		// 7. 각 방에 2개씩 발송되었는지 확인
+		room1Count := 0
+		room2Count := 0
 	for _, m := range sentMessages {
 		if m.room == "testRoom1" {
 			room1Count++
@@ -708,17 +706,17 @@ func TestSendMilestoneAlerts_Integration(t *testing.T) {
 			room2Count++
 		}
 	}
-	if room1Count != 2 || room2Count != 2 {
-		t.Errorf("expected 2 messages per room, got room1=%d, room2=%d", room1Count, room2Count)
+		if room1Count != 1 || room2Count != 1 {
+			t.Errorf("expected 1 message per room, got room1=%d, room2=%d", room1Count, room2Count)
+		}
 	}
-}
 
 // TestMilestoneDetectionFlow: 구독자 증가 → 마일스톤 검출 → 메시지 생성 전체 플로우
 func TestMilestoneDetectionFlow(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mockMembers := &mockMemberDataProvider{members: testMembers()}
 
-	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, logger)
+	scheduler := NewScheduler(nil, nil, nil, nil, mockMembers, nil, nil, logger)
 
 	testCases := []struct {
 		name            string
@@ -748,13 +746,13 @@ func TestMilestoneDetectionFlow(t *testing.T) {
 			expectMilestone: true,
 			expectEmoji:     "🎉",
 		},
-		{
-			name:            "no milestone but large gain",
-			prevSubs:        110000,
-			currentSubs:     125000,
-			expectMilestone: false,
-			expectEmoji:     "📈",
-		},
+			{
+				name:            "no milestone but large gain",
+				prevSubs:        110000,
+				currentSubs:     125000,
+				expectMilestone: false,
+				expectEmoji:     "",
+			},
 		{
 			name:            "no notification needed",
 			prevSubs:        110000,

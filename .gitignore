@@ -188,6 +188,14 @@ yarn-debug.log*
 yarn-error.log*
 
 # ============================================
+# Repository-specific (Go)
+# ============================================
+# NOTE: 커밋된 산출물 제거는 별도 git 작업이 필요함
+hololive-kakao-bot-go/config.json
+hololive-kakao-bot-go/bot
+hololive-kakao-bot-go/fetch_profiles
+
+# ============================================
 # Explicitly Include (Override)
 # ============================================
 !.env.example

@@ -5,13 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/twentyq"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
+	twentyquc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/twentyq"
 )
 
 func (h *TwentyQHandler) handleHints(c *gin.Context) {
@@ -20,53 +15,11 @@ func (h *TwentyQHandler) handleHints(c *gin.Context) {
 		return
 	}
 
-	system, err := h.prompts.HintsSystem(req.Category)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	secretToon := toon.EncodeSecret(req.Target, req.Category, nil)
-	userContent, err := h.prompts.HintsUser(secretToon)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	detailsJSON, err := shared.SerializeDetails(req.Details)
-	if err != nil {
-		writeError(c, httperror.NewInvalidInput("details must be a JSON object"))
-		return
-	}
-	err = h.ensureSafeDetails(detailsJSON)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-	if detailsJSON != "" {
-		userContent = userContent + "\n\n[추가 정보(JSON)]\n" + prompt.WrapXML("details_json", detailsJSON)
-	}
-
-	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "hints",
-	}, twentyq.HintsSchema())
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	// Chain of Thought reasoning \ub85c\uadf8 \ucd9c\ub825
-	if reasoning, ok := payload["reasoning"].(string); ok && reasoning != "" {
-		h.logger.Debug("twentyq_hints_cot", "request_id", middleware.GetRequestID(c), "reasoning", reasoning)
-	}
-
-	hints, err := shared.ParseStringSlice(payload, "hints")
+	hints, err := h.usecase.GenerateHints(c.Request.Context(), middleware.GetRequestID(c), twentyquc.HintsRequest{
+		Target:   req.Target,
+		Category: req.Category,
+		Details:  req.Details,
+	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"math/rand/v2"
 	"net"
 	"strings"
@@ -128,15 +129,119 @@ func (c *Client) StructuredWithSearch(ctx context.Context, req Request, schema m
 	}, err
 }
 
+// ConsensusVote 는 합의 로직에서 수집한 개별 응답이다.
+type ConsensusVote struct {
+	Value      string
+	Confidence float64
+	Reasoning  string
+}
+
+type consensusScore struct {
+	Count         int
+	WeightSum     float64
+	MaxConfidence float64
+}
+
+func pickConsensusWinner(scores map[string]consensusScore) (string, consensusScore) {
+	const epsilon = 1e-9
+	var winningValue string
+	var winningScore consensusScore
+	hasWinner := false
+
+	for value, score := range scores {
+		if !hasWinner {
+			winningValue = value
+			winningScore = score
+			hasWinner = true
+			continue
+		}
+
+		if score.WeightSum > winningScore.WeightSum+epsilon {
+			winningValue = value
+			winningScore = score
+			continue
+		}
+		if math.Abs(score.WeightSum-winningScore.WeightSum) > epsilon {
+			continue
+		}
+
+		if score.Count > winningScore.Count {
+			winningValue = value
+			winningScore = score
+			continue
+		}
+		if score.Count < winningScore.Count {
+			continue
+		}
+
+		if score.MaxConfidence > winningScore.MaxConfidence+epsilon {
+			winningValue = value
+			winningScore = score
+			continue
+		}
+		if math.Abs(score.MaxConfidence-winningScore.MaxConfidence) > epsilon {
+			continue
+		}
+
+		if value < winningValue {
+			winningValue = value
+			winningScore = score
+		}
+	}
+
+	return winningValue, winningScore
+}
+
+func parseNormalizedConfidence(payload map[string]any) (float64, bool) {
+	if payload == nil {
+		return 0, false
+	}
+	raw, ok := payload["confidence"]
+	if !ok {
+		return 0, false
+	}
+
+	var confidence float64
+	switch value := raw.(type) {
+	case float64:
+		confidence = value
+	case float32:
+		confidence = float64(value)
+	case int:
+		confidence = float64(value)
+	case int64:
+		confidence = float64(value)
+	case json.Number:
+		parsed, err := value.Float64()
+		if err != nil {
+			return 0, false
+		}
+		confidence = parsed
+	default:
+		return 0, false
+	}
+
+	if confidence < 0 {
+		confidence = 0
+	} else if confidence > 1 {
+		confidence = 1
+	}
+	return confidence, true
+}
+
 // ConsensusResult 는 합의 로직 결과다.
 type ConsensusResult struct {
-	Payload        map[string]any
-	Model          string
-	SearchQueries  []string
-	ConsensusField string // 합의 기준 필드
-	ConsensusValue string // 합의된 값
-	ConsensusCount int    // 동의한 호출 수
-	TotalCalls     int    // 총 호출 수
+	Payload         map[string]any
+	Model           string
+	SearchQueries   []string
+	ConsensusField  string // 합의 기준 필드
+	ConsensusValue  string // 합의된 값
+	ConsensusCount  int    // 동의한 호출 수
+	TotalCalls      int    // 총 호출 수
+	SuccessfulCalls int
+	ConsensusWeight float64
+	TotalWeight     float64
+	Votes           []ConsensusVote
 }
 
 // StructuredWithConsensus 는 동일 요청을 N번 병렬 호출하여 합의된 결과를 반환한다.
@@ -231,6 +336,198 @@ func (c *Client) StructuredWithConsensus(
 		ConsensusCount: winningCount,
 		TotalCalls:     numCalls,
 	}, nil
+}
+
+// StructuredWithConsensusWeighted 는 동일 요청을 N번 병렬 호출하여 confidence 가중치로 합의된 결과를 반환한다.
+// fieldName 필드 값별 confidence 합산(Weighted Voting)을 사용하고, 동점이면 count -> maxConfidence -> value 순으로 결정한다.
+func (c *Client) StructuredWithConsensusWeighted(
+	ctx context.Context,
+	req Request,
+	schema map[string]any,
+	fieldName string,
+	numCalls int,
+) (ConsensusResult, error) {
+	if numCalls <= 1 {
+		return c.structuredWithConsensusWeightedSingle(ctx, req, schema, fieldName)
+	}
+	return c.structuredWithConsensusWeightedMulti(ctx, req, schema, fieldName, numCalls)
+}
+
+func (c *Client) structuredWithConsensusWeightedSingle(
+	ctx context.Context,
+	req Request,
+	schema map[string]any,
+	fieldName string,
+) (ConsensusResult, error) {
+	result, err := c.StructuredWithSearch(ctx, req, schema)
+	if err != nil {
+		return ConsensusResult{}, err
+	}
+
+	value := ""
+	if v, ok := result.Payload[fieldName].(string); ok {
+		value = v
+	}
+	confidence, _ := parseNormalizedConfidence(result.Payload)
+	reasoning, _ := result.Payload["reasoning"].(string)
+
+	votes := make([]ConsensusVote, 0, 1)
+	if value != "" {
+		votes = append(votes, ConsensusVote{
+			Value:      value,
+			Confidence: confidence,
+			Reasoning:  reasoning,
+		})
+	}
+
+	return ConsensusResult{
+		Payload:         result.Payload,
+		Model:           result.Model,
+		SearchQueries:   result.SearchQueries,
+		ConsensusField:  fieldName,
+		ConsensusValue:  value,
+		ConsensusCount:  1,
+		TotalCalls:      1,
+		SuccessfulCalls: 1,
+		ConsensusWeight: confidence,
+		TotalWeight:     confidence,
+		Votes:           votes,
+	}, nil
+}
+
+type weightedConsensusCollector struct {
+	scores             map[string]consensusScore
+	payloads           map[string]map[string]any
+	payloadConfidences map[string]float64
+
+	votes []ConsensusVote
+
+	allSearchQueries []string
+	model            string
+	successCount     int
+
+	fallbackPayload    map[string]any
+	fallbackConfidence float64
+}
+
+func newWeightedConsensusCollector(numCalls int) *weightedConsensusCollector {
+	return &weightedConsensusCollector{
+		scores:             make(map[string]consensusScore),
+		payloads:           make(map[string]map[string]any),
+		payloadConfidences: make(map[string]float64),
+		votes:              make([]ConsensusVote, 0, numCalls),
+	}
+}
+
+func (c *weightedConsensusCollector) add(result StructuredResult, fieldName string) {
+	c.successCount++
+	if c.model == "" {
+		c.model = result.Model
+	}
+	c.allSearchQueries = append(c.allSearchQueries, result.SearchQueries...)
+
+	if c.fallbackPayload == nil {
+		c.fallbackPayload = result.Payload
+		if confidence, ok := parseNormalizedConfidence(result.Payload); ok {
+			c.fallbackConfidence = confidence
+		}
+	}
+
+	value, ok := result.Payload[fieldName].(string)
+	if !ok {
+		return
+	}
+
+	confidence, _ := parseNormalizedConfidence(result.Payload)
+	reasoning, _ := result.Payload["reasoning"].(string)
+
+	c.votes = append(c.votes, ConsensusVote{
+		Value:      value,
+		Confidence: confidence,
+		Reasoning:  reasoning,
+	})
+
+	score := c.scores[value]
+	score.Count++
+	score.WeightSum += confidence
+	if confidence > score.MaxConfidence {
+		score.MaxConfidence = confidence
+	}
+	c.scores[value] = score
+
+	bestConfidence, hasBest := c.payloadConfidences[value]
+	if !hasBest || confidence > bestConfidence {
+		c.payloads[value] = result.Payload
+		c.payloadConfidences[value] = confidence
+	}
+}
+
+func (c *weightedConsensusCollector) toResult(fieldName string, totalCalls int) ConsensusResult {
+	winningValue, winningScore := pickConsensusWinner(c.scores)
+	totalWeight := 0.0
+	for _, score := range c.scores {
+		totalWeight += score.WeightSum
+	}
+
+	selectedPayload := c.payloads[winningValue]
+	if selectedPayload == nil {
+		selectedPayload = c.fallbackPayload
+	}
+
+	consensusWeight := winningScore.WeightSum
+	if winningValue == "" && winningScore == (consensusScore{}) {
+		consensusWeight = c.fallbackConfidence
+		totalWeight = c.fallbackConfidence
+	}
+
+	return ConsensusResult{
+		Payload:         selectedPayload,
+		Model:           c.model,
+		SearchQueries:   c.allSearchQueries,
+		ConsensusField:  fieldName,
+		ConsensusValue:  winningValue,
+		ConsensusCount:  winningScore.Count,
+		TotalCalls:      totalCalls,
+		SuccessfulCalls: c.successCount,
+		ConsensusWeight: consensusWeight,
+		TotalWeight:     totalWeight,
+		Votes:           c.votes,
+	}
+}
+
+func (c *Client) structuredWithConsensusWeightedMulti(
+	ctx context.Context,
+	req Request,
+	schema map[string]any,
+	fieldName string,
+	numCalls int,
+) (ConsensusResult, error) {
+	type callResult struct {
+		result StructuredResult
+		err    error
+	}
+	results := make(chan callResult, numCalls)
+
+	for i := 0; i < numCalls; i++ {
+		go func() {
+			r, e := c.StructuredWithSearch(ctx, req, schema)
+			results <- callResult{result: r, err: e}
+		}()
+	}
+
+	collector := newWeightedConsensusCollector(numCalls)
+	for i := 0; i < numCalls; i++ {
+		cr := <-results
+		if cr.err != nil {
+			continue
+		}
+		collector.add(cr.result, fieldName)
+	}
+
+	if collector.successCount == 0 {
+		return ConsensusResult{}, errors.New("all consensus calls failed")
+	}
+	return collector.toResult(fieldName, numCalls), nil
 }
 
 func (c *Client) structuredInternal(ctx context.Context, req Request, schema map[string]any, enableSearch bool) (map[string]any, string, []string, error) {

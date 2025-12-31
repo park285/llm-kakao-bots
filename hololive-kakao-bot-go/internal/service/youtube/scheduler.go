@@ -7,9 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kapu/hololive-kakao-bot-go/internal/adapter"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
+	"github.com/kapu/hololive-kakao-bot-go/internal/iris"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
@@ -20,6 +23,8 @@ type Scheduler struct {
 	cache                *cache.Service
 	statsRepo            *StatsRepository
 	membersData          domain.MemberDataProvider
+	alarmService         *notification.AlarmService
+	irisClient           iris.Client
 	logger               *slog.Logger
 	ticker               *time.Ticker
 	milestoneWatchTicker *time.Ticker
@@ -29,9 +34,10 @@ type Scheduler struct {
 }
 
 const (
-	schedulerInterval       = 12 * time.Hour
-	milestoneWatchInterval  = 1 * time.Hour // 마일스톤 직전 멤버 빠른 체크
-	MilestoneThresholdRatio = 0.95          // 95% 이상이면 마일스톤 직전으로 간주
+	schedulerInterval         = 12 * time.Hour
+	milestoneWatchInterval    = 1 * time.Hour // 마일스톤 직전 멤버 빠른 체크
+	MilestoneThresholdRatio   = 0.95          // 95% 이상이면 마일스톤 직전으로 간주
+	ApproachingThresholdRatio = 0.99          // 99% 이상이면 예고 알람 발송
 
 	channelsPerBatch = 30 // 30 channels × 100 units = 3,000 units per batch
 	batchesPerDay    = 2  // 2 batches × 3,000 = 6,000 units
@@ -45,13 +51,24 @@ var SubscriberMilestones = []uint64{
 }
 
 // NewScheduler: YouTube 데이터 수집 스케줄러를 생성한다.
-func NewScheduler(youtubeSvc *Service, holodexSvc *holodex.Service, cacheSvc *cache.Service, statsRepo *StatsRepository, membersData domain.MemberDataProvider, logger *slog.Logger) *Scheduler {
+func NewScheduler(
+	youtubeSvc *Service,
+	holodexSvc *holodex.Service,
+	cacheSvc *cache.Service,
+	statsRepo *StatsRepository,
+	membersData domain.MemberDataProvider,
+	alarmSvc *notification.AlarmService,
+	irisClient iris.Client,
+	logger *slog.Logger,
+) *Scheduler {
 	return &Scheduler{
 		youtube:      youtubeSvc,
 		holodex:      holodexSvc,
 		cache:        cacheSvc,
 		statsRepo:    statsRepo,
 		membersData:  membersData,
+		alarmService: alarmSvc,
+		irisClient:   irisClient,
 		logger:       logger,
 		currentBatch: 0,
 		stopCh:       make(chan struct{}),
@@ -93,11 +110,13 @@ func (ys *Scheduler) Start(ctx context.Context) {
 		go func() {
 			// 시작 직후 첫 체크 실행
 			ys.watchNearMilestoneMembers(ctx)
+			ys.dispatchMilestoneAlerts(ctx)
 
 			for {
 				select {
 				case <-ys.milestoneWatchTicker.C:
 					ys.watchNearMilestoneMembers(ctx)
+					ys.dispatchMilestoneAlerts(ctx)
 				case <-ys.stopCh:
 					return
 				case <-ctx.Done():
@@ -378,68 +397,122 @@ func (ys *Scheduler) checkMilestones(previous, current uint64) []uint64 {
 	return achieved
 }
 
-// SendMilestoneAlerts: 감지된 중요 통계 변화(마일스톤 등)에 대해 채팅방에 알림 메시지를 전송한다.
-func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(room, message string) error, rooms []string) error {
-	changes, err := ys.statsRepo.GetUnnotifiedChanges(ctx, 50)
+// dispatchMilestoneAlerts: 알람이 설정된 방에 마일스톤 알람을 발송한다.
+func (ys *Scheduler) dispatchMilestoneAlerts(ctx context.Context) {
+	if ys.alarmService == nil || ys.irisClient == nil {
+		return
+	}
+
+	// 알람이 설정된 고유 방 목록 조회
+	rooms, err := ys.alarmService.GetDistinctRooms(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get unnotified changes: %w", err)
+		ys.logger.Warn("Failed to get alarm rooms for milestone dispatch", slog.Any("error", err))
+		return
 	}
 
-	if len(changes) == 0 {
-		return nil
+	if len(rooms) == 0 {
+		return
 	}
 
-	ys.logger.Debug("Processing stats changes for notifications",
-		slog.Int("changes", len(changes)))
+	// 메시지 발송 함수
+	sendMessage := func(room, message string) error {
+		return ys.irisClient.SendMessage(ctx, room, message)
+	}
 
-	sentCount := 0
-	for _, change := range changes {
-		if !ys.isSignificantChange(change) {
-			if err := ys.statsRepo.MarkChangeNotified(ctx, change.ChannelID, change.DetectedAt); err != nil {
-				ys.logger.Warn("Failed to mark change notified",
-					slog.String("channel", change.ChannelID),
-					slog.Any("error", err))
-			}
-			continue
-		}
+	if err := ys.SendMilestoneAlerts(ctx, sendMessage, rooms); err != nil {
+		ys.logger.Warn("Failed to dispatch milestone alerts", slog.Any("error", err))
+	}
+}
 
-		message := ys.formatChangeMessage(change)
-		if message == "" {
+// SendMilestoneAlerts: 감지된 중요 통계 변화(마일스톤 등)에 대해 채팅방에 알림 메시지를 전송한다.
+// 예고 알람(99% 도달)과 달성 알람 모두 처리한다.
+func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(room, message string) error, rooms []string) error {
+	// 1. 예고 알람 처리 (99% 도달)
+	approachingSent := ys.sendApproachingAlerts(ctx, sendMessage, rooms)
+
+	// 2. 마일스톤 달성 알람 처리 (youtube_milestones 테이블에서 직접 조회)
+	milestones, err := ys.statsRepo.GetUnnotifiedMilestones(ctx, 50)
+	if err != nil {
+		ys.logger.Warn("Failed to get unnotified milestones", slog.Any("error", err))
+	}
+
+	milestoneSent := 0
+	for _, m := range milestones {
+		msg, err := adapter.FormatMilestoneAchieved(m.MemberName, util.FormatKoreanNumber(int64(m.Value)))
+		if err != nil {
+			ys.logger.Warn("마일스톤 달성 메시지 포맷 오류", slog.Any("error", err))
 			continue
 		}
 
 		for _, room := range rooms {
-			if err := sendMessage(room, message); err != nil {
+			if err := sendMessage(room, msg); err != nil {
 				ys.logger.Error("Failed to send milestone notification",
 					slog.String("room", room),
-					slog.String("member", change.MemberName),
+					slog.String("member", m.MemberName),
 					slog.Any("error", err))
 				continue
 			}
 		}
 
-		if err := ys.statsRepo.MarkChangeNotified(ctx, change.ChannelID, change.DetectedAt); err != nil {
-			ys.logger.Warn("Failed to mark change notified",
-				slog.String("channel", change.ChannelID),
+		if err := ys.statsRepo.MarkMilestoneNotified(ctx, m.ChannelID, m.Type, m.Value); err != nil {
+			ys.logger.Warn("Failed to mark milestone notified",
+				slog.String("channel", m.ChannelID),
+				slog.Any("error", err))
+		} else {
+			milestoneSent++
+		}
+	}
+
+	totalSent := milestoneSent + approachingSent
+	if totalSent > 0 {
+		ys.logger.Info("Milestone notifications sent",
+			slog.Int("achievements", milestoneSent),
+			slog.Int("approaching", approachingSent))
+	}
+
+	return nil
+}
+
+// sendApproachingAlerts: 예고 알람(99% 도달)을 채팅방에 발송한다.
+func (ys *Scheduler) sendApproachingAlerts(ctx context.Context, sendMessage func(room, message string) error, rooms []string) int {
+	notifications, err := ys.statsRepo.GetUnnotifiedApproaching(ctx, 50)
+	if err != nil {
+		ys.logger.Warn("Failed to get unnotified approaching alerts", slog.Any("error", err))
+		return 0
+	}
+
+	if len(notifications) == 0 {
+		return 0
+	}
+
+	sentCount := 0
+	for _, n := range notifications {
+		message := FormatApproachingMessage(n.MemberName, n.MilestoneValue, n.CurrentSubs)
+
+		for _, room := range rooms {
+			if err := sendMessage(room, message); err != nil {
+				ys.logger.Error("Failed to send approaching notification",
+					slog.String("room", room),
+					slog.String("member", n.MemberName),
+					slog.Any("error", err))
+				continue
+			}
+		}
+
+		if err := ys.statsRepo.MarkApproachingChatNotified(ctx, n.ChannelID, n.MilestoneValue); err != nil {
+			ys.logger.Warn("Failed to mark approaching notified",
+				slog.String("channel", n.ChannelID),
 				slog.Any("error", err))
 		} else {
 			sentCount++
 		}
 	}
 
-	if sentCount > 0 {
-		ys.logger.Info("Milestone notifications sent",
-			slog.Int("sent", sentCount))
-	}
-
-	return nil
+	return sentCount
 }
 
+// isSignificantChange: 마일스톤 달성 여부만 체크 (구독자 증가량은 알람 대상 아님)
 func (ys *Scheduler) isSignificantChange(change *domain.StatsChange) bool {
-	if change.SubscriberChange >= 10000 {
-		return true
-	}
-
 	if change.PreviousStats != nil && change.CurrentStats != nil {
 		milestones := ys.checkMilestones(change.PreviousStats.SubscriberCount, change.CurrentStats.SubscriberCount)
 		if len(milestones) > 0 {
@@ -450,6 +523,7 @@ func (ys *Scheduler) isSignificantChange(change *domain.StatsChange) bool {
 	return false
 }
 
+// formatChangeMessage: 마일스톤 달성 메시지만 생성 (구독자 증가 알람은 제거됨)
 func (ys *Scheduler) formatChangeMessage(change *domain.StatsChange) string {
 	if change.PreviousStats == nil || change.CurrentStats == nil {
 		return ""
@@ -457,17 +531,16 @@ func (ys *Scheduler) formatChangeMessage(change *domain.StatsChange) string {
 
 	milestones := ys.checkMilestones(change.PreviousStats.SubscriberCount, change.CurrentStats.SubscriberCount)
 	if len(milestones) > 0 {
-		milestone := milestones[0] // 첫 번째 milestone 사용
-		return fmt.Sprintf("🎉 %s님이 구독자 %s명을 달성했습니다!\n축하합니다! 🎊",
+		milestone := milestones[0]
+		msg, err := adapter.FormatMilestoneAchieved(
 			change.MemberName,
-			util.FormatKoreanNumber(int64(milestone)))
-	}
-
-	if change.SubscriberChange >= 10000 {
-		return fmt.Sprintf("📈 %s님의 구독자가 %s명 증가했습니다!\n현재 구독자: %s명",
-			change.MemberName,
-			util.FormatKoreanNumber(change.SubscriberChange),
-			util.FormatKoreanNumber(int64(change.CurrentStats.SubscriberCount)))
+			util.FormatKoreanNumber(int64(milestone)),
+		)
+		if err != nil {
+			ys.logger.Warn("마일스톤 달성 메시지 포맷 오류", slog.Any("error", err))
+			return ""
+		}
+		return msg
 	}
 
 	return ""
@@ -539,6 +612,63 @@ func (ys *Scheduler) watchNearMilestoneMembers(ctx context.Context) {
 						slog.Any("error", err))
 				}
 			}
+		} else {
+			// 마일스톤 미달성 상태에서 99% 이상 도달 시 예고 알람 체크
+			ys.checkApproachingAlert(ctx, nm, member, currentSubs, now)
 		}
 	}
+}
+
+// checkApproachingAlert: 99% 이상 도달 시 예고 알람을 발송한다 (중복 방지)
+func (ys *Scheduler) checkApproachingAlert(ctx context.Context, nm NearMilestoneEntry, member *domain.Member, currentSubs uint64, now time.Time) {
+	// 현재 진행률 계산 (최신 구독자 수 기준)
+	progressPct := float64(currentSubs) / float64(nm.NextMilestone)
+	if progressPct < ApproachingThresholdRatio {
+		return // 99% 미만 → 예고 알람 대상 아님
+	}
+
+	// 이미 예고 알람을 발송했는지 확인
+	alreadyNotified, err := ys.statsRepo.HasApproachingNotified(ctx, nm.ChannelID, nm.NextMilestone)
+	if err != nil {
+		ys.logger.Warn("Failed to check approaching notification status",
+			slog.String("channel", nm.ChannelID),
+			slog.Any("error", err))
+		return
+	}
+	if alreadyNotified {
+		return // 이미 예고 알람 발송 완료
+	}
+
+	// 예고 알람 기록 저장 (중복 방지)
+	if err := ys.statsRepo.SaveApproachingNotification(ctx, nm.ChannelID, nm.NextMilestone, currentSubs, now); err != nil {
+		ys.logger.Warn("Failed to save approaching notification",
+			slog.String("channel", nm.ChannelID),
+			slog.Any("error", err))
+		return
+	}
+
+	remaining := nm.NextMilestone - currentSubs
+	ys.logger.Info("Approaching milestone alert triggered",
+		slog.String("member", member.Name),
+		slog.Any("milestone", nm.NextMilestone),
+		slog.Any("current_subs", currentSubs),
+		slog.Any("remaining", remaining))
+}
+
+// FormatApproachingMessage: 마일스톤 예고 알람 메시지를 생성한다.
+func FormatApproachingMessage(memberName string, milestone, currentSubs uint64) string {
+	remaining := milestone - currentSubs
+	msg, err := adapter.FormatMilestoneApproaching(
+		memberName,
+		util.FormatKoreanNumber(int64(milestone)),
+		util.FormatKoreanNumber(int64(remaining)),
+	)
+	if err != nil {
+		// 펴백: 하드코딩 메시지 (템플릿 실패 시)
+		return fmt.Sprintf("📍 %s님이 구독자 %s명까지 %s명 남았습니다!\n곧 마일스톤 달성이 예상됩니다! 🎯",
+			memberName,
+			util.FormatKoreanNumber(int64(milestone)),
+			util.FormatKoreanNumber(int64(remaining)))
+	}
+	return msg
 }

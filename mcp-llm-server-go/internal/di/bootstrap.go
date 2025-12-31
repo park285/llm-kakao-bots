@@ -3,10 +3,14 @@ package di
 import (
 	"fmt"
 
+	"google.golang.org/grpc/reflection"
+
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/twentyq"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/grpcserver"
+	llmv1 "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/grpcserver/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/guard"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/metrics"
@@ -78,8 +82,30 @@ func InitializeApp() (*App, error) {
 
 	turtleSoupHandler := handler.NewTurtleSoupHandler(cfg, geminiClient, injectionGuard, sessionStore, turtlesoupPrompts, puzzleLoader, logger)
 
+	grpcLLMService := grpcserver.NewLLMService(
+		cfg,
+		logger,
+		geminiClient,
+		injectionGuard,
+		sessionStore,
+		usageRepository,
+		twentyqPrompts,
+		topicLoader,
+		turtlesoupPrompts,
+		puzzleLoader,
+	)
+
+	grpcServer, grpcListener, err := grpcserver.NewServer(cfg, logger)
+	if err != nil {
+		return nil, fmt.Errorf("grpc server: %w", err)
+	}
+	if grpcServer != nil {
+		llmv1.RegisterLLMServiceServer(grpcServer, grpcLLMService)
+		reflection.Register(grpcServer) // grpcurl 등 도구 지원
+	}
+
 	router := handler.NewRouter(cfg, logger, llmHandler, sessionHandler, guardHandler, usageHandler, twentyQHandler, turtleSoupHandler)
 	httpServer := server.NewHTTPServer(cfg, router)
 
-	return NewApp(httpServer, logger, cfg, sessionStore, usageRepository, usageRecorder), nil
+	return NewApp(httpServer, grpcServer, grpcListener, logger, cfg, sessionStore, usageRepository, usageRecorder), nil
 }

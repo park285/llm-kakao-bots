@@ -20,14 +20,16 @@ func NewAccessControl(cfg qconfig.AccessConfig) *AccessControl {
 // GetDenialReason: 접근 거부 사유에 따른 오류 메시지를 반환합니다.
 // 접근이 허용된 경우 nil을 반환합니다.
 func (a *AccessControl) GetDenialReason(userID string, chatID string) *string {
-	switch a.control.DenialReason(userID, chatID) {
-	case accesscontrol.DenialReasonUserBlocked:
-		return ptr.String(qmessages.ErrorUserBlocked)
-	case accesscontrol.DenialReasonChatBlocked:
-		return ptr.String(qmessages.ErrorChatBlocked)
-	case accesscontrol.DenialReasonAccessDenied:
-		return ptr.String(qmessages.ErrorAccessDenied)
-	default:
+	msg, ok := accesscontrol.DenialReasonMessage(
+		a.control.DenialReason(userID, chatID),
+		accesscontrol.DenialReasonMessages{
+			UserBlocked:  qmessages.ErrorUserBlocked,
+			ChatBlocked:  qmessages.ErrorChatBlocked,
+			AccessDenied: qmessages.ErrorAccessDenied,
+		},
+	)
+	if !ok {
 		return nil
 	}
+	return ptr.String(msg)
 }

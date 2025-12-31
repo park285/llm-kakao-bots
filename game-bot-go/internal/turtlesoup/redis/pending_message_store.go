@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
@@ -21,11 +20,7 @@ type PendingMessageStore struct {
 	store *pending.Store
 }
 
-type pendingMessagePayload struct {
-	Content  string  `json:"content"`
-	ThreadID *string `json:"threadId,omitempty"`
-	Sender   *string `json:"sender,omitempty"`
-}
+type pendingMessagePayload = pending.BaseMessagePayload
 
 // NewPendingMessageStore: 새로운 PendingMessageStore 인스턴스를 생성합니다.
 func NewPendingMessageStore(client valkey.Client, logger *slog.Logger) *PendingMessageStore {
@@ -68,7 +63,7 @@ func (s *PendingMessageStore) Enqueue(ctx context.Context, chatID string, messag
 		return EnqueueQueueFull, fmt.Errorf("marshal pending message failed: %w", err)
 	}
 
-	// message\uc5d0\uc11c UserID\uc640 Timestamp \uc0ac\uc6a9
+	// message에서 `UserID`와 `Timestamp` 사용함
 	result, err := s.store.Enqueue(ctx, chatID, message.UserID, message.Timestamp, string(jsonValue))
 	if err != nil {
 		return result, fmt.Errorf("pending enqueue failed: %w", err)
@@ -138,24 +133,14 @@ func (s *PendingMessageStore) GetQueueDetails(ctx context.Context, chatID string
 		return "", nil
 	}
 
-	lines := make([]string, 0, len(entries))
-	for idx, entry := range entries {
-		entryUserID, jsonPart, ok := pending.ExtractUserIDAndJSON(entry)
-		if !ok {
-			continue
-		}
-
+	details := pending.FormatQueueDetails(entries, domainmodels.DisplayNameFromUser, func(jsonPart string) (pending.QueueDetailsItem, bool) {
 		var payload pendingMessagePayload
 		if err := json.Unmarshal([]byte(jsonPart), &payload); err != nil {
-			continue
+			return pending.QueueDetailsItem{}, false
 		}
-
-		displayName := domainmodels.DisplayNameFromUser(entryUserID, payload.Sender)
-
-		lines = append(lines, fmt.Sprintf("%d. %s - %s", idx+1, displayName, payload.Content))
-	}
-
-	return strings.Join(lines, "\n"), nil
+		return pending.QueueDetailsItem{Sender: payload.Sender, Content: payload.Content}, true
+	})
+	return details, nil
 }
 
 // Clear: 대기열의 모든 메시지를 삭제합니다.

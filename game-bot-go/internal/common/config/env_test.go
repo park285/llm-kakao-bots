@@ -337,11 +337,11 @@ func TestReadServerTuningConfigFromEnv(t *testing.T) {
 		if cfg.ReadHeaderTimeout != 5*time.Second {
 			t.Errorf("expected ReadHeaderTimeout=5s, got %v", cfg.ReadHeaderTimeout)
 		}
-		if cfg.IdleTimeout != 0 {
-			t.Errorf("expected IdleTimeout=0, got %v", cfg.IdleTimeout)
+		if cfg.IdleTimeout != 90*time.Second {
+			t.Errorf("expected IdleTimeout=90s, got %v", cfg.IdleTimeout)
 		}
-		if cfg.MaxHeaderBytes != 0 {
-			t.Errorf("expected MaxHeaderBytes=0, got %d", cfg.MaxHeaderBytes)
+		if cfg.MaxHeaderBytes != 1<<20 {
+			t.Errorf("expected MaxHeaderBytes=1MiB, got %d", cfg.MaxHeaderBytes)
 		}
 	})
 

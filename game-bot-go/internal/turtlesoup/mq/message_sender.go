@@ -2,10 +2,11 @@ package mq
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
+	commonmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mq"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
-	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/textutil"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 	tsmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/messages"
 )
@@ -26,33 +27,18 @@ func NewMessageSender(msgProvider *messageprovider.Provider, publish func(ctx co
 
 // SendFinal 는 동작을 수행한다.
 func (s *MessageSender) SendFinal(ctx context.Context, message mqmsg.InboundMessage, text string) error {
-	chunks := textutil.ChunkByLines(text, tsconfig.KakaoMessageMaxLength)
-	if len(chunks) == 0 {
-		return s.publish(ctx, mqmsg.NewFinal(message.ChatID, "", message.ThreadID))
-	}
-
-	for idx, chunk := range chunks {
-		isLast := idx == len(chunks)-1
-		if isLast {
-			if err := s.publish(ctx, mqmsg.NewFinal(message.ChatID, chunk, message.ThreadID)); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := s.publish(ctx, mqmsg.NewWaiting(message.ChatID, chunk, message.ThreadID)); err != nil {
-			return err
-		}
+	if err := commonmq.SendFinalChunked(ctx, s.publish, message.ChatID, text, message.ThreadID, tsconfig.KakaoMessageMaxLength); err != nil {
+		return fmt.Errorf("send final failed: %w", err)
 	}
 	return nil
 }
 
 // SendWaiting 는 동작을 수행한다.
 func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMessage, command Command) error {
-	key := command.WaitingMessageKey()
-	if key == nil {
-		return nil
+	if err := commonmq.SendWaitingFromCommand(ctx, s.publish, s.msgProvider, message.ChatID, message.ThreadID, command); err != nil {
+		return fmt.Errorf("send waiting failed: %w", err)
 	}
-	return s.publish(ctx, mqmsg.NewWaiting(message.ChatID, s.msgProvider.Get(*key), message.ThreadID))
+	return nil
 }
 
 // SendError 는 동작을 수행한다.

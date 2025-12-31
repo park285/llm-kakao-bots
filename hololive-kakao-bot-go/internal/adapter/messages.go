@@ -196,6 +196,11 @@ const (
 	ErrStatsQueryFailed   = "구독자 순위 조회 중 오류가 발생했습니다."
 	MsgNoStatsData        = "해당 기간의 통계 데이터가 없습니다."
 
+	// Subscriber 관련
+	ErrSubscriberNeedMemberName = "❌ 멤버 이름을 입력해주세요.\n예) !구독자 페코라"
+	ErrSubscriberQueryFailed    = "구독자 정보 조회 중 오류가 발생했습니다."
+	MsgNoSubscriberData         = "해당 멤버의 구독자 정보가 없습니다."
+
 	// Matcher 관련
 	ErrMatcherNotActivated = "멤버 검색 기능이 활성화되지 않았습니다."
 

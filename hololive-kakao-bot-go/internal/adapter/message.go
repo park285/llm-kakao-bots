@@ -66,6 +66,9 @@ func (ma *MessageAdapter) ParseMessage(message *iris.Message) *ParsedCommand {
 	if parsed, ok := ma.tryHelpCommand(command, text); ok {
 		return parsed
 	}
+	if parsed, ok := ma.trySubscriberCommand(command, args, text); ok {
+		return parsed
+	}
 	if parsed, ok := ma.tryStatsCommand(command, args, text); ok {
 		return parsed
 	}
@@ -133,6 +136,19 @@ func (ma *MessageAdapter) tryHelpCommand(command string, raw string) (*ParsedCom
 	return &ParsedCommand{Type: domain.CommandHelp, Params: make(map[string]any), RawMessage: raw}, true
 }
 
+func (ma *MessageAdapter) trySubscriberCommand(command string, args []string, raw string) (*ParsedCommand, bool) {
+	if !ma.isSubscriberCommand(command) {
+		return nil, false
+	}
+	// 멤버 이름이 없으면 에러 처리를 위해 빈 member로 전달
+	member := util.TrimSpace(strings.Join(args, " "))
+	return &ParsedCommand{
+		Type:       domain.CommandSubscriber,
+		Params:     map[string]any{"member": member},
+		RawMessage: raw,
+	}, true
+}
+
 func (ma *MessageAdapter) tryStatsCommand(command string, args []string, raw string) (*ParsedCommand, bool) {
 	if !ma.isStatsCommand(command) {
 		return nil, false
@@ -191,8 +207,12 @@ func (ma *MessageAdapter) isMemberInfoCommand(cmd string) bool {
 	return util.Contains([]string{"멤버", "member", "프로필", "profile", "정보", "info"}, cmd)
 }
 
+func (ma *MessageAdapter) isSubscriberCommand(cmd string) bool {
+	return util.Contains([]string{"구독자", "subscriber", "subs"}, cmd)
+}
+
 func (ma *MessageAdapter) isStatsCommand(cmd string) bool {
-	return util.Contains([]string{"구독자순위", "구독자", "순위", "통계", "stats", "ranking"}, cmd)
+	return util.Contains([]string{"구독자순위", "순위", "통계", "stats", "ranking"}, cmd)
 }
 
 func (ma *MessageAdapter) parseUpcomingArgs(args []string) map[string]any {

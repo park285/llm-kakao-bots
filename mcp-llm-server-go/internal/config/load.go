@@ -81,6 +81,9 @@ func LogEnvStatus(cfg *Config, logger *slog.Logger) {
 		"db_name", cfg.Database.Name,
 		"session_ttl", cfg.Session.SessionTTLMinutes,
 		"history_pairs", cfg.Session.HistoryMaxPairs,
+		"grpc_enabled", cfg.GRPC.Enabled,
+		"grpc_host", cfg.GRPC.Host,
+		"grpc_port", cfg.GRPC.Port,
 	)
 
 	if len(cfg.Gemini.APIKeys) == 0 {
@@ -143,6 +146,11 @@ func buildConfig() *Config {
 			Host:         getEnvString("HTTP_HOST", "127.0.0.1"),
 			Port:         getEnvInt("HTTP_PORT", 40527),
 			HTTP2Enabled: getEnvBool("HTTP2_ENABLED", true),
+		},
+		GRPC: GRPCConfig{
+			Host:    getEnvString("GRPC_HOST", "127.0.0.1"),
+			Port:    getEnvInt("GRPC_PORT", 40528),
+			Enabled: getEnvBool("GRPC_ENABLED", true),
 		},
 		HTTPAuth: HTTPAuthConfig{
 			APIKey:   getEnvString("HTTP_API_KEY", ""),

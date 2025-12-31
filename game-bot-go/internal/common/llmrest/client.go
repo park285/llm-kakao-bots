@@ -15,14 +15,20 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httpclient"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httputil"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 )
 
-// Config: REST 클라이언트 설정
+// Config: LLM 서버 통신 설정입니다.
+// BaseURL 스킴이 grpc이면 내부 통신을 gRPC로 수행합니다.
 type Config struct {
 	BaseURL          string
+	RequireGRPC      bool
 	APIKey           string
 	Timeout          time.Duration
 	ConnectTimeout   time.Duration
@@ -31,10 +37,14 @@ type Config struct {
 	RetryDelay       time.Duration
 }
 
-// Client: LLM 서버와 통신하기 위한 HTTP 클라이언트
+// Client: LLM 서버와 통신하기 위한 클라이언트입니다.
+// BaseURL 스킴이 grpc이면 gRPC(plaintext)로, 그 외에는 HTTP로 통신합니다.
 type Client struct {
 	baseURL          *url.URL
 	httpClient       *http.Client
+	grpcConn         *grpc.ClientConn
+	grpcClient       llmv1.LLMServiceClient
+	grpcTimeout      time.Duration
 	apiKey           string
 	retryMaxAttempts int
 	retryDelay       time.Duration
@@ -50,6 +60,14 @@ func New(cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("invalid base url: %q", cfg.BaseURL)
 	}
 
+	scheme := strings.ToLower(strings.TrimSpace(parsedBaseURL.Scheme))
+	if scheme == "grpcs" {
+		return nil, fmt.Errorf("grpcs not supported: tls disabled")
+	}
+	if cfg.RequireGRPC && scheme != "grpc" {
+		return nil, fmt.Errorf("grpc required: base url scheme must be grpc, got %q", parsedBaseURL.Scheme)
+	}
+
 	retryMaxAttempts := cfg.RetryMaxAttempts
 	if retryMaxAttempts < 1 {
 		retryMaxAttempts = 1
@@ -59,7 +77,7 @@ func New(cfg Config) (*Client, error) {
 		retryDelay = 0
 	}
 
-	return &Client{
+	client := &Client{
 		baseURL: parsedBaseURL,
 		httpClient: httpclient.New(httpclient.Config{
 			Timeout:        cfg.Timeout,
@@ -69,7 +87,51 @@ func New(cfg Config) (*Client, error) {
 		apiKey:           strings.TrimSpace(cfg.APIKey),
 		retryMaxAttempts: retryMaxAttempts,
 		retryDelay:       retryDelay,
-	}, nil
+		grpcTimeout:      cfg.Timeout,
+	}
+
+	if scheme == "grpc" {
+		const grpcMaxMsgSizeBytes = 16 * 1024 * 1024
+		const defaultGRPCPort = "40528"
+
+		grpcTarget := parsedBaseURL.Host
+		if parsedBaseURL.Port() == "" {
+			grpcTarget = net.JoinHostPort(parsedBaseURL.Hostname(), defaultGRPCPort)
+		}
+
+		apiKey := client.apiKey
+		interceptor := func(
+			ctx context.Context,
+			method string,
+			req, reply any,
+			cc *grpc.ClientConn,
+			invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption,
+		) error {
+			if apiKey != "" {
+				ctx = metadata.AppendToOutgoingContext(ctx, "x-api-key", apiKey)
+			}
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+
+		conn, err := grpc.NewClient(
+			grpcTarget,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(interceptor),
+			grpc.WithDefaultCallOptions(
+				grpc.MaxCallRecvMsgSize(grpcMaxMsgSizeBytes),
+				grpc.MaxCallSendMsgSize(grpcMaxMsgSizeBytes),
+			),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("create grpc client failed: %w", err)
+		}
+
+		client.grpcConn = conn
+		client.grpcClient = llmv1.NewLLMServiceClient(conn)
+	}
+
+	return client, nil
 }
 
 type httpError struct {
@@ -272,6 +334,27 @@ func (c *Client) doJSONOnce(
 			return errors.New("empty response body")
 		}
 		return fmt.Errorf("decode response failed: %w", err)
+	}
+	return nil
+}
+
+func (c *Client) grpcCallContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if c == nil || c.grpcTimeout <= 0 {
+		return ctx, func() {}
+	}
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, c.grpcTimeout)
+}
+
+// Close: gRPC 연결을 정리합니다.
+func (c *Client) Close() error {
+	if c == nil || c.grpcConn == nil {
+		return nil
+	}
+	if err := c.grpcConn.Close(); err != nil {
+		return fmt.Errorf("grpc conn close failed: %w", err)
 	}
 	return nil
 }

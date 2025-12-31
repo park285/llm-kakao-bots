@@ -52,7 +52,7 @@ services:
     volumes:
       - valkey-cache-data:/data
     command: >
-      valkey-server  --appendonly yes  --appendfsync everysec  --save ""  --maxmemory 384mb  --maxmemory-policy allkeys-lfu  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+      valkey-server  --appendonly no  --save ""  --maxmemory 384mb  --maxmemory-policy allkeys-lfu  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
     sysctls:
       - net.core.somaxconn=1024
     restart: always
@@ -82,7 +82,7 @@ services:
       - valkey-mq-data:/data
       - ./logs:/var/log/valkey-mq
     command: >
-      valkey-server  --port 1833  --appendonly yes  --appendfsync everysec  --no-appendfsync-on-rewrite yes  --maxmemory 192mb  --maxmemory-policy noeviction  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+      valkey-server  --port 1833  --appendonly no  --save ""  --maxmemory 192mb  --maxmemory-policy noeviction  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
     sysctls:
       - net.core.somaxconn=1024
     restart: always
@@ -118,6 +118,9 @@ services:
       HTTP_HOST: 0.0.0.0
       HTTP_PORT: 40527
       HTTP2_ENABLED: "true"
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: 40528
+      GRPC_ENABLED: "true"
       HTTP_API_KEY_REQUIRED: "true"
       RULEPACKS_DIR: /app/rulepacks
       LOG_DIR: /app/logs
@@ -166,7 +169,7 @@ services:
     environment:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 30081
-      LLM_REST_BASE_URL: http://mcp-llm-server:40527
+      LLM_BASE_URL: grpc://mcp-llm-server:40528
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
       MQ_HOST: valkey-mq
@@ -218,7 +221,7 @@ services:
     environment:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 30082
-      LLM_REST_BASE_URL: http://mcp-llm-server:40527
+      LLM_BASE_URL: grpc://mcp-llm-server:40528
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
       MQ_HOST: valkey-mq

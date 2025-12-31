@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	"github.com/goccy/go-json"
+
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/randx"
 )
 
 //go:embed topics/*.json
@@ -25,8 +27,7 @@ type TopicEntry struct {
 type TopicLoader struct {
 	mu     sync.RWMutex
 	topics map[string][]TopicEntry
-	rng    *rand.Rand
-	rngMu  sync.Mutex
+	rng    *randx.LockedRand
 }
 
 // topicItemRaw JSON 파싱용 중간 구조체.
@@ -61,7 +62,7 @@ var AllCategories = []string{
 func NewTopicLoader() (*TopicLoader, error) {
 	loader := &TopicLoader{
 		topics: make(map[string][]TopicEntry),
-		rng:    rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())),
+		rng:    randx.New(rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))),
 	}
 	if err := loader.load(); err != nil {
 		return nil, err
@@ -206,8 +207,6 @@ func (l *TopicLoader) selectFromAllCategoriesExcluding(bannedTopics []string, ex
 }
 
 func (l *TopicLoader) randIntN(n int) int {
-	l.rngMu.Lock()
-	defer l.rngMu.Unlock()
 	return l.rng.IntN(n)
 }
 

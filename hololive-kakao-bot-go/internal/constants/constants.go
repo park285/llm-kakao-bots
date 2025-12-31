@@ -227,11 +227,17 @@ var AppTimeout = struct {
 
 // ServerTimeout 는 HTTP 서버 타임아웃이다.
 var ServerTimeout = struct {
-	ReadHeader time.Duration
-	Idle       time.Duration
+	ReadHeader     time.Duration
+	Read           time.Duration
+	Write          time.Duration
+	Idle           time.Duration
+	MaxHeaderBytes int
 }{
-	ReadHeader: 5 * time.Second,
-	Idle:       60 * time.Second,
+	ReadHeader:     5 * time.Second,
+	Read:           15 * time.Second,
+	Write:          60 * time.Second,
+	Idle:           60 * time.Second,
+	MaxHeaderBytes: 1 << 20, // 1MiB
 }
 
 // ServerConfig 는 서버 기본 설정이다.

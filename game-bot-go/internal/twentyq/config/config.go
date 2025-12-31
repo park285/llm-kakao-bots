@@ -15,8 +15,8 @@ type ServerTuningConfig = commonconfig.ServerTuningConfig
 // CommandsConfig: 명령어 접두사 등 명령어 처리 관련 설정 alias
 type CommandsConfig = commonconfig.CommandsConfig
 
-// LlmRestConfig: LLM REST API 연동 설정 alias
-type LlmRestConfig = commonconfig.LlmRestConfig
+// LlmConfig: LLM 서버 통신 설정 alias
+type LlmConfig = commonconfig.LlmConfig
 
 // RedisConfig: Redis 연결 설정 (캐시용) alias
 type RedisConfig = commonconfig.RedisConfig
@@ -52,12 +52,17 @@ type StatsConfig struct {
 	DropLogOnQueueFull bool
 }
 
+// UsageConfig: 사용량/비용 표시를 위한 설정입니다.
+type UsageConfig struct {
+	ExchangeRateAPIURL string
+}
+
 // Config: 전체 애플리케이션 설정 구조체
 type Config struct {
 	Server       ServerConfig
 	ServerTuning ServerTuningConfig
 	Commands     CommandsConfig
-	LlmRest      LlmRestConfig
+	Llm          LlmConfig
 	Redis        RedisConfig
 	Valkey       ValkeyMQConfig
 	Postgres     PostgresConfig
@@ -65,6 +70,7 @@ type Config struct {
 	Admin        AdminConfig
 	Log          LogConfig
 	Stats        StatsConfig
+	Usage        UsageConfig
 }
 
 // LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드합니다.
@@ -81,7 +87,7 @@ func LoadFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	llmRest, err := readLlmRestConfig()
+	llmCfg, err := readLlmConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +116,13 @@ func LoadFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	usage := readUsageConfig()
 
 	return &Config{
 		Server:       server,
 		ServerTuning: serverTuning,
 		Commands:     commands,
-		LlmRest:      llmRest,
+		Llm:          llmCfg,
 		Redis:        redisCfg,
 		Valkey:       valkey,
 		Postgres:     postgres,
@@ -123,7 +130,16 @@ func LoadFromEnv() (*Config, error) {
 		Admin:        admin,
 		Log:          log,
 		Stats:        stats,
+		Usage:        usage,
 	}, nil
+}
+
+func readUsageConfig() UsageConfig {
+	apiURL := commonconfig.StringFromEnvFirstNonEmpty(
+		[]string{"TWENTYQ_EXCHANGE_RATE_API_URL", "EXCHANGE_RATE_API_URL"},
+		DefaultExchangeRateAPIURL,
+	)
+	return UsageConfig{ExchangeRateAPIURL: apiURL}
 }
 
 func readStatsConfig() (StatsConfig, error) {
@@ -168,10 +184,10 @@ func readCommandsConfig() (CommandsConfig, error) {
 	return CommandsConfig{Prefix: prefix}, nil
 }
 
-func readLlmRestConfig() (LlmRestConfig, error) {
-	cfg, err := commonconfig.ReadLlmRestConfigFromEnv()
+func readLlmConfig() (LlmConfig, error) {
+	cfg, err := commonconfig.ReadLlmConfigFromEnv()
 	if err != nil {
-		return LlmRestConfig{}, fmt.Errorf("read llm rest config failed: %w", err)
+		return LlmConfig{}, fmt.Errorf("read llm config failed: %w", err)
 	}
 	return cfg, nil
 }

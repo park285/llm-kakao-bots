@@ -50,3 +50,34 @@ func TestSchemas(t *testing.T) {
 		t.Fatalf("expected required fields")
 	}
 }
+
+func TestVerifySchemaIncludesConfidence(t *testing.T) {
+	schema := VerifySchema()
+
+	required, ok := schema["required"].([]string)
+	if !ok {
+		t.Fatalf("expected required to be []string")
+	}
+	hasConfidence := false
+	for _, field := range required {
+		if field == "confidence" {
+			hasConfidence = true
+			break
+		}
+	}
+	if !hasConfidence {
+		t.Fatalf("expected confidence in required fields")
+	}
+
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected properties to be map[string]any")
+	}
+	confidenceSchema, ok := properties["confidence"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected confidence schema to be map[string]any")
+	}
+	if confidenceSchema["type"] != "number" {
+		t.Fatalf("expected confidence.type number, got: %v", confidenceSchema["type"])
+	}
+}

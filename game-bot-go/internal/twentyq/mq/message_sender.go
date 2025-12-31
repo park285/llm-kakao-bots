@@ -2,10 +2,11 @@ package mq
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
+	commonmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mq"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/mqmsg"
-	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/textutil"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 )
@@ -26,33 +27,18 @@ func NewMessageSender(msgProvider *messageprovider.Provider, publish func(ctx co
 
 // SendFinal: 최종 처리 결과(답변)를 전송합니다. 메시지가 길 경우 분할 전송합니다.
 func (s *MessageSender) SendFinal(ctx context.Context, message mqmsg.InboundMessage, text string) error {
-	chunks := textutil.ChunkByLines(text, qconfig.KakaoMessageMaxLength)
-	if len(chunks) == 0 {
-		return s.publish(ctx, mqmsg.NewFinal(message.ChatID, "", message.ThreadID))
-	}
-
-	for idx, chunk := range chunks {
-		isLast := idx == len(chunks)-1
-		if isLast {
-			if err := s.publish(ctx, mqmsg.NewFinal(message.ChatID, chunk, message.ThreadID)); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := s.publish(ctx, mqmsg.NewWaiting(message.ChatID, chunk, message.ThreadID)); err != nil {
-			return err
-		}
+	if err := commonmq.SendFinalChunked(ctx, s.publish, message.ChatID, text, message.ThreadID, qconfig.KakaoMessageMaxLength); err != nil {
+		return fmt.Errorf("send final failed: %w", err)
 	}
 	return nil
 }
 
 // SendWaiting: 명령어 처리가 시작되었음을 알리는 대기 메시지(예: ~가 생각 중입니다)를 전송합니다.
 func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMessage, command Command) error {
-	key := command.WaitingMessageKey()
-	if key == nil {
-		return nil
+	if err := commonmq.SendWaitingFromCommand(ctx, s.publish, s.msgProvider, message.ChatID, message.ThreadID, command); err != nil {
+		return fmt.Errorf("send waiting failed: %w", err)
 	}
-	return s.publish(ctx, mqmsg.NewWaiting(message.ChatID, s.msgProvider.Get(*key), message.ThreadID))
+	return nil
 }
 
 // SendError: 발생한 에러에 매핑된 사용자 메시지를 전송합니다.

@@ -53,6 +53,11 @@ const (
 	RedisKeyLockPrefix    = RedisKeyPrefix + ":lock"
 )
 
+// DefaultExchangeRateAPIURL: USD/KRW 환율 조회를 위한 기본 API URL입니다.
+const (
+	DefaultExchangeRateAPIURL = "https://api.frankfurter.app/latest?from=USD&to=KRW"
+)
+
 // RedisSessionTTLSeconds 는 Redis TTL 상수 목록이다.
 const (
 	RedisSessionTTLSeconds    = 12 * 60 * 60

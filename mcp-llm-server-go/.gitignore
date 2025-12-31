@@ -1,0 +1,31 @@
+# 빌드 산출물
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# 환경/비밀값
+.env
+.env.local
+.env.*.local
+
+# 로그/런타임
+*.log
+logs/
+*.pid
+
+# 임시 파일
+tmp/
+temp/
+*.tmp
+
+# IDE/OS
+.idea/
+.vscode/
+.DS_Store
+
+# Serena
+.serena/

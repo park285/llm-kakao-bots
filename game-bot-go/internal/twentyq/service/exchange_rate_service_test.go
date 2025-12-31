@@ -19,8 +19,7 @@ func TestFrankfurterExchangeRateService(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		svc := NewFrankfurterExchangeRateService(logger)
-		svc.apiURL = ts.URL
+		svc := NewFrankfurterExchangeRateService(logger, ts.URL)
 
 		rate := svc.getUsdKrwRate(context.Background())
 		if rate != 1500.0 {
@@ -48,8 +47,7 @@ func TestFrankfurterExchangeRateService(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		svc := NewFrankfurterExchangeRateService(logger)
-		svc.apiURL = ts.URL
+		svc := NewFrankfurterExchangeRateService(logger, ts.URL)
 
 		// First call
 		svc.getUsdKrwRate(context.Background())
@@ -78,8 +76,7 @@ func TestFrankfurterExchangeRateService(t *testing.T) {
 				ts := httptest.NewServer(tt.handler)
 				defer ts.Close()
 
-				svc := NewFrankfurterExchangeRateService(logger)
-				svc.apiURL = ts.URL
+				svc := NewFrankfurterExchangeRateService(logger, ts.URL)
 
 				rate := svc.getUsdKrwRate(context.Background())
 				if rate != defaultUsdKrwRate {
@@ -90,15 +87,7 @@ func TestFrankfurterExchangeRateService(t *testing.T) {
 	})
 
 	t.Run("Network_Error", func(t *testing.T) {
-		svc := NewFrankfurterExchangeRateService(logger)
-		svc.apiURL = "http://invalid-url-that-fails.com"
-		// Short timeout for test speed? Client has 10s.
-		// We can replace client or just trust it eventually fails.
-		// Or assume invalid URL fails quickly on DNS/connection.
-		// Actually, let's just use empty string or bad protocol to fail creation request?
-		// NewRequestWithContext checks URL parse.
-
-		svc.apiURL = "::invalid" // Should fail NewRequest
+		svc := NewFrankfurterExchangeRateService(logger, "::invalid") // Should fail NewRequest
 		rate := svc.getUsdKrwRate(context.Background())
 		if rate != defaultUsdKrwRate {
 			t.Errorf("expected default rate for bad URL")
