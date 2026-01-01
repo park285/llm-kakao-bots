@@ -42,7 +42,7 @@ type CircuitBreaker struct {
 	mu                  sync.RWMutex
 }
 
-// NewCircuitBreaker: 새로운 서킷 브레이커 인스턴스를 생성한다.
+// NewCircuitBreaker: 새로운 서킷 브레이커 인스턴스를 생성합니다.
 func NewCircuitBreaker(
 	failureThreshold int,
 	resetTimeout time.Duration,
@@ -61,7 +61,7 @@ func NewCircuitBreaker(
 	}
 }
 
-// GetState: 현재 서킷 브레이커의 상태를 반환한다.
+// GetState: 현재 서킷 브레이커의 상태를 반환합니다.
 // 상태 조회 시 복구 시간이나 헬스 체크 조건을 확인하여 상태 전이를 트리거할 수도 있다.
 func (cb *CircuitBreaker) GetState() CircuitState {
 	cb.mu.Lock()
@@ -80,13 +80,13 @@ func (cb *CircuitBreaker) GetState() CircuitState {
 	return cb.state
 }
 
-// CanExecute: 현재 요청 실행이 가능한지(서킷이 열려있지 않은지) 확인한다.
+// CanExecute: 현재 요청 실행이 가능한지(서킷이 열려있지 않은지) 확인합니다.
 func (cb *CircuitBreaker) CanExecute() bool {
 	state := cb.GetState()
 	return state != CircuitStateOpen
 }
 
-// RecordSuccess: 요청 성공을 기록한다.
+// RecordSuccess: 요청 성공을 기록합니다.
 // Half-Open 상태였다면 Closed 상태로 전환하여 서킷을 복구한다.
 func (cb *CircuitBreaker) RecordSuccess() {
 	cb.mu.Lock()
@@ -104,7 +104,7 @@ func (cb *CircuitBreaker) RecordSuccess() {
 	}
 }
 
-// RecordFailure: 요청 실패를 기록한다.
+// RecordFailure: 요청 실패를 기록합니다.
 // 실패 횟수가 임계치를 초과하면 서킷을 Open 상태로 전환한다.
 func (cb *CircuitBreaker) RecordFailure(customTimeout time.Duration) {
 	cb.mu.Lock()
@@ -188,7 +188,7 @@ func (cb *CircuitBreaker) transitionTo(newState CircuitState) {
 	)
 }
 
-// Reset: 서킷 브레이커 상태를 강제로 초기화(Closed, 실패 횟수 0)한다.
+// Reset: 서킷 브레이커 상태를 강제로 초기화(Closed, 실패 횟수 0)합니다.
 func (cb *CircuitBreaker) Reset() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -199,7 +199,7 @@ func (cb *CircuitBreaker) Reset() {
 	cb.nextRetryTime = time.Time{}
 }
 
-// GetStatus: 모니터링을 위해 현재 서킷 브레이커의 상세 상태 정보를 반환한다.
+// GetStatus: 모니터링을 위해 현재 서킷 브레이커의 상세 상태 정보를 반환합니다.
 func (cb *CircuitBreaker) GetStatus() CircuitBreakerStatus {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()

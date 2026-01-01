@@ -13,7 +13,7 @@ type CommandContext struct {
 	Timestamp   time.Time
 }
 
-// NewCommandContext: 새로운 CommandContext 인스턴스를 생성한다.
+// NewCommandContext: 새로운 CommandContext 인스턴스를 생성합니다.
 func NewCommandContext(room, roomName, userID, userName, message string, isGroupChat bool) *CommandContext {
 	return &CommandContext{
 		Room:        room,

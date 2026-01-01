@@ -22,7 +22,7 @@ type Service struct {
 	cache    *Settings
 }
 
-// NewSettingsService: 지정된 파일 경로에서 설정을 로드하여 서비스 인스턴스를 생성한다.
+// NewSettingsService: 지정된 파일 경로에서 설정을 로드하여 서비스 인스턴스를 생성합니다.
 func NewSettingsService(filePath string, logger *slog.Logger) *Service {
 	s := &Service{
 		filePath: filePath,
@@ -52,7 +52,7 @@ func (s *Service) Get() Settings {
 	return *s.cache
 }
 
-// Update: 설정을 업데이트하고 파일에 즉시 영구 저장한다.
+// Update: 설정을 업데이트하고 파일에 즉시 영구 저장합니다.
 func (s *Service) Update(newSettings Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -2,7 +2,7 @@ package adapter
 
 import "fmt"
 
-// UIEmoji 는 사용자 메시지에 사용하는 이모지 모음이다.
+// UIEmoji: 사용자 메시지에 사용하는 이모지 모음입니다.
 type UIEmoji struct {
 	Brand     string
 	Alarm     string
@@ -24,7 +24,7 @@ type UIEmoji struct {
 	Video     string
 }
 
-// DefaultEmoji 는 모든 사용자 메시지에 사용되는 이모지 단일 정의다.
+// DefaultEmoji: 모든 사용자 메시지에 사용되는 이모지 단일 정의다.
 var DefaultEmoji = UIEmoji{
 	Brand:     "🌸",
 	Alarm:     "🔔",
@@ -46,27 +46,27 @@ var DefaultEmoji = UIEmoji{
 	Video:     "🎬",
 }
 
-// MessageBuilder 는 공통 메시지 패턴을 생성한다.
+// MessageBuilder: 공통 메시지 패턴을 생성합니다.
 type MessageBuilder struct {
 	emoji UIEmoji
 }
 
-// NewMessageBuilder 는 기본 이모지를 사용하는 MessageBuilder를 생성한다.
+// NewMessageBuilder: 기본 이모지를 사용하는 MessageBuilder를 생성합니다.
 func NewMessageBuilder() *MessageBuilder {
 	return &MessageBuilder{emoji: DefaultEmoji}
 }
 
-// CountedHeader 는 설정된 알람 개수 헤더를 생성한다.
+// CountedHeader: 설정된 알람 개수 헤더를 생성합니다.
 func (mb *MessageBuilder) CountedHeader(emoji, label string, count int) string {
 	return fmt.Sprintf("%s %s (%d개)", emoji, label, count)
 }
 
-// TimeRangeHeader 는 시간 범위 헤더를 생성한다.
+// TimeRangeHeader: 시간 범위 헤더를 생성합니다.
 func (mb *MessageBuilder) TimeRangeHeader(emoji, label string, hours, count int) string {
 	return fmt.Sprintf("%s %s (%d시간 이내, %d개)", emoji, label, hours, count)
 }
 
-// DayRangeHeader 는 일수 범위 헤더를 생성한다.
+// DayRangeHeader: 일수 범위 헤더를 생성합니다.
 func (mb *MessageBuilder) DayRangeHeader(emoji, channelName string, days, count int) string {
 	if channelName != "" {
 		return fmt.Sprintf("%s %s 일정 (%d일 이내, %d개)", emoji, channelName, days, count)
@@ -74,28 +74,28 @@ func (mb *MessageBuilder) DayRangeHeader(emoji, channelName string, days, count 
 	return fmt.Sprintf("%s 일정 (%d일 이내, %d개)", emoji, days, count)
 }
 
-// EmptyMessage 는 빈 상태 메시지를 생성한다.
+// EmptyMessage: 빈 상태 메시지를 생성합니다.
 func (mb *MessageBuilder) EmptyMessage(emoji, message string) string {
 	return fmt.Sprintf("%s %s", emoji, message)
 }
 
-// UsageHint 는 사용법 안내 메시지를 생성한다.
+// UsageHint: 사용법 안내 메시지를 생성합니다.
 func (mb *MessageBuilder) UsageHint(prefix, command, example string) string {
 	return fmt.Sprintf("%s 사용법:\n%s%s [멤버명]\n예) %s%s",
 		mb.emoji.Hint, prefix, command, prefix, example)
 }
 
-// ErrorMessage 는 에러 메시지를 생성한다.
+// ErrorMessage: 에러 메시지를 생성합니다.
 func (mb *MessageBuilder) ErrorMessage(message string) string {
 	return fmt.Sprintf("%s %s", mb.emoji.Error, message)
 }
 
-// SuccessMessage 는 성공 메시지를 생성한다.
+// SuccessMessage: 성공 메시지를 생성합니다.
 func (mb *MessageBuilder) SuccessMessage(message string) string {
 	return fmt.Sprintf("%s %s", mb.emoji.Success, message)
 }
 
-// MemberHeader 는 멤버 프로필 헤더를 생성한다.
+// MemberHeader: 멤버 프로필 헤더를 생성합니다.
 func (mb *MessageBuilder) MemberHeader(names []string) string {
 	if len(names) == 0 {
 		return fmt.Sprintf("%s 멤버 정보", mb.emoji.Member)
@@ -122,42 +122,42 @@ func joinNames(names []string) string {
 // 전역 MessageBuilder 인스턴스
 var defaultMessageBuilder = NewMessageBuilder()
 
-// CountedHeader 는 전역 MessageBuilder로 헤더를 생성한다.
+// CountedHeader: 전역 MessageBuilder로 헤더를 생성합니다.
 func CountedHeader(emoji, label string, count int) string {
 	return defaultMessageBuilder.CountedHeader(emoji, label, count)
 }
 
-// TimeRangeHeader 는 전역 MessageBuilder로 헤더를 생성한다.
+// TimeRangeHeader: 전역 MessageBuilder로 헤더를 생성합니다.
 func TimeRangeHeader(emoji, label string, hours, count int) string {
 	return defaultMessageBuilder.TimeRangeHeader(emoji, label, hours, count)
 }
 
-// DayRangeHeader 는 전역 MessageBuilder로 헤더를 생성한다.
+// DayRangeHeader: 전역 MessageBuilder로 헤더를 생성합니다.
 func DayRangeHeader(emoji, channelName string, days, count int) string {
 	return defaultMessageBuilder.DayRangeHeader(emoji, channelName, days, count)
 }
 
-// EmptyMessage 는 전역 MessageBuilder로 메시지를 생성한다.
+// EmptyMessage: 전역 MessageBuilder로 메시지를 생성합니다.
 func EmptyMessage(emoji, message string) string {
 	return defaultMessageBuilder.EmptyMessage(emoji, message)
 }
 
-// UsageHint 는 전역 MessageBuilder로 사용법 안내 메시지를 생성한다.
+// UsageHint: 전역 MessageBuilder로 사용법 안내 메시지를 생성합니다.
 func UsageHint(prefix, command, example string) string {
 	return defaultMessageBuilder.UsageHint(prefix, command, example)
 }
 
-// ErrorMessage 는 전역 MessageBuilder로 에러 메시지를 생성한다.
+// ErrorMessage: 전역 MessageBuilder로 에러 메시지를 생성합니다.
 func ErrorMessage(message string) string {
 	return defaultMessageBuilder.ErrorMessage(message)
 }
 
-// SuccessMessage 는 전역 MessageBuilder로 성공 메시지를 생성한다.
+// SuccessMessage: 전역 MessageBuilder로 성공 메시지를 생성합니다.
 func SuccessMessage(message string) string {
 	return defaultMessageBuilder.SuccessMessage(message)
 }
 
-// MemberHeader 는 전역 MessageBuilder로 멤버 헤더를 생성한다.
+// MemberHeader: 전역 MessageBuilder로 멤버 헤더를 생성합니다.
 func MemberHeader(names []string) string {
 	return defaultMessageBuilder.MemberHeader(names)
 }

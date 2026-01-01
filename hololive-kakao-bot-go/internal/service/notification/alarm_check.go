@@ -15,8 +15,8 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// CheckUpcomingStreams: 구독된 채널들의 예정 방송을 확인하고, 알림 조건(설정된 예고 시간)에 맞으면 알림 메시지를 생성한다.
-// Worker Pool을 사용하여 병렬로 채널 정보를 조회한다.
+// CheckUpcomingStreams: 구독된 채널들의 예정 방송을 확인하고, 알림 조건(설정된 예고 시간)에 맞으면 알림 메시지를 생성합니다.
+// Worker Pool을 사용하여 병렬로 채널 정보를 조회합니다.
 func (as *AlarmService) CheckUpcomingStreams(ctx context.Context) ([]*domain.AlarmNotification, error) {
 	channelIDs, err := as.cache.SMembers(ctx, AlarmChannelRegistryKey)
 	if err != nil {

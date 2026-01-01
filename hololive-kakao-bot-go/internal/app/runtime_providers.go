@@ -36,7 +36,7 @@ func ProvideBot(deps *bot.Dependencies) (*bot.Bot, error) {
 	return created, nil
 }
 
-// ProvideValkeyMQConsumer: 메시지 큐(Valkey) 컨슈머를 생성하여 제공한다.
+// ProvideValkeyMQConsumer: 메시지 큐(Valkey) 컨슈머를 생성하여 제공합니다.
 func ProvideValkeyMQConsumer(
 	ctx context.Context,
 	mqCfg mq.ValkeyMQConfig,
@@ -51,17 +51,17 @@ func ProvideValkeyMQConsumer(
 	return consumer, nil
 }
 
-// ProvideSessionStore: 세션 저장소(Valkey 백엔드)를 생성하여 제공한다.
+// ProvideSessionStore: 세션 저장소(Valkey 백엔드)를 생성하여 제공합니다.
 func ProvideSessionStore(cacheSvc *cache.Service, logger *slog.Logger) *server.ValkeySessionStore {
 	return server.NewValkeySessionStore(cacheSvc.GetClient(), logger)
 }
 
-// ProvideLoginRateLimiter: 로그인 시도 제한(Rate Limiter)을 생성하여 제공한다.
+// ProvideLoginRateLimiter: 로그인 시도 제한(Rate Limiter)을 생성하여 제공합니다.
 func ProvideLoginRateLimiter() *server.LoginRateLimiter {
 	return server.NewLoginRateLimiter()
 }
 
-// ProvideSecurityConfig: 보안 관련 설정(세션 비밀키 등)을 로드하여 제공한다.
+// ProvideSecurityConfig: 보안 관련 설정(세션 비밀키 등)을 로드하여 제공합니다.
 func ProvideSecurityConfig(cfg *config.Config) *server.SecurityConfig {
 	return &server.SecurityConfig{
 		SessionSecret: cfg.Server.SessionSecret,
@@ -69,7 +69,7 @@ func ProvideSecurityConfig(cfg *config.Config) *server.SecurityConfig {
 	}
 }
 
-// ProvideAdminCredentials: 관리자 자격 증명을 설정에서 로드하여 제공한다.
+// ProvideAdminCredentials: 관리자 자격 증명을 설정에서 로드하여 제공합니다.
 func ProvideAdminCredentials(cfg *config.Config) AdminCredentials {
 	return AdminCredentials{
 		User:     cfg.Server.AdminUser,
@@ -77,7 +77,7 @@ func ProvideAdminCredentials(cfg *config.Config) AdminCredentials {
 	}
 }
 
-// ProvideSystemCollector: 시스템 리소스 수집기를 생성하여 제공한다.
+// ProvideSystemCollector: 시스템 리소스 수집기를 생성하여 제공합니다.
 func ProvideSystemCollector(cfg *config.Config) *system.Collector {
 	endpoints := []system.ServiceEndpoint{
 		{Name: "llm-server", URL: cfg.Services.LLMServerHealthURL},
@@ -129,7 +129,7 @@ func ProvideAdminHandler(
 	)
 }
 
-// ProvideAdminAllowedCIDRs: 관리자 페이지 접근 허용 IP 대역을 설정에서 로드하고 파싱하여 제공한다.
+// ProvideAdminAllowedCIDRs: 관리자 페이지 접근 허용 IP 대역을 설정에서 로드하고 파싱하여 제공합니다.
 func ProvideAdminAllowedCIDRs(cfg *config.Config) ([]*net.IPNet, error) {
 	allowed, err := server.NewIPAllowList(cfg.Server.AdminAllowedIPs)
 	if err != nil {
@@ -138,12 +138,12 @@ func ProvideAdminAllowedCIDRs(cfg *config.Config) ([]*net.IPNet, error) {
 	return allowed, nil
 }
 
-// ProvideYouTubeService: YouTube 서비스 인스턴스를 제공한다.
+// ProvideYouTubeService: YouTube 서비스 인스턴스를 제공합니다.
 func ProvideYouTubeService(ytStack *YouTubeStack) *youtube.Service {
 	return ytStack.Service
 }
 
-// ProvideYouTubeScheduler: YouTube 스케줄러 인스턴스를 제공한다.
+// ProvideYouTubeScheduler: YouTube 스케줄러 인스턴스를 제공합니다.
 func ProvideYouTubeScheduler(deps *bot.Dependencies) *youtube.Scheduler {
 	return deps.Scheduler
 }

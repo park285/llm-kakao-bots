@@ -57,7 +57,7 @@ type Bot struct {
 	selfSender       string
 }
 
-// NewBot: 필요한 의존성(Dependencies)을 주입받아 새로운 Bot 인스턴스를 생성하고 초기화한다.
+// NewBot: 필요한 의존성(Dependencies)을 주입받아 새로운 Bot 인스턴스를 생성하고 초기화합니다.
 func NewBot(deps *Dependencies) (*Bot, error) {
 	if deps == nil {
 		return nil, fmt.Errorf("bot dependencies are required")
@@ -176,7 +176,7 @@ func (b *Bot) initializeCommands() {
 	b.logger.Info("Commands initialized", slog.Int("count", registry.Count()))
 }
 
-// Start: 봇 서비스를 시작한다. Redis/Iris 연결 확인, 알림 스케줄러 실행 등을 수행하며 Context가 종료될 때까지 대기한다.
+// Start: 봇 서비스를 시작한다. Redis/Iris 연결 확인, 알림 스케줄러 실행 등을 수행하며 Context가 종료될 때까지 대기합니다.
 func (b *Bot) Start(ctx context.Context) error {
 	b.logger.Info("Starting Hololive KakaoTalk Bot...")
 
@@ -568,7 +568,7 @@ func buildAlarmGroupKey(notif *domain.AlarmNotification) string {
 	return fmt.Sprintf("%s|minutes|%d", notif.RoomID, notif.MinutesUntil)
 }
 
-// Shutdown: 봇의 리소스를 정리하고 실행 중인 작업(알림 체커 등)을 안전하게 종료한다.
+// Shutdown: 봇의 리소스를 정리하고 실행 중인 작업(알림 체커 등)을 안전하게 종료합니다.
 func (b *Bot) Shutdown(ctx context.Context) error {
 	b.logger.Info("Shutting down bot...")
 

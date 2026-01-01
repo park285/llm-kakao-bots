@@ -19,7 +19,7 @@ func (as *AlarmService) CacheMemberName(ctx context.Context, channelID, memberNa
 	return nil
 }
 
-// GetMemberName: 캐시된 멤버 이름을 조회한다. 없으면 빈 문자열을 반환한다.
+// GetMemberName: 캐시된 멤버 이름을 조회한다. 없으면 빈 문자열을 반환합니다.
 func (as *AlarmService) GetMemberName(ctx context.Context, channelID string) (string, error) {
 	name, err := as.cache.HGet(ctx, MemberNameKey, channelID)
 	if err != nil {
@@ -28,7 +28,7 @@ func (as *AlarmService) GetMemberName(ctx context.Context, channelID string) (st
 	return name, nil
 }
 
-// GetMemberNameWithFallback: 2-layer fallback으로 멤버 이름을 조회한다.
+// GetMemberNameWithFallback: 2-layer fallback으로 멤버 이름을 조회합니다.
 // 1. Cache (Valkey) → 2. Database (alarms 테이블)
 // DB 조회 성공 시 Valkey에 캐싱하여 다음 요청은 Valkey에서 처리.
 func (as *AlarmService) GetMemberNameWithFallback(ctx context.Context, channelID string) string {
@@ -80,7 +80,7 @@ func (as *AlarmService) SetUserName(ctx context.Context, userID, userName string
 	return nil
 }
 
-// MarkAsNotified: 해당 방송(streamID)에 대해 특정 시점(minutesUntil)의 알림을 발송했음을 기록한다.
+// MarkAsNotified: 해당 방송(streamID)에 대해 특정 시점(minutesUntil)의 알림을 발송했음을 기록합니다.
 func (as *AlarmService) MarkAsNotified(ctx context.Context, streamID string, startScheduled time.Time, minutesUntil int) error {
 	notifiedKey := NotifiedKeyPrefix + streamID
 	notifiedData := NotifiedData{
@@ -108,7 +108,7 @@ func (as *AlarmService) isAlreadyNotified(ctx context.Context, streamID string) 
 	return err == nil && notifiedData.StartScheduled != ""
 }
 
-// GetNextStreamInfo: 특정 채널의 다음 방송 정보(예정 또는 라이브)를 캐시에서 조회한다.
+// GetNextStreamInfo: 특정 채널의 다음 방송 정보(예정 또는 라이브)를 캐시에서 조회합니다.
 func (as *AlarmService) GetNextStreamInfo(ctx context.Context, channelID string) (*domain.NextStreamInfo, error) {
 	as.cacheMutex.RLock()
 	defer as.cacheMutex.RUnlock()

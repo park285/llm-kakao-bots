@@ -162,7 +162,7 @@ func (h *Service) GetUpcomingStreams(ctx context.Context, hours int) ([]*domain.
 	return upcoming, nil
 }
 
-// GetChannelSchedule: 특정 채널의 방송 일정(예정된 방송)을 조회한다.
+// GetChannelSchedule: 특정 채널의 방송 일정(예정된 방송)을 조회합니다.
 // includeLive가 true이면 현재 진행 중인 방송도 포함한다.
 func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hours int, includeLive bool) ([]*domain.Stream, error) {
 	cacheKey := fmt.Sprintf("channel_schedule_%s_%d_%t", channelID, hours, includeLive)
@@ -263,7 +263,7 @@ func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hour
 	return result, nil
 }
 
-// SearchChannels: 채널 이름 검색 쿼리를 통해 해당하는 Hololive 채널 목록을 조회한다.
+// SearchChannels: 채널 이름 검색 쿼리를 통해 해당하는 Hololive 채널 목록을 조회합니다.
 func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.Channel, error) {
 	cacheKey := buildSearchChannelsCacheKey(query)
 
@@ -320,7 +320,7 @@ func buildSearchChannelsCacheKey(query string) string {
 	return searchChannelsCacheKeyPrefix + hex.EncodeToString(sum[:])
 }
 
-// GetChannel: 채널 ID로 특정 채널의 상세 정보를 조회한다.
+// GetChannel: 채널 ID로 특정 채널의 상세 정보를 조회합니다.
 func (h *Service) GetChannel(ctx context.Context, channelID string) (*domain.Channel, error) {
 	cacheKey := fmt.Sprintf("channel_%s", channelID)
 

@@ -96,7 +96,7 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 	}, nil
 }
 
-// InitializeBotDependencies - 봇 의존성을 초기화한다.
+// InitializeBotDependencies - 봇 의존성을 초기화합니다.
 func InitializeBotDependencies(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*bot.Dependencies, func(), error) {
 	infra, err := initCoreInfrastructure(ctx, cfg, logger)
 	if err != nil {

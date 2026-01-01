@@ -86,7 +86,6 @@ const LoginPage = () => {
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
               Hololive Bot <span className="text-sky-500">Console</span>
             </h1>
-            <p className="text-slate-400 text-sm mt-2 font-medium">관리자 계정으로 접속하세요</p>
           </div>
 
           {/* Login Form */}

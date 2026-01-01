@@ -7,7 +7,7 @@ type helpTemplateData struct {
 	Prefix string
 }
 
-// FormatHelp: 도움말 메시지를 생성한다.
+// FormatHelp: 도움말 메시지를 생성합니다.
 func (f *ResponseFormatter) FormatHelp() string {
 	data := helpTemplateData{Emoji: DefaultEmoji, Prefix: f.prefix}
 	rendered, err := executeFormatterTemplate("help.tmpl", data)

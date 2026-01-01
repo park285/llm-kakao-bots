@@ -38,7 +38,7 @@ func (c CommandType) String() string {
 	return string(c)
 }
 
-// IsValid: 해당 명령어 타입이 유효한지(정의된 목록에 존재하는지) 검증한다.
+// IsValid: 해당 명령어 타입이 유효한지(정의된 목록에 존재하는지) 검증합니다.
 func (c CommandType) IsValid() bool {
 	switch c {
 	case CommandLive, CommandUpcoming, CommandSchedule, CommandHelp,
@@ -71,17 +71,17 @@ type ChannelSelection struct {
 	Reasoning     string  `json:"reasoning"`
 }
 
-// IsSingle: 파싱 결과가 단 하나의 명확한 명령어로 해석되었는지 확인한다.
+// IsSingle: 파싱 결과가 단 하나의 명확한 명령어로 해석되었는지 확인합니다.
 func (pr *ParseResults) IsSingle() bool {
 	return pr.Single != nil
 }
 
-// IsMultiple: 파싱 결과가 여러 개의 후보(중의적 해석)를 포함하고 있는지 확인한다.
+// IsMultiple: 파싱 결과가 여러 개의 후보(중의적 해석)를 포함하고 있는지 확인합니다.
 func (pr *ParseResults) IsMultiple() bool {
 	return len(pr.Multiple) > 0
 }
 
-// GetCommands: 해석된 모든 명령어 후보 리스트를 반환한다.
+// GetCommands: 해석된 모든 명령어 후보 리스트를 반환합니다.
 func (pr *ParseResults) GetCommands() []*ParseResult {
 	if pr.IsSingle() {
 		return []*ParseResult{pr.Single}

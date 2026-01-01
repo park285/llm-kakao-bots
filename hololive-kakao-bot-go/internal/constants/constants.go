@@ -2,7 +2,7 @@ package constants
 
 import "time"
 
-// CacheTTL 는 패키지 변수다.
+// CacheTTL: 패키지 변수다.
 var CacheTTL = struct {
 	LiveStreams      time.Duration
 	UpcomingStreams  time.Duration
@@ -21,7 +21,7 @@ var CacheTTL = struct {
 	NotificationSent: 24 * time.Hour,   // 24시간 - 알림 발송 기록
 }
 
-// MemberCacheDefaults 는 패키지 변수다.
+// MemberCacheDefaults: 패키지 변수다.
 var MemberCacheDefaults = struct {
 	ValkeyTTL           time.Duration
 	WarmUpChunkSize     int
@@ -32,7 +32,7 @@ var MemberCacheDefaults = struct {
 	WarmUpMaxGoroutines: 10,
 }
 
-// WebSocketConfig 는 패키지 변수다.
+// WebSocketConfig: 패키지 변수다.
 var WebSocketConfig = struct {
 	MaxReconnectAttempts int
 	ReconnectDelay       time.Duration
@@ -41,7 +41,7 @@ var WebSocketConfig = struct {
 	ReconnectDelay:       5 * time.Second,
 }
 
-// ValkeyConfig 는 패키지 변수다.
+// ValkeyConfig: 패키지 변수다.
 var ValkeyConfig = struct {
 	ReadyTimeout      time.Duration
 	BlockingPoolSize  int
@@ -52,14 +52,14 @@ var ValkeyConfig = struct {
 	PipelineMultiplex: 4,
 }
 
-// AIInputLimits 는 패키지 변수다.
+// AIInputLimits: 패키지 변수다.
 var AIInputLimits = struct {
 	MaxQueryLength int
 }{
 	MaxQueryLength: 500,
 }
 
-// RetryConfig 는 패키지 변수다.
+// RetryConfig: 패키지 변수다.
 var RetryConfig = struct {
 	MaxAttempts int
 	BaseDelay   time.Duration
@@ -70,7 +70,7 @@ var RetryConfig = struct {
 	Jitter:      250 * time.Millisecond,
 }
 
-// CircuitBreakerConfig 는 패키지 변수다.
+// CircuitBreakerConfig: 패키지 변수다.
 var CircuitBreakerConfig = struct {
 	FailureThreshold    int
 	ResetTimeout        time.Duration
@@ -85,7 +85,7 @@ var CircuitBreakerConfig = struct {
 	HealthCheckTimeout:  10 * time.Second, // Health Check 타임아웃 (10초)
 }
 
-// PaginationConfig 는 패키지 변수다.
+// PaginationConfig: 패키지 변수다.
 var PaginationConfig = struct {
 	ItemsPerPage   int
 	Timeout        time.Duration
@@ -96,7 +96,7 @@ var PaginationConfig = struct {
 	MaxEmbedFields: 25,              // Discord Embed 필드 최대 개수
 }
 
-// APIConfig 는 패키지 변수다.
+// APIConfig: 패키지 변수다.
 var APIConfig = struct {
 	HolodexBaseURL   string
 	HolodexTimeout   time.Duration
@@ -107,7 +107,7 @@ var APIConfig = struct {
 	MaxRetryAttempts: 3,
 }
 
-// HolodexTransportConfig 는 Holodex HTTP Transport 설정이다.
+// HolodexTransportConfig: Holodex HTTP Transport 설정입니다.
 // 동시 요청 시 커넥션 풀 고갈 방지를 위해 디폴트(MaxIdleConnsPerHost=2)보다 높게 설정한다.
 var HolodexTransportConfig = struct {
 	MaxConnsPerHost     int
@@ -119,7 +119,7 @@ var HolodexTransportConfig = struct {
 	IdleConnTimeout:     30 * time.Second,
 }
 
-// OfficialScheduleConfig 는 패키지 변수다.
+// OfficialScheduleConfig: 패키지 변수다.
 var OfficialScheduleConfig = struct {
 	BaseURL     string
 	Timeout     time.Duration
@@ -130,7 +130,7 @@ var OfficialScheduleConfig = struct {
 	CacheExpiry: 30 * time.Minute,
 }
 
-// OfficialProfileConfig 는 패키지 변수다.
+// OfficialProfileConfig: 패키지 변수다.
 var OfficialProfileConfig = struct {
 	BaseURL        string
 	UserAgent      string
@@ -147,7 +147,7 @@ var OfficialProfileConfig = struct {
 	OutputFile:     "internal/domain/data/official_profiles_raw.json",
 }
 
-// YouTubeConfig 는 패키지 변수다.
+// YouTubeConfig: 패키지 변수다.
 var YouTubeConfig = struct {
 	DailyQuotaLimit       int
 	SearchQuotaCost       int
@@ -168,7 +168,7 @@ var YouTubeConfig = struct {
 	CacheExpiration:       2 * time.Hour,
 }
 
-// StringLimits 는 패키지 변수다.
+// StringLimits: 패키지 변수다.
 var StringLimits = struct {
 	EmbedTitle       int
 	EmbedDescription int
@@ -185,9 +185,10 @@ var StringLimits = struct {
 	NextStreamTitle:  40,
 }
 
-// MQConfig 는 패키지 변수다.
+// MQConfig: 패키지 변수다.
 var MQConfig = struct {
 	ReplyStreamKey           string
+	ReplyStreamMaxLen        int64
 	ConsumerGroup            string
 	ConnWriteTimeout         time.Duration
 	BlockingPoolSize         int
@@ -202,6 +203,7 @@ var MQConfig = struct {
 	RetryDelay               time.Duration
 }{
 	ReplyStreamKey:           "kakao:bot:reply",
+	ReplyStreamMaxLen:        1000,
 	ConsumerGroup:            "hololive-bot-group",
 	ConnWriteTimeout:         3 * time.Second,
 	BlockingPoolSize:         50,
@@ -216,7 +218,7 @@ var MQConfig = struct {
 	RetryDelay:               1 * time.Second,
 }
 
-// AppTimeout 는 앱 빌드/종료 타임아웃 설정이다.
+// AppTimeout: 앱 빌드/종료 타임아웃 설정입니다.
 var AppTimeout = struct {
 	Build    time.Duration
 	Shutdown time.Duration
@@ -225,7 +227,7 @@ var AppTimeout = struct {
 	Shutdown: 10 * time.Second,
 }
 
-// ServerTimeout 는 HTTP 서버 타임아웃이다.
+// ServerTimeout: HTTP 서버 타임아웃입니다.
 var ServerTimeout = struct {
 	ReadHeader     time.Duration
 	Read           time.Duration
@@ -240,14 +242,14 @@ var ServerTimeout = struct {
 	MaxHeaderBytes: 1 << 20, // 1MiB
 }
 
-// ServerConfig 는 서버 기본 설정이다.
+// ServerConfig: 서버 기본 설정입니다.
 var ServerConfig = struct {
 	TrustedProxies []string
 }{
 	TrustedProxies: []string{"127.0.0.1", "::1"},
 }
 
-// CORSConfig 는 CORS 기본 설정이다.
+// CORSConfig: CORS 기본 설정입니다.
 var CORSConfig = struct {
 	AllowOrigins []string
 	AllowMethods []string
@@ -255,10 +257,16 @@ var CORSConfig = struct {
 }{
 	AllowOrigins: []string{"http://localhost:5173"},
 	AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
+	AllowHeaders: []string{
+		"Origin", "Content-Type", "Accept", "Authorization",
+		// Client Hints 헤더 (실제 기기 정보 수집용)
+		"Sec-CH-UA", "Sec-CH-UA-Mobile", "Sec-CH-UA-Platform",
+		"Sec-CH-UA-Platform-Version", "Sec-CH-UA-Model",
+		"Sec-CH-UA-Arch", "Sec-CH-UA-Bitness", "Sec-CH-UA-Full-Version-List",
+	},
 }
 
-// AdminUIConfig 는 Admin UI 정적 파일/캐시 설정이다.
+// AdminUIConfig: Admin UI 정적 파일/캐시 설정입니다.
 var AdminUIConfig = struct {
 	AssetsRoute         string
 	AssetsURLPrefix     string
@@ -281,7 +289,7 @@ var AdminUIConfig = struct {
 	CacheControlFavicon: "public, max-age=86400",
 }
 
-// RequestTimeout 는 HTTP 요청 및 서비스 타임아웃 설정
+// RequestTimeout: HTTP 요청 및 서비스 타임아웃 설정
 var RequestTimeout = struct {
 	AdminRequest      time.Duration
 	BotCommand        time.Duration
@@ -298,12 +306,13 @@ var RequestTimeout = struct {
 	DatabasePing:      5 * time.Second,
 }
 
-// SessionConfig 는 세션 관련 설정이다.
+// SessionConfig: 세션 관련 설정입니다.
 // ExpiryDuration: 세션 TTL (heartbeat 미수신 시 만료)
 // HeartbeatInterval: 프론트엔드 heartbeat 주기 (반드시 IdleTimeout보다 짧아야 함)
 // IdleTimeout: 클라이언트 유휴 상태 타임아웃 (idle 상태에서는 세션 즉시 만료)
 // AbsoluteTimeout: 절대 만료 시간 (OWASP 권고: 최초 로그인 후 재인증 강제)
 // TokenRotation: 하트비트 시 세션 ID 갱신 여부 (토큰 탈취 피해 최소화)
+// RotationInterval: Token Rotation 최소 간격 (잦은 교체 방지, Valkey 부하 감소)
 // GracePeriod: Token Rotation 시 기존 세션 유예 시간 (Race Condition 방지)
 // IdleSessionTTL: idle=true 수신 시 세션 TTL 단축값 (즉시 만료 유도)
 var SessionConfig = struct {
@@ -312,6 +321,7 @@ var SessionConfig = struct {
 	IdleTimeout       time.Duration
 	AbsoluteTimeout   time.Duration
 	TokenRotation     bool
+	RotationInterval  time.Duration
 	GracePeriod       time.Duration
 	IdleSessionTTL    time.Duration
 }{
@@ -320,11 +330,12 @@ var SessionConfig = struct {
 	IdleTimeout:       10 * time.Minute, // 10분 유휴 → 세션 즉시 만료
 	AbsoluteTimeout:   8 * time.Hour,    // 8시간 후 무조건 재로그인 강제 (OWASP)
 	TokenRotation:     true,             // 하트비트 시 새 세션 ID 발급
+	RotationInterval:  15 * time.Minute, // 15분마다만 세션 ID 교체 (잦은 Rotation 방지)
 	GracePeriod:       30 * time.Second, // Token Rotation 시 기존 세션 30초 유지 (병렬 요청 보호)
 	IdleSessionTTL:    10 * time.Second, // idle=true 시 세션 TTL 10초로 단축
 }
 
-// DatabaseConfig 는 데이터베이스 연결 설정이다.
+// DatabaseConfig: 데이터베이스 연결 설정입니다.
 var DatabaseConfig = struct {
 	MaxOpenConns    int
 	MaxIdleConns    int
@@ -335,7 +346,7 @@ var DatabaseConfig = struct {
 	ConnMaxLifetime: 5 * time.Minute,
 }
 
-// DatabaseDefaults 는 PostgreSQL 기본값이다. (env 미설정 시)
+// DatabaseDefaults: PostgreSQL 기본값이다. (env 미설정 시)
 var DatabaseDefaults = struct {
 	Host     string
 	Port     int

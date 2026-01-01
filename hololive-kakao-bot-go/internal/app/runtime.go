@@ -48,7 +48,7 @@ func (r *BotRuntime) Close() {
 	}
 }
 
-// BuildRuntime: 설정과 로거를 기반으로 봇 런타임 환경을 구성하고 모든 의존성을 초기화한다.
+// BuildRuntime: 설정과 로거를 기반으로 봇 런타임 환경을 구성하고 모든 의존성을 초기화합니다.
 func BuildRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*BotRuntime, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config must not be nil")
@@ -69,7 +69,7 @@ func BuildRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logger) 
 	return runtime, nil
 }
 
-// StartAdminServer: 관리자용 웹 서버를 비동기적으로 시작한다.
+// StartAdminServer: 관리자용 웹 서버를 비동기적으로 시작합니다.
 func (r *BotRuntime) StartAdminServer(errCh chan<- error) {
 	if r == nil || r.AdminServer == nil {
 		return
@@ -88,7 +88,7 @@ func (r *BotRuntime) StartAdminServer(errCh chan<- error) {
 	}()
 }
 
-// ShutdownAdminServer: 관리자용 웹 서버를 안전하게 종료한다.
+// ShutdownAdminServer: 관리자용 웹 서버를 안전하게 종료합니다.
 func (r *BotRuntime) ShutdownAdminServer(ctx context.Context) error {
 	if r == nil || r.AdminServer == nil {
 		return nil
@@ -99,7 +99,7 @@ func (r *BotRuntime) ShutdownAdminServer(ctx context.Context) error {
 	return nil
 }
 
-// Start: 봇의 모든 구성 요소(스케줄러, 알람 체커, MQ 컨슈머, 관리자 서버)를 시작한다.
+// Start: 봇의 모든 구성 요소(스케줄러, 알람 체커, MQ 컨슈머, 관리자 서버)를 시작합니다.
 func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 	if r == nil {
 		return
@@ -141,7 +141,7 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 	}
 }
 
-// Shutdown: 봇의 모든 구성 요소를 안전하게 종료하고 리소스를 정리한다.
+// Shutdown: 봇의 모든 구성 요소를 안전하게 종료하고 리소스를 정리합니다.
 func (r *BotRuntime) Shutdown(ctx context.Context) {
 	if r == nil {
 		return

@@ -2,7 +2,7 @@ package util
 
 import "strings"
 
-// TruncateString: 주어진 문자열을 최대 길이(Rune 기준)로 자르고, 초과 시 "..."을 붙여 반환한다.
+// TruncateString: 주어진 문자열을 최대 길이(Rune 기준)로 자르고, 초과 시 "..."을 붙여 반환합니다.
 func TruncateString(s string, maxRunes int) string {
 	runes := []rune(s)
 	if len(runes) <= maxRunes {
@@ -16,12 +16,12 @@ func TrimSpace(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// Normalize: 문자열을 소문자로 변환하고 양쪽 공백을 제거한다.
+// Normalize: 문자열을 소문자로 변환하고 양쪽 공백을 제거합니다.
 func Normalize(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
 
-// NormalizeSuffix: 문자열에서 "짱", "쨩"과 같은 한국어 호칭 접미사를 제거하고 정규화한다.
+// NormalizeSuffix: 문자열에서 "짱", "쨩"과 같은 한국어 호칭 접미사를 제거하고 정규화합니다.
 func NormalizeSuffix(s string) string {
 	normalized := Normalize(s)
 
@@ -36,7 +36,7 @@ func NormalizeSuffix(s string) string {
 	return normalized
 }
 
-// NormalizeKey: 검색 키 생성을 위해 특수문자, 공백 등을 제거하여 문자열을 정규화한다.
+// NormalizeKey: 검색 키 생성을 위해 특수문자, 공백 등을 제거하여 문자열을 정규화합니다.
 func NormalizeKey(name string) string {
 	name = Normalize(name)
 	if name == "" {
@@ -65,7 +65,7 @@ func Slugify(name string) string {
 	return name
 }
 
-// Contains: 문자열 슬라이스에 특정 문자열이 포함되어 있는지 확인한다.
+// Contains: 문자열 슬라이스에 특정 문자열이 포함되어 있는지 확인합니다.
 func Contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
@@ -75,7 +75,7 @@ func Contains(slice []string, item string) bool {
 	return false
 }
 
-// StripLeadingHeader 는 텍스트 앞부분의 헤더 문자열을 제거한다.
+// StripLeadingHeader: 텍스트 앞부분의 헤더 문자열을 제거합니다.
 // 여러 개행 패턴을 시도하여 가장 적절한 방식으로 제거한다.
 func StripLeadingHeader(text, header string) string {
 	if TrimSpace(text) == "" || TrimSpace(header) == "" {

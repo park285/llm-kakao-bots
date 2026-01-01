@@ -22,12 +22,12 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/settings"
 )
 
-// ProvideAdminAddr: 관리자 서버가 리슨할 주소를 반환한다.
+// ProvideAdminAddr: 관리자 서버가 리슨할 주소를 반환합니다.
 func ProvideAdminAddr(cfg *config.Config) string {
 	return fmt.Sprintf(":%d", cfg.Server.Port)
 }
 
-// ProvideAdminServer: 관리자용 HTTP 서버 인스턴스를 생성한다.
+// ProvideAdminServer: 관리자용 HTTP 서버 인스턴스를 생성합니다.
 // H2C(HTTP/2 Cleartext)를 기본으로 사용하여 멀티플렉싱과 헤더 압축 이점을 제공한다.
 func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 	return &http.Server{
@@ -41,7 +41,7 @@ func ProvideAdminServer(addr string, router *gin.Engine) *http.Server {
 	}
 }
 
-// ProvideAdminRouter: 관리자 API 및 UI를 서빙하는 Gin 라우터를 설정하고 제공한다.
+// ProvideAdminRouter: 관리자 API 및 UI를 서빙하는 Gin 라우터를 설정하고 제공합니다.
 func ProvideAdminRouter(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -101,9 +101,14 @@ func newAdminRouter(ctx context.Context, logger *slog.Logger) (*gin.Engine, erro
 	}
 	router.TrustedPlatform = gin.PlatformCloudflare
 	router.Use(gin.Recovery())
-	router.Use(server.LoggerMiddleware(ctx, logger, "/health")) // HTTP 접속 로깅 (/health 제외)
+	router.Use(server.LoggerMiddleware(ctx, logger,
+		"/health",
+		"/admin/api/ws/*", // WebSocket 시스템 통계 스트리밍
+		"*/logs/stream",   // Docker 로그 스트리밍 (suffix 매칭)
+	))
 	router.Use(cors.New(newAdminCORSConfig()))
 	router.Use(server.SecurityHeadersMiddleware())
+	router.Use(server.ClientHintsMiddleware()) // Client Hints 요청 (실제 기기 정보 수집)
 	router.Use(newAdminGzipMiddleware())
 	router.Use(newAdminStaticCacheMiddleware())
 
@@ -122,12 +127,20 @@ func newAdminCORSConfig() cors.Config {
 
 func newAdminGzipMiddleware() gin.HandlerFunc {
 	return gzip.Gzip(gzip.DefaultCompression, gzip.WithCustomShouldCompressFn(func(c *gin.Context) bool {
+		path := c.Request.URL.Path
+
+		// WebSocket 경로 제외 (hijacked connection 경고 방지)
+		// WebSocket은 자체 프레이밍을 사용하므로 HTTP 압축이 불필요함
+		if strings.Contains(path, "/ws/") || strings.HasSuffix(path, "/logs/stream") {
+			return false
+		}
+
 		// Static assets는 항상 압축
-		if strings.HasPrefix(c.Request.URL.Path, constants.AdminUIConfig.AssetsURLPrefix) {
+		if strings.HasPrefix(path, constants.AdminUIConfig.AssetsURLPrefix) {
 			return true
 		}
 		// Health check, 작은 API 응답은 압축 제외
-		if c.Request.URL.Path == "/health" {
+		if path == "/health" {
 			return false
 		}
 		// 기본적으로 압축 허용 (실제 Content-Length는 응답 후 결정됨)

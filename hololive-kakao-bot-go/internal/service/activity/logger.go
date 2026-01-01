@@ -26,7 +26,7 @@ type Logger struct {
 	mu       sync.RWMutex
 }
 
-// NewActivityLogger: 새로운 활동 로그 기록기를 생성한다.
+// NewActivityLogger: 새로운 활동 로그 기록기를 생성합니다.
 func NewActivityLogger(filePath string, logger *slog.Logger) *Logger {
 	return &Logger{
 		filePath: filePath,
@@ -58,7 +58,7 @@ func (l *Logger) Log(entryType, summary string, details map[string]any) {
 	}
 }
 
-// GetRecentLogs: 최근 활동 로그를 조회한다.
+// GetRecentLogs: 최근 활동 로그를 조회합니다.
 func (l *Logger) GetRecentLogs(limit int) ([]LogEntry, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()

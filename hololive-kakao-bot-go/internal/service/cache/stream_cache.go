@@ -8,7 +8,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
 )
 
-// GetStreams: 캐시된 방송 목록을 조회한다.
+// GetStreams: 캐시된 방송 목록을 조회합니다.
 func (c *Service) GetStreams(ctx context.Context, key string) ([]*domain.Stream, bool) {
 	var streams []*domain.Stream
 	if err := c.Get(ctx, key, &streams); err != nil {

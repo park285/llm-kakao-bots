@@ -50,7 +50,7 @@ var SubscriberMilestones = []uint64{
 	1500000, 2000000, 2500000, 3000000, 4000000, 5000000,
 }
 
-// NewScheduler: YouTube 데이터 수집 스케줄러를 생성한다.
+// NewScheduler: YouTube 데이터 수집 스케줄러를 생성합니다.
 func NewScheduler(
 	youtubeSvc *Service,
 	holodexSvc *holodex.Service,
@@ -75,7 +75,7 @@ func NewScheduler(
 	}
 }
 
-// Start: 스케줄러를 시작하여 주기적인 작업을 등록한다.
+// Start: 스케줄러를 시작하여 주기적인 작업을 등록합니다.
 func (ys *Scheduler) Start(ctx context.Context) {
 	ys.ticker = time.NewTicker(schedulerInterval)
 
@@ -127,7 +127,7 @@ func (ys *Scheduler) Start(ctx context.Context) {
 	}
 }
 
-// Stop: 스케줄러를 중지한다.
+// Stop: 스케줄러를 중지합니다.
 func (ys *Scheduler) Stop() {
 	if ys.ticker != nil {
 		ys.ticker.Stop()
@@ -424,7 +424,7 @@ func (ys *Scheduler) dispatchMilestoneAlerts(ctx context.Context) {
 	}
 }
 
-// SendMilestoneAlerts: 감지된 중요 통계 변화(마일스톤 등)에 대해 채팅방에 알림 메시지를 전송한다.
+// SendMilestoneAlerts: 감지된 중요 통계 변화(마일스톤 등)에 대해 채팅방에 알림 메시지를 전송합니다.
 // 예고 알람(99% 도달)과 달성 알람 모두 처리한다.
 func (ys *Scheduler) SendMilestoneAlerts(ctx context.Context, sendMessage func(room, message string) error, rooms []string) error {
 	// 1. 예고 알람 처리 (99% 도달)
@@ -655,7 +655,7 @@ func (ys *Scheduler) checkApproachingAlert(ctx context.Context, nm NearMilestone
 		slog.Any("remaining", remaining))
 }
 
-// FormatApproachingMessage: 마일스톤 예고 알람 메시지를 생성한다.
+// FormatApproachingMessage: 마일스톤 예고 알람 메시지를 생성합니다.
 func FormatApproachingMessage(memberName string, milestone, currentSubs uint64) string {
 	remaining := milestone - currentSubs
 	msg, err := adapter.FormatMilestoneApproaching(

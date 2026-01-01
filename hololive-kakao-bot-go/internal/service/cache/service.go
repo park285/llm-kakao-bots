@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -26,23 +27,50 @@ type Service struct {
 
 // Config: Valkey 연결 설정을 담는 구조체
 type Config struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
+	Host       string
+	Port       int
+	Password   string
+	DB         int
+	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
 }
 
-// NewCacheService: 새로운 Valkey 캐시 서비스 인스턴스를 생성하고 연결을 수립한다.
+// NewCacheService: 새로운 Valkey 캐시 서비스 인스턴스를 생성하고 연결을 수립합니다.
+// SocketPath가 설정되면 UDS로 연결하고, 비어있으면 TCP로 연결합니다.
 func NewCacheService(cfg Config, logger *slog.Logger) (*Service, error) {
-	client, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress:       []string{fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)},
+	// 주소 결정: UDS 모드면 소켓 경로, TCP 모드면 host:port
+	var addr string
+	var connMethod string
+	if cfg.SocketPath != "" {
+		addr = cfg.SocketPath
+		connMethod = "unix"
+	} else {
+		addr = fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+		connMethod = "tcp"
+	}
+
+	opts := valkey.ClientOption{
+		InitAddress:       []string{addr},
 		Password:          cfg.Password,
 		SelectDB:          cfg.DB,
 		ConnWriteTimeout:  constants.MQConfig.ConnWriteTimeout,
 		BlockingPoolSize:  constants.ValkeyConfig.BlockingPoolSize,
 		PipelineMultiplex: constants.ValkeyConfig.PipelineMultiplex,
-		Dialer:            net.Dialer{Timeout: constants.MQConfig.DialTimeout},
-	})
+	}
+
+	// UDS 모드: 커스텀 DialCtxFn 설정
+	if cfg.SocketPath != "" {
+		socketPath := cfg.SocketPath
+		opts.DialCtxFn = func(ctx context.Context, _ string, _ *net.Dialer, _ *tls.Config) (net.Conn, error) {
+			var d net.Dialer
+			d.Timeout = constants.MQConfig.DialTimeout
+			return d.DialContext(ctx, "unix", socketPath)
+		}
+	} else {
+		// TCP 모드: Dialer 설정
+		opts.Dialer = net.Dialer{Timeout: constants.MQConfig.DialTimeout}
+	}
+
+	client, err := valkey.NewClient(opts)
 	if err != nil {
 		return nil, errors.NewCacheError("failed to create cache client", "init", "", err)
 	}
@@ -57,7 +85,8 @@ func NewCacheService(cfg Config, logger *slog.Logger) (*Service, error) {
 	}
 
 	logger.Info("Cache store connected",
-		slog.String("addr", fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)),
+		slog.String("addr", addr),
+		slog.String("method", connMethod),
 		slog.Int("db", cfg.DB),
 		slog.Int("pool_size", constants.ValkeyConfig.BlockingPoolSize),
 	)
@@ -68,7 +97,7 @@ func NewCacheService(cfg Config, logger *slog.Logger) (*Service, error) {
 	}, nil
 }
 
-// Get: 키에 해당하는 값을 조회하고, 결과를 dest 인터페이스에 언마샬링한다.
+// Get: 키에 해당하는 값을 조회하고, 결과를 dest 인터페이스에 언마샬링합니다.
 func (c *Service) Get(ctx context.Context, key string, dest any) error {
 	resp := c.client.Do(ctx, c.client.B().Get().Key(key).Build())
 	if util.IsValkeyNil(resp.Error()) {
@@ -179,7 +208,7 @@ func (c *Service) MSet(ctx context.Context, pairs map[string]any, ttl time.Durat
 	return nil
 }
 
-// Del: 지정된 키를 삭제한다.
+// Del: 지정된 키를 삭제합니다.
 func (c *Service) Del(ctx context.Context, key string) error {
 	if err := c.client.Do(ctx, c.client.B().Del().Key(key).Build()).Error(); err != nil {
 		c.logger.Error("Cache delete failed", slog.String("key", key), slog.Any("error", err))
@@ -188,7 +217,7 @@ func (c *Service) Del(ctx context.Context, key string) error {
 	return nil
 }
 
-// DelMany: 여러 키를 한 번에 삭제한다.
+// DelMany: 여러 키를 한 번에 삭제합니다.
 func (c *Service) DelMany(ctx context.Context, keys []string) (int64, error) {
 	if len(keys) == 0 {
 		return 0, nil
@@ -208,7 +237,7 @@ func (c *Service) DelMany(ctx context.Context, keys []string) (int64, error) {
 	return deleted, nil
 }
 
-// ScanKeys: SCAN 명령을 사용하여 패턴과 일치하는 키를 점진적으로 조회한다.
+// ScanKeys: SCAN 명령을 사용하여 패턴과 일치하는 키를 점진적으로 조회합니다.
 // KEYS와 달리 Redis를 블로킹하지 않아 대량 키 조회에 안전하다.
 // 단, 비원자적이므로 스캔 중 키 변경 시 누락/중복이 발생할 수 있다.
 func (c *Service) ScanKeys(ctx context.Context, pattern string, batchSize int64) ([]string, error) {
@@ -243,7 +272,7 @@ func (c *Service) ScanKeys(ctx context.Context, pattern string, batchSize int64)
 	return keys, nil
 }
 
-// SAdd: Set 자료구조에 멤버들을 추가한다.
+// SAdd: Set 자료구조에 멤버들을 추가합니다.
 func (c *Service) SAdd(ctx context.Context, key string, members []string) (int64, error) {
 	if len(members) == 0 {
 		return 0, nil
@@ -263,7 +292,7 @@ func (c *Service) SAdd(ctx context.Context, key string, members []string) (int64
 	return added, nil
 }
 
-// SRem: Set 자료구조에서 멤버들을 제거한다.
+// SRem: Set 자료구조에서 멤버들을 제거합니다.
 func (c *Service) SRem(ctx context.Context, key string, members []string) (int64, error) {
 	if len(members) == 0 {
 		return 0, nil
@@ -283,7 +312,7 @@ func (c *Service) SRem(ctx context.Context, key string, members []string) (int64
 	return removed, nil
 }
 
-// SMembers: Set의 모든 멤버를 조회한다.
+// SMembers: Set의 모든 멤버를 조회합니다.
 func (c *Service) SMembers(ctx context.Context, key string) ([]string, error) {
 	resp := c.client.Do(ctx, c.client.B().Smembers().Key(key).Build())
 	if resp.Error() != nil {
@@ -299,7 +328,7 @@ func (c *Service) SMembers(ctx context.Context, key string) ([]string, error) {
 	return members, nil
 }
 
-// SIsMember: 특정 값이 Set에 포함되어 있는지 확인한다.
+// SIsMember: 특정 값이 Set에 포함되어 있는지 확인합니다.
 func (c *Service) SIsMember(ctx context.Context, key, member string) (bool, error) {
 	resp := c.client.Do(ctx, c.client.B().Sismember().Key(key).Member(member).Build())
 	if resp.Error() != nil {
@@ -315,7 +344,7 @@ func (c *Service) SIsMember(ctx context.Context, key, member string) (bool, erro
 	return exists, nil
 }
 
-// HSet: Hash 자료구조의 특정 필드에 값을 설정한다.
+// HSet: Hash 자료구조의 특정 필드에 값을 설정합니다.
 func (c *Service) HSet(ctx context.Context, key, field, value string) error {
 	if err := c.client.Do(ctx, c.client.B().Hset().Key(key).FieldValue().FieldValue(field, value).Build()).Error(); err != nil {
 		c.logger.Error("Cache hset failed", slog.String("key", key), slog.String("field", field), slog.Any("error", err))
@@ -324,7 +353,7 @@ func (c *Service) HSet(ctx context.Context, key, field, value string) error {
 	return nil
 }
 
-// HMSet: Hash 자료구조에 여러 필드와 값을 한 번에 설정한다.
+// HMSet: Hash 자료구조에 여러 필드와 값을 한 번에 설정합니다.
 func (c *Service) HMSet(ctx context.Context, key string, fields map[string]any) error {
 	if len(fields) == 0 {
 		return nil
@@ -342,7 +371,7 @@ func (c *Service) HMSet(ctx context.Context, key string, fields map[string]any) 
 	return nil
 }
 
-// HGet: Hash 자료구조에서 특정 필드의 값을 조회한다.
+// HGet: Hash 자료구조에서 특정 필드의 값을 조회합니다.
 func (c *Service) HGet(ctx context.Context, key, field string) (string, error) {
 	resp := c.client.Do(ctx, c.client.B().Hget().Key(key).Field(field).Build())
 	if util.IsValkeyNil(resp.Error()) {
@@ -361,7 +390,7 @@ func (c *Service) HGet(ctx context.Context, key, field string) (string, error) {
 	return value, nil
 }
 
-// HGetAll: Hash의 모든 필드와 값을 조회한다.
+// HGetAll: Hash의 모든 필드와 값을 조회합니다.
 func (c *Service) HGetAll(ctx context.Context, key string) (map[string]string, error) {
 	resp := c.client.Do(ctx, c.client.B().Hgetall().Key(key).Build())
 	if resp.Error() != nil {
@@ -377,7 +406,7 @@ func (c *Service) HGetAll(ctx context.Context, key string) (map[string]string, e
 	return values, nil
 }
 
-// Expire: 키의 만료 시간을 설정한다.
+// Expire: 키의 만료 시간을 설정합니다.
 func (c *Service) Expire(ctx context.Context, key string, ttl time.Duration) error {
 	if err := c.client.Do(ctx, c.client.B().Expire().Key(key).Seconds(int64(ttl.Seconds())).Build()).Error(); err != nil {
 		c.logger.Error("Cache expire failed", slog.String("key", key), slog.Any("error", err))
@@ -386,7 +415,7 @@ func (c *Service) Expire(ctx context.Context, key string, ttl time.Duration) err
 	return nil
 }
 
-// Exists: 키가 존재하는지 확인한다.
+// Exists: 키가 존재하는지 확인합니다.
 func (c *Service) Exists(ctx context.Context, key string) (bool, error) {
 	resp := c.client.Do(ctx, c.client.B().Exists().Key(key).Build())
 	if resp.Error() != nil {
@@ -402,7 +431,7 @@ func (c *Service) Exists(ctx context.Context, key string) (bool, error) {
 	return count > 0, nil
 }
 
-// Close: 캐시 스토어 연결을 안전하게 종료한다.
+// Close: 캐시 스토어 연결을 안전하게 종료합니다.
 func (c *Service) Close() error {
 	var closeErr error
 
@@ -418,7 +447,7 @@ func (c *Service) Close() error {
 	return closeErr
 }
 
-// IsConnected: 캐시 스토어와 연결되어 있는지(PING 응답 여부) 확인한다.
+// IsConnected: 캐시 스토어와 연결되어 있는지(PING 응답 여부) 확인합니다.
 func (c *Service) IsConnected(ctx context.Context) bool {
 	return c.client.Do(ctx, c.client.B().Ping().Build()).Error() == nil
 }

@@ -35,7 +35,7 @@ type memberDirectoryEntryView struct {
 	ShowBoth  bool
 }
 
-// MemberDirectory: 전체 멤버 디렉토리 목록을 포맷팅하여 메시지 문자열을 생성한다.
+// MemberDirectory: 전체 멤버 디렉토리 목록을 포맷팅하여 메시지 문자열을 생성합니다.
 func (f *ResponseFormatter) MemberDirectory(groups []MemberDirectoryGroup, total int) string {
 	viewGroups := prepareMemberDirectoryGroups(groups)
 

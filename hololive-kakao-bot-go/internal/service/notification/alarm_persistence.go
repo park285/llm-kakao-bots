@@ -78,7 +78,7 @@ func (as *AlarmService) clearUserAlarmsAsync(roomID, userID string) {
 	}()
 }
 
-// WarmCacheFromDB: 앱 시작 시 DB에서 모든 알람을 로드하여 Valkey 캐시를 워밍한다.
+// WarmCacheFromDB: 앱 시작 시 DB에서 모든 알람을 로드하여 Valkey 캐시를 워밍합니다.
 // 이 메서드는 앱 시작 시 한 번만 호출되며, 이후 런타임 중에는 Valkey만 사용한다.
 func (as *AlarmService) WarmCacheFromDB(ctx context.Context) error {
 	if as.alarmRepo == nil {

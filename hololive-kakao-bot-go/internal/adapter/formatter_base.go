@@ -28,7 +28,7 @@ func splitTemplateInstruction(rendered string) (instruction string, body string)
 	return instruction, body
 }
 
-// NewResponseFormatter: 새로운 ResponseFormatter 인스턴스를 생성한다.
+// NewResponseFormatter: 새로운 ResponseFormatter 인스턴스를 생성합니다.
 func NewResponseFormatter(prefix string) *ResponseFormatter {
 	if util.TrimSpace(prefix) == "" {
 		prefix = "!"
@@ -36,7 +36,7 @@ func NewResponseFormatter(prefix string) *ResponseFormatter {
 	return &ResponseFormatter{prefix: prefix}
 }
 
-// Prefix: 현재 설정된 명령어 접두사를 반환한다.
+// Prefix: 현재 설정된 명령어 접두사를 반환합니다.
 func (f *ResponseFormatter) Prefix() string {
 	if f == nil {
 		return "!"
@@ -47,12 +47,12 @@ func (f *ResponseFormatter) Prefix() string {
 	return "!"
 }
 
-// FormatError: 에러 메시지를 사용자 친화적인 포맷으로 변환한다.
+// FormatError: 에러 메시지를 사용자 친화적인 포맷으로 변환합니다.
 func (f *ResponseFormatter) FormatError(message string) string {
 	return ErrorMessage(message)
 }
 
-// MemberNotFound: 멤버를 찾을 수 없을 때의 에러 메시지를 생성한다.
+// MemberNotFound: 멤버를 찾을 수 없을 때의 에러 메시지를 생성합니다.
 func (f *ResponseFormatter) MemberNotFound(memberName string) string {
 	return f.FormatError(fmt.Sprintf("'%s' 멤버를 찾을 수 없습니다.", memberName))
 }

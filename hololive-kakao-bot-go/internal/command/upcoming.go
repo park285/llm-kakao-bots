@@ -13,17 +13,17 @@ type UpcomingCommand struct {
 	BaseCommand
 }
 
-// NewUpcomingCommand: 예정 방송 조회 커맨드 핸들러를 생성한다.
+// NewUpcomingCommand: 예정 방송 조회 커맨드 핸들러를 생성합니다.
 func NewUpcomingCommand(deps *Dependencies) *UpcomingCommand {
 	return &UpcomingCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name: 커맨드의 이름("upcoming")을 반환한다.
+// Name: 커맨드의 이름("upcoming")을 반환합니다.
 func (c *UpcomingCommand) Name() string {
 	return "upcoming"
 }
 
-// Description: 커맨드에 대한 설명을 반환한다.
+// Description: 커맨드에 대한 설명을 반환합니다.
 func (c *UpcomingCommand) Description() string {
 	return "예정된 방송 목록"
 }

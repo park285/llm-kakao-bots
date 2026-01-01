@@ -29,7 +29,7 @@ type Talents struct {
 //go:embed data/official_talents.json
 var officialTalentsJSON []byte
 
-// LoadTalents: 임베딩된 JSON 데이터(official_talents.json)를 로드하여 Talents 객체를 초기화한다.
+// LoadTalents: 임베딩된 JSON 데이터(official_talents.json)를 로드하여 Talents 객체를 초기화합니다.
 func LoadTalents() (*Talents, error) {
 	var talents []*OfficialTalent
 	if err := json.Unmarshal(officialTalentsJSON, &talents); err != nil {
@@ -58,7 +58,7 @@ func (ot *Talents) FindByEnglish(name string) *OfficialTalent {
 	return ot.byEnglish[util.Normalize(name)]
 }
 
-// Slug: 탤런트의 고유 식별자(Slug)를 생성한다. 공식 프로필 링크의 경로(path)를 우선 사용하고, 없으면 영문 이름을 변환하여 사용한다.
+// Slug: 탤런트의 고유 식별자(Slug)를 생성한다. 공식 프로필 링크의 경로(path)를 우선 사용하고, 없으면 영문 이름을 변환하여 사용합니다.
 func (ot *OfficialTalent) Slug() string {
 	if ot == nil {
 		return ""

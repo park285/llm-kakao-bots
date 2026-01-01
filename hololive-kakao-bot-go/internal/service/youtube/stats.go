@@ -12,7 +12,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 )
 
-// StatsService: 상위 수준의 통계 서비스로, Repository와 YouTube Service를 조합하여 통계 데이터를 제공한다.
+// StatsService: 상위 수준의 통계 서비스로, Repository와 YouTube Service를 조합하여 통계 데이터를 제공합니다.
 type StatsService struct {
 	oauth     *OAuthService
 	cache     *cache.Service
@@ -34,7 +34,7 @@ type ChannelStatistics struct {
 	ViewCount        uint64
 }
 
-// NewStatsService: 통계 서비스 인스턴스를 생성한다.
+// NewStatsService: 통계 서비스 인스턴스를 생성합니다.
 func NewStatsService(oauth *OAuthService, cacheSvc *cache.Service, statsRepo *StatsRepository, logger *slog.Logger) *StatsService {
 	return &StatsService{
 		oauth:     oauth,

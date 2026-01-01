@@ -30,7 +30,7 @@ type PostgresConfig struct {
 	Database string
 }
 
-// NewPostgresService: 주어진 설정을 사용하여 PostgreSQL 연결을 수립하고 서비스를 초기화한다.
+// NewPostgresService: 주어진 설정을 사용하여 PostgreSQL 연결을 수립하고 서비스를 초기화합니다.
 // 연결 풀 설정 및 초기 헬스 체크(Ping)를 수행하며, GORM 인스턴스도 함께 초기화한다.
 func NewPostgresService(cfg PostgresConfig, logger *slog.Logger) (*PostgresService, error) {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
@@ -88,7 +88,7 @@ func (ps *PostgresService) GetGormDB() *gorm.DB {
 	return ps.gormDB
 }
 
-// Close: 데이터베이스 연결을 안전하게 종료한다.
+// Close: 데이터베이스 연결을 안전하게 종료합니다.
 func (ps *PostgresService) Close() error {
 	if ps.db != nil {
 		if err := ps.db.Close(); err != nil {

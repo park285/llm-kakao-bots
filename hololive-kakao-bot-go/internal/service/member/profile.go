@@ -27,7 +27,7 @@ type ProfileService struct {
 	channelToSlug map[string]string
 }
 
-// NewProfileService: 프로필 데이터와 번역 데이터를 로드하여 서비스 인스턴스를 초기화한다.
+// NewProfileService: 프로필 데이터와 번역 데이터를 로드하여 서비스 인스턴스를 초기화합니다.
 // 검색 최적화를 위한 인덱싱 작업도 수행한다.
 func NewProfileService(cacheSvc *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) (*ProfileService, error) {
 	if membersData == nil {
@@ -92,7 +92,7 @@ func NewProfileService(cacheSvc *cache.Service, membersData domain.MemberDataPro
 	return service, nil
 }
 
-// GetWithTranslation: 영문 이름으로 프로필을 조회하고, 번역된 정보가 있다면 함께 반환한다.
+// GetWithTranslation: 영문 이름으로 프로필을 조회하고, 번역된 정보가 있다면 함께 반환합니다.
 func (s *ProfileService) GetWithTranslation(ctx context.Context, englishName string) (*domain.TalentProfile, *domain.Translated, error) {
 	if util.TrimSpace(englishName) == "" {
 		return nil, nil, fmt.Errorf("member name is required")
@@ -111,7 +111,7 @@ func (s *ProfileService) GetWithTranslation(ctx context.Context, englishName str
 	return profile, translated, nil
 }
 
-// GetByEnglish: 영문 이름(정규화됨)으로 원본 프로필 정보를 조회한다.
+// GetByEnglish: 영문 이름(정규화됨)으로 원본 프로필 정보를 조회합니다.
 func (s *ProfileService) GetByEnglish(englishName string) (*domain.TalentProfile, error) {
 	if profile, ok := s.byEnglish(englishName); ok {
 		return profile, nil
@@ -119,7 +119,7 @@ func (s *ProfileService) GetByEnglish(englishName string) (*domain.TalentProfile
 	return nil, fmt.Errorf("official profile not found for member '%s'", englishName)
 }
 
-// GetByChannel: 채널 ID로 원본 프로필 정보를 조회한다.
+// GetByChannel: 채널 ID로 원본 프로필 정보를 조회합니다.
 func (s *ProfileService) GetByChannel(channelID string) (*domain.TalentProfile, error) {
 	if channelID == "" {
 		return nil, fmt.Errorf("channel id is empty")

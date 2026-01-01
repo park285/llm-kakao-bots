@@ -47,7 +47,7 @@ type MemberMatcher struct {
 	matchCacheLastCleanup time.Time
 }
 
-// NewMemberMatcher: 새로운 MemberMatcher 인스턴스를 생성한다.
+// NewMemberMatcher: 새로운 MemberMatcher 인스턴스를 생성합니다.
 func NewMemberMatcher(
 	ctx context.Context,
 	membersData domain.MemberDataProvider,
@@ -428,7 +428,7 @@ func (mm *MemberMatcher) findBestMatchImpl(ctx context.Context, query string) (*
 	return nil, nil
 }
 
-// GetAllMembers: 등록된 모든 멤버 정보를 반환한다.
+// GetAllMembers: 등록된 모든 멤버 정보를 반환합니다.
 func (mm *MemberMatcher) GetAllMembers() []*domain.Member {
 	ctx := mm.ctx
 	if ctx == nil {
@@ -437,7 +437,7 @@ func (mm *MemberMatcher) GetAllMembers() []*domain.Member {
 	return mm.membersData.WithContext(ctx).GetAllMembers()
 }
 
-// GetMemberByChannelID: 채널 ID를 사용하여 멤버 정보를 조회한다.
+// GetMemberByChannelID: 채널 ID를 사용하여 멤버 정보를 조회합니다.
 func (mm *MemberMatcher) GetMemberByChannelID(ctx context.Context, channelID string) *domain.Member {
 	if ctx == nil {
 		ctx = context.Background()

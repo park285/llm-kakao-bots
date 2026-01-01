@@ -20,7 +20,7 @@ type Registry struct {
 	aliasKeys map[string]string
 }
 
-// NewRegistry: 새로운 명령어 레지스트리 인스턴스를 생성한다.
+// NewRegistry: 새로운 명령어 레지스트리 인스턴스를 생성합니다.
 func NewRegistry() *Registry {
 	return &Registry{
 		handlers:  make(map[string]Command),
@@ -58,7 +58,7 @@ func (r *Registry) Execute(ctx context.Context, cmdCtx *domain.CommandContext, k
 	return nil
 }
 
-// Count: 현재 등록된 명령어의 총 개수를 반환한다.
+// Count: 현재 등록된 명령어의 총 개수를 반환합니다.
 func (r *Registry) Count() int {
 	if r == nil {
 		return 0

@@ -25,7 +25,7 @@ type Member struct {
 	IsGraduated bool     `json:"isGraduated,omitempty"`
 }
 
-// MembersData: 전체 멤버 데이터의 메타데이터 및 목록, 빠른 조회를 위한 맵(Map)을 포함한다.
+// MembersData: 전체 멤버 데이터의 메타데이터 및 목록, 빠른 조회를 위한 맵(Map)을 포함합니다.
 type MembersData struct {
 	Version     string    `json:"version"`
 	LastUpdated string    `json:"lastUpdated"`
@@ -39,7 +39,7 @@ type MembersData struct {
 //go:embed data/members.json
 var membersJSON []byte
 
-// GetAllAliases: 멤버의 한국어 및 일본어 별명을 모두 합쳐 하나의 슬라이스로 반환한다.
+// GetAllAliases: 멤버의 한국어 및 일본어 별명을 모두 합쳐 하나의 슬라이스로 반환합니다.
 func (m *Member) GetAllAliases() []string {
 	if m.Aliases == nil {
 		return []string{}
@@ -51,7 +51,7 @@ func (m *Member) GetAllAliases() []string {
 	return all
 }
 
-// HasAlias: 주어진 이름이 해당 멤버의 별명 목록에 포함되어 있는지 확인한다.
+// HasAlias: 주어진 이름이 해당 멤버의 별명 목록에 포함되어 있는지 확인합니다.
 func (m *Member) HasAlias(name string) bool {
 	aliases := m.GetAllAliases()
 	for _, alias := range aliases {
@@ -62,7 +62,7 @@ func (m *Member) HasAlias(name string) bool {
 	return false
 }
 
-// LoadMembersData: 임베딩된 JSON 데이터(members.json)를 파싱하여 MembersData 구조체를 생성하고 초기화한다.
+// LoadMembersData: 임베딩된 JSON 데이터(members.json)를 파싱하여 MembersData 구조체를 생성하고 초기화합니다.
 func LoadMembersData() (*MembersData, error) {
 	var data MembersData
 	if err := json.Unmarshal(membersJSON, &data); err != nil {
@@ -100,7 +100,7 @@ func (md *MembersData) FindMemberByAlias(alias string) *Member {
 	return nil
 }
 
-// GetChannelIDs: 등록된 모든 멤버의 채널 ID 목록을 추출하여 반환한다.
+// GetChannelIDs: 등록된 모든 멤버의 채널 ID 목록을 추출하여 반환합니다.
 func (md *MembersData) GetChannelIDs() []string {
 	ids := make([]string, len(md.Members))
 	for i, member := range md.Members {
@@ -109,7 +109,7 @@ func (md *MembersData) GetChannelIDs() []string {
 	return ids
 }
 
-// GetAllMembers: 전체 멤버 목록을 반환한다.
+// GetAllMembers: 전체 멤버 목록을 반환합니다.
 func (md *MembersData) GetAllMembers() []*Member {
 	return md.Members
 }

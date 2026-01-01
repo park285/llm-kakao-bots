@@ -22,7 +22,7 @@ type LogConfig struct {
 	Compress   bool
 }
 
-// NewLogger: 콘솔 출력용 기본 slog 로거를 생성한다.
+// NewLogger: 콘솔 출력용 기본 slog 로거를 생성합니다.
 func NewLogger() *slog.Logger {
 	return slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      slog.LevelInfo,
@@ -31,7 +31,7 @@ func NewLogger() *slog.Logger {
 	}))
 }
 
-// NewLoggerWithLevel: 지정된 레벨로 콘솔 출력용 slog 로거를 생성한다.
+// NewLoggerWithLevel: 지정된 레벨로 콘솔 출력용 slog 로거를 생성합니다.
 func NewLoggerWithLevel(level string) *slog.Logger {
 	return slog.New(tint.NewHandler(os.Stdout, &tint.Options{
 		Level:      parseLogLevel(level),
@@ -40,7 +40,7 @@ func NewLoggerWithLevel(level string) *slog.Logger {
 	}))
 }
 
-// EnableFileLogging: 파일 로깅을 활성화하고, 로그 로테이션이 적용된 로거를 반환한다.
+// EnableFileLogging: 파일 로깅을 활성화하고, 로그 로테이션이 적용된 로거를 반환합니다.
 // cfg.Dir이 비어있으면 nil을 반환한다.
 func EnableFileLogging(cfg LogConfig, fileName string) (*slog.Logger, error) {
 	if cfg.Dir == "" {
@@ -74,7 +74,7 @@ func EnableFileLogging(cfg LogConfig, fileName string) (*slog.Logger, error) {
 	return logger, nil
 }
 
-// EnableFileLoggingWithLevel: 지정된 레벨과 파일 로깅을 활성화한다.
+// EnableFileLoggingWithLevel: 지정된 레벨과 파일 로깅을 활성화합니다.
 func EnableFileLoggingWithLevel(cfg LogConfig, fileName, level string) (*slog.Logger, error) {
 	if cfg.Dir == "" {
 		return NewLoggerWithLevel(level), nil

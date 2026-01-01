@@ -23,7 +23,7 @@ const (
 )
 
 // Cache: 멤버 정보를 인메모리(Local) 및 Redis(Valkey)에 이중 캐싱하여 관리하는 서비스
-// DB 부하를 줄이고 빠른 조회를 지원하며, 워밍업(Warm-up) 기능을 제공한다.
+// DB 부하를 줄이고 빠른 조회를 지원하며, 워밍업(Warm-up) 기능을 제공합니다.
 type Cache struct {
 	repo   *Repository
 	cache  *cache.Service
@@ -51,7 +51,7 @@ type CacheConfig struct {
 	WarmUpMaxGoroutines int
 }
 
-// NewMemberCache: 새로운 멤버 캐시 서비스 인스턴스를 생성하고 초기화한다.
+// NewMemberCache: 새로운 멤버 캐시 서비스 인스턴스를 생성하고 초기화합니다.
 // 설정에 따라 생성 시점에 자동으로 캐시 워밍업을 수행할 수 있다.
 func NewMemberCache(ctx context.Context, repo *Repository, cacheService *cache.Service, logger *slog.Logger, cfg CacheConfig) (*Cache, error) {
 	if cfg.ValkeyTTL == 0 {
@@ -89,7 +89,7 @@ func (c *Cache) cacheEnabled() bool {
 	return c != nil && c.cache != nil
 }
 
-// WarmUpCache: DB에서 모든 멤버 정보를 로드하여 Redis 및 인메모리 캐시에 적재한다.
+// WarmUpCache: DB에서 모든 멤버 정보를 로드하여 Redis 및 인메모리 캐시에 적재합니다.
 // 병렬 처리를 통해 대량의 데이터도 빠르게 처리한다.
 func (c *Cache) WarmUpCache(ctx context.Context) error {
 	members, err := c.repo.GetAllMembers(ctx)
@@ -304,7 +304,7 @@ func (c *Cache) cacheMember(ctx context.Context, member *domain.Member) {
 	}
 }
 
-// InvalidateAll: 모든 멤버 관련 캐시(인메모리 및 Redis)를 무효화(삭제)한다.
+// InvalidateAll: 모든 멤버 관련 캐시(인메모리 및 Redis)를 무효화(삭제)합니다.
 func (c *Cache) InvalidateAll(ctx context.Context) error {
 	// 인메모리 캐시 클리어
 	c.byChannelID = sync.Map{}
@@ -331,7 +331,7 @@ func (c *Cache) InvalidateAll(ctx context.Context) error {
 	return nil
 }
 
-// Refresh: 캐시를 전체 무효화한 후 다시 워밍업을 수행한다.
+// Refresh: 캐시를 전체 무효화한 후 다시 워밍업을 수행합니다.
 func (c *Cache) Refresh(ctx context.Context) error {
 	if err := c.InvalidateAll(ctx); err != nil {
 		return err

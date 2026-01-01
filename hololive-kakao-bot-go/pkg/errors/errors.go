@@ -1,4 +1,4 @@
-// Package errors: Hololive 봇 서비스 전체에서 사용되는 에러 타입들을 정의한다.
+// Package errors: Hololive 봇 서비스 전체에서 사용되는 에러 타입들을 정의합니다.
 // game-bot-go의 에러 패턴과 동일한 표준 Go 에러 스타일을 따른다.
 package errors
 
@@ -20,7 +20,7 @@ func (e APIError) Error() string {
 
 func (e APIError) Unwrap() error { return e.Err }
 
-// NewAPIError: API 에러를 생성한다.
+// NewAPIError: API 에러를 생성합니다.
 func NewAPIError(message string, statusCode int, context map[string]any) *APIError {
 	op := message
 	if v, ok := context["operation"]; ok {
@@ -44,7 +44,7 @@ func (e KeyRotationError) Error() string {
 	return fmt.Sprintf("key rotation exhausted operation=%s status=%d", e.Operation, e.StatusCode)
 }
 
-// NewKeyRotationError: 키 로테이션 에러를 생성한다.
+// NewKeyRotationError: 키 로테이션 에러를 생성합니다.
 func NewKeyRotationError(message string, statusCode int, context map[string]any) *KeyRotationError {
 	op := message
 	if v, ok := context["url"]; ok {
@@ -74,7 +74,7 @@ func (e CacheError) Error() string {
 
 func (e CacheError) Unwrap() error { return e.Err }
 
-// NewCacheError: 캐시 에러를 생성한다.
+// NewCacheError: 캐시 에러를 생성합니다.
 func NewCacheError(message, operation, key string, cause error) *CacheError {
 	return &CacheError{
 		Operation: operation,
@@ -105,7 +105,7 @@ func (e ValidationError) Error() string {
 	return fmt.Sprintf("validation error field=%s: %s", e.Field, e.Message)
 }
 
-// NewValidationError: 검증 에러를 생성한다.
+// NewValidationError: 검증 에러를 생성합니다.
 func NewValidationError(message, field string, value any) *ValidationError {
 	return &ValidationError{
 		Field:   field,
@@ -129,7 +129,7 @@ func (e ServiceError) Error() string {
 
 func (e ServiceError) Unwrap() error { return e.Err }
 
-// NewServiceError: 서비스 에러를 생성한다.
+// NewServiceError: 서비스 에러를 생성합니다.
 func NewServiceError(message, service, operation string, cause error) *ServiceError {
 	return &ServiceError{
 		Service:   service,

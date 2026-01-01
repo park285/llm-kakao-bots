@@ -49,7 +49,7 @@ type channelScheduleTemplateData struct {
 	Streams     []scheduleEntryView
 }
 
-// FormatLiveStreams: 라이브 스트림 목록을 포맷팅하여 메시지 문자열을 생성한다.
+// FormatLiveStreams: 라이브 스트림 목록을 포맷팅하여 메시지 문자열을 생성합니다.
 func (f *ResponseFormatter) FormatLiveStreams(streams []*domain.Stream) string {
 	data := liveStreamsTemplateData{Emoji: DefaultEmoji, Count: len(streams)}
 	if len(streams) > 0 {
@@ -78,7 +78,7 @@ func (f *ResponseFormatter) FormatLiveStreams(streams []*domain.Stream) string {
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// UpcomingStreams: 예정된 방송 목록을 포맷팅하여 메시지 문자열을 생성한다.
+// UpcomingStreams: 예정된 방송 목록을 포맷팅하여 메시지 문자열을 생성합니다.
 func (f *ResponseFormatter) UpcomingStreams(streams []*domain.Stream, hours int) string {
 	data := upcomingStreamsTemplateData{Emoji: DefaultEmoji, Count: len(streams), Hours: hours}
 	if len(streams) > 0 {
@@ -108,7 +108,7 @@ func (f *ResponseFormatter) UpcomingStreams(streams []*domain.Stream, hours int)
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// ChannelSchedule: 특정 채널의 방송 일정을 포맷팅하여 메시지 문자열을 생성한다.
+// ChannelSchedule: 특정 채널의 방송 일정을 포맷팅하여 메시지 문자열을 생성합니다.
 func (f *ResponseFormatter) ChannelSchedule(channel *domain.Channel, streams []*domain.Stream, days int) string {
 	data := channelScheduleTemplateData{Emoji: DefaultEmoji, Days: days, Count: len(streams)}
 	if channel != nil {

@@ -13,7 +13,7 @@ type ServiceAdapter struct {
 	ctx   context.Context
 }
 
-// NewMemberServiceAdapter: 새로운 MemberServiceAdapter 인스턴스를 생성한다.
+// NewMemberServiceAdapter: 새로운 MemberServiceAdapter 인스턴스를 생성합니다.
 func NewMemberServiceAdapter(cache *Cache) *ServiceAdapter {
 	return &ServiceAdapter{
 		cache: cache,
@@ -66,7 +66,7 @@ func (a *ServiceAdapter) GetAllMembers() []*domain.Member {
 	return members
 }
 
-// WithContext: 커스텀 context를 가진 새 adapter를 생성한다.
+// WithContext: 커스텀 context를 가진 새 adapter를 생성합니다.
 func (a *ServiceAdapter) WithContext(ctx context.Context) domain.MemberDataProvider {
 	if ctx == nil {
 		ctx = context.Background()

@@ -23,7 +23,7 @@ func (s StreamStatus) String() string {
 	return string(s)
 }
 
-// IsValid: 방송 상태 값이 유효한지 검증한다.
+// IsValid: 방송 상태 값이 유효한지 검증합니다.
 func (s StreamStatus) IsValid() bool {
 	switch s {
 	case StreamStatusLive, StreamStatusUpcoming, StreamStatusPast:
@@ -49,7 +49,7 @@ type Stream struct {
 	Channel        *Channel     `json:"channel,omitempty"`
 }
 
-// IsLive: 방송이 현재 진행 중('live')인지 확인한다.
+// IsLive: 방송이 현재 진행 중('live')인지 확인합니다.
 func (s *Stream) IsLive() bool {
 	if s == nil {
 		return false
@@ -57,7 +57,7 @@ func (s *Stream) IsLive() bool {
 	return s.Status == StreamStatusLive
 }
 
-// IsUpcoming: 방송이 예정('upcoming') 상태인지 확인한다.
+// IsUpcoming: 방송이 예정('upcoming') 상태인지 확인합니다.
 func (s *Stream) IsUpcoming() bool {
 	if s == nil {
 		return false
@@ -65,7 +65,7 @@ func (s *Stream) IsUpcoming() bool {
 	return s.Status == StreamStatusUpcoming
 }
 
-// IsPast: 방송이 종료('past')되었는지 확인한다.
+// IsPast: 방송이 종료('past')되었는지 확인합니다.
 func (s *Stream) IsPast() bool {
 	if s == nil {
 		return false
@@ -84,7 +84,7 @@ func (s *Stream) GetYouTubeURL() string {
 	return "https://youtube.com/watch?v=" + s.ID
 }
 
-// TimeUntilStart: 예정된 방송 시작 시각까지 남은 시간을 Duration으로 반환한다.
+// TimeUntilStart: 예정된 방송 시작 시각까지 남은 시간을 Duration으로 반환합니다.
 // 이미 시작 시간이 지났거나 예정 시간이 없으면 nil을 반환한다.
 func (s *Stream) TimeUntilStart() *time.Duration {
 	if s.StartScheduled == nil {
@@ -100,7 +100,7 @@ func (s *Stream) TimeUntilStart() *time.Duration {
 	return &duration
 }
 
-// MinutesUntilStart: 방송 시작까지 남은 시간을 '분' 단위(올림)로 계산하여 반환한다.
+// MinutesUntilStart: 방송 시작까지 남은 시간을 '분' 단위(올림)로 계산하여 반환합니다.
 func (s *Stream) MinutesUntilStart() int {
 	return util.MinutesUntilCeil(s.StartScheduled, time.Now())
 }

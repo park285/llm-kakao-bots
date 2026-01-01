@@ -14,7 +14,7 @@ type sequentialDispatcher struct {
 	normalize NormalizeFunc
 }
 
-// NewSequentialDispatcher: 이벤트를 순차적으로 처리하는 기본 Dispatcher 구현체를 생성한다.
+// NewSequentialDispatcher: 이벤트를 순차적으로 처리하는 기본 Dispatcher 구현체를 생성합니다.
 func NewSequentialDispatcher(registry *Registry, normalize NormalizeFunc) Dispatcher {
 	return &sequentialDispatcher{registry: registry, normalize: normalize}
 }

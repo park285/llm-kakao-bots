@@ -19,14 +19,14 @@ type DBIntegrationRuntime struct {
 	cleanup func()
 }
 
-// Close: 런타임 리소스를 정리하고 연결을 해제한다.
+// Close: 런타임 리소스를 정리하고 연결을 해제합니다.
 func (r *DBIntegrationRuntime) Close() {
 	if r != nil && r.cleanup != nil {
 		r.cleanup()
 	}
 }
 
-// BuildDBIntegrationRuntime: PostgreSQL 설정을 기반으로 DB 통합 런타임 환경을 구축한다.
+// BuildDBIntegrationRuntime: PostgreSQL 설정을 기반으로 DB 통합 런타임 환경을 구축합니다.
 func BuildDBIntegrationRuntime(
 	ctx context.Context,
 	pgCfg config.PostgresConfig,

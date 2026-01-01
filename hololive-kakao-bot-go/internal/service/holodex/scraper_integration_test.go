@@ -13,7 +13,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 )
 
-// TestScraperLiveIntegration 은 실제 schedule.hololive.tv 사이트에서 스크래핑이 동작하는지 확인합니다.
+// TestScraperLiveIntegration: 실제 schedule.hololive.tv 사이트에서 스크래핑이 동작하는지 확인합니다.
 // 이 테스트는 -tags=integration 플래그로만 실행됩니다.
 func TestScraperLiveIntegration(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

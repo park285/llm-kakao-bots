@@ -28,6 +28,8 @@ type ValkeyMQConfig struct {
 	ReadCount     int64
 	BlockTimeout  time.Duration
 	WorkerCount   int // Worker pool 크기
+	// ReplyStreamMaxLen: reply stream의 최대 길이 (0 이하면 trim 비활성)
+	ReplyStreamMaxLen int64
 }
 
 // newValkeyClient: 공통 Valkey 클라이언트 생성 로직
@@ -74,14 +76,14 @@ func newValkeyClient(host string, port int, password string, logger *slog.Logger
 }
 
 // ValkeyMQClient: 메시지 큐에 메시지를 발행(Publish)하는 클라이언트
-// Iris 서버로 보낼 응답 메시지를 Redis Stream에 적재한다.
+// Iris 서버로 보낼 응답 메시지를 Redis Stream에 적재합니다.
 type ValkeyMQClient struct {
 	cfg    ValkeyMQConfig
 	client valkey.Client
 	logger *slog.Logger
 }
 
-// NewValkeyMQClient: 새로운 ValkeyMQClient 인스턴스를 생성하고 연결을 초기화한다.
+// NewValkeyMQClient: 새로운 ValkeyMQClient 인스턴스를 생성하고 연결을 초기화합니다.
 func NewValkeyMQClient(ctx context.Context, cfg ValkeyMQConfig, logger *slog.Logger) *ValkeyMQClient {
 	client, err := newValkeyClient(cfg.Host, cfg.Port, cfg.Password, logger)
 	if err != nil {
@@ -99,17 +101,25 @@ func NewValkeyMQClient(ctx context.Context, cfg ValkeyMQConfig, logger *slog.Log
 	}
 }
 
-// SendMessage: 지정된 채팅방으로 보낼 텍스트 메시지를 Redis Stream에 추가(발행)한다.
+// SendMessage: 지정된 채팅방으로 보낼 텍스트 메시지를 Redis Stream에 추가(발행)합니다.
 func (c *ValkeyMQClient) SendMessage(ctx context.Context, room, message string) error {
 	streamKey := constants.MQConfig.ReplyStreamKey
 
-	cmd := c.client.B().Xadd().Key(streamKey).Id("*").
-		FieldValue().
-		FieldValue("chatId", room).
-		FieldValue("text", message).
-		FieldValue("threadId", "").
-		FieldValue("type", "final").
-		Build()
+	fieldValues := []string{
+		"chatId", room,
+		"text", message,
+		"threadId", "",
+		"type", "final",
+	}
+
+	var args []string
+	if c.cfg.ReplyStreamMaxLen > 0 {
+		args = append(args, "MAXLEN", "~", fmt.Sprintf("%d", c.cfg.ReplyStreamMaxLen))
+	}
+	args = append(args, "*")
+	args = append(args, fieldValues...)
+
+	cmd := c.client.B().Arbitrary("XADD").Keys(streamKey).Args(args...).Build()
 
 	if err := c.client.Do(ctx, cmd).Error(); err != nil {
 		c.logger.Error("MQ_REPLY_ERROR",
@@ -136,7 +146,7 @@ func (c *ValkeyMQClient) SendImage(ctx context.Context, room, imageBase64 string
 	return nil
 }
 
-// Ping: Redis 서버와의 연결 상태를 점검한다.
+// Ping: Redis 서버와의 연결 상태를 점검합니다.
 func (c *ValkeyMQClient) Ping(ctx context.Context) bool {
 	return c.client.Do(ctx, c.client.B().Ping().Build()).Error() == nil
 }
@@ -157,7 +167,7 @@ type MessageHandler interface {
 }
 
 // ValkeyMQConsumer: Redis 스트림을 구독하고 메시지를 수신하여 처리하는 컨슈머
-// Worker Pool을 사용하여 병렬 처리를 지원하며, Consumer Group을 통해 로드 밸런싱을 수행한다.
+// Worker Pool을 사용하여 병렬 처리를 지원하며, Consumer Group을 통해 로드 밸런싱을 수행합니다.
 type ValkeyMQConsumer struct {
 	cfg    ValkeyMQConfig
 	client valkey.Client
@@ -166,7 +176,7 @@ type ValkeyMQConsumer struct {
 	cache  *cache.Service
 }
 
-// NewValkeyMQConsumer: 새로운 ValkeyMQConsumer 인스턴스를 생성한다.
+// NewValkeyMQConsumer: 새로운 ValkeyMQConsumer 인스턴스를 생성합니다.
 func NewValkeyMQConsumer(ctx context.Context, cfg ValkeyMQConfig, logger *slog.Logger, handler MessageHandler, cacheService *cache.Service) *ValkeyMQConsumer {
 	// Worker count 기본값
 	if cfg.WorkerCount == 0 {
@@ -191,7 +201,7 @@ func NewValkeyMQConsumer(ctx context.Context, cfg ValkeyMQConfig, logger *slog.L
 	}
 }
 
-// Start: 별도의 고루틴에서 메시지 수신 루프(run)를 시작한다.
+// Start: 별도의 고루틴에서 메시지 수신 루프(run)를 시작합니다.
 func (c *ValkeyMQConsumer) Start(ctx context.Context) {
 	go c.run(ctx)
 }

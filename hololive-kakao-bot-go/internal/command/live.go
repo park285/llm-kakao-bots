@@ -13,22 +13,22 @@ type LiveCommand struct {
 	BaseCommand
 }
 
-// NewLiveCommand: LiveCommand 인스턴스를 생성한다.
+// NewLiveCommand: LiveCommand 인스턴스를 생성합니다.
 func NewLiveCommand(deps *Dependencies) *LiveCommand {
 	return &LiveCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name: 명령어의 고유 식별자('live')를 반환한다.
+// Name: 명령어의 고유 식별자('live')를 반환합니다.
 func (c *LiveCommand) Name() string {
 	return "live"
 }
 
-// Description: 명령어에 대한 사용자용 설명('현재 방송 중인 스트림 목록')을 반환한다.
+// Description: 명령어에 대한 사용자용 설명('현재 방송 중인 스트림 목록')을 반환합니다.
 func (c *LiveCommand) Description() string {
 	return "현재 방송 중인 스트림 목록"
 }
 
-// Execute: Holodex API를 통해 현재 진행 중인 방송을 조회하고, 결과를 포맷팅하여 채팅방에 전송한다.
+// Execute: Holodex API를 통해 현재 진행 중인 방송을 조회하고, 결과를 포맷팅하여 채팅방에 전송합니다.
 // 특정 멤버 이름이 파라미터로 주어진 경우, 해당 멤버의 방송만 필터링한다.
 func (c *LiveCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {

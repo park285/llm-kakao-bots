@@ -24,7 +24,7 @@ type MemberIntent struct {
 	Reasoning  string           `json:"reasoning"`
 }
 
-// NormalizeMemberIntent: 문자열 형태의 의도를 표준 열거형 타입으로 변환한다.
+// NormalizeMemberIntent: 문자열 형태의 의도를 표준 열거형 타입으로 변환합니다.
 func NormalizeMemberIntent(raw string) MemberIntentType {
 	switch util.Normalize(raw) {
 	case string(MemberIntentMemberInfo):
@@ -36,7 +36,7 @@ func NormalizeMemberIntent(raw string) MemberIntentType {
 	}
 }
 
-// IsMemberInfoIntent: 분석된 의도가 '멤버 정보 조회'이고 신뢰도가 기준치(0.35) 이상인지 확인한다.
+// IsMemberInfoIntent: 분석된 의도가 '멤버 정보 조회'이고 신뢰도가 기준치(0.35) 이상인지 확인합니다.
 func (mic *MemberIntent) IsMemberInfoIntent() bool {
 	if mic == nil {
 		return false

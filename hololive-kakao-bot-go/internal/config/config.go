@@ -50,6 +50,7 @@ type ValkeyMQConfig struct {
 	ReadCount           int
 	BlockTimeoutSeconds int
 	WorkerCount         int
+	ReplyStreamMaxLen   int
 }
 
 // ServerConfig: 관리자용 웹 대시보드 및 API 서버 설정
@@ -70,7 +71,7 @@ type KakaoConfig struct {
 	mu sync.RWMutex
 }
 
-// SnapshotACL: 현재 ACL 설정 상태(활성화 여부 및 허용된 방 목록)의 스냅샷을 반환한다.
+// SnapshotACL: 현재 ACL 설정 상태(활성화 여부 및 허용된 방 목록)의 스냅샷을 반환합니다.
 // Thread-safe하게 읽기 락을 사용한다.
 func (c *KakaoConfig) SnapshotACL() (enabled bool, rooms []string) {
 	if c == nil {
@@ -84,7 +85,7 @@ func (c *KakaoConfig) SnapshotACL() (enabled bool, rooms []string) {
 	return c.ACLEnabled, rooms
 }
 
-// SetACLEnabled: ACL(접근 제어) 기능의 활성화 여부를 '동적으로' 설정한다.
+// SetACLEnabled: ACL(접근 제어) 기능의 활성화 여부를 '동적으로' 설정합니다.
 func (c *KakaoConfig) SetACLEnabled(enabled bool) {
 	if c == nil {
 		return
@@ -96,7 +97,7 @@ func (c *KakaoConfig) SetACLEnabled(enabled bool) {
 	c.ACLEnabled = enabled
 }
 
-// AddRoom: 허용 목록에 새로운 채팅방을 추가한다. 이미 존재하면 false를 반환한다.
+// AddRoom: 허용 목록에 새로운 채팅방을 추가한다. 이미 존재하면 false를 반환합니다.
 func (c *KakaoConfig) AddRoom(room string) bool {
 	if c == nil {
 		return false
@@ -120,7 +121,7 @@ func (c *KakaoConfig) AddRoom(room string) bool {
 	return true
 }
 
-// RemoveRoom: 허용 목록에서 특정 채팅방을 제거한다.
+// RemoveRoom: 허용 목록에서 특정 채팅방을 제거합니다.
 func (c *KakaoConfig) RemoveRoom(room string) bool {
 	if c == nil {
 		return false
@@ -148,7 +149,7 @@ func (c *KakaoConfig) RemoveRoom(room string) bool {
 	return removed
 }
 
-// IsRoomAllowed: 해당 채팅방(chatID)이 봇 사용이 허용된 곳인지 확인한다.
+// IsRoomAllowed: 해당 채팅방(chatID)이 봇 사용이 허용된 곳인지 확인합니다.
 // ACL이 비활성화되어 있으면 모든 방을 허용한다.
 func (c *KakaoConfig) IsRoomAllowed(roomName, chatID string) bool {
 	if c == nil {
@@ -191,10 +192,11 @@ type YouTubeConfig struct {
 
 // ValkeyConfig: 데이터 캐싱 용도의 Redis(Valkey) 연결 설정
 type ValkeyConfig struct {
-	Host     string
-	Port     int
-	Password string
-	DB       int
+	Host       string
+	Port       int
+	Password   string
+	DB         int
+	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
 }
 
 // PostgresConfig: 메인 데이터베이스(PostgreSQL) 연결 설정
@@ -235,7 +237,7 @@ type ServicesConfig struct {
 	GameBotTurtleHealthURL  string // game-bot-go turtlesoup health URL
 }
 
-// Load: .env 파일 및 환경 변수로부터 설정을 로드하고, 기본값을 적용하여 Config 객체를 생성한다.
+// Load: .env 파일 및 환경 변수로부터 설정을 로드하고, 기본값을 적용하여 Config 객체를 생성합니다.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -256,6 +258,10 @@ func Load() (*Config, error) {
 				int(constants.MQConfig.BlockTimeout.Seconds()),
 			),
 			WorkerCount: getEnvInt("MQ_WORKER_COUNT", constants.MQConfig.WorkerCount),
+			ReplyStreamMaxLen: getEnvInt(
+				"MQ_REPLY_STREAM_MAX_LEN",
+				int(constants.MQConfig.ReplyStreamMaxLen),
+			),
 		},
 		Server: ServerConfig{
 			Port:            getEnvInt("SERVER_PORT", 30001),
@@ -277,10 +283,11 @@ func Load() (*Config, error) {
 			EnableQuotaBuilding: getEnvBool("YOUTUBE_ENABLE_QUOTA_BUILDING", false),
 		},
 		Valkey: ValkeyConfig{
-			Host:     getEnv("CACHE_HOST", "localhost"),
-			Port:     getEnvInt("CACHE_PORT", 6379),
-			Password: getEnv("CACHE_PASSWORD", ""),
-			DB:       getEnvInt("CACHE_DB", 0),
+			Host:       getEnv("CACHE_HOST", "localhost"),
+			Port:       getEnvInt("CACHE_PORT", 6379),
+			Password:   getEnv("CACHE_PASSWORD", ""),
+			DB:         getEnvInt("CACHE_DB", 0),
+			SocketPath: getEnv("CACHE_SOCKET_PATH", ""),
 		},
 		Postgres: PostgresConfig{
 			Host:     getEnv("POSTGRES_HOST", constants.DatabaseDefaults.Host),
@@ -321,7 +328,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Validate: 필수 설정값이 누락되지 않았는지 검증한다.
+// Validate: 필수 설정값이 누락되지 않았는지 검증합니다.
 func (c *Config) Validate() error {
 	if c.Server.Port == 0 {
 		return fmt.Errorf("SERVER_PORT is required")

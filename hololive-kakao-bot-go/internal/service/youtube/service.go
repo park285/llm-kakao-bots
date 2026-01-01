@@ -30,7 +30,7 @@ type Service struct {
 	quotaReset time.Time
 }
 
-// NewService: YouTube 서비스 인스턴스를 생성한다.
+// NewService: YouTube 서비스 인스턴스를 생성합니다.
 func NewYouTubeService(ctx context.Context, apiKey string, cacheSvc *cache.Service, logger *slog.Logger) (*Service, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("YouTube API key is required")
@@ -135,7 +135,7 @@ func (ys *Service) fetchChannelUpcoming(ctx context.Context, channelID string, a
 	costMu.Unlock()
 }
 
-// FetchUpcomingStreams: 지정된 채널들의 예정된 방송(라이브 예정) 목록을 조회한다.
+// FetchUpcomingStreams: 지정된 채널들의 예정된 방송(라이브 예정) 목록을 조회합니다.
 func (ys *Service) GetUpcomingStreams(ctx context.Context, channelIDs []string) ([]*domain.Stream, error) {
 	if len(channelIDs) > constants.YouTubeConfig.MaxChannelsPerCall {
 		ys.logger.Warn("Too many channels requested, limiting to max",
@@ -293,7 +293,7 @@ func extractThumbnail(thumbnails *youtube.ThumbnailDetails) *string {
 	return nil
 }
 
-// GetQuotaStatus: 현재 API 할당량 사용량, 잔여량, 초기화 예정 시간을 반환한다.
+// GetQuotaStatus: 현재 API 할당량 사용량, 잔여량, 초기화 예정 시간을 반환합니다.
 func (ys *Service) GetQuotaStatus() (used int, remaining int, resetTime time.Time) {
 	ys.quotaMu.Lock()
 	defer ys.quotaMu.Unlock()
@@ -305,7 +305,7 @@ func (ys *Service) GetQuotaStatus() (used int, remaining int, resetTime time.Tim
 	return ys.quotaUsed, constants.YouTubeConfig.DailyQuotaLimit - ys.quotaUsed, ys.quotaReset
 }
 
-// IsQuotaAvailable: 지정된 채널 수만큼 조회할 수 있는 API 할당량이 남아있는지 확인한다.
+// IsQuotaAvailable: 지정된 채널 수만큼 조회할 수 있는 API 할당량이 남아있는지 확인합니다.
 func (ys *Service) IsQuotaAvailable(channelCount int) bool {
 	estimatedCost := channelCount * constants.YouTubeConfig.SearchQuotaCost
 	err := ys.checkQuota(estimatedCost)
@@ -329,7 +329,7 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-// FetchChannelStats: 지정된 채널들의 통계(구독자 수, 조회수 등)를 조회한다.
+// FetchChannelStats: 지정된 채널들의 통계(구독자 수, 조회수 등)를 조회합니다.
 // 여러 배치를 병렬로 처리하여 레이턴시를 개선한다.
 func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string) (map[string]*ChannelStats, error) {
 	if len(channelIDs) == 0 {
@@ -404,7 +404,7 @@ func (ys *Service) GetChannelStatistics(ctx context.Context, channelIDs []string
 	return result, nil
 }
 
-// GetRecentVideos: 특정 채널의 최근 업로드된 비디오 목록을 조회한다.
+// GetRecentVideos: 특정 채널의 최근 업로드된 비디오 목록을 조회합니다.
 func (ys *Service) GetRecentVideos(ctx context.Context, channelID string, maxResults int64) ([]string, error) {
 	if err := ys.checkQuota(constants.YouTubeConfig.SearchQuotaCost); err != nil {
 		return nil, err

@@ -31,7 +31,7 @@ const (
 	scraperChannelCacheKeyPrefix = "scraper:channel:"
 )
 
-// NewScraperService: 새로운 ScraperService 인스턴스를 생성한다.
+// NewScraperService: 새로운 ScraperService 인스턴스를 생성합니다.
 // 멤버 정보와 매핑 데이터를 초기화하여 크롤링 데이터 파싱에 활용한다.
 func NewScraperService(cacheSvc *cache.Service, membersData domain.MemberDataProvider, logger *slog.Logger) *ScraperService {
 	nameMap := make(map[string]string)
@@ -343,7 +343,7 @@ func (e *StructureChangedError) Error() string {
 	return fmt.Sprintf("%s (parse errors: %d)", e.Message, e.ParseErrors)
 }
 
-// IsStructureError: 에러가 HTML 구조 변경으로 인한 것인지 확인한다.
+// IsStructureError: 에러가 HTML 구조 변경으로 인한 것인지 확인합니다.
 func IsStructureError(err error) bool {
 	structureChangedError := &StructureChangedError{}
 	ok := errors.As(err, &structureChangedError)

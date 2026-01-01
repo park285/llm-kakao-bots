@@ -19,7 +19,7 @@ const (
 	sessionKeyPrefix = "session:admin:"
 )
 
-// ValkeySessionStore 는 Valkey 기반 세션 저장소로 서버 재기동 시에도 세션을 유지한다.
+// ValkeySessionStore: Valkey 기반 세션 저장소로 서버 재기동 시에도 세션을 유지합니다.
 type ValkeySessionStore struct {
 	client valkey.Client
 	logger *slog.Logger
@@ -212,7 +212,7 @@ func (s *ValkeySessionStore) RefreshSessionWithValidation(ctx context.Context, s
 				slog.Any("error", err),
 			)
 		}
-		s.logger.Info("Session TTL shortened (idle)",
+		s.logger.Debug("Session TTL shortened (idle)",
 			slog.String("session_id", truncateSessionID(sessionID)),
 			slog.Duration("ttl", idleTTL),
 		)
@@ -238,6 +238,7 @@ func (s *ValkeySessionStore) RefreshSessionWithValidation(ctx context.Context, s
 // RotateSession: 기존 세션을 삭제하고 새 세션을 생성합니다 (토큰 갱신).
 // 원본 세션의 AbsoluteExpiresAt을 유지하여 절대 만료 시간은 연장 불가.
 // 기존 세션에는 Grace Period (30초)를 적용하여 Race Condition을 방지합니다.
+// RotationInterval(15분) 미경과 시 Rotation을 건너뛰어 Valkey 부하를 방지합니다.
 func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID string) (*Session, error) {
 	// 기존 세션 조회
 	oldSession, err := s.GetSession(ctx, oldSessionID)
@@ -248,14 +249,22 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 		return nil, fmt.Errorf("session not found")
 	}
 
+	// [Rotation Interval 체크: 잦은 교체 방지]
+	// 마지막 Rotation 이후 RotationInterval(15분) 미경과 시 Rotation 건너뛰기.
+	// Valkey 쓰기 부하 방지 및 클라이언트 쿠키 갱신 안정화 목적.
+	rotationInterval := constants.SessionConfig.RotationInterval
+	if !oldSession.LastRotatedAt.IsZero() && time.Since(oldSession.LastRotatedAt) < rotationInterval {
+		s.logger.Debug("Session rotation skipped (interval not elapsed)",
+			slog.String("session_id", truncateSessionID(oldSessionID)),
+			slog.Duration("elapsed", time.Since(oldSession.LastRotatedAt)),
+			slog.Duration("interval", rotationInterval),
+		)
+		return oldSession, nil
+	}
+
 	// [방어적 코드: 중복 회전 방지]
 	// 기존 세션의 남은 TTL 확인.
 	// GracePeriod(30초) + 여유분(5초) 이내라면 이미 회전된 세션으로 간주하고 회전 중단.
-	//
-	// NOTE: 현재 HandleHeartbeat 흐름에서는 RefreshSessionWithValidation이 먼저 호출되어
-	// TTL을 1시간으로 연장하므로, 정상 흐름에서는 이 조건이 실행되지 않습니다.
-	// 다만, 향후 Refresh 로직 변경이나 직접 RotateSession 호출 시를 대비한 방어적 코드입니다.
-	// 삭제해도 보안상 문제는 없으나, 네트워크 지연/병렬 요청 시 이중 회전이 발생할 수 있습니다.
 	key := sessionKeyPrefix + oldSessionID
 	ttlResp := s.client.Do(ctx, s.client.B().Ttl().Key(key).Build())
 	if ttl, err := ttlResp.AsInt64(); err == nil && ttl > 0 {
@@ -265,7 +274,6 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 				slog.String("session_id", truncateSessionID(oldSessionID)),
 				slog.Int64("ttl", ttl),
 			)
-			// 중복 회전 방지: 기존 세션 반환 (클라이언트는 200 OK 받고 계속 진행)
 			return oldSession, nil
 		}
 	}
@@ -276,7 +284,7 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 		return nil, fmt.Errorf("session absolute timeout exceeded")
 	}
 
-	// 새 세션 생성 (AbsoluteExpiresAt 유지)
+	// 새 세션 생성 (AbsoluteExpiresAt 유지, LastRotatedAt 갱신)
 	newSessionID := generateValkeySessionID()
 	now := time.Now()
 	newSession := &Session{
@@ -284,6 +292,7 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 		CreatedAt:         oldSession.CreatedAt, // 원본 생성 시간 유지
 		ExpiresAt:         now.Add(s.ttl),
 		AbsoluteExpiresAt: oldSession.AbsoluteExpiresAt, // 절대 만료 시간 유지!
+		LastRotatedAt:     now,                          // Rotation 시간 기록
 	}
 
 	// 새 세션 저장

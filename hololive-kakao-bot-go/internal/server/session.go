@@ -27,11 +27,13 @@ type SessionProvider interface {
 
 // Session: 관리자 세션 정보를 담는 구조체입니다.
 // AbsoluteExpiresAt: 절대 만료 시간 (하트비트로 연장 불가, OWASP 권고)
+// LastRotatedAt: 마지막 세션 ID 교체 시간 (RotationInterval 체크용)
 type Session struct {
 	ID                string    `json:"id"`
 	CreatedAt         time.Time `json:"created_at"`
 	ExpiresAt         time.Time `json:"expires_at"`
 	AbsoluteExpiresAt time.Time `json:"absolute_expires_at"`
+	LastRotatedAt     time.Time `json:"last_rotated_at,omitempty"`
 }
 
 // AdminAuthMiddleware: API 엔드포인트의 관리자 세션을 검증하는 미들웨어입니다.

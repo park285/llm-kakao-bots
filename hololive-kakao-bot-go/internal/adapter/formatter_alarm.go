@@ -102,7 +102,7 @@ func (f *ResponseFormatter) FormatAlarmAdded(memberName string, added bool, next
 	return rendered
 }
 
-// FormatAlarmRemoved: 알림 삭제 성공 메시지를 생성한다.
+// FormatAlarmRemoved: 알림 삭제 성공 메시지를 생성합니다.
 func (f *ResponseFormatter) FormatAlarmRemoved(memberName string, removed bool) string {
 	data := alarmRemovedTemplateData{
 		Emoji:      DefaultEmoji,
@@ -181,7 +181,7 @@ func formatUpcomingTimeDetail(timeLeft time.Duration) string {
 	}
 }
 
-// FormatAlarmList: 사용자의 현재 알림 목록을 포맷팅하여 메시지 문자열을 생성한다.
+// FormatAlarmList: 사용자의 현재 알림 목록을 포맷팅하여 메시지 문자열을 생성합니다.
 func (f *ResponseFormatter) FormatAlarmList(alarms []AlarmListEntry) string {
 	processed := make([]alarmListEntryView, len(alarms))
 	for idx, alarm := range alarms {
@@ -213,7 +213,7 @@ func (f *ResponseFormatter) FormatAlarmList(alarms []AlarmListEntry) string {
 	return util.ApplyKakaoSeeMorePadding(body, instruction)
 }
 
-// FormatAlarmCleared: 알림 전체 삭제 완료 메시지를 생성한다.
+// FormatAlarmCleared: 알림 전체 삭제 완료 메시지를 생성합니다.
 func (f *ResponseFormatter) FormatAlarmCleared(count int) string {
 	data := alarmClearedTemplateData{Emoji: DefaultEmoji, Count: count}
 	rendered, err := executeFormatterTemplate("alarm_cleared.tmpl", data)
@@ -224,12 +224,12 @@ func (f *ResponseFormatter) FormatAlarmCleared(count int) string {
 	return rendered
 }
 
-// InvalidAlarmUsage: 알림 명령어의 잘못된 사용법에 대한 안내 메시지를 반환한다.
+// InvalidAlarmUsage: 알림 명령어의 잘못된 사용법에 대한 안내 메시지를 반환합니다.
 func (f *ResponseFormatter) InvalidAlarmUsage() string {
 	return ErrInvalidAlarmUsage
 }
 
-// AlarmNotification: 단일 방송 알림 메시지를 생성한다.
+// AlarmNotification: 단일 방송 알림 메시지를 생성합니다.
 func (f *ResponseFormatter) AlarmNotification(notification *domain.AlarmNotification) string {
 	if notification == nil || notification.Stream == nil {
 		return ""
@@ -352,7 +352,7 @@ type milestoneApproachingTemplateData struct {
 	Remaining  string
 }
 
-// FormatMilestoneAchieved: 마일스톤 달성 알림 메시지를 생성한다.
+// FormatMilestoneAchieved: 마일스톤 달성 알림 메시지를 생성합니다.
 func FormatMilestoneAchieved(memberName, milestone string) (string, error) {
 	data := milestoneAchievedTemplateData{
 		MemberName: memberName,
@@ -362,7 +362,7 @@ func FormatMilestoneAchieved(memberName, milestone string) (string, error) {
 	return executeFormatterTemplate("milestone_achieved.tmpl", data)
 }
 
-// FormatMilestoneApproaching: 마일스톤 예고 알림 메시지를 생성한다.
+// FormatMilestoneApproaching: 마일스톤 예고 알림 메시지를 생성합니다.
 func FormatMilestoneApproaching(memberName, milestone, remaining string) (string, error) {
 	data := milestoneApproachingTemplateData{
 		MemberName: memberName,

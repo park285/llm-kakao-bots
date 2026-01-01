@@ -22,17 +22,17 @@ func (s NextStreamStatus) String() string {
 	return string(s)
 }
 
-// IsLive: 상태가 '현재 방송 중'인지 확인한다.
+// IsLive: 상태가 '현재 방송 중'인지 확인합니다.
 func (s NextStreamStatus) IsLive() bool {
 	return s == NextStreamStatusLive
 }
 
-// IsUpcoming: 상태가 '방송 예정'인지 확인한다.
+// IsUpcoming: 상태가 '방송 예정'인지 확인합니다.
 func (s NextStreamStatus) IsUpcoming() bool {
 	return s == NextStreamStatusUpcoming
 }
 
-// IsValid: 상태 값이 정의된 목록에 포함되는 유효한 값인지 확인한다.
+// IsValid: 상태 값이 정의된 목록에 포함되는 유효한 값인지 확인합니다.
 func (s NextStreamStatus) IsValid() bool {
 	switch s {
 	case NextStreamStatusLive, NextStreamStatusUpcoming, NextStreamStatusNoUpcoming, NextStreamStatusTimeUnknown:

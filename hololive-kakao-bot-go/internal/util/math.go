@@ -2,7 +2,7 @@ package util
 
 import "fmt"
 
-// Max: 두 정수 중 더 큰 값을 반환한다.
+// Max: 두 정수 중 더 큰 값을 반환합니다.
 func Max(a, b int) int {
 	if a > b {
 		return a
@@ -10,7 +10,7 @@ func Max(a, b int) int {
 	return b
 }
 
-// Min: 두 정수 중 더 작은 값을 반환한다.
+// Min: 두 정수 중 더 작은 값을 반환합니다.
 func Min(a, b int) int {
 	if a < b {
 		return a
@@ -33,7 +33,7 @@ func Unique(nums []int) []int {
 	return result
 }
 
-// FormatKoreanNumber 는 한국어 단위(만)로 숫자를 포맷팅한다.
+// FormatKoreanNumber: 한국어 단위(만)로 숫자를 포맷팅합니다.
 // 예: 10000 -> "1만", 12345 -> "1만 2345", 500 -> "500"
 func FormatKoreanNumber(n int64) string {
 	if n >= 10000 {

@@ -2,7 +2,7 @@ package iris
 
 import "context"
 
-// Client 는 Iris 메시지 전송 인터페이스다.
+// Client: Iris 메시지 전송 인터페이스다.
 type Client interface {
 	SendMessage(ctx context.Context, room, message string) error
 	SendImage(ctx context.Context, room, imageBase64 string) error

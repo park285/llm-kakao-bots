@@ -69,15 +69,16 @@ func ProvidePostgresService(resources *bootstrap.DatabaseResources) *database.Po
 // ProvideValkeyMQConfig - 설정에서 MQ 설정 생성
 func ProvideValkeyMQConfig(cfg *config.Config) mq.ValkeyMQConfig {
 	return mq.ValkeyMQConfig{
-		Host:          cfg.ValkeyMQ.Host,
-		Port:          cfg.ValkeyMQ.Port,
-		Password:      cfg.ValkeyMQ.Password,
-		StreamKey:     cfg.ValkeyMQ.StreamKey,
-		ConsumerGroup: cfg.ValkeyMQ.ConsumerGroup,
-		ConsumerName:  cfg.ValkeyMQ.ConsumerName,
-		ReadCount:     int64(cfg.ValkeyMQ.ReadCount),
-		BlockTimeout:  time.Duration(cfg.ValkeyMQ.BlockTimeoutSeconds) * time.Second,
-		WorkerCount:   cfg.ValkeyMQ.WorkerCount,
+		Host:              cfg.ValkeyMQ.Host,
+		Port:              cfg.ValkeyMQ.Port,
+		Password:          cfg.ValkeyMQ.Password,
+		StreamKey:         cfg.ValkeyMQ.StreamKey,
+		ConsumerGroup:     cfg.ValkeyMQ.ConsumerGroup,
+		ConsumerName:      cfg.ValkeyMQ.ConsumerName,
+		ReadCount:         int64(cfg.ValkeyMQ.ReadCount),
+		BlockTimeout:      time.Duration(cfg.ValkeyMQ.BlockTimeoutSeconds) * time.Second,
+		WorkerCount:       cfg.ValkeyMQ.WorkerCount,
+		ReplyStreamMaxLen: int64(cfg.ValkeyMQ.ReplyStreamMaxLen),
 	}
 }
 

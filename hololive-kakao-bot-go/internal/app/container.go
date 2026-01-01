@@ -33,7 +33,7 @@ func (c *Container) Close() {
 	}
 }
 
-// NewBot: 설정된 의존성을 사용하여 새로운 Bot 인스턴스를 생성한다.
+// NewBot: 설정된 의존성을 사용하여 새로운 Bot 인스턴스를 생성합니다.
 func (c *Container) NewBot() (*bot.Bot, error) {
 	if c == nil || c.botDeps == nil {
 		return nil, fmt.Errorf("bot dependencies not initialized")
@@ -45,7 +45,7 @@ func (c *Container) NewBot() (*bot.Bot, error) {
 	return b, nil
 }
 
-// GetYouTubeScheduler: 유튜버 스케줄러 인스턴스를 반환한다.
+// GetYouTubeScheduler: 유튜버 스케줄러 인스턴스를 반환합니다.
 func (c *Container) GetYouTubeScheduler() *youtube.Scheduler {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -53,7 +53,7 @@ func (c *Container) GetYouTubeScheduler() *youtube.Scheduler {
 	return c.botDeps.Scheduler
 }
 
-// GetMemberRepo: 멤버 정보 저장소(Repository)를 반환한다.
+// GetMemberRepo: 멤버 정보 저장소(Repository)를 반환합니다.
 func (c *Container) GetMemberRepo() *member.Repository {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -61,7 +61,7 @@ func (c *Container) GetMemberRepo() *member.Repository {
 	return c.botDeps.MemberRepo
 }
 
-// GetMemberCache: 멤버 정보 캐시 서비스를 반환한다.
+// GetMemberCache: 멤버 정보 캐시 서비스를 반환합니다.
 func (c *Container) GetMemberCache() *member.Cache {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -69,7 +69,7 @@ func (c *Container) GetMemberCache() *member.Cache {
 	return c.botDeps.MemberCache
 }
 
-// GetAlarmService: 알림 서비스를 반환한다.
+// GetAlarmService: 알림 서비스를 반환합니다.
 func (c *Container) GetAlarmService() *notification.AlarmService {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -77,7 +77,7 @@ func (c *Container) GetAlarmService() *notification.AlarmService {
 	return c.botDeps.Alarm
 }
 
-// GetCache: 전역 캐시 서비스를 반환한다.
+// GetCache: 전역 캐시 서비스를 반환합니다.
 func (c *Container) GetCache() *cache.Service {
 	if c.botDeps == nil {
 		return nil
@@ -85,7 +85,7 @@ func (c *Container) GetCache() *cache.Service {
 	return c.botDeps.Cache
 }
 
-// GetHolodexService: Holodex API 서비스를 반환한다.
+// GetHolodexService: Holodex API 서비스를 반환합니다.
 func (c *Container) GetHolodexService() *holodex.Service {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -93,7 +93,7 @@ func (c *Container) GetHolodexService() *holodex.Service {
 	return c.botDeps.Holodex
 }
 
-// GetYouTubeService: YouTube API 서비스를 반환한다.
+// GetYouTubeService: YouTube API 서비스를 반환합니다.
 func (c *Container) GetYouTubeService() *youtube.Service {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -101,7 +101,7 @@ func (c *Container) GetYouTubeService() *youtube.Service {
 	return c.botDeps.Service
 }
 
-// GetActivityLogger: 활동 로그 기록 서비스를 반환한다.
+// GetActivityLogger: 활동 로그 기록 서비스를 반환합니다.
 func (c *Container) GetActivityLogger() *activity.Logger {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -109,7 +109,7 @@ func (c *Container) GetActivityLogger() *activity.Logger {
 	return c.botDeps.Activity
 }
 
-// GetSettingsService: 봇 설정 관리 서비스를 반환한다.
+// GetSettingsService: 봇 설정 관리 서비스를 반환합니다.
 func (c *Container) GetSettingsService() *settings.Service {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -117,7 +117,7 @@ func (c *Container) GetSettingsService() *settings.Service {
 	return c.botDeps.Settings
 }
 
-// GetACLService: 접근 제어(ACL) 서비스를 반환한다.
+// GetACLService: 접근 제어(ACL) 서비스를 반환합니다.
 func (c *Container) GetACLService() *acl.Service {
 	if c == nil || c.botDeps == nil {
 		return nil
@@ -125,7 +125,7 @@ func (c *Container) GetACLService() *acl.Service {
 	return c.botDeps.ACL
 }
 
-// Build: 주어진 설정과 로거를 기반으로 애플리케이션 컨테이너를 구성하고 모든 의존성을 초기화한다.
+// Build: 주어진 설정과 로거를 기반으로 애플리케이션 컨테이너를 구성하고 모든 의존성을 초기화합니다.
 func Build(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Container, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config must not be nil")

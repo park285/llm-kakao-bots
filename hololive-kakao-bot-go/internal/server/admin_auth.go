@@ -68,15 +68,33 @@ func (h *AdminHandler) HandleLogin(c *gin.Context) {
 	signedSessionID := SignSessionID(session.ID, h.securityCfg.SessionSecret)
 	SetSecureCookie(c, sessionCookieName, signedSessionID, 0, h.securityCfg.ForceHTTPS) // 0 = 세션 쿠키 (브라우저 종료 시 삭제)
 
+	// Client Hints 수집 (실제 기기 정보)
+	clientHints := ParseClientHints(c)
+	deviceInfo := clientHints.Summary()
+	if deviceInfo == "" {
+		deviceInfo = truncateUA(c.Request.UserAgent())
+	}
+
 	h.logger.Info("Admin logged in",
 		slog.String("username", req.Username),
 		slog.String("ip", ip),
+		slog.String("device", deviceInfo),
 	)
 
-	h.activity.Log("auth_login", "Admin login successful", map[string]any{
+	// 활동 로그에 Client Hints 정보 추가
+	logDetails := map[string]any{
 		"username": req.Username,
 		"ip":       ip,
-	})
+	}
+	if clientHints.HasClientHints() {
+		logDetails["device"] = deviceInfo
+		for k, v := range clientHints.ToLogFields() {
+			logDetails[k] = v
+		}
+	} else {
+		logDetails["ua"] = truncateUA(c.Request.UserAgent())
+	}
+	h.activity.Log("auth_login", "Admin login successful", logDetails)
 
 	c.JSON(200, gin.H{
 		"status":  "ok",
@@ -119,9 +137,15 @@ func (h *AdminHandler) HandleLogout(c *gin.Context) {
 
 	ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
 
-	h.activity.Log("auth_logout", "Admin logout", map[string]any{
+	// Client Hints 수집 (실제 기기 정보)
+	clientHints := ParseClientHints(c)
+	logDetails := map[string]any{
 		"ip": c.ClientIP(),
-	})
+	}
+	if clientHints.HasClientHints() {
+		logDetails["device"] = clientHints.Summary()
+	}
+	h.activity.Log("auth_logout", "Admin logout", logDetails)
 
 	c.JSON(200, gin.H{
 		"status":  "ok",

@@ -16,7 +16,7 @@ type Repository struct {
 	logger *slog.Logger
 }
 
-// NewRepository: 새로운 알람 Repository를 생성한다.
+// NewRepository: 새로운 알람 Repository를 생성합니다.
 func NewRepository(db *sql.DB, logger *slog.Logger) *Repository {
 	return &Repository{
 		db:     db,
@@ -45,7 +45,7 @@ func (r *Repository) Add(ctx context.Context, alarm *domain.Alarm) error {
 	return nil
 }
 
-// Remove: 특정 알람을 DB에서 삭제한다.
+// Remove: 특정 알람을 DB에서 삭제합니다.
 func (r *Repository) Remove(ctx context.Context, roomID, userID, channelID string) error {
 	query := `DELETE FROM alarms WHERE room_id = $1 AND user_id = $2 AND channel_id = $3`
 	_, err := r.db.ExecContext(ctx, query, roomID, userID, channelID)
@@ -55,7 +55,7 @@ func (r *Repository) Remove(ctx context.Context, roomID, userID, channelID strin
 	return nil
 }
 
-// ClearByUser: 특정 사용자의 모든 알람을 삭제한다.
+// ClearByUser: 특정 사용자의 모든 알람을 삭제합니다.
 func (r *Repository) ClearByUser(ctx context.Context, roomID, userID string) (int64, error) {
 	query := `DELETE FROM alarms WHERE room_id = $1 AND user_id = $2`
 	result, err := r.db.ExecContext(ctx, query, roomID, userID)
@@ -69,7 +69,7 @@ func (r *Repository) ClearByUser(ctx context.Context, roomID, userID string) (in
 	return affected, nil
 }
 
-// FindByUser: 특정 사용자의 모든 알람을 조회한다.
+// FindByUser: 특정 사용자의 모든 알람을 조회합니다.
 func (r *Repository) FindByUser(ctx context.Context, roomID, userID string) ([]*domain.Alarm, error) {
 	query := `
 		SELECT id, room_id, user_id, channel_id, member_name, room_name, user_name, created_at
@@ -87,7 +87,7 @@ func (r *Repository) FindByUser(ctx context.Context, roomID, userID string) ([]*
 	return r.scanAlarms(rows)
 }
 
-// FindByChannel: 특정 채널의 모든 구독자 알람을 조회한다.
+// FindByChannel: 특정 채널의 모든 구독자 알람을 조회합니다.
 func (r *Repository) FindByChannel(ctx context.Context, channelID string) ([]*domain.Alarm, error) {
 	query := `
 		SELECT id, room_id, user_id, channel_id, member_name, room_name, user_name, created_at
@@ -105,7 +105,7 @@ func (r *Repository) FindByChannel(ctx context.Context, channelID string) ([]*do
 	return r.scanAlarms(rows)
 }
 
-// GetMemberName: 채널ID에 해당하는 멤버 이름을 조회한다.
+// GetMemberName: 채널ID에 해당하는 멤버 이름을 조회합니다.
 // 해당 채널에 알람을 설정한 적이 있는 레코드에서 member_name을 가져온다.
 func (r *Repository) GetMemberName(ctx context.Context, channelID string) (string, error) {
 	query := `
@@ -142,7 +142,7 @@ func (r *Repository) LoadAll(ctx context.Context) ([]*domain.Alarm, error) {
 	return r.scanAlarms(rows)
 }
 
-// GetAllChannelIDs: 알람이 설정된 모든 채널 ID를 조회한다.
+// GetAllChannelIDs: 알람이 설정된 모든 채널 ID를 조회합니다.
 func (r *Repository) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	query := `SELECT DISTINCT channel_id FROM alarms`
 
@@ -167,7 +167,7 @@ func (r *Repository) GetAllChannelIDs(ctx context.Context) ([]string, error) {
 	return channelIDs, nil
 }
 
-// GetAllMemberNames: 모든 채널ID → 멤버이름 매핑을 조회한다.
+// GetAllMemberNames: 모든 채널ID → 멤버이름 매핑을 조회합니다.
 func (r *Repository) GetAllMemberNames(ctx context.Context) (map[string]string, error) {
 	query := `
 		SELECT DISTINCT ON (channel_id) channel_id, member_name

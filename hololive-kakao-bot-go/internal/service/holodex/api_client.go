@@ -27,7 +27,7 @@ type Requester interface {
 }
 
 // APIClient: Holodex API 요청을 처리하는 클라이언트
-// API 키 로테이션, 서킷 브레이커, 속도 제한(Rate Limiting) 기능을 포함한다.
+// API 키 로테이션, 서킷 브레이커, 속도 제한(Rate Limiting) 기능을 포함합니다.
 type APIClient struct {
 	httpClient       *http.Client
 	apiKeys          []string
@@ -43,7 +43,7 @@ type APIClient struct {
 
 var errNoAPIKeys = stdErrors.New("no Holodex API keys configured")
 
-// NewHolodexAPIClient: 새로운 Holodex API 클라이언트를 생성하고 초기화한다.
+// NewHolodexAPIClient: 새로운 Holodex API 클라이언트를 생성하고 초기화합니다.
 // 초당 10회 요청 제한(Rate Limit)이 기본 설정된다.
 func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *slog.Logger) *APIClient {
 	return &APIClient{
@@ -55,7 +55,7 @@ func NewHolodexAPIClient(httpClient *http.Client, apiKeys []string, logger *slog
 }
 
 // DoRequest: Holodex API에 요청을 보낸다.
-// Rate Limit 준수, 서킷 브레이커 확인, API 키 로테이션 및 재시도 로직을 수행한다.
+// Rate Limit 준수, 서킷 브레이커 확인, API 키 로테이션 및 재시도 로직을 수행합니다.
 func (c *APIClient) DoRequest(ctx context.Context, method, path string, params url.Values) ([]byte, error) {
 	// Rate limit 체크
 	limiter := c.rateLimiter
@@ -236,7 +236,7 @@ func (c *APIClient) handleServerError(ctx context.Context, status, attempt, maxA
 	return nil, true, errors.NewAPIError(fmt.Sprintf("Server error: %d", status), status, nil)
 }
 
-// IsCircuitOpen: 현재 서킷 브레이커가 열려있는지(요청 차단 상태인지) 확인한다.
+// IsCircuitOpen: 현재 서킷 브레이커가 열려있는지(요청 차단 상태인지) 확인합니다.
 func (c *APIClient) IsCircuitOpen() bool {
 	c.circuitMu.RLock()
 	defer c.circuitMu.RUnlock()

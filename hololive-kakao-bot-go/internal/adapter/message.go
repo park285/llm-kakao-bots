@@ -9,24 +9,24 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// MessageAdapter 는 타입이다.
+// MessageAdapter: 카카오톡 메시지를 커맨드로 파싱하는 어댑터입니다.
 type MessageAdapter struct {
 	prefix string
 }
 
-// NewMessageAdapter 는 동작을 수행한다.
+// NewMessageAdapter: MessageAdapter 인스턴스를 생성합니다.
 func NewMessageAdapter(prefix string) *MessageAdapter {
 	return &MessageAdapter{prefix: prefix}
 }
 
-// ParsedCommand 는 타입이다.
+// ParsedCommand: 파싱된 커맨드 정보를 담는 구조체입니다.
 type ParsedCommand struct {
 	Type       domain.CommandType
 	Params     map[string]any
 	RawMessage string
 }
 
-// ParseMessage 는 동작을 수행한다.
+// ParseMessage: 입력 메시지를 분석하여 커맨드 유형과 파라미터를 추출합니다.
 func (ma *MessageAdapter) ParseMessage(message *iris.Message) *ParsedCommand {
 	if message == nil || message.Msg == "" {
 		return ma.createUnknownCommand("")

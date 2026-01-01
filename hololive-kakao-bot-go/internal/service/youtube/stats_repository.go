@@ -20,7 +20,7 @@ type StatsRepository struct {
 	logger *slog.Logger
 }
 
-// NewYouTubeStatsRepository: 새로운 StatsRepository 인스턴스를 생성한다.
+// NewYouTubeStatsRepository: 새로운 StatsRepository 인스턴스를 생성합니다.
 func NewYouTubeStatsRepository(postgres *database.PostgresService, logger *slog.Logger) *StatsRepository {
 	return &StatsRepository{
 		db:     postgres.GetDB(),
@@ -28,7 +28,7 @@ func NewYouTubeStatsRepository(postgres *database.PostgresService, logger *slog.
 	}
 }
 
-// SaveStats: 채널 통계 데이터를 저장한다.
+// SaveStats: 채널 통계 데이터를 저장합니다.
 func (r *StatsRepository) SaveStats(ctx context.Context, stats *domain.TimestampedStats) error {
 	query := `
 		INSERT INTO youtube_stats_history (time, channel_id, member_name, subscribers, videos, views)
@@ -60,7 +60,7 @@ func (r *StatsRepository) SaveStats(ctx context.Context, stats *domain.Timestamp
 	return nil
 }
 
-// GetLatestStats: 각 채널의 최신 통계 데이터를 조회한다.
+// GetLatestStats: 각 채널의 최신 통계 데이터를 조회합니다.
 func (r *StatsRepository) GetLatestStats(ctx context.Context, channelID string) (*domain.TimestampedStats, error) {
 	query := `
 		SELECT time, channel_id, member_name, subscribers, videos, views
@@ -187,7 +187,7 @@ func (r *StatsRepository) GetAchievedMilestones(ctx context.Context, channelIDs 
 	return result, nil
 }
 
-// RecordChange: 구독자 수 등의 변화를 기록한다.
+// RecordChange: 구독자 수 등의 변화를 기록합니다.
 func (r *StatsRepository) RecordChange(ctx context.Context, change *domain.StatsChange) error {
 	query := `
 		INSERT INTO youtube_stats_changes
@@ -234,7 +234,7 @@ func (r *StatsRepository) RecordChange(ctx context.Context, change *domain.Stats
 	return nil
 }
 
-// RecordMilestone: 구독자 수 달성 등 마일스톤 이벤트를 기록한다.
+// RecordMilestone: 구독자 수 달성 등 마일스톤 이벤트를 기록합니다.
 func (r *StatsRepository) SaveMilestone(ctx context.Context, milestone *domain.Milestone) error {
 	query := `
 		INSERT INTO youtube_milestones (channel_id, member_name, type, value, achieved_at, notified)
@@ -263,7 +263,7 @@ func (r *StatsRepository) SaveMilestone(ctx context.Context, milestone *domain.M
 	return nil
 }
 
-// HasAchievedMilestone: 특정 채널이 특정 마일스톤을 이미 달성했는지 확인한다.
+// HasAchievedMilestone: 특정 채널이 특정 마일스톤을 이미 달성했는지 확인합니다.
 // 구독자가 감소 후 다시 증가해도 중복 달성으로 처리되지 않도록 방지한다.
 func (r *StatsRepository) HasAchievedMilestone(ctx context.Context, channelID string, milestoneType domain.MilestoneType, value uint64) (bool, error) {
 	query := `
@@ -282,7 +282,7 @@ func (r *StatsRepository) HasAchievedMilestone(ctx context.Context, channelID st
 	return exists, nil
 }
 
-// GetUnnotifiedChanges: 아직 알림이 발송되지 않은 통계 변화 내역을 최신순으로 조회한다.
+// GetUnnotifiedChanges: 아직 알림이 발송되지 않은 통계 변화 내역을 최신순으로 조회합니다.
 // PreviousStats와 CurrentStats를 복원하여 마일스톤 검출이 가능하도록 한다.
 func (r *StatsRepository) GetUnnotifiedChanges(ctx context.Context, limit int) ([]*domain.StatsChange, error) {
 	query := `
@@ -345,7 +345,7 @@ func (r *StatsRepository) GetUnnotifiedChanges(ctx context.Context, limit int) (
 	return changes, nil
 }
 
-// MarkChangeNotified: 특정 통계 변화 내역을 알림 발송 완료 상태로 처리한다.
+// MarkChangeNotified: 특정 통계 변화 내역을 알림 발송 완료 상태로 처리합니다.
 func (r *StatsRepository) MarkChangeNotified(ctx context.Context, channelID string, detectedAt time.Time) error {
 	query := `
 		UPDATE youtube_stats_changes
@@ -361,7 +361,7 @@ func (r *StatsRepository) MarkChangeNotified(ctx context.Context, channelID stri
 	return nil
 }
 
-// GetTopGainers: 특정 시점 이후 구독자 증가량이 가장 높은 채널 상위 목록을 조회한다.
+// GetTopGainers: 특정 시점 이후 구독자 증가량이 가장 높은 채널 상위 목록을 조회합니다.
 func (r *StatsRepository) GetTopGainers(ctx context.Context, since time.Time, limit int) ([]domain.RankEntry, error) {
 	query := `
 		WITH latest AS (
@@ -697,7 +697,7 @@ type ApproachingNotification struct {
 	NotifiedAt     time.Time `json:"notifiedAt"`
 }
 
-// HasApproachingNotified: 특정 마일스톤에 대해 예고 알림이 이미 발송되었는지 확인한다.
+// HasApproachingNotified: 특정 마일스톤에 대해 예고 알림이 이미 발송되었는지 확인합니다.
 func (r *StatsRepository) HasApproachingNotified(ctx context.Context, channelID string, milestoneValue uint64) (bool, error) {
 	query := `
 		SELECT EXISTS(
@@ -715,7 +715,7 @@ func (r *StatsRepository) HasApproachingNotified(ctx context.Context, channelID 
 	return exists, nil
 }
 
-// SaveApproachingNotification: 마일스톤 접근 예고 알림 기록을 저장한다.
+// SaveApproachingNotification: 마일스톤 접근 예고 알림 기록을 저장합니다.
 func (r *StatsRepository) SaveApproachingNotification(ctx context.Context, channelID string, milestoneValue, currentSubs uint64, notifiedAt time.Time) error {
 	query := `
 		INSERT INTO youtube_milestone_approaching (channel_id, milestone_value, current_subs, notified_at)
@@ -736,7 +736,7 @@ func (r *StatsRepository) SaveApproachingNotification(ctx context.Context, chann
 	return nil
 }
 
-// GetUnnotifiedApproaching: 아직 채팅방에 발송되지 않은 예고 알림 목록을 조회한다.
+// GetUnnotifiedApproaching: 아직 채팅방에 발송되지 않은 예고 알림 목록을 조회합니다.
 // 이 함수는 SendMilestoneAlerts와 유사한 패턴으로 예고 알람을 발송할 때 사용된다.
 func (r *StatsRepository) GetUnnotifiedApproaching(ctx context.Context, limit int) ([]ApproachingNotification, error) {
 	query := `
@@ -772,7 +772,7 @@ func (r *StatsRepository) GetUnnotifiedApproaching(ctx context.Context, limit in
 	return notifications, nil
 }
 
-// MarkApproachingChatNotified: 예고 알림의 채팅방 발송 완료 상태를 업데이트한다.
+// MarkApproachingChatNotified: 예고 알림의 채팅방 발송 완료 상태를 업데이트합니다.
 func (r *StatsRepository) MarkApproachingChatNotified(ctx context.Context, channelID string, milestoneValue uint64) error {
 	query := `
 		UPDATE youtube_milestone_approaching
@@ -797,7 +797,7 @@ type MilestoneNotification struct {
 	AchievedAt time.Time `json:"achievedAt"`
 }
 
-// GetUnnotifiedMilestones: 아직 알림이 발송되지 않은 마일스톤 목록을 조회한다.
+// GetUnnotifiedMilestones: 아직 알림이 발송되지 않은 마일스톤 목록을 조회합니다.
 func (r *StatsRepository) GetUnnotifiedMilestones(ctx context.Context, limit int) ([]MilestoneNotification, error) {
 	query := `
 		SELECT channel_id, member_name, type, value, achieved_at

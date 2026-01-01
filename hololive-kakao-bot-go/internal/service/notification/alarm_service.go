@@ -12,7 +12,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 )
 
-// NewAlarmService: 새로운 AlarmService 인스턴스를 생성하고 설정(목표 알림 시간 등)을 초기화한다.
+// NewAlarmService: 새로운 AlarmService 인스턴스를 생성하고 설정(목표 알림 시간 등)을 초기화합니다.
 func NewAlarmService(
 	cacheSvc *cache.Service,
 	holodexSvc *holodex.Service,
@@ -62,7 +62,7 @@ func buildTargetMinutes(advanceMinutes []int) []int {
 	return filtered
 }
 
-// AddAlarm: 특정 채팅방(사용자)에 대해 특정 멤버(채널)의 방송 알림을 추가한다.
+// AddAlarm: 특정 채팅방(사용자)에 대해 특정 멤버(채널)의 방송 알림을 추가합니다.
 func (as *AlarmService) AddAlarm(ctx context.Context, roomID, userID, channelID, memberName, roomName, userName string) (bool, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	added, err := as.cache.SAdd(ctx, alarmKey, []string{channelID})
@@ -119,7 +119,7 @@ func (as *AlarmService) AddAlarm(ctx context.Context, roomID, userID, channelID,
 	return added > 0, nil
 }
 
-// RemoveAlarm: 특정 채팅방(사용자)에서 특정 멤버(채널)의 방송 알림을 해제한다.
+// RemoveAlarm: 특정 채팅방(사용자)에서 특정 멤버(채널)의 방송 알림을 해제합니다.
 func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channelID string) (bool, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	removed, err := as.cache.SRem(ctx, alarmKey, []string{channelID})
@@ -165,7 +165,7 @@ func (as *AlarmService) RemoveAlarm(ctx context.Context, roomID, userID, channel
 	return removed > 0, nil
 }
 
-// GetUserAlarms: 해당 사용자가 현재 구독 중인 모든 채널 ID 목록을 반환한다.
+// GetUserAlarms: 해당 사용자가 현재 구독 중인 모든 채널 ID 목록을 반환합니다.
 func (as *AlarmService) GetUserAlarms(ctx context.Context, roomID, userID string) ([]string, error) {
 	alarmKey := as.getAlarmKey(roomID, userID)
 	channelIDs, err := as.cache.SMembers(ctx, alarmKey)
@@ -176,7 +176,7 @@ func (as *AlarmService) GetUserAlarms(ctx context.Context, roomID, userID string
 	return channelIDs, nil
 }
 
-// ClearUserAlarms: 해당 사용자의 모든 알림 설정을 삭제(초기화)한다.
+// ClearUserAlarms: 해당 사용자의 모든 알림 설정을 삭제(초기화)합니다.
 func (as *AlarmService) ClearUserAlarms(ctx context.Context, roomID, userID string) (int, error) {
 	alarms, err := as.GetUserAlarms(ctx, roomID, userID)
 	if err != nil {

@@ -84,7 +84,7 @@ func (h *AdminHandler) RemoveAlias(c *gin.Context) {
 	h.handleAliasOperation(c, h.repo.RemoveAlias, "remove")
 }
 
-// SetGraduation 는 졸업 상태를 갱신한다.
+// SetGraduation: 졸업 상태를 갱신합니다.
 //
 //nolint:dupl // Similar patterns for different update operations
 func (h *AdminHandler) SetGraduation(c *gin.Context) {
@@ -141,7 +141,7 @@ func (h *AdminHandler) SetGraduation(c *gin.Context) {
 	})
 }
 
-// UpdateChannelID 는 채널 ID를 갱신한다.
+// UpdateChannelID: 채널 ID를 갱신합니다.
 //
 //nolint:dupl // Similar patterns for different update operations
 func (h *AdminHandler) UpdateChannelID(c *gin.Context) {

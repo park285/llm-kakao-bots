@@ -14,12 +14,12 @@ type Alarm struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// RegistryKey: room:user 형식의 레지스트리 키를 반환한다.
+// RegistryKey: room:user 형식의 레지스트리 키를 반환합니다.
 func (a *Alarm) RegistryKey() string {
 	return a.RoomID + ":" + a.UserID
 }
 
-// NewAlarm: 새로운 알림 구독 객체를 생성한다.
+// NewAlarm: 새로운 알림 구독 객체를 생성합니다.
 func NewAlarm(roomID, userID, channelID, memberName string) *Alarm {
 	return &Alarm{
 		RoomID:     roomID,
@@ -41,7 +41,7 @@ type AlarmNotification struct {
 	ScheduleChangeMessage string   `json:"schedule_change_message,omitempty"`
 }
 
-// NewAlarmNotification: 알림 발송을 위한 새로운 Notification 객체를 생성한다.
+// NewAlarmNotification: 알림 발송을 위한 새로운 Notification 객체를 생성합니다.
 func NewAlarmNotification(roomID string, channel *Channel, stream *Stream, minutesUntil int, users []string, scheduleMessage string) *AlarmNotification {
 	return &AlarmNotification{
 		RoomID:                roomID,
@@ -53,7 +53,7 @@ func NewAlarmNotification(roomID string, channel *Channel, stream *Stream, minut
 	}
 }
 
-// UserCount: 이 알림을 수신하게 될 사용자의 수를 반환한다.
+// UserCount: 이 알림을 수신하게 될 사용자의 수를 반환합니다.
 func (n *AlarmNotification) UserCount() int {
 	return len(n.Users)
 }

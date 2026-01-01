@@ -15,22 +15,22 @@ type ScheduleCommand struct {
 	BaseCommand
 }
 
-// NewScheduleCommand: NewScheduleCommand 인스턴스를 생성한다.
+// NewScheduleCommand: NewScheduleCommand 인스턴스를 생성합니다.
 func NewScheduleCommand(deps *Dependencies) *ScheduleCommand {
 	return &ScheduleCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name: 명령어의 고유 식별자('schedule')를 반환한다.
+// Name: 명령어의 고유 식별자('schedule')를 반환합니다.
 func (c *ScheduleCommand) Name() string {
 	return "schedule"
 }
 
-// Description: 명령어에 대한 사용자용 설명('특정 멤버 일정 조회')을 반환한다.
+// Description: 명령어에 대한 사용자용 설명('특정 멤버 일정 조회')을 반환합니다.
 func (c *ScheduleCommand) Description() string {
 	return "특정 멤버 일정 조회"
 }
 
-// Execute: 특정 멤버의 방송 일정을 조회하고, 결과를 포맷팅하여 채팅방에 전송한다.
+// Execute: 특정 멤버의 방송 일정을 조회하고, 결과를 포맷팅하여 채팅방에 전송합니다.
 func (c *ScheduleCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {
 		return err

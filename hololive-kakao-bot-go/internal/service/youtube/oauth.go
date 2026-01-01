@@ -26,7 +26,7 @@ type OAuthService struct {
 	logger  *slog.Logger
 }
 
-// NewYouTubeOAuthService: 저장된 토큰이나 자격 증명을 로드하여 OAuth 서비스를 초기화한다.
+// NewYouTubeOAuthService: 저장된 토큰이나 자격 증명을 로드하여 OAuth 서비스를 초기화합니다.
 func NewYouTubeOAuthService(logger *slog.Logger) (*OAuthService, error) {
 	if logger == nil {
 		logger = slog.Default()
@@ -119,12 +119,12 @@ func (ys *OAuthService) Authorize(ctx context.Context) error {
 	return nil
 }
 
-// IsAuthorized: 현재 유효한 인증 토큰이 있는지 확인한다.
+// IsAuthorized: 현재 유효한 인증 토큰이 있는지 확인합니다.
 func (ys *OAuthService) IsAuthorized() bool {
 	return ys != nil && ys.service != nil && ys.token != nil
 }
 
-// GetService: 인증된 YouTube API 클라이언트를 반환한다.
+// GetService: 인증된 YouTube API 클라이언트를 반환합니다.
 func (ys *OAuthService) GetService() *youtube.Service {
 	if ys == nil {
 		return nil

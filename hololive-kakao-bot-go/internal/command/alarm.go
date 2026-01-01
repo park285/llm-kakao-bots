@@ -14,22 +14,22 @@ type AlarmCommand struct {
 	BaseCommand
 }
 
-// NewAlarmCommand: 알람 관리 커맨드 핸들러를 생성한다.
+// NewAlarmCommand: 알람 관리 커맨드 핸들러를 생성합니다.
 func NewAlarmCommand(deps *Dependencies) *AlarmCommand {
 	return &AlarmCommand{BaseCommand: NewBaseCommand(deps)}
 }
 
-// Name: 커맨드의 이름("alarm")을 반환한다.
+// Name: 커맨드의 이름("alarm")을 반환합니다.
 func (c *AlarmCommand) Name() string {
 	return "alarm"
 }
 
-// Description: 커맨드에 대한 설명을 반환한다.
+// Description: 커맨드에 대한 설명을 반환합니다.
 func (c *AlarmCommand) Description() string {
 	return "방송 알람 관리"
 }
 
-// Execute: 알람 추가, 삭제, 목록 조회 등의 작업을 수행한다.
+// Execute: 알람 추가, 삭제, 목록 조회 등의 작업을 수행합니다.
 func (c *AlarmCommand) Execute(ctx context.Context, cmdCtx *domain.CommandContext, params map[string]any) error {
 	if err := c.ensureDeps(); err != nil {
 		return err

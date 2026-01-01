@@ -40,7 +40,7 @@ func (c *Service) InitializeMemberDatabase(ctx context.Context, memberData map[s
 	return nil
 }
 
-// GetMemberChannelID: 멤버 이름으로 채널 ID를 조회한다.
+// GetMemberChannelID: 멤버 이름으로 채널 ID를 조회합니다.
 func (c *Service) GetMemberChannelID(ctx context.Context, memberName string) (string, error) {
 	if memberName == "" {
 		return "", nil
@@ -63,7 +63,7 @@ func (c *Service) GetMemberChannelID(ctx context.Context, memberName string) (st
 	return value, nil
 }
 
-// GetAllMembers: 캐시에 저장된 모든 멤버 정보를 조회한다.
+// GetAllMembers: 캐시에 저장된 모든 멤버 정보를 조회합니다.
 func (c *Service) GetAllMembers(ctx context.Context) (map[string]string, error) {
 	resp := c.client.Do(ctx, c.client.B().Hgetall().Key(memberHashKey).Build())
 	if resp.Error() != nil {
@@ -79,7 +79,7 @@ func (c *Service) GetAllMembers(ctx context.Context) (map[string]string, error) 
 	return values, nil
 }
 
-// AddMember: 멤버 정보를 캐시에 추가하거나 갱신한다.
+// AddMember: 멤버 정보를 캐시에 추가하거나 갱신합니다.
 func (c *Service) AddMember(ctx context.Context, memberName, channelID string) error {
 	if memberName == "" || channelID == "" {
 		return fmt.Errorf("member name and channel ID must be provided")

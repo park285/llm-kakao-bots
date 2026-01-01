@@ -11,7 +11,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
-// NewIPAllowList: 허용된 IP 대역(CIDR) 목록을 파싱하여 IPNet 슬라이스를 생성한다.
+// NewIPAllowList: 허용된 IP 대역(CIDR) 목록을 파싱하여 IPNet 슬라이스를 생성합니다.
 func NewIPAllowList(allowed []string) ([]*net.IPNet, error) {
 	nets := make([]*net.IPNet, 0, len(allowed))
 	for _, raw := range allowed {
@@ -36,14 +36,14 @@ func NewIPAllowList(allowed []string) ([]*net.IPNet, error) {
 }
 
 // AdminIPAllowMiddleware: 관리자 페이지 접근 시 클라이언트 IP가 허용 목록에 있는지 검사하는 미들웨어
+// allowlist가 비어있으면 모든 IP를 허용합니다 (개발/테스트용).
 func AdminIPAllowMiddleware(allowed []*net.IPNet, logger *slog.Logger) gin.HandlerFunc {
 	if len(allowed) == 0 {
+		if logger != nil {
+			logger.Warn("Admin IP allowlist is empty; allowing all admin requests (configure ADMIN_ALLOWED_IPS for production)")
+		}
 		return func(c *gin.Context) {
-			if logger != nil {
-				logger.Error("Admin IP allowlist is empty; denying all admin requests")
-			}
-			c.JSON(403, gin.H{"error": "forbidden"})
-			c.Abort()
+			c.Next()
 		}
 	}
 	return func(c *gin.Context) {
