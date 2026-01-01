@@ -51,13 +51,14 @@ services:
       - "6379:6379"
     volumes:
       - valkey-cache-data:/data
+      - valkey-cache-socket:/var/run/valkey
     command: >
-      valkey-server  --appendonly no  --save ""  --maxmemory 384mb  --maxmemory-policy allkeys-lfu  --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
+      valkey-server --unixsocket /var/run/valkey/valkey-cache.sock --unixsocketperm 777 --port 6379 --appendonly no --save "" --maxmemory 384mb --maxmemory-policy allkeys-lfu --loglevel notice --io-threads 4 --io-threads-do-reads yes --activedefrag yes --active-defrag-threshold-lower 10 --active-defrag-cycle-min 1 --active-defrag-cycle-max 25
     sysctls:
       - net.core.somaxconn=1024
     restart: always
     healthcheck:
-      test: [ "CMD", "valkey-cli", "ping" ]
+      test: [ "CMD", "valkey-cli", "-s", "/var/run/valkey/valkey-cache.sock", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -128,8 +129,10 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       GUARD_THRESHOLD: 0.6
+      GRPC_SOCKET_PATH: /var/run/grpc/llm.sock
     volumes:
       - ./logs:/app/logs
+      - grpc-socket:/var/run/grpc
     depends_on:
       postgres:
         condition: service_healthy
@@ -137,6 +140,7 @@ services:
         condition: service_healthy
     ports:
       - "40527:40527"
+      - "40528:40528"
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "-T", "5", "http://localhost:40527/health/ready" ]
       interval: 30s
@@ -169,7 +173,8 @@ services:
     environment:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 30081
-      LLM_BASE_URL: grpc://mcp-llm-server:40528
+      LLM_BASE_URL: unix:///var/run/grpc/llm.sock
+      CACHE_SOCKET_PATH: /var/run/valkey/valkey-cache.sock
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
       MQ_HOST: valkey-mq
@@ -184,6 +189,8 @@ services:
           memory: 512m
     volumes:
       - ./logs:/app/logs
+      - grpc-socket:/var/run/grpc:ro
+      - valkey-cache-socket:/var/run/valkey:ro
     ports:
       - "30081:30081"
     depends_on:
@@ -221,7 +228,8 @@ services:
     environment:
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 30082
-      LLM_BASE_URL: grpc://mcp-llm-server:40528
+      LLM_BASE_URL: unix:///var/run/grpc/llm.sock
+      CACHE_SOCKET_PATH: /var/run/valkey/valkey-cache.sock
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
       MQ_HOST: valkey-mq
@@ -235,6 +243,8 @@ services:
     command: [ "./bin/turtlesoup" ]
     volumes:
       - ./logs:/app/logs
+      - grpc-socket:/var/run/grpc:ro
+      - valkey-cache-socket:/var/run/valkey:ro
     ports:
       - "30082:30082"
     depends_on:
@@ -270,6 +280,7 @@ services:
       GOGC: "60"
       MQ_HOST: valkey-mq
       MQ_PORT: 1833
+      CACHE_SOCKET_PATH: /var/run/valkey/valkey-cache.sock
       CACHE_HOST: valkey-cache
       CACHE_PORT: 6379
       POSTGRES_HOST: postgres
@@ -287,6 +298,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - valkey-cache-socket:/var/run/valkey:ro
     ports:
       - "30001:30001"
     depends_on:
@@ -338,7 +350,18 @@ volumes:
   pg-data-v18:
   valkey-cache-data:
   valkey-mq-data:
-
+  grpc-socket:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,mode=0777,uid=1000
+  valkey-cache-socket:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,mode=0777
 
 networks:
   llm-bot-net:
