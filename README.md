@@ -14,9 +14,10 @@ LLM 기반 카카오톡 봇 서비스를 위한 모노레포 워크스페이스�
 | **언어** | Go | 1.25.5 |
 | **AI** | Google Gemini API | go-genai SDK |
 | **메시지큐** | Valkey Streams | 9.0.1-alpine3.23 |
-| **캐시** | Valkey (AOF) | 9.0.1-alpine3.23 |
+| **캐시** | Valkey | 9.0.1-alpine3.23 (UDS 지원) |
 | **데이터베이스** | PostgreSQL | 18-alpine |
-| **HTTP** | h2c (HTTP/2 Cleartext) | - |
+| **gRPC** | gRPC + UDS | Dual-mode (TCP + Unix Socket) |
+| **Valkey** | Valkey + UDS | Dual-mode (TCP + Unix Socket) |
 
 ## 프로젝트 구조
 
@@ -65,7 +66,7 @@ llm/
 
 | 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
 |--------|------------|------|--------|------|
-| `mcp-llm-server` | mcp-llm-server | 40527 | 1GB | LLM 추론/가드/세션 |
+| `mcp-llm-server` | mcp-llm-server | 40527 (HTTP), 40528 (gRPC) | 1GB | LLM 추론/가드/세션 |
 | `twentyq-bot` | twentyq-bot | 30081 | 512MB | 스무고개 게임 봇 |
 | `turtle-soup-bot` | turtle-soup-bot | 30082 | 512MB | 바다거북수프 게임 봇 |
 | `hololive-bot` | hololive-kakao-bot-go | 30001 | 512MB | 홀로라이브 정보 봇 |
@@ -76,7 +77,7 @@ llm/
 | 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
 |--------|------------|------|--------|------|
 | `postgres` | llm-postgres | 5432 | 512MB | 통합 PostgreSQL |
-| `valkey-cache` | valkey-cache | 6379 | 512MB | 세션/캐시 (AOF) |
+| `valkey-cache` | valkey-cache | 6379 (TCP) + UDS | 512MB | 세션/캐시 (Dual-mode) |
 | `valkey-mq` | valkey-mq | 1833 | 256MB | Streams 메시지큐 |
 
 ### DeUnhealth (컨테이너 헬스 모니터)
@@ -148,6 +149,21 @@ postgres:
 | twentyq | GET/POST | `/api/twentyq/*` | REST API |
 | turtlesoup | GET | `/health` | 헬스체크 |
 | turtlesoup | GET/POST | `/api/turtlesoup/*` | REST API |
+
+### gRPC 엔드포인트 (`mcp-llm-server:40528`)
+
+| 서비스 | 메서드 | 설명 |
+|--------|--------|------|
+| `llm.v1.LLMService` | `GetModelConfig` | 모델 설정 조회 |
+| `llm.v1.LLMService` | `EndSession` | 세션 종료 |
+| `llm.v1.LLMService` | `GuardIsMalicious` | 인젝션 가드 체크 |
+| `llm.v1.LLMService` | `TwentyQ*` | 스무고개 LLM 호출 |
+| `llm.v1.LLMService` | `TurtleSoup*` | 바다거북수프 LLM 호출 |
+| `llm.v1.LLMService` | `Get*Usage` | 토큰 사용량 조회 |
+
+**gRPC 통신 모드**:
+- **TCP**: `grpc://mcp-llm-server:40528` (외부 디버깅용)
+- **UDS**: `unix:///var/run/grpc/llm.sock` (내부 컨테이너 통신, 성능 최적화)
 
 ## 빠른 시작
 
@@ -243,12 +259,33 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 | `LOG_FILE_MAX_SIZE_MB` | 최대 파일 크기(MB) | `1` |
 | `LOG_FILE_MAX_BACKUPS` | 백업 개수 | `30` |
 
+### gRPC/UDS 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `GRPC_HOST` | gRPC 바인딩 호스트 | `127.0.0.1` |
+| `GRPC_PORT` | gRPC 포트 | `40528` |
+| `GRPC_ENABLED` | gRPC 활성화 | `true` |
+| `GRPC_SOCKET_PATH` | UDS 소켓 경로 | (비활성화) |
+| `LLM_BASE_URL` | LLM 서버 URL (클라이언트) | `grpc://...` 또는 `unix://...` |
+
+### Valkey UDS 설정
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `CACHE_SOCKET_PATH` | Valkey 캐시 UDS 소켓 경로 | (비활성화, TCP 사용) |
+| `CACHE_HOST` | Valkey 캐시 호스트 | `valkey-cache` |
+| `CACHE_PORT` | Valkey 캐시 포트 | `6379` |
+
+**참고**: `CACHE_SOCKET_PATH`가 설정되면 TCP 설정(`CACHE_HOST`, `CACHE_PORT`)보다 UDS가 우선 사용됩니다.
+프로덕션 환경에서는 UDS를 통해 네트워크 스택 오버헤드 없이 직접 통신하여 레이턴시를 최소화합니다.
+
 ## 아키텍처
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                              카카오톡 앱                                       │
-└──────────────────────────────────┬───────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -261,20 +298,30 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate mcp-llm-server
 │    :30081       │    │    :30082       │    │       :30001            │
 └────────┬────────┘    └────────┬────────┘    └────────────┬────────────┘
          │                      │                          │
-         │    ┌─────────────────┴──────────────┐           │
-         └───►│         LLM Server             │           │
-              │           :40527               │           │
-              │        (h2c + Gin)             │           │
-              └───────────────┬────────────────┘           │
-                              │                            │
-    ┌─────────────────────────┼─────────────────────────┐  │
-    │                         │                         │  │
-    ▼                         ▼                         ▼  ▼
+         │  UDS (/var/run/grpc/llm.sock)                   │
+         └──────────────────────┼──────────────────────────┘
+                                ▼
+              ┌─────────────────────────────────┐
+              │         LLM Server              │
+              │  HTTP :40527 │ gRPC :40528      │
+              │  UDS: /var/run/grpc/llm.sock    │
+              └───────────────┬─────────────────┘
+                              │
+    ┌─────────────────────────┼─────────────────────────┐
+    │                         │                         │
+    ▼                         ▼                         ▼
 ┌──────────────┐    ┌───────────────┐    ┌────────────────────┐
 │ Valkey Cache │◄───┼───────────────┼────┤    PostgreSQL      │
-│    :6379     │    │  Gemini API   │    │      :5432         │
-│ (AOF 영속화)  │    │  (External)   │    │                    │
-└──────────────┘    └───────────────┘    └────────────────────┘
+│ :6379 + UDS  │    │  Gemini API   │    │      :5432         │
+│ valkey-cache │    └───────────────┘    └────────────────────┘
+│   .sock      │
+└──────────────┘
+        ▲
+        │ UDS (/var/run/valkey/valkey-cache.sock)
+        │
+┌───────┴────────┬────────────────┬───────────────────────────┐
+│   twentyq-bot  │ turtle-soup-bot│     hololive-bot          │
+└────────────────┴────────────────┴───────────────────────────┘
 
 ┌───────────────────────────────────────────────────────────────┐
 │  DeUnhealth (qmcgaw/deunhealth) - 헬스체크 실패 시 자동 재시작   │
@@ -393,11 +440,30 @@ curl http://localhost:40527/health/models
 ### Valkey 연결 실패
 
 ```bash
-# Valkey 상태 확인
+# Valkey 상태 확인 (TCP)
 docker exec valkey-cache valkey-cli ping
 docker exec valkey-mq valkey-cli -p 1833 ping
+
+# Valkey 상태 확인 (UDS)
+docker exec valkey-cache valkey-cli -s /var/run/valkey/valkey-cache.sock ping
+
+# UDS 소켓 파일 존재 여부 확인
+docker exec valkey-cache ls -la /var/run/valkey/
+```
+
+### gRPC 테스트 (grpcurl)
+
+```bash
+# gRPC 서비스 목록
+grpcurl -plaintext localhost:40528 list
+
+# 모델 설정 조회
+grpcurl -plaintext localhost:40528 llm.v1.LLMService/GetModelConfig
+
+# 메서드 상세 정보
+grpcurl -plaintext localhost:40528 describe llm.v1.LLMService
 ```
 
 ---
 
-**Last Updated**: 2025-12-26
+**Last Updated**: 2026-01-01
