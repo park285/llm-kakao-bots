@@ -17,6 +17,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
+	"golang.org/x/text/unicode/norm"
 )
 
 // Service: TwentyQ 비즈니스 로직(HTTP/gRPC 공용) 구현체입니다.
@@ -269,6 +270,23 @@ func (s *Service) VerifyGuess(ctx context.Context, requestID string, target stri
 		return VerifyResult{}, httperror.NewInvalidInput("guess required")
 	}
 
+	// Fast-path: 정규화 후 완전 일치 검사 → LLM 호출 없이 즉시 ACCEPT
+	// 비용 절감 + 결정론적 판정 (LLM 환각 위험 제거)
+	if normalizeForCompare(target) == normalizeForCompare(guess) {
+		resultStr := string(twentyqdomain.VerifyAccept)
+		s.logInfo(
+			"twentyq_verify_result",
+			"request_id", requestID,
+			"path", "fast", // 대시보드 필터링용: fast | llm
+			"result", resultStr, // 정답 | 근접 | 오답
+			"target", target,
+			"guess", guess,
+			"llm_calls", 0, // Fast-path는 LLM 호출 0회
+			"cost_saved", true, // 비용 절감 여부
+		)
+		return VerifyResult{Result: &resultStr, RawText: resultStr}, nil
+	}
+
 	if err := s.guard.EnsureSafe(guess); err != nil {
 		s.logError("twentyq_guess_guard_failed", err)
 		return VerifyResult{}, fmt.Errorf("guard guess: %w", err)
@@ -289,6 +307,7 @@ func (s *Service) VerifyGuess(ctx context.Context, requestID string, target stri
 		return VerifyResult{}, fmt.Errorf("verify structured: %w", err)
 	}
 
+	// LLM 호출이 필요 없었을 경우 위에서 반환했으므로 여기서는 기존 흐름 유지
 	s.logVerifyConsensus(requestID, consensus)
 
 	return s.parseVerifyGuessPayload(consensus.Payload), nil
@@ -343,15 +362,22 @@ func (s *Service) logVerifyConsensus(requestID string, consensus gemini.Consensu
 			)
 		}
 	}
+
+	// 만장일치 여부 판단 (합의 분석용)
+	unanimous := consensus.ConsensusCount == consensus.SuccessfulCalls && consensus.SuccessfulCalls > 0
+
 	s.logInfo(
-		"twentyq_verify_consensus",
+		"twentyq_verify_result", // Fast-path와 동일한 이벤트명
 		"request_id", requestID,
-		"value", consensus.ConsensusValue,
-		"count", consensus.ConsensusCount,
-		"total", consensus.TotalCalls,
+		"path", "llm", // 대시보드 필터링용: fast | llm
+		"result", consensus.ConsensusValue,
+		"llm_calls", consensus.TotalCalls, // LLM 호출 횟수
+		"success", consensus.SuccessfulCalls,
+		"count", consensus.ConsensusCount, // 합의 투표 수
 		"weight", consensus.ConsensusWeight,
 		"total_weight", consensus.TotalWeight,
-		"success", consensus.SuccessfulCalls,
+		"unanimous", unanimous, // 만장일치 여부
+		"cost_saved", false, // LLM 호출했으므로 비용 절감 아님
 	)
 }
 
@@ -617,4 +643,18 @@ func (s *Service) logInfo(event string, fields ...any) {
 		return
 	}
 	s.logger.Info(event, fields...)
+}
+
+// normalizeForCompare: 문자열 비교를 위한 정규화를 수행합니다.
+// 1. 유니코드 NFC 정규화 (조합형/완성형 통일)
+// 2. 모든 공백 제거
+// 3. 소문자 변환 (영문 대소문자 무시)
+func normalizeForCompare(s string) string {
+	// NFC 정규화: NFD(분해형)로 입력된 한글도 NFC(완성형)로 통일
+	s = norm.NFC.String(s)
+	// 모든 공백 제거 (중간 공백 포함)
+	s = strings.ReplaceAll(s, " ", "")
+	s = strings.ReplaceAll(s, "\t", "")
+	// 소문자 변환 (영문 대소문자 무시)
+	return strings.ToLower(s)
 }

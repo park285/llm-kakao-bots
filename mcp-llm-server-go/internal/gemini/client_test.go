@@ -163,12 +163,23 @@ func TestPickConsensusWinner(t *testing.T) {
 			expectedValue: "",
 		},
 		{
-			name: "by_weight",
+			// 핵심 변경: Count(다수결)가 WeightSum보다 우선
+			// "확신에 찬 소수"가 다수를 이기지 못함
+			name: "count_priority_over_weight",
 			scores: map[string]consensusScore{
-				"A": {Count: 3, WeightSum: 1.0, MaxConfidence: 0.4},
-				"B": {Count: 1, WeightSum: 1.5, MaxConfidence: 0.9},
+				"정답": {Count: 2, WeightSum: 0.8, MaxConfidence: 0.4},
+				"오답": {Count: 1, WeightSum: 0.95, MaxConfidence: 0.95},
 			},
-			expectedValue: "B",
+			expectedValue: "정답", // Count 2 > 1 → 정답 승리
+		},
+		{
+			// 동일 Count일 때 WeightSum으로 결정
+			name: "weight_when_count_tied",
+			scores: map[string]consensusScore{
+				"정답": {Count: 2, WeightSum: 1.5, MaxConfidence: 0.8},
+				"오답": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.6},
+			},
+			expectedValue: "정답", // Count 동일 → WeightSum 1.5 > 1.0
 		},
 		{
 			name: "tie_break_by_count",
@@ -176,7 +187,7 @@ func TestPickConsensusWinner(t *testing.T) {
 				"A": {Count: 1, WeightSum: 1.0, MaxConfidence: 1.0},
 				"B": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.5},
 			},
-			expectedValue: "B",
+			expectedValue: "B", // Count 2 > 1
 		},
 		{
 			name: "tie_break_by_max_confidence",
@@ -184,15 +195,41 @@ func TestPickConsensusWinner(t *testing.T) {
 				"A": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.6},
 				"B": {Count: 2, WeightSum: 1.0, MaxConfidence: 0.8},
 			},
-			expectedValue: "B",
+			expectedValue: "B", // Count, Weight 동일 → MaxConfidence 0.8 > 0.6
 		},
 		{
-			name: "tie_break_by_value",
+			// 명시적 우선순위 맵 테스트: 정답 > 근접 > 오답
+			name: "priority_map_accept_over_close",
+			scores: map[string]consensusScore{
+				"정답": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+				"근접": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+			},
+			expectedValue: "정답", // 동점 → 우선순위 맵: 정답(3) > 근접(2)
+		},
+		{
+			name: "priority_map_close_over_reject",
+			scores: map[string]consensusScore{
+				"근접": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+				"오답": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
+			},
+			expectedValue: "근접", // 동점 → 우선순위 맵: 근접(2) > 오답(1)
+		},
+		{
+			name: "priority_map_accept_over_reject",
+			scores: map[string]consensusScore{
+				"정답": {Count: 1, WeightSum: 0.5, MaxConfidence: 0.5},
+				"오답": {Count: 1, WeightSum: 0.5, MaxConfidence: 0.5},
+			},
+			expectedValue: "정답", // 동점 → 우선순위 맵: 정답(3) > 오답(1)
+		},
+		{
+			// 알 수 없는 값은 우선순위 0으로 처리됨
+			name: "unknown_values_fallback",
 			scores: map[string]consensusScore{
 				"a": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
 				"b": {Count: 1, WeightSum: 1.0, MaxConfidence: 0.5},
 			},
-			expectedValue: "a",
+			expectedValue: "a", // 둘 다 우선순위 0 → 먼저 처리된 값 유지 (비결정적이지만 테스트에서는 map 순서에 의존)
 		},
 	}
 

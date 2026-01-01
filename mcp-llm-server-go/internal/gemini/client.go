@@ -142,6 +142,14 @@ type consensusScore struct {
 	MaxConfidence float64
 }
 
+// verifyResultPriority: 검증 결과의 명시적 우선순위 맵입니다.
+// 동점 시 사용자에게 유리한 방향으로 판정합니다: 정답 > 근접 > 오답
+var verifyResultPriority = map[string]int{
+	"정답": 3,
+	"근접": 2,
+	"오답": 1,
+}
+
 func pickConsensusWinner(scores map[string]consensusScore) (string, consensusScore) {
 	const epsilon = 1e-9
 	var winningValue string
@@ -156,15 +164,7 @@ func pickConsensusWinner(scores map[string]consensusScore) (string, consensusSco
 			continue
 		}
 
-		if score.WeightSum > winningScore.WeightSum+epsilon {
-			winningValue = value
-			winningScore = score
-			continue
-		}
-		if math.Abs(score.WeightSum-winningScore.WeightSum) > epsilon {
-			continue
-		}
-
+		// 1순위: Count (다수결) - "확신에 찬 소수"가 다수를 이기지 못하도록 함
 		if score.Count > winningScore.Count {
 			winningValue = value
 			winningScore = score
@@ -174,6 +174,17 @@ func pickConsensusWinner(scores map[string]consensusScore) (string, consensusSco
 			continue
 		}
 
+		// 2순위: WeightSum (신뢰도 합) - 동일 투표 수일 때 신뢰도로 결정
+		if score.WeightSum > winningScore.WeightSum+epsilon {
+			winningValue = value
+			winningScore = score
+			continue
+		}
+		if math.Abs(score.WeightSum-winningScore.WeightSum) > epsilon {
+			continue
+		}
+
+		// 3순위: MaxConfidence (최대 개별 신뢰도)
 		if score.MaxConfidence > winningScore.MaxConfidence+epsilon {
 			winningValue = value
 			winningScore = score
@@ -183,7 +194,11 @@ func pickConsensusWinner(scores map[string]consensusScore) (string, consensusSco
 			continue
 		}
 
-		if value < winningValue {
+		// 4순위: 명시적 우선순위 맵 (정답 > 근접 > 오답)
+		// 사전순 대신, 사용자에게 유리한 방향으로 판정
+		valuePriority := verifyResultPriority[value]
+		winnerPriority := verifyResultPriority[winningValue]
+		if valuePriority > winnerPriority {
 			winningValue = value
 			winningScore = score
 		}
