@@ -201,11 +201,12 @@ type ValkeyConfig struct {
 
 // PostgresConfig: 메인 데이터베이스(PostgreSQL) 연결 설정
 type PostgresConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Database string
+	Host       string
+	Port       int
+	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
+	User       string
+	Password   string
+	Database   string
 }
 
 // NotificationConfig: 방송 알림 스케줄링(미리 알림 시간, 체크 주기) 설정
@@ -290,11 +291,12 @@ func Load() (*Config, error) {
 			SocketPath: getEnv("CACHE_SOCKET_PATH", ""),
 		},
 		Postgres: PostgresConfig{
-			Host:     getEnv("POSTGRES_HOST", constants.DatabaseDefaults.Host),
-			Port:     getEnvInt("POSTGRES_PORT", constants.DatabaseDefaults.Port),
-			User:     getEnv("POSTGRES_USER", constants.DatabaseDefaults.User),
-			Password: getEnv("POSTGRES_PASSWORD", constants.DatabaseDefaults.Password),
-			Database: getEnv("POSTGRES_DB", constants.DatabaseDefaults.Database),
+			Host:       getEnv("POSTGRES_HOST", constants.DatabaseDefaults.Host),
+			Port:       getEnvInt("POSTGRES_PORT", constants.DatabaseDefaults.Port),
+			SocketPath: getEnv("POSTGRES_SOCKET_PATH", ""),
+			User:       getEnv("POSTGRES_USER", constants.DatabaseDefaults.User),
+			Password:   getEnv("POSTGRES_PASSWORD", constants.DatabaseDefaults.Password),
+			Database:   getEnv("POSTGRES_DB", constants.DatabaseDefaults.Database),
 		},
 		Notification: NotificationConfig{
 			AdvanceMinutes: parseIntList(getEnv("NOTIFICATION_ADVANCE_MINUTES", "5,15,30")),

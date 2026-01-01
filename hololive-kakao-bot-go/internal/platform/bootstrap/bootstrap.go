@@ -70,13 +70,15 @@ func NewCacheResources(cfg config.ValkeyConfig, logger *slog.Logger) (*CacheReso
 }
 
 // NewDatabaseResources: PostgreSQL 설정을 기반으로 DB 서비스를 초기화하고 리소스 객체를 반환합니다.
+// SocketPath가 설정되면 UDS로 연결합니다.
 func NewDatabaseResources(cfg config.PostgresConfig, logger *slog.Logger) (*DatabaseResources, error) {
 	dbSvc, err := database.NewPostgresService(database.PostgresConfig{
-		Host:     cfg.Host,
-		Port:     cfg.Port,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Database: cfg.Database,
+		Host:       cfg.Host,
+		Port:       cfg.Port,
+		SocketPath: cfg.SocketPath,
+		User:       cfg.User,
+		Password:   cfg.Password,
+		Database:   cfg.Database,
 	}, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create postgres service: %w", err)

@@ -375,15 +375,29 @@ func newTwentyQServerApp(
 }
 
 func openPostgres(ctx context.Context, cfg qconfig.PostgresConfig) (*gorm.DB, *sql.DB, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host,
-		cfg.Port,
-		cfg.User,
-		cfg.Password,
-		cfg.Name,
-		cfg.SSLMode,
-	)
+	var dsn string
+	if cfg.SocketPath != "" {
+		// UDS 우선: SocketPath가 설정되면 Unix 소켓 사용
+		dsn = fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s sslmode=%s",
+			cfg.SocketPath,
+			cfg.User,
+			cfg.Password,
+			cfg.Name,
+			cfg.SSLMode,
+		)
+	} else {
+		// TCP fallback
+		dsn = fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Host,
+			cfg.Port,
+			cfg.User,
+			cfg.Password,
+			cfg.Name,
+			cfg.SSLMode,
+		)
+	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

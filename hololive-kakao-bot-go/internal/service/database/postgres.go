@@ -21,20 +21,29 @@ type PostgresService struct {
 	logger *slog.Logger
 }
 
-// PostgresConfig: PostgreSQL 접속 정보(Host, Port, User, Password, Database)를 담는 설정 구조체
+// PostgresConfig: PostgreSQL 접속 정보(Host, Port, SocketPath, User, Password, Database)를 담는 설정 구조체
 type PostgresConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Database string
+	Host       string
+	Port       int
+	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
+	User       string
+	Password   string
+	Database   string
 }
 
 // NewPostgresService: 주어진 설정을 사용하여 PostgreSQL 연결을 수립하고 서비스를 초기화합니다.
 // 연결 풀 설정 및 초기 헬스 체크(Ping)를 수행하며, GORM 인스턴스도 함께 초기화한다.
 func NewPostgresService(cfg PostgresConfig, logger *slog.Logger) (*PostgresService, error) {
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database)
+	var dsn string
+	if cfg.SocketPath != "" {
+		// UDS 우선: SocketPath가 설정되면 Unix 소켓 사용
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+			cfg.SocketPath, cfg.User, cfg.Password, cfg.Database)
+	} else {
+		// TCP fallback
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+			cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database)
+	}
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -54,9 +63,15 @@ func NewPostgresService(cfg PostgresConfig, logger *slog.Logger) (*PostgresServi
 		return nil, fmt.Errorf("failed to ping postgres: %w", err)
 	}
 
+	connMode := "TCP"
+	if cfg.SocketPath != "" {
+		connMode = "UDS"
+	}
 	logger.Info("PostgreSQL connected",
+		slog.String("mode", connMode),
 		slog.String("host", cfg.Host),
 		slog.Int("port", cfg.Port),
+		slog.String("socket_path", cfg.SocketPath),
 		slog.String("database", cfg.Database),
 	)
 

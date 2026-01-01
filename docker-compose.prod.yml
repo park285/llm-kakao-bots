@@ -25,6 +25,7 @@ services:
       - "5432:5432"
     volumes:
       - pg-data-v18:/var/lib/postgresql/data
+      - pg-socket:/var/run/postgresql
       - ./backups:/backups
       - ./hololive-kakao-bot-go/scripts/init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
@@ -128,11 +129,13 @@ services:
       SESSION_STORE_URL: redis://valkey-cache:6379
       DB_HOST: postgres
       DB_PORT: 5432
+      DB_SOCKET_PATH: /var/run/postgresql
       GUARD_THRESHOLD: 0.6
       GRPC_SOCKET_PATH: /var/run/grpc/llm.sock
     volumes:
       - ./logs:/app/logs
       - grpc-socket:/var/run/grpc
+      - pg-socket:/var/run/postgresql:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -181,6 +184,7 @@ services:
       MQ_PORT: 1833
       DB_HOST: postgres
       DB_PORT: 5432
+      DB_SOCKET_PATH: /var/run/postgresql
       LOG_DIR: /app/logs
       GOMEMLIMIT: "450MiB"
     deploy:
@@ -191,6 +195,7 @@ services:
       - ./logs:/app/logs
       - grpc-socket:/var/run/grpc:ro
       - valkey-cache-socket:/var/run/valkey:ro
+      - pg-socket:/var/run/postgresql:ro
     ports:
       - "30081:30081"
     depends_on:
@@ -285,6 +290,7 @@ services:
       CACHE_PORT: 6379
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      POSTGRES_SOCKET_PATH: /var/run/postgresql
       POSTGRES_DB: hololive
       POSTGRES_USER: ${DB_USER:-twentyq_app}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -299,6 +305,7 @@ services:
       - ./logs:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - valkey-cache-socket:/var/run/valkey:ro
+      - pg-socket:/var/run/postgresql:ro
     ports:
       - "30001:30001"
     depends_on:
@@ -357,6 +364,12 @@ volumes:
       device: tmpfs
       o: size=1m,mode=0777,uid=1000
   valkey-cache-socket:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=1m,mode=0777
+  pg-socket:
     driver: local
     driver_opts:
       type: tmpfs

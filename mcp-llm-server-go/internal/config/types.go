@@ -148,6 +148,7 @@ type HTTPRateLimitConfig struct {
 type DatabaseConfig struct {
 	Host                                 string
 	Port                                 int
+	SocketPath                           string // UDS 경로 (비어있으면 TCP 사용)
 	Name                                 string
 	User                                 string
 	Password                             string
@@ -163,8 +164,24 @@ type DatabaseConfig struct {
 	UsageBatchErrorLogMaxIntervalSeconds int
 }
 
-// DSN: DB 접속 문자열을 반환합니다.
+// DSN: DB 접속 문자열을 반환합니다. SocketPath가 설정되면 UDS를 사용합니다.
 func (d DatabaseConfig) DSN() string {
+	// UDS 우선: SocketPath가 설정되면 Unix 소켓 사용
+	if d.SocketPath != "" {
+		u := &url.URL{
+			Scheme:   "postgresql",
+			Host:     d.SocketPath,
+			Path:     "/" + d.Name,
+			RawQuery: "host=" + d.SocketPath,
+		}
+		if d.Password == "" {
+			u.User = url.User(d.User)
+		} else {
+			u.User = url.UserPassword(d.User, d.Password)
+		}
+		return u.String()
+	}
+	// TCP fallback
 	host := net.JoinHostPort(d.Host, strconv.Itoa(d.Port))
 	u := &url.URL{
 		Scheme: "postgresql",

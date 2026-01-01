@@ -26,12 +26,13 @@ type ValkeyMQConfig = commonconfig.ValkeyMQConfig
 
 // PostgresConfig: PostgreSQL 데이터베이스 설정
 type PostgresConfig struct {
-	Host     string
-	Port     int
-	Name     string
-	User     string
-	Password string
-	SSLMode  string
+	Host       string
+	Port       int
+	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
+	Name       string
+	User       string
+	Password   string
+	SSLMode    string
 }
 
 // AccessConfig: 접근 제어 설정 (화이트리스트/블랙리스트) alias
@@ -264,12 +265,13 @@ func readPostgresConfig() (PostgresConfig, error) {
 	}
 
 	return PostgresConfig{
-		Host:     commonconfig.StringFromEnv("DB_HOST", "localhost"),
-		Port:     port,
-		Name:     commonconfig.StringFromEnv("DB_NAME", "twentyq"),
-		User:     commonconfig.StringFromEnv("DB_USER", "twentyq_app"),
-		Password: commonconfig.StringFromEnv("DB_PASSWORD", ""),
-		SSLMode:  commonconfig.StringFromEnv("DB_SSLMODE", "disable"),
+		Host:       commonconfig.StringFromEnv("DB_HOST", "localhost"),
+		Port:       port,
+		SocketPath: commonconfig.StringFromEnv("DB_SOCKET_PATH", ""),
+		Name:       commonconfig.StringFromEnv("DB_NAME", "twentyq"),
+		User:       commonconfig.StringFromEnv("DB_USER", "twentyq_app"),
+		Password:   commonconfig.StringFromEnv("DB_PASSWORD", ""),
+		SSLMode:    commonconfig.StringFromEnv("DB_SSLMODE", "disable"),
 	}, nil
 }
 

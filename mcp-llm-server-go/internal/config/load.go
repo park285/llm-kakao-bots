@@ -166,6 +166,7 @@ func buildConfig() *Config {
 		Database: DatabaseConfig{
 			Host:                                 getEnvString("DB_HOST", "localhost"),
 			Port:                                 getEnvInt("DB_PORT", 5432),
+			SocketPath:                           getEnvString("DB_SOCKET_PATH", ""),
 			Name:                                 getEnvString("DB_NAME", "twentyq"),
 			User:                                 getEnvString("DB_USER", "twentyq"),
 			Password:                             getEnvString("DB_PASSWORD", ""),
