@@ -95,7 +95,7 @@ func InitializeApp() (*App, error) {
 		puzzleLoader,
 	)
 
-	grpcServer, grpcListener, err := grpcserver.NewServer(cfg, logger)
+	grpcServer, grpcListener, grpcUDSListener, err := grpcserver.NewServer(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("grpc server: %w", err)
 	}
@@ -107,5 +107,5 @@ func InitializeApp() (*App, error) {
 	router := handler.NewRouter(cfg, logger, llmHandler, sessionHandler, guardHandler, usageHandler, twentyQHandler, turtleSoupHandler)
 	httpServer := server.NewHTTPServer(cfg, router)
 
-	return NewApp(httpServer, grpcServer, grpcListener, logger, cfg, sessionStore, usageRepository, usageRecorder), nil
+	return NewApp(httpServer, grpcServer, grpcListener, grpcUDSListener, logger, cfg, sessionStore, usageRepository, usageRecorder), nil
 }

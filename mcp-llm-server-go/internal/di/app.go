@@ -12,11 +12,12 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usage"
 )
 
-// App 은 애플리케이션 구성 요소를 묶는다.
+// App: 애플리케이션 구성 요소를 묶는다.
 type App struct {
 	Server          *http.Server
 	GRPCServer      *grpc.Server
-	GRPCListener    net.Listener
+	GRPCListener    net.Listener // TCP 리스너
+	GRPCUDSListener net.Listener // UDS 리스너 (선택적)
 	Logger          *slog.Logger
 	Config          *config.Config
 	SessionStore    *session.Store
@@ -29,6 +30,7 @@ func NewApp(
 	server *http.Server,
 	grpcServer *grpc.Server,
 	grpcListener net.Listener,
+	grpcUDSListener net.Listener,
 	logger *slog.Logger,
 	cfg *config.Config,
 	sessionStore *session.Store,
@@ -39,6 +41,7 @@ func NewApp(
 		Server:          server,
 		GRPCServer:      grpcServer,
 		GRPCListener:    grpcListener,
+		GRPCUDSListener: grpcUDSListener,
 		Logger:          logger,
 		Config:          cfg,
 		SessionStore:    sessionStore,
@@ -47,13 +50,16 @@ func NewApp(
 	}
 }
 
-// Close 앱 리소스 정리
+// Close: 앱 리소스를 정리합니다.
 func (a *App) Close() {
 	if a.GRPCServer != nil {
 		a.GRPCServer.Stop()
 	}
 	if a.GRPCListener != nil {
 		_ = a.GRPCListener.Close()
+	}
+	if a.GRPCUDSListener != nil {
+		_ = a.GRPCUDSListener.Close()
 	}
 	if a.SessionStore != nil {
 		a.SessionStore.Close()

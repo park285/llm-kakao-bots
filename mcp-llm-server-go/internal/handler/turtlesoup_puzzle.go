@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,10 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
+	turtlesoupuc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/turtlesoup"
 )
 
 func (h *TurtleSoupHandler) handleGenerate(c *gin.Context) {
@@ -21,51 +19,31 @@ func (h *TurtleSoupHandler) handleGenerate(c *gin.Context) {
 		return
 	}
 
-	category := strings.TrimSpace(shared.ValueOrEmpty(req.Category))
-	if category == "" {
-		category = "MYSTERY"
-	}
-
-	difficulty := 3
+	var difficultyPtr *int
 	if req.Difficulty != nil {
-		difficulty = *req.Difficulty
-	}
-	if difficulty < 1 {
-		difficulty = 1
-	}
-	if difficulty > 5 {
-		difficulty = 5
+		d := *req.Difficulty
+		difficultyPtr = &d
 	}
 
-	theme := strings.TrimSpace(shared.ValueOrEmpty(req.Theme))
-	if theme != "" {
-		if err := h.guard.EnsureSafe(theme); err != nil {
-			h.logError(err)
-			writeError(c, err)
-			return
-		}
-	}
-
-	preset, err := h.loader.GetRandomPuzzleByDifficulty(difficulty)
-	if err == nil {
-		c.JSON(http.StatusOK, TurtleSoupPuzzleGenerationResponse{
-			Title:      preset.Title,
-			Scenario:   preset.Question,
-			Solution:   preset.Answer,
-			Category:   category,
-			Difficulty: preset.Difficulty,
-			Hints:      []string{},
-		})
-		return
-	}
-
-	puzzle, err := h.generatePuzzleLLM(c.Request.Context(), category, difficulty, theme)
+	puzzle, err := h.usecase.GeneratePuzzle(c.Request.Context(), turtlesoupuc.GeneratePuzzleRequest{
+		Category:   shared.ValueOrEmpty(req.Category),
+		Difficulty: difficultyPtr,
+		Theme:      shared.ValueOrEmpty(req.Theme),
+	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, puzzle)
+
+	c.JSON(http.StatusOK, TurtleSoupPuzzleGenerationResponse{
+		Title:      puzzle.Title,
+		Scenario:   puzzle.Scenario,
+		Solution:   puzzle.Solution,
+		Category:   puzzle.Category,
+		Difficulty: puzzle.Difficulty,
+		Hints:      puzzle.Hints,
+	})
 }
 
 func (h *TurtleSoupHandler) handleRewrite(c *gin.Context) {
@@ -74,20 +52,12 @@ func (h *TurtleSoupHandler) handleRewrite(c *gin.Context) {
 		return
 	}
 
-	system, err := h.prompts.RewriteSystem()
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-	userContent, err := h.prompts.RewriteUser(req.Title, req.Scenario, req.Solution, req.Difficulty)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	scenario, solution, err := h.rewritePuzzle(c.Request.Context(), system, userContent)
+	result, err := h.usecase.RewriteScenario(c.Request.Context(), turtlesoupuc.RewriteRequest{
+		Title:      req.Title,
+		Scenario:   req.Scenario,
+		Solution:   req.Solution,
+		Difficulty: req.Difficulty,
+	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
@@ -95,8 +65,8 @@ func (h *TurtleSoupHandler) handleRewrite(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, TurtleSoupRewriteResponse{
-		Scenario:         scenario,
-		Solution:         solution,
+		Scenario:         result.Scenario,
+		Solution:         result.Solution,
 		OriginalScenario: req.Scenario,
 		OriginalSolution: req.Solution,
 	})
@@ -172,107 +142,4 @@ func (h *TurtleSoupHandler) handleReloadPuzzles(c *gin.Context) {
 		"count":         count,
 		"by_difficulty": h.loader.CountByDifficulty(),
 	})
-}
-
-func (h *TurtleSoupHandler) generatePuzzleLLM(ctx context.Context, category string, difficulty int, theme string) (TurtleSoupPuzzleGenerationResponse, error) {
-	system, err := h.prompts.GenerateSystem()
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("load puzzle system prompt: %w", err)
-	}
-
-	examples := h.loader.GetExamples(difficulty, 3)
-	exampleLines := make([]string, 0, len(examples))
-	for _, p := range examples {
-		exampleLines = append(exampleLines, strings.Join([]string{
-			"- 제목: " + p.Title,
-			"  시나리오: " + p.Question,
-			"  정답: " + p.Answer,
-			"  난이도: " + strconv.Itoa(p.Difficulty),
-		}, "\n"))
-	}
-	examplesBlock := strings.Join(exampleLines, "\n\n")
-
-	userContent, err := h.prompts.GenerateUser(category, difficulty, theme, examplesBlock)
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("format puzzle user prompt: %w", err)
-	}
-
-	payload, _, err := h.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "hints",
-	}, turtlesoup.PuzzleSchema())
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("generate puzzle structured: %w", err)
-	}
-
-	title, err := shared.ParseStringField(payload, "title")
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("parse title: %w", err)
-	}
-	scenario, err := shared.ParseStringField(payload, "scenario")
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("parse scenario: %w", err)
-	}
-	solution, err := shared.ParseStringField(payload, "solution")
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("parse solution: %w", err)
-	}
-	respCategory := strings.TrimSpace(valueOrEmptyString(payload, "category"))
-	if respCategory == "" {
-		respCategory = category
-	}
-	respDifficulty := difficulty
-	if value, ok := payload["difficulty"]; ok {
-		switch number := value.(type) {
-		case float64:
-			respDifficulty = int(number)
-		case int:
-			respDifficulty = number
-		}
-	}
-	hints, err := shared.ParseStringSlice(payload, "hints")
-	if err != nil {
-		return TurtleSoupPuzzleGenerationResponse{}, fmt.Errorf("parse hints: %w", err)
-	}
-
-	return TurtleSoupPuzzleGenerationResponse{
-		Title:      strings.TrimSpace(title),
-		Scenario:   strings.TrimSpace(scenario),
-		Solution:   strings.TrimSpace(solution),
-		Category:   respCategory,
-		Difficulty: respDifficulty,
-		Hints:      hints,
-	}, nil
-}
-
-func valueOrEmptyString(payload map[string]any, key string) string {
-	raw, ok := payload[key]
-	if !ok {
-		return ""
-	}
-	value, ok := raw.(string)
-	if !ok {
-		return ""
-	}
-	return value
-}
-
-func (h *TurtleSoupHandler) rewritePuzzle(ctx context.Context, system string, userContent string) (string, string, error) {
-	payload, _, err := h.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "answer",
-	}, turtlesoup.RewriteSchema())
-	if err != nil {
-		return "", "", fmt.Errorf("rewrite structured: %w", err)
-	}
-
-	scenario, sErr := shared.ParseStringField(payload, "scenario")
-	solution, aErr := shared.ParseStringField(payload, "solution")
-	if sErr != nil || aErr != nil || strings.TrimSpace(scenario) == "" || strings.TrimSpace(solution) == "" {
-		return "", "", httperror.NewInternalError("rewrite response invalid")
-	}
-
-	return strings.TrimSpace(scenario), strings.TrimSpace(solution), nil
 }

@@ -18,12 +18,14 @@ import (
 	domain "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/guard"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/llm"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 )
 
 type fakeLLMClient struct {
-	chatFn       func(ctx context.Context, req gemini.Request) (string, string, error)
-	structuredFn func(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error)
+	chatFn          func(ctx context.Context, req gemini.Request) (string, string, error)
+	chatWithUsageFn func(ctx context.Context, req gemini.Request) (llm.ChatResult, string, error)
+	structuredFn    func(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error)
 }
 
 func (f fakeLLMClient) Chat(ctx context.Context, req gemini.Request) (string, string, error) {
@@ -33,6 +35,17 @@ func (f fakeLLMClient) Chat(ctx context.Context, req gemini.Request) (string, st
 	return f.chatFn(ctx, req)
 }
 
+func (f fakeLLMClient) ChatWithUsage(ctx context.Context, req gemini.Request) (llm.ChatResult, string, error) {
+	if f.chatWithUsageFn != nil {
+		return f.chatWithUsageFn(ctx, req)
+	}
+	text, model, err := f.Chat(ctx, req)
+	if err != nil {
+		return llm.ChatResult{}, model, err
+	}
+	return llm.ChatResult{Text: text}, model, nil
+}
+
 func (f fakeLLMClient) Structured(ctx context.Context, req gemini.Request, schema map[string]any) (map[string]any, string, error) {
 	if f.structuredFn == nil {
 		return map[string]any{}, "gemini-3-test", nil
@@ -40,7 +53,7 @@ func (f fakeLLMClient) Structured(ctx context.Context, req gemini.Request, schem
 	return f.structuredFn(ctx, req, schema)
 }
 
-func newTestTurtleSoupHandler(t *testing.T, client LLMClient) (*TurtleSoupHandler, *gin.Engine) {
+func newTestTurtleSoupHandler(t *testing.T, client gemini.LLM) (*TurtleSoupHandler, *gin.Engine) {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)

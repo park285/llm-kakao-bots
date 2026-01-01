@@ -22,13 +22,13 @@ import (
 )
 
 var (
-	// ErrMissingAPIKey 는 Gemini API 키가 없을 때 반환된다.
+	// ErrMissingAPIKey: Gemini API 키가 없을 때 반환됩니다.
 	ErrMissingAPIKey = errors.New("missing gemini api key")
-	// ErrInvalidModel 는 지원하지 않는 모델일 때 반환된다.
+	// ErrInvalidModel: 지원하지 않는 모델일 때 반환됩니다.
 	ErrInvalidModel = errors.New("invalid model")
 )
 
-// Request 는 Gemini 요청 데이터다.
+// Request: Gemini 요청 데이터입니다.
 type Request struct {
 	Prompt       string
 	SystemPrompt string
@@ -37,7 +37,7 @@ type Request struct {
 	Task         string
 }
 
-// Client 는 Gemini 호출을 담당한다.
+// Client: Gemini API 호출을 담당하는 클라이언트입니다.
 type Client struct {
 	cfg           *config.Config
 	metrics       *metrics.Store
@@ -48,7 +48,7 @@ type Client struct {
 	apiKeyIdx     int
 }
 
-// NewClient 는 Gemini 클라이언트를 생성한다.
+// NewClient: Gemini 클라이언트를 생성합니다.
 func NewClient(cfg *config.Config, metricsStore *metrics.Store, usageRecorder *usage.Recorder) (*Client, error) {
 	if cfg == nil {
 		return nil, errors.New("config is nil")
@@ -65,7 +65,7 @@ func NewClient(cfg *config.Config, metricsStore *metrics.Store, usageRecorder *u
 	}, nil
 }
 
-// Chat 은 텍스트 채팅 요청을 수행한다.
+// Chat: 텍스트 채팅 요청을 수행합니다.
 func (c *Client) Chat(ctx context.Context, req Request) (string, string, error) {
 	start := time.Now()
 	response, model, err := c.generate(ctx, req, "", nil)
@@ -80,7 +80,7 @@ func (c *Client) Chat(ctx context.Context, req Request) (string, string, error) 
 	return response.Text(), model, nil
 }
 
-// ChatWithUsage 는 텍스트 응답과 사용량을 함께 반환한다.
+// ChatWithUsage: 텍스트 응답과 토큰 사용량을 함께 반환합니다.
 func (c *Client) ChatWithUsage(ctx context.Context, req Request) (llm.ChatResult, string, error) {
 	start := time.Now()
 	response, model, err := c.generate(ctx, req, "", nil)
@@ -105,21 +105,21 @@ func (c *Client) ChatWithUsage(ctx context.Context, req Request) (llm.ChatResult
 	return result, model, nil
 }
 
-// Structured 는 JSON 스키마 기반 응답을 반환한다.
+// Structured: JSON 스키마 기반 응답을 반환합니다.
 func (c *Client) Structured(ctx context.Context, req Request, schema map[string]any) (map[string]any, string, error) {
 	parsed, model, _, err := c.structuredInternal(ctx, req, schema, false)
 	return parsed, model, err
 }
 
-// StructuredResult 는 검색 정보를 포함한 응답 결과다.
+// StructuredResult: 검색 정보를 포함한 응답 결과입니다.
 type StructuredResult struct {
 	Payload       map[string]any
 	Model         string
 	SearchQueries []string // Google Search가 사용된 경우 검색 쿼리
 }
 
-// StructuredWithSearch 는 Google Search 도구를 활성화한 JSON 스키마 기반 응답을 반환한다.
-// LLM이 필요하다고 판단하면 자체적으로 검색을 수행한다.
+// StructuredWithSearch: Google Search 도구를 활성화한 JSON 스키마 기반 응답을 반환합니다.
+// LLM이 필요하다고 판단하면 자체적으로 검색을 수행합니다.
 func (c *Client) StructuredWithSearch(ctx context.Context, req Request, schema map[string]any) (StructuredResult, error) {
 	parsed, model, searchQueries, err := c.structuredInternal(ctx, req, schema, true)
 	return StructuredResult{
@@ -129,7 +129,7 @@ func (c *Client) StructuredWithSearch(ctx context.Context, req Request, schema m
 	}, err
 }
 
-// ConsensusVote 는 합의 로직에서 수집한 개별 응답이다.
+// ConsensusVote: 합의 로직에서 수집한 개별 응답입니다.
 type ConsensusVote struct {
 	Value      string
 	Confidence float64
@@ -229,7 +229,7 @@ func parseNormalizedConfidence(payload map[string]any) (float64, bool) {
 	return confidence, true
 }
 
-// ConsensusResult 는 합의 로직 결과다.
+// ConsensusResult: 합의 로직 결과입니다.
 type ConsensusResult struct {
 	Payload         map[string]any
 	Model           string
@@ -244,8 +244,8 @@ type ConsensusResult struct {
 	Votes           []ConsensusVote
 }
 
-// StructuredWithConsensus 는 동일 요청을 N번 병렬 호출하여 합의된 결과를 반환한다.
-// fieldName 필드의 값을 기준으로 다수결을 수행한다.
+// StructuredWithConsensus: 동일 요청을 N번 병렬 호출하여 합의된 결과를 반환합니다.
+// fieldName 필드의 값을 기준으로 다수결을 수행합니다.
 func (c *Client) StructuredWithConsensus(
 	ctx context.Context,
 	req Request,
@@ -338,8 +338,8 @@ func (c *Client) StructuredWithConsensus(
 	}, nil
 }
 
-// StructuredWithConsensusWeighted 는 동일 요청을 N번 병렬 호출하여 confidence 가중치로 합의된 결과를 반환한다.
-// fieldName 필드 값별 confidence 합산(Weighted Voting)을 사용하고, 동점이면 count -> maxConfidence -> value 순으로 결정한다.
+// StructuredWithConsensusWeighted: 동일 요청을 N번 병렬 호출하여 confidence 가중치로 합의된 결과를 반환합니다.
+// fieldName 필드 값별 confidence 합산(Weighted Voting)을 사용하고, 동점이면 count -> maxConfidence -> value 순으로 결정합니다.
 func (c *Client) StructuredWithConsensusWeighted(
 	ctx context.Context,
 	req Request,

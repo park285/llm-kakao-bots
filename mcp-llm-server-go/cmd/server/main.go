@@ -49,6 +49,19 @@ func main() {
 		go func() {
 			grpcServerErr <- app.GRPCServer.Serve(app.GRPCListener)
 		}()
+
+		// UDS listener가 있으면 별도 goroutine으로 serve함
+		if app.GRPCUDSListener != nil {
+			app.Logger.Info(
+				"grpc_uds_server_start",
+				"addr", app.GRPCUDSListener.Addr().String(),
+			)
+			go func() {
+				// UDS serve 에러는 TCP와 동일한 서버이므로 별도 채널 불필요
+				// 서버 종료 시 자동으로 에러 반환됨
+				_ = app.GRPCServer.Serve(app.GRPCUDSListener)
+			}()
+		}
 	}
 
 	signalCh := make(chan os.Signal, 1)

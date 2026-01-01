@@ -13,7 +13,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 )
 
-// ErrorCode 는 API 오류 코드다.
+// ErrorCode: API 오류 코드다.
 type ErrorCode string
 
 const (
@@ -53,7 +53,7 @@ const (
 	ErrorCodeMissingField ErrorCode = "MISSING_FIELD"
 )
 
-// ErrorResponse 는 API 오류 응답 본문이다.
+// ErrorResponse: API 오류 응답 본문입니다.
 type ErrorResponse struct {
 	ErrorCode string         `json:"error_code"`
 	ErrorType string         `json:"error_type"`
@@ -62,7 +62,7 @@ type ErrorResponse struct {
 	Details   map[string]any `json:"details"`
 }
 
-// Error 는 내부 표준 오류 타입이다.
+// Error: 내부 표준 오류 타입입니다.
 type Error struct {
 	Code    ErrorCode
 	Status  int
@@ -76,7 +76,7 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
-// Response 는 오류를 HTTP 응답으로 변환한다.
+// Response: 오류를 HTTP 응답으로 변환합니다.
 func Response(err error, requestID string) (int, ErrorResponse) {
 	apiErr := FromError(err)
 	if apiErr == nil {
@@ -97,7 +97,7 @@ func Response(err error, requestID string) (int, ErrorResponse) {
 	}
 }
 
-// FromError 는 오류를 내부 오류 타입으로 변환한다.
+// FromError: 오류를 내부 오류 타입으로 변환합니다.
 func FromError(err error) *Error {
 	if err == nil {
 		return nil
@@ -137,7 +137,7 @@ func FromError(err error) *Error {
 	return NewInternalError("Internal server error")
 }
 
-// NewInternalError 는 내부 오류를 생성한다.
+// NewInternalError: 내부 오류를 생성합니다.
 func NewInternalError(message string) *Error {
 	return &Error{
 		Code:    ErrorCodeInternal,
@@ -148,7 +148,7 @@ func NewInternalError(message string) *Error {
 	}
 }
 
-// NewValidationError 는 검증 오류를 생성한다.
+// NewValidationError: 검증 오류를 생성합니다.
 func NewValidationError(err error) *Error {
 	return &Error{
 		Code:    ErrorCodeValidation,
@@ -159,7 +159,7 @@ func NewValidationError(err error) *Error {
 	}
 }
 
-// NewMissingField 는 누락 필드 오류를 생성한다.
+// NewMissingField: 누락 필드 오류를 생성합니다.
 func NewMissingField(field string) *Error {
 	return &Error{
 		Code:    ErrorCodeMissingField,
@@ -170,7 +170,7 @@ func NewMissingField(field string) *Error {
 	}
 }
 
-// NewInvalidInput 는 입력 오류를 생성한다.
+// NewInvalidInput: 입력 오류를 생성합니다.
 func NewInvalidInput(message string) *Error {
 	return &Error{
 		Code:    ErrorCodeInvalidInput,
@@ -181,7 +181,7 @@ func NewInvalidInput(message string) *Error {
 	}
 }
 
-// NewUnauthorized 는 인증 오류를 생성한다.
+// NewUnauthorized: 인증 오류를 생성합니다.
 func NewUnauthorized(details map[string]any) *Error {
 	return &Error{
 		Code:    ErrorCodeUnauthorized,
@@ -192,7 +192,7 @@ func NewUnauthorized(details map[string]any) *Error {
 	}
 }
 
-// NewRateLimitExceeded 는 요청 제한 오류를 생성한다.
+// NewRateLimitExceeded: 요청 제한 오류를 생성합니다.
 func NewRateLimitExceeded(details map[string]any) *Error {
 	return &Error{
 		Code:    ErrorCodeHTTPRateLimit,
@@ -203,7 +203,7 @@ func NewRateLimitExceeded(details map[string]any) *Error {
 	}
 }
 
-// NewGuardBlocked 는 가드 차단 오류를 생성한다.
+// NewGuardBlocked: 가드 차단 오류를 생성합니다.
 func NewGuardBlocked(score float64, threshold float64) *Error {
 	return &Error{
 		Code:    ErrorCodeGuardBlocked,
@@ -214,7 +214,7 @@ func NewGuardBlocked(score float64, threshold float64) *Error {
 	}
 }
 
-// NewSessionNotFound 는 세션 미존재 오류를 생성한다.
+// NewSessionNotFound: 세션 미존재 오류를 생성합니다.
 func NewSessionNotFound(sessionID string) *Error {
 	return &Error{
 		Code:    ErrorCodeSessionNotFound,
@@ -225,7 +225,7 @@ func NewSessionNotFound(sessionID string) *Error {
 	}
 }
 
-// NewSessionError 는 세션 오류를 생성한다.
+// NewSessionError: 세션 오류를 생성합니다.
 func NewSessionError(message string, status int) *Error {
 	return &Error{
 		Code:    ErrorCodeSession,
@@ -236,7 +236,7 @@ func NewSessionError(message string, status int) *Error {
 	}
 }
 
-// NewLLMModelError 는 LLM 모델 오류를 생성한다.
+// NewLLMModelError: LLM 모델 오류를 생성합니다.
 func NewLLMModelError(message string) *Error {
 	return &Error{
 		Code:    ErrorCodeLLMModel,
@@ -247,7 +247,7 @@ func NewLLMModelError(message string) *Error {
 	}
 }
 
-// NewLLMTimeoutError 는 LLM 타임아웃 오류를 생성한다.
+// NewLLMTimeoutError: LLM 타임아웃 오류를 생성합니다.
 func NewLLMTimeoutError(message string) *Error {
 	return &Error{
 		Code:    ErrorCodeLLMTimeout,
@@ -258,7 +258,7 @@ func NewLLMTimeoutError(message string) *Error {
 	}
 }
 
-// NewLLMError 는 LLM 오류를 생성한다.
+// NewLLMError: LLM 오류를 생성합니다.
 func NewLLMError(message string, status int) *Error {
 	return &Error{
 		Code:    ErrorCodeLLM,
@@ -269,7 +269,7 @@ func NewLLMError(message string, status int) *Error {
 	}
 }
 
-// FieldError 는 필드 오류 상세 정보다.
+// FieldError: 필드 오류 상세 정보다.
 type FieldError struct {
 	Field   string `json:"field"`
 	Message string `json:"message"`

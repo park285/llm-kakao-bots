@@ -6,21 +6,21 @@ import (
 	domainmodels "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/models"
 )
 
-// AnswerType 은 정답 판정 결과 타입이다.
+// AnswerType: 정답 판정 결과 타입입니다.
 type AnswerType string
 
 const (
-	// AnswerYes 는 긍정 답변이다.
+	// AnswerYes 는 긍정 답변입니다.
 	AnswerYes AnswerType = domainmodels.AnswerYesText
-	// AnswerNo 는 부정 답변이다.
+	// AnswerNo 는 부정 답변입니다.
 	AnswerNo AnswerType = domainmodels.AnswerNoText
-	// AnswerIrrelevant 는 무관함 답변이다.
+	// AnswerIrrelevant 는 무관함 답변입니다.
 	AnswerIrrelevant AnswerType = "관계없습니다"
-	// AnswerSomewhatRelated 는 부분 관련 답변이다.
+	// AnswerSomewhatRelated 는 부분 관련 답변입니다.
 	AnswerSomewhatRelated AnswerType = "조금은 관계있습니다"
-	// AnswerWrongPremise 는 전제 오류 답변이다.
+	// AnswerWrongPremise 는 전제 오류 답변입니다.
 	AnswerWrongPremise AnswerType = "전제가 틀렸습니다"
-	// AnswerCannotAnswer 는 응답 불가 답변이다.
+	// AnswerCannotAnswer 는 응답 불가 답변입니다.
 	AnswerCannotAnswer AnswerType = "답변할 수 없습니다"
 	// AnswerImportantMessage 는 중요 질문 메시지다.
 	AnswerImportantMessage = "중요한 질문입니다"
@@ -58,7 +58,7 @@ func ParseBaseAnswer(rawText string) (AnswerType, bool) {
 	return "", false
 }
 
-// FormatAnswerText 는 기본 답변과 중요 표시를 합쳐 문자열로 만든다.
+// FormatAnswerText: 기본 답변과 중요 표시를 합쳐 문자열로 만든다.
 func FormatAnswerText(base AnswerType, isImportant bool) string {
 	if base == "" {
 		return ""
@@ -72,15 +72,15 @@ func FormatAnswerText(base AnswerType, isImportant bool) string {
 	return string(base) + ", 중요한 질문입니다!"
 }
 
-// ValidationResult 는 정답 검증 결과 타입이다.
+// ValidationResult: 정답 검증 결과 타입입니다.
 type ValidationResult string
 
 const (
-	// ValidationYes 는 정답 판정이다.
+	// ValidationYes 는 정답 판정입니다.
 	ValidationYes ValidationResult = "YES"
-	// ValidationNo 는 오답 판정이다.
+	// ValidationNo 는 오답 판정입니다.
 	ValidationNo ValidationResult = "NO"
-	// ValidationClose 는 유사 판정이다.
+	// ValidationClose 는 유사 판정입니다.
 	ValidationClose ValidationResult = "CLOSE"
 )
 
@@ -95,12 +95,12 @@ func ParseValidationResult(rawText string) (ValidationResult, bool) {
 	return "", false
 }
 
-// HintOutput 은 힌트 출력 스키마다.
+// HintOutput: 힌트 출력 스키마다.
 type HintOutput struct {
 	Hint string `json:"hint"`
 }
 
-// PuzzleOutput 은 퍼즐 생성 출력 스키마다.
+// PuzzleOutput: 퍼즐 생성 출력 스키마다.
 type PuzzleOutput struct {
 	Title      string   `json:"title"`
 	Scenario   string   `json:"scenario"`
@@ -110,7 +110,7 @@ type PuzzleOutput struct {
 	Hints      []string `json:"hints"`
 }
 
-// RewriteOutput 은 리라이트 출력 스키마다.
+// RewriteOutput: 리라이트 출력 스키마다.
 type RewriteOutput struct {
 	Scenario string `json:"scenario"`
 	Solution string `json:"solution"`
@@ -158,7 +158,7 @@ func RewriteSchema() map[string]any {
 	return rewriteSchema
 }
 
-// AnswerOutput 은 답변 출력 스키마다.
+// AnswerOutput: 답변 출력 스키마다.
 type AnswerOutput struct {
 	Answer    string `json:"answer"`
 	Important bool   `json:"important"`
@@ -191,7 +191,7 @@ func AnswerSchema() map[string]any {
 	return answerSchema
 }
 
-// ValidateOutput 은 검증 출력 스키마다.
+// ValidateOutput: 검증 출력 스키마다.
 type ValidateOutput struct {
 	Result string `json:"result"`
 }

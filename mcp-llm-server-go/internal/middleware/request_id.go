@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RequestIDHeader 는 요청 ID 헤더 키다.
+// RequestIDHeader: 요청 ID 헤더 키다.
 const RequestIDHeader = "X-Request-ID"
 
 const requestIDKey = "request_id"
 
-// RequestID 는 요청 ID를 부여하는 미들웨어다.
+// RequestID: 요청 ID를 부여하는 미들웨어다.
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := c.GetHeader(RequestIDHeader)

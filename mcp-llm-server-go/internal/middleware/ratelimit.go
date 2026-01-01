@@ -15,7 +15,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
 )
 
-// RateLimit 는 요청 제한 미들웨어다.
+// RateLimit: 요청 제한 미들웨어다.
 func RateLimit(cfg *config.Config) gin.HandlerFunc {
 	limit := 0
 	cacheSize := 0

@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/goccy/go-json"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -23,10 +21,9 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/guard"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/llm"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usage"
+	turtlesoupuc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/turtlesoup"
 	twentyquc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/twentyq"
 )
 
@@ -43,19 +40,13 @@ type LLMService struct {
 
 	logger *slog.Logger
 
-	client *gemini.Client
-	guard  *guard.InjectionGuard
-	store  *session.Store
+	guard *guard.InjectionGuard
+	store *session.Store
 
 	usageRepo *usage.Repository
 
-	twentyqUsecase *twentyquc.Service
-
-	twentyqPrompts *twentyq.Prompts
-	topicLoader    *twentyq.TopicLoader
-
-	turtlesoupPrompts *turtlesoup.Prompts
-	puzzleLoader      *turtlesoup.PuzzleLoader
+	twentyqUsecase    *twentyquc.Service
+	turtlesoupUsecase *turtlesoupuc.Service
 }
 
 // NewLLMService: gRPC LLMService를 생성합니다.
@@ -74,15 +65,11 @@ func NewLLMService(
 	return &LLMService{
 		cfg:               cfg,
 		logger:            logger,
-		client:            client,
 		guard:             injectionGuard,
 		store:             store,
 		usageRepo:         usageRepo,
 		twentyqUsecase:    twentyquc.New(cfg, client, injectionGuard, store, twentyqPrompts, topicLoader, logger),
-		twentyqPrompts:    twentyqPrompts,
-		topicLoader:       topicLoader,
-		turtlesoupPrompts: turtlesoupPrompts,
-		puzzleLoader:      puzzleLoader,
+		turtlesoupUsecase: turtlesoupuc.New(cfg, client, injectionGuard, store, turtlesoupPrompts, puzzleLoader, logger),
 	}
 }
 
@@ -345,64 +332,50 @@ func (s *LLMService) TurtleSoupGeneratePuzzle(ctx context.Context, req *llmv1.Tu
 	if req == nil {
 		req = &llmv1.TurtleSoupGeneratePuzzleRequest{}
 	}
-	if s.turtlesoupPrompts == nil || s.puzzleLoader == nil || s.guard == nil || s.client == nil {
+	if s.turtlesoupUsecase == nil {
 		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	category := strings.TrimSpace(req.GetCategory())
-	if category == "" {
-		category = shared.DefaultCategory
+	var difficultyPtr *int
+	if req.Difficulty != nil {
+		d := int(req.GetDifficulty())
+		difficultyPtr = &d
 	}
 
-	difficulty := int(req.GetDifficulty())
-	if req.Difficulty == nil {
-		difficulty = shared.DefaultDifficulty
-	}
-	if difficulty < shared.MinDifficulty {
-		difficulty = shared.MinDifficulty
-	}
-	if difficulty > shared.MaxDifficulty {
-		difficulty = shared.MaxDifficulty
+	result, err := s.turtlesoupUsecase.GeneratePuzzle(ctx, turtlesoupuc.GeneratePuzzleRequest{
+		Category:   req.GetCategory(),
+		Difficulty: difficultyPtr,
+		Theme:      req.GetTheme(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("generate puzzle: %w", err)
 	}
 
-	theme := strings.TrimSpace(req.GetTheme())
-	if theme != "" {
-		if err := s.guard.EnsureSafe(theme); err != nil {
-			s.logError("turtlesoup_theme_guard_failed", err)
-			return nil, fmt.Errorf("guard theme: %w", err)
-		}
-	}
-
-	preset, err := s.puzzleLoader.GetRandomPuzzleByDifficulty(difficulty)
-	if err == nil {
-		return &llmv1.TurtleSoupGeneratePuzzleResponse{
-			Title:      preset.Title,
-			Scenario:   preset.Question,
-			Solution:   preset.Answer,
-			Category:   category,
-			Difficulty: int32(preset.Difficulty),
-			Hints:      []string{},
-		}, nil
-	}
-
-	return s.generatePuzzleLLM(ctx, category, difficulty, theme)
+	return &llmv1.TurtleSoupGeneratePuzzleResponse{
+		Title:      result.Title,
+		Scenario:   result.Scenario,
+		Solution:   result.Solution,
+		Category:   result.Category,
+		Difficulty: int32(result.Difficulty),
+		Hints:      result.Hints,
+	}, nil
 }
 
 func (s *LLMService) TurtleSoupGetRandomPuzzle(ctx context.Context, req *llmv1.TurtleSoupGetRandomPuzzleRequest) (*llmv1.TurtleSoupGetRandomPuzzleResponse, error) {
 	if req == nil {
 		req = &llmv1.TurtleSoupGetRandomPuzzleRequest{}
 	}
-	if s.puzzleLoader == nil {
-		return nil, status.Error(codes.Internal, "puzzle loader not configured")
+	if s.turtlesoupUsecase == nil {
+		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	var puzzle turtlesoup.PuzzlePreset
+	var puzzle turtlesoupuc.RandomPuzzleResult
 	var err error
 
 	if req.Difficulty == nil {
-		puzzle, err = s.puzzleLoader.GetRandomPuzzle()
+		puzzle, err = s.turtlesoupUsecase.GetRandomPuzzle()
 	} else {
-		puzzle, err = s.puzzleLoader.GetRandomPuzzleByDifficulty(int(req.GetDifficulty()))
+		puzzle, err = s.turtlesoupUsecase.GetRandomPuzzleByDifficulty(int(req.GetDifficulty()))
 	}
 	if err != nil {
 		return nil, status.Error(codes.Internal, "no puzzle available")
@@ -427,30 +400,23 @@ func (s *LLMService) TurtleSoupRewriteScenario(ctx context.Context, req *llmv1.T
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request required")
 	}
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Scenario) == "" || strings.TrimSpace(req.Solution) == "" {
-		return nil, status.Error(codes.InvalidArgument, "title, scenario, solution required")
-	}
-	if s.turtlesoupPrompts == nil || s.client == nil {
+	if s.turtlesoupUsecase == nil {
 		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	system, err := s.turtlesoupPrompts.RewriteSystem()
+	result, err := s.turtlesoupUsecase.RewriteScenario(ctx, turtlesoupuc.RewriteRequest{
+		Title:      req.Title,
+		Scenario:   req.Scenario,
+		Solution:   req.Solution,
+		Difficulty: int(req.Difficulty),
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "load rewrite system prompt failed")
-	}
-	userContent, err := s.turtlesoupPrompts.RewriteUser(req.Title, req.Scenario, req.Solution, int(req.Difficulty))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "format rewrite user prompt failed")
-	}
-
-	scenario, solution, err := s.rewritePuzzle(ctx, system, userContent)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rewrite scenario: %w", err)
 	}
 
 	return &llmv1.TurtleSoupRewriteScenarioResponse{
-		Scenario:         scenario,
-		Solution:         solution,
+		Scenario:         result.Scenario,
+		Solution:         result.Solution,
 		OriginalScenario: req.Scenario,
 		OriginalSolution: req.Solution,
 	}, nil
@@ -460,74 +426,35 @@ func (s *LLMService) TurtleSoupAnswerQuestion(ctx context.Context, req *llmv1.Tu
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request required")
 	}
-	if strings.TrimSpace(req.Scenario) == "" || strings.TrimSpace(req.Solution) == "" {
-		return nil, status.Error(codes.InvalidArgument, "scenario, solution required")
-	}
-
-	question := strings.TrimSpace(req.Question)
-	if question == "" {
-		return nil, status.Error(codes.InvalidArgument, "question required")
-	}
-
-	if s.guard == nil || s.client == nil || s.store == nil || s.turtlesoupPrompts == nil || s.cfg == nil {
+	if s.turtlesoupUsecase == nil {
 		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	if err := s.guard.EnsureSafe(question); err != nil {
-		s.logError("turtlesoup_question_guard_failed", err)
-		return nil, fmt.Errorf("guard question: %w", err)
-	}
-
-	sessionID, history, _, err := s.resolveHistory(ctx, req.SessionId, req.ChatId, req.Namespace, "turtle-soup")
+	result, err := s.turtlesoupUsecase.AnswerQuestion(ctx, RequestIDFromContext(ctx), turtlesoupuc.AnswerRequest{
+		SessionID: req.SessionId,
+		ChatID:    req.ChatId,
+		Namespace: req.Namespace,
+		Scenario:  req.Scenario,
+		Solution:  req.Solution,
+		Question:  req.Question,
+	})
 	if err != nil {
-		s.logError("session_create_failed", err)
-		return nil, err
-	}
-	historyPairs := countQAPairs(history)
-
-	puzzleToon := toon.EncodePuzzle(req.Scenario, req.Solution, "", nil)
-	system, err := s.turtlesoupPrompts.AnswerSystemWithPuzzle(puzzleToon)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "load answer system prompt failed")
-	}
-	userContent, err := s.turtlesoupPrompts.AnswerUser(question)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "format answer user prompt failed")
+		return nil, fmt.Errorf("answer question: %w", err)
 	}
 
-	payload, _, err := s.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		History:      history,
-		Task:         "answer",
-	}, turtlesoup.AnswerSchema())
-	if err != nil {
-		return nil, fmt.Errorf("answer structured: %w", err)
-	}
-
-	rawAnswer, _ := shared.ParseStringField(payload, "answer")
-	isImportant, _ := payload["important"].(bool)
-
-	base := turtlesoup.AnswerType(rawAnswer)
-	if rawAnswer == "" {
-		base = turtlesoup.AnswerCannotAnswer
-	}
-	answerText := turtlesoup.FormatAnswerText(base, isImportant)
-	if answerText == "" {
-		answerText = string(turtlesoup.AnswerCannotAnswer)
-	}
-
-	items := buildTurtleHistoryItems(history, question, answerText)
-
-	if err := s.appendTurtleHistory(ctx, sessionID, question, answerText); err != nil {
-		s.logError("turtlesoup_append_history_failed", err)
+	history := make([]*llmv1.TurtleSoupHistoryItem, 0, len(result.History))
+	for _, item := range result.History {
+		history = append(history, &llmv1.TurtleSoupHistoryItem{
+			Question: item.Question,
+			Answer:   item.Answer,
+		})
 	}
 
 	return &llmv1.TurtleSoupAnswerQuestionResponse{
-		Answer:        answerText,
-		RawText:       rawAnswer,
-		QuestionCount: int32(historyPairs + 1),
-		History:       items,
+		Answer:        result.Answer,
+		RawText:       result.RawText,
+		QuestionCount: int32(result.QuestionCount),
+		History:       history,
 	}, nil
 }
 
@@ -535,51 +462,21 @@ func (s *LLMService) TurtleSoupValidateSolution(ctx context.Context, req *llmv1.
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request required")
 	}
-	if strings.TrimSpace(req.Solution) == "" {
-		return nil, status.Error(codes.InvalidArgument, "solution required")
-	}
-
-	playerAnswer := strings.TrimSpace(req.PlayerAnswer)
-	if playerAnswer == "" {
-		return nil, status.Error(codes.InvalidArgument, "player_answer required")
-	}
-
-	if s.guard == nil || s.client == nil || s.turtlesoupPrompts == nil {
+	if s.turtlesoupUsecase == nil {
 		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	if err := s.guard.EnsureSafe(playerAnswer); err != nil {
-		s.logError("turtlesoup_answer_guard_failed", err)
-		return nil, fmt.Errorf("guard player answer: %w", err)
-	}
-
-	system, err := s.turtlesoupPrompts.ValidateSystem()
+	result, err := s.turtlesoupUsecase.ValidateSolution(ctx, turtlesoupuc.ValidateRequest{
+		Solution:     req.Solution,
+		PlayerAnswer: req.PlayerAnswer,
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "load validate system prompt failed")
-	}
-	userContent, err := s.turtlesoupPrompts.ValidateUser(req.Solution, playerAnswer)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "format validate user prompt failed")
-	}
-
-	payload, _, err := s.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "verify",
-	}, turtlesoup.ValidateSchema())
-	if err != nil {
-		return nil, fmt.Errorf("validate structured: %w", err)
-	}
-
-	rawValue, parseErr := shared.ParseStringField(payload, "result")
-	result := string(turtlesoup.ValidationNo)
-	if parseErr == nil && rawValue != "" {
-		result = rawValue
+		return nil, fmt.Errorf("validate solution: %w", err)
 	}
 
 	return &llmv1.TurtleSoupValidateSolutionResponse{
-		Result:  result,
-		RawText: rawValue,
+		Result:  result.Result,
+		RawText: result.RawText,
 	}, nil
 }
 
@@ -587,29 +484,17 @@ func (s *LLMService) TurtleSoupGenerateHint(ctx context.Context, req *llmv1.Turt
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "request required")
 	}
-	if strings.TrimSpace(req.Scenario) == "" || strings.TrimSpace(req.Solution) == "" {
-		return nil, status.Error(codes.InvalidArgument, "scenario, solution required")
-	}
-	if req.Level <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "level must be positive")
-	}
-	if s.turtlesoupPrompts == nil || s.client == nil {
+	if s.turtlesoupUsecase == nil {
 		return nil, status.Error(codes.Internal, "service not configured")
 	}
 
-	puzzleToon := toon.EncodePuzzle(req.Scenario, req.Solution, "", nil)
-	system, err := s.turtlesoupPrompts.HintSystem()
+	hint, err := s.turtlesoupUsecase.GenerateHint(ctx, turtlesoupuc.HintRequest{
+		Scenario: req.Scenario,
+		Solution: req.Solution,
+		Level:    int(req.Level),
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "load hint system prompt failed")
-	}
-	userContent, err := s.turtlesoupPrompts.HintUser(puzzleToon, int(req.Level))
-	if err != nil {
-		return nil, status.Error(codes.Internal, "format hint user prompt failed")
-	}
-
-	hint, err := s.generateHint(ctx, system, userContent)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate hint: %w", err)
 	}
 
 	return &llmv1.TurtleSoupGenerateHintResponse{
@@ -739,245 +624,6 @@ func (s *LLMService) GetTotalUsage(ctx context.Context, req *llmv1.GetTotalUsage
 		ReasoningTokens: totalUsage.ReasoningTokens,
 		Model:           model,
 	}, nil
-}
-
-func (s *LLMService) resolveHistory(
-	ctx context.Context,
-	sessionID *string,
-	chatID *string,
-	namespace *string,
-	defaultNamespace string,
-) (string, []llm.HistoryEntry, int, error) {
-	effectiveSessionID, derived := shared.ResolveSessionID(
-		shared.ValueOrEmpty(sessionID),
-		shared.ValueOrEmpty(chatID),
-		shared.ValueOrEmpty(namespace),
-		defaultNamespace,
-	)
-
-	if effectiveSessionID != "" && derived && sessionID == nil && s.store != nil && s.cfg != nil {
-		now := time.Now()
-		meta := session.Meta{
-			ID:           effectiveSessionID,
-			SystemPrompt: "",
-			Model:        s.cfg.Gemini.DefaultModel,
-			CreatedAt:    now,
-			UpdatedAt:    now,
-			MessageCount: 0,
-		}
-		if err := s.store.CreateSession(ctx, meta); err != nil {
-			return "", nil, 0, fmt.Errorf("create session: %w", err)
-		}
-	}
-
-	if effectiveSessionID == "" || s.store == nil {
-		return "", []llm.HistoryEntry{}, 0, nil
-	}
-
-	history, err := s.store.GetHistory(ctx, effectiveSessionID)
-	if err != nil {
-		s.logError("session_history_failed", err)
-		return effectiveSessionID, []llm.HistoryEntry{}, 0, nil
-	}
-	return effectiveSessionID, history, len(history), nil
-}
-
-func (s *LLMService) appendTurtleHistory(ctx context.Context, sessionID string, question string, answer string) error {
-	if sessionID == "" || s.store == nil {
-		return nil
-	}
-	if err := s.store.AppendHistory(
-		ctx,
-		sessionID,
-		llm.HistoryEntry{Role: "user", Content: "Q: " + question},
-		llm.HistoryEntry{Role: "assistant", Content: "A: " + answer},
-	); err != nil {
-		return fmt.Errorf("append history: %w", err)
-	}
-	return nil
-}
-
-func countQAPairs(history []llm.HistoryEntry) int {
-	pairs := 0
-	for i := 0; i+1 < len(history); i++ {
-		q := strings.TrimSpace(history[i].Content)
-		a := strings.TrimSpace(history[i+1].Content)
-		if strings.HasPrefix(q, "Q:") && strings.HasPrefix(a, "A:") {
-			pairs++
-			i++
-		}
-	}
-	return pairs
-}
-
-func buildTurtleHistoryItems(history []llm.HistoryEntry, currentQuestion string, currentAnswer string) []*llmv1.TurtleSoupHistoryItem {
-	items := make([]*llmv1.TurtleSoupHistoryItem, 0)
-
-	for i := 0; i+1 < len(history); i++ {
-		q := strings.TrimSpace(history[i].Content)
-		a := strings.TrimSpace(history[i+1].Content)
-		if !strings.HasPrefix(q, "Q:") || !strings.HasPrefix(a, "A:") {
-			continue
-		}
-		items = append(items, &llmv1.TurtleSoupHistoryItem{
-			Question: strings.TrimSpace(strings.TrimPrefix(q, "Q:")),
-			Answer:   strings.TrimSpace(strings.TrimPrefix(a, "A:")),
-		})
-		i++
-	}
-
-	items = append(items, &llmv1.TurtleSoupHistoryItem{
-		Question: currentQuestion,
-		Answer:   currentAnswer,
-	})
-	return items
-}
-
-func (s *LLMService) generateHint(ctx context.Context, system string, userContent string) (string, error) {
-	payload, _, err := s.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "hints",
-	}, turtlesoup.HintSchema())
-	if err == nil {
-		hint, parseErr := shared.ParseStringField(payload, "hint")
-		if parseErr == nil && strings.TrimSpace(hint) != "" {
-			return strings.TrimSpace(hint), nil
-		}
-	}
-
-	rawText, _, err := s.client.Chat(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "hints",
-	})
-	if err != nil {
-		return "", fmt.Errorf("hint chat: %w", err)
-	}
-
-	parsed := strings.TrimSpace(rawText)
-	if strings.HasPrefix(parsed, "```") {
-		parsed = strings.TrimSpace(strings.TrimPrefix(parsed, "```json"))
-		parsed = strings.TrimSpace(strings.TrimPrefix(parsed, "```"))
-		if idx := strings.Index(parsed, "```"); idx >= 0 {
-			parsed = strings.TrimSpace(parsed[:idx])
-		}
-	}
-
-	var decoded map[string]any
-	if err := json.Unmarshal([]byte(parsed), &decoded); err == nil {
-		if hint, err := shared.ParseStringField(decoded, "hint"); err == nil && strings.TrimSpace(hint) != "" {
-			return strings.TrimSpace(hint), nil
-		}
-	}
-
-	return parsed, nil
-}
-
-func (s *LLMService) generatePuzzleLLM(ctx context.Context, category string, difficulty int, theme string) (*llmv1.TurtleSoupGeneratePuzzleResponse, error) {
-	system, err := s.turtlesoupPrompts.GenerateSystem()
-	if err != nil {
-		return nil, fmt.Errorf("load puzzle system prompt: %w", err)
-	}
-
-	examples := s.puzzleLoader.GetExamples(difficulty, 3)
-	exampleLines := make([]string, 0, len(examples))
-	for _, p := range examples {
-		exampleLines = append(exampleLines, strings.Join([]string{
-			"- 제목: " + p.Title,
-			"  시나리오: " + p.Question,
-			"  정답: " + p.Answer,
-			"  난이도: " + strconv.Itoa(p.Difficulty),
-		}, "\n"))
-	}
-	examplesBlock := strings.Join(exampleLines, "\n\n")
-
-	userContent, err := s.turtlesoupPrompts.GenerateUser(category, difficulty, theme, examplesBlock)
-	if err != nil {
-		return nil, fmt.Errorf("format puzzle user prompt: %w", err)
-	}
-
-	payload, _, err := s.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "hints",
-	}, turtlesoup.PuzzleSchema())
-	if err != nil {
-		return nil, fmt.Errorf("generate puzzle structured: %w", err)
-	}
-
-	title, err := shared.ParseStringField(payload, "title")
-	if err != nil {
-		return nil, fmt.Errorf("parse title: %w", err)
-	}
-	scenario, err := shared.ParseStringField(payload, "scenario")
-	if err != nil {
-		return nil, fmt.Errorf("parse scenario: %w", err)
-	}
-	solution, err := shared.ParseStringField(payload, "solution")
-	if err != nil {
-		return nil, fmt.Errorf("parse solution: %w", err)
-	}
-
-	respCategory := strings.TrimSpace(valueOrEmptyString(payload, "category"))
-	if respCategory == "" {
-		respCategory = category
-	}
-
-	respDifficulty := difficulty
-	if value, ok := payload["difficulty"]; ok {
-		switch number := value.(type) {
-		case float64:
-			respDifficulty = int(number)
-		case int:
-			respDifficulty = number
-		}
-	}
-
-	hints, err := shared.ParseStringSlice(payload, "hints")
-	if err != nil {
-		return nil, fmt.Errorf("parse hints: %w", err)
-	}
-
-	return &llmv1.TurtleSoupGeneratePuzzleResponse{
-		Title:      strings.TrimSpace(title),
-		Scenario:   strings.TrimSpace(scenario),
-		Solution:   strings.TrimSpace(solution),
-		Category:   respCategory,
-		Difficulty: int32(respDifficulty),
-		Hints:      hints,
-	}, nil
-}
-
-func (s *LLMService) rewritePuzzle(ctx context.Context, system string, userContent string) (string, string, error) {
-	payload, _, err := s.client.Structured(ctx, gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "answer",
-	}, turtlesoup.RewriteSchema())
-	if err != nil {
-		return "", "", fmt.Errorf("rewrite structured: %w", err)
-	}
-
-	scenario, sErr := shared.ParseStringField(payload, "scenario")
-	solution, aErr := shared.ParseStringField(payload, "solution")
-	if sErr != nil || aErr != nil || strings.TrimSpace(scenario) == "" || strings.TrimSpace(solution) == "" {
-		return "", "", httperror.NewInternalError("rewrite response invalid")
-	}
-
-	return strings.TrimSpace(scenario), strings.TrimSpace(solution), nil
-}
-
-func valueOrEmptyString(payload map[string]any, key string) string {
-	raw, ok := payload[key]
-	if !ok {
-		return ""
-	}
-	value, ok := raw.(string)
-	if !ok {
-		return ""
-	}
-	return value
 }
 
 func statusFromError(err error) error {

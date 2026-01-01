@@ -1,6 +1,6 @@
 package models
 
-// RequiredStringFieldSchema 는 단일 문자열 필드가 필수인 스키마를 만든다.
+// RequiredStringFieldSchema: 단일 문자열 필드가 필수인 스키마를 만든다.
 func RequiredStringFieldSchema(field string) map[string]any {
 	return requiredObjectSchema(map[string]any{
 		field: map[string]any{
@@ -9,7 +9,7 @@ func RequiredStringFieldSchema(field string) map[string]any {
 	}, []string{field})
 }
 
-// RequiredStringArrayFieldSchema 는 문자열 배열 필드가 필수인 스키마를 만든다.
+// RequiredStringArrayFieldSchema: 문자열 배열 필드가 필수인 스키마를 만든다.
 func RequiredStringArrayFieldSchema(field string) map[string]any {
 	return requiredObjectSchema(map[string]any{
 		field: map[string]any{

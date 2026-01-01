@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RequestLogger 는 HTTP 요청 로그 미들웨어다.
+// RequestLogger: HTTP 요청 로그 미들웨어다.
 func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))

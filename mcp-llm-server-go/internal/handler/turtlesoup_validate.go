@@ -5,9 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/turtlesoup"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/handler/shared"
+	turtlesoupuc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/turtlesoup"
 )
 
 func (h *TurtleSoupHandler) handleValidate(c *gin.Context) {
@@ -16,44 +14,18 @@ func (h *TurtleSoupHandler) handleValidate(c *gin.Context) {
 		return
 	}
 
-	if err := h.guard.EnsureSafe(req.PlayerAnswer); err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	system, err := h.prompts.ValidateSystem()
+	result, err := h.usecase.ValidateSolution(c.Request.Context(), turtlesoupuc.ValidateRequest{
+		Solution:     req.Solution,
+		PlayerAnswer: req.PlayerAnswer,
+	})
 	if err != nil {
 		h.logError(err)
 		writeError(c, err)
 		return
-	}
-	userContent, err := h.prompts.ValidateUser(req.Solution, req.PlayerAnswer)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	payload, _, err := h.client.Structured(c.Request.Context(), gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "verify",
-	}, turtlesoup.ValidateSchema())
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	rawValue, parseErr := shared.ParseStringField(payload, "result")
-	result := string(turtlesoup.ValidationNo)
-	if parseErr == nil && rawValue != "" {
-		result = rawValue
 	}
 
 	c.JSON(http.StatusOK, TurtleSoupValidateResponse{
-		Result:  result,
-		RawText: rawValue,
+		Result:  result.Result,
+		RawText: result.RawText,
 	})
 }

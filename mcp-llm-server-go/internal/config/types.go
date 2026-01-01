@@ -8,7 +8,7 @@ import (
 
 const gemini3MinTemperature = 1.0
 
-// ThinkingConfig 는 Gemini thinking 레벨 설정이다.
+// ThinkingConfig: Gemini thinking 레벨 설정입니다.
 type ThinkingConfig struct {
 	LevelDefault string
 	LevelHints   string
@@ -30,7 +30,7 @@ func (t ThinkingConfig) Level(task string) string {
 	}
 }
 
-// GeminiConfig 는 Gemini 모델 설정이다.
+// GeminiConfig: Gemini 모델 설정입니다.
 type GeminiConfig struct {
 	APIKeys          []string
 	DefaultModel     string
@@ -80,14 +80,14 @@ func (g GeminiConfig) TemperatureForModel(model string) float64 {
 	return g.Temperature
 }
 
-// SessionConfig 는 세션 관련 설정이다.
+// SessionConfig: 세션 관련 설정입니다.
 type SessionConfig struct {
 	MaxSessions       int
 	SessionTTLMinutes int
 	HistoryMaxPairs   int
 }
 
-// SessionStoreConfig 는 세션 저장소 연결 설정이다.
+// SessionStoreConfig: 세션 저장소 연결 설정입니다.
 type SessionStoreConfig struct {
 	URL                 string
 	Enabled             bool
@@ -97,7 +97,7 @@ type SessionStoreConfig struct {
 	ConnectRetrySeconds int
 }
 
-// GuardConfig 는 입력 검증 설정이다.
+// GuardConfig: 입력 검증 설정입니다.
 type GuardConfig struct {
 	Enabled         bool
 	Threshold       float64
@@ -106,7 +106,7 @@ type GuardConfig struct {
 	CacheTTLSeconds int
 }
 
-// LoggingConfig 는 로깅 설정이다.
+// LoggingConfig: 로깅 설정입니다.
 type LoggingConfig struct {
 	Level      string
 	LogDir     string
@@ -116,34 +116,35 @@ type LoggingConfig struct {
 	Compress   bool
 }
 
-// HTTPConfig 는 HTTP 서버 설정이다.
+// HTTPConfig: HTTP 서버 설정입니다.
 type HTTPConfig struct {
 	Host         string
 	Port         int
 	HTTP2Enabled bool
 }
 
-// GRPCConfig 는 gRPC 서버 설정이다.
+// GRPCConfig: gRPC 서버 설정입니다.
 type GRPCConfig struct {
-	Host    string
-	Port    int
-	Enabled bool
+	Host       string
+	Port       int
+	Enabled    bool
+	SocketPath string // UDS 경로 (비어있으면 TCP만 사용)
 }
 
-// HTTPAuthConfig 는 API 키 인증 설정이다.
+// HTTPAuthConfig: API 키 인증 설정입니다.
 type HTTPAuthConfig struct {
 	APIKey   string
 	Required bool
 }
 
-// HTTPRateLimitConfig 는 요청 제한 설정이다.
+// HTTPRateLimitConfig: 요청 제한 설정입니다.
 type HTTPRateLimitConfig struct {
 	RequestsPerMinute int
 	CacheSize         int
 	CacheTTLSeconds   int
 }
 
-// DatabaseConfig 는 DB 연결 및 저장 설정이다.
+// DatabaseConfig: DB 연결 및 저장 설정입니다.
 type DatabaseConfig struct {
 	Host                                 string
 	Port                                 int
@@ -178,7 +179,7 @@ func (d DatabaseConfig) DSN() string {
 	return u.String()
 }
 
-// Config 는 애플리케이션 전체 설정이다.
+// Config: 애플리케이션 전체 설정입니다.
 type Config struct {
 	Gemini        GeminiConfig
 	Session       SessionConfig

@@ -90,7 +90,7 @@ func (c *TTLCache[K, V]) Set(key K, value V) {
 	c.evictIfNeeded()
 }
 
-// Modify 는 key의 값을 원자적으로 갱신하고 갱신된 값을 반환한다.
+// Modify: key의 값을 원자적으로 갱신하고 갱신된 값을 반환합니다.
 // update 함수는 캐시 내부 락을 잡은 상태로 호출되므로, update 내부에서 긴 연산을 수행하지 않아야 한다.
 func (c *TTLCache[K, V]) Modify(key K, update func(current V, exists bool) V) (V, bool) {
 	var zero V

@@ -13,7 +13,7 @@ func Encode(value any) string {
 	return encode(value, 0)
 }
 
-// EncodeSecret 는 스무고개 비밀 정보를 Toon 포맷으로 만든다.
+// EncodeSecret: 스무고개 비밀 정보를 Toon 포맷으로 만든다.
 func EncodeSecret(target string, category string, details map[string]any) string {
 	lines := []string{
 		"target: " + Encode(target),
@@ -27,7 +27,7 @@ func EncodeSecret(target string, category string, details map[string]any) string
 	return strings.Join(lines, "\n")
 }
 
-// EncodePuzzle 는 퍼즐 정보를 Toon 포맷으로 만든다.
+// EncodePuzzle: 퍼즐 정보를 Toon 포맷으로 만든다.
 func EncodePuzzle(scenario string, solution string, category string, difficulty *int) string {
 	lines := []string{
 		"scenario: " + Encode(scenario),

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -31,23 +32,27 @@ const (
 
 type ctxKey string
 
-// NewServer: gRPC 서버를 생성합니다.
-func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Listener, error) {
+// NewServer: gRPC 서버와 listener들을 생성합니다.
+// TCP listener는 항상 생성되며, UDS listener는 SocketPath가 설정된 경우에만 생성됩니다.
+func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Listener, net.Listener, error) {
 	host := defaultHost
 	port := defaultPort
 	enabled := true
 	apiKey := ""
 	apiKeyRequired := false
+	socketPath := ""
+
 	if cfg != nil {
 		host = strings.TrimSpace(cfg.GRPC.Host)
 		port = cfg.GRPC.Port
 		enabled = cfg.GRPC.Enabled
+		socketPath = strings.TrimSpace(cfg.GRPC.SocketPath)
 
 		apiKey = strings.TrimSpace(cfg.HTTPAuth.APIKey)
 		apiKeyRequired = cfg.HTTPAuth.Required
 	}
 	if !enabled {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	if host == "" {
 		host = defaultHost
@@ -56,14 +61,35 @@ func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Liste
 		port = defaultPort
 	}
 
+	// TCP listener 생성
 	addr := fmt.Sprintf("%s:%d", host, port)
 	var lc net.ListenConfig
 	listenCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	lis, err := lc.Listen(listenCtx, "tcp", addr)
+	tcpLis, err := lc.Listen(listenCtx, "tcp", addr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("listen: %w", err)
+		return nil, nil, nil, fmt.Errorf("tcp listen: %w", err)
+	}
+
+	// UDS listener 생성 (설정된 경우에만)
+	var udsLis net.Listener
+	if socketPath != "" {
+		// 기존 소켓 파일이 있으면 삭제함 (비정상 종료 시 잔존 파일 처리)
+		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+			_ = tcpLis.Close()
+			return nil, nil, nil, fmt.Errorf("remove existing socket: %w", err)
+		}
+
+		udsLis, err = lc.Listen(listenCtx, "unix", socketPath)
+		if err != nil {
+			_ = tcpLis.Close()
+			return nil, nil, nil, fmt.Errorf("unix listen: %w", err)
+		}
+
+		if logger != nil {
+			logger.Info("grpc_uds_enabled", "socket_path", socketPath)
+		}
 	}
 
 	server := grpc.NewServer(
@@ -73,7 +99,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Liste
 			errorMapperInterceptor(),
 		),
 	)
-	return server, lis, nil
+	return server, tcpLis, udsLis, nil
 }
 
 func unaryInterceptor(logger *slog.Logger, apiKey string, apiKeyRequired bool) grpc.UnaryServerInterceptor {

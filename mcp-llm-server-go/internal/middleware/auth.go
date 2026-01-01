@@ -10,7 +10,7 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/httperror"
 )
 
-// APIKeyAuth 는 API 키 인증 미들웨어다.
+// APIKeyAuth: API 키 인증 미들웨어다.
 func APIKeyAuth(cfg *config.Config) gin.HandlerFunc {
 	expected := ""
 	required := false

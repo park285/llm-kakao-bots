@@ -2,12 +2,10 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
-	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
+	turtlesoupuc "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/usecase/turtlesoup"
 )
 
 func (h *TurtleSoupHandler) handleReveal(c *gin.Context) {
@@ -16,24 +14,9 @@ func (h *TurtleSoupHandler) handleReveal(c *gin.Context) {
 		return
 	}
 
-	puzzleToon := toon.EncodePuzzle(req.Scenario, req.Solution, "", nil)
-	system, err := h.prompts.RevealSystem()
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-	userContent, err := h.prompts.RevealUser(puzzleToon)
-	if err != nil {
-		h.logError(err)
-		writeError(c, err)
-		return
-	}
-
-	narrative, _, err := h.client.Chat(c.Request.Context(), gemini.Request{
-		Prompt:       userContent,
-		SystemPrompt: system,
-		Task:         "reveal",
+	narrative, err := h.usecase.Reveal(c.Request.Context(), turtlesoupuc.RevealRequest{
+		Scenario: req.Scenario,
+		Solution: req.Solution,
 	})
 	if err != nil {
 		h.logError(err)
@@ -41,5 +24,5 @@ func (h *TurtleSoupHandler) handleReveal(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, TurtleSoupRevealResponse{Narrative: strings.TrimSpace(narrative)})
+	c.JSON(http.StatusOK, TurtleSoupRevealResponse{Narrative: narrative})
 }

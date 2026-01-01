@@ -11,7 +11,7 @@ import (
 //go:embed prompts/*.yml
 var promptsFS embed.FS
 
-// Prompts 는 Turtle Soup 프롬프트 모음이다.
+// Prompts: Turtle Soup 프롬프트 모음입니다.
 type Prompts struct {
 	bundle *prompt.Bundle
 }

@@ -61,7 +61,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// LogEnvStatus 는 환경 설정 상태를 로그로 남긴다.
+// LogEnvStatus: 환경 설정 상태를 로그로 남긴다.
 func LogEnvStatus(cfg *Config, logger *slog.Logger) {
 	if logger == nil || cfg == nil {
 		return
@@ -84,6 +84,7 @@ func LogEnvStatus(cfg *Config, logger *slog.Logger) {
 		"grpc_enabled", cfg.GRPC.Enabled,
 		"grpc_host", cfg.GRPC.Host,
 		"grpc_port", cfg.GRPC.Port,
+		"grpc_socket_path", cfg.GRPC.SocketPath,
 	)
 
 	if len(cfg.Gemini.APIKeys) == 0 {
@@ -148,9 +149,10 @@ func buildConfig() *Config {
 			HTTP2Enabled: getEnvBool("HTTP2_ENABLED", true),
 		},
 		GRPC: GRPCConfig{
-			Host:    getEnvString("GRPC_HOST", "127.0.0.1"),
-			Port:    getEnvInt("GRPC_PORT", 40528),
-			Enabled: getEnvBool("GRPC_ENABLED", true),
+			Host:       getEnvString("GRPC_HOST", "127.0.0.1"),
+			Port:       getEnvInt("GRPC_PORT", 40528),
+			Enabled:    getEnvBool("GRPC_ENABLED", true),
+			SocketPath: getEnvString("GRPC_SOCKET_PATH", ""),
 		},
 		HTTPAuth: HTTPAuthConfig{
 			APIKey:   getEnvString("HTTP_API_KEY", ""),
