@@ -17,7 +17,7 @@ import (
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 )
 
-// PuzzleService 는 타입이다.
+// PuzzleService: TurtleSoup 퍼즐 생성 및 중복 방지를 담당하는 서비스입니다.
 type PuzzleService struct {
 	restClient *llmrest.Client
 	cfg        tsconfig.PuzzleConfig
@@ -25,7 +25,7 @@ type PuzzleService struct {
 	logger     *slog.Logger
 }
 
-// NewPuzzleService 는 동작을 수행한다.
+// NewPuzzleService: PuzzleService 인스턴스를 생성합니다.
 func NewPuzzleService(restClient *llmrest.Client, cfg tsconfig.PuzzleConfig, dedupStore *tsredis.PuzzleDedupStore, logger *slog.Logger) *PuzzleService {
 	return &PuzzleService{
 		restClient: restClient,
@@ -35,14 +35,15 @@ func NewPuzzleService(restClient *llmrest.Client, cfg tsconfig.PuzzleConfig, ded
 	}
 }
 
-// PuzzleGenerationRequest 는 타입이다.
+// PuzzleGenerationRequest: 퍼즐 생성 요청 파라미터입니다.
 type PuzzleGenerationRequest struct {
 	Category   *tsmodel.PuzzleCategory
 	Difficulty *int
 	Theme      *string
 }
 
-// GeneratePuzzle 는 동작을 수행한다.
+// GeneratePuzzle: LLM을 통해 새 퍼즐을 생성합니다.
+// 중복 방지 및 재시도 로직을 포함하며, 실패 시 Preset 퍼즐을 반환합니다.
 func (s *PuzzleService) GeneratePuzzle(ctx context.Context, req PuzzleGenerationRequest, chatID string) (tsmodel.Puzzle, error) {
 	category := tsmodel.PuzzleCategoryMystery
 	if req.Category != nil {

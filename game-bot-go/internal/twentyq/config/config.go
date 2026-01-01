@@ -197,6 +197,7 @@ func readRedisConfig() (RedisConfig, error) {
 		[]string{"CACHE_HOST", "REDIS_HOST"},
 		[]string{"CACHE_PORT", "REDIS_PORT"},
 		[]string{"CACHE_PASSWORD", "REDIS_PASSWORD"},
+		[]string{"CACHE_SOCKET_PATH", "REDIS_SOCKET_PATH"},
 		"localhost",
 		6379,
 		"",

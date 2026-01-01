@@ -3,35 +3,40 @@ package security
 import (
 	"context"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
+	"google.golang.org/grpc"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 )
 
 func TestCachedInjectionGuard_ValidateOrThrow_CachesIsMalicious(t *testing.T) {
 	mockMalicious := false
 	var calls int32
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/api/guard/checks") {
+	stub := &guardOnlyLLMGRPCStub{
+		handler: func(ctx context.Context, _ *llmv1.GuardIsMaliciousRequest) (*llmv1.GuardIsMaliciousResponse, error) {
 			atomic.AddInt32(&calls, 1)
-			_ = json.NewEncoder(w).Encode(llmrest.GuardMaliciousResponse{Malicious: mockMalicious})
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+			return &llmv1.GuardIsMaliciousResponse{Malicious: mockMalicious}, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	client, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	base := NewMcpInjectionGuard(client, logger)
@@ -64,21 +69,27 @@ func TestCachedInjectionGuard_IsMalicious_SingleflightCoalesces(t *testing.T) {
 	started := make(chan struct{})
 	release := make(chan struct{})
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/api/guard/checks") {
+	stub := &guardOnlyLLMGRPCStub{
+		handler: func(ctx context.Context, _ *llmv1.GuardIsMaliciousRequest) (*llmv1.GuardIsMaliciousResponse, error) {
 			n := atomic.AddInt32(&calls, 1)
 			if n == 1 {
 				close(started)
 				<-release
 			}
-			_ = json.NewEncoder(w).Encode(llmrest.GuardMaliciousResponse{Malicious: mockMalicious})
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+			return &llmv1.GuardIsMaliciousResponse{Malicious: mockMalicious}, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	client, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	base := NewMcpInjectionGuard(client, logger)

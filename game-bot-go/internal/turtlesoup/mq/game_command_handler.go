@@ -16,7 +16,7 @@ import (
 	tssvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/service"
 )
 
-// GameCommandHandler: 사용자의 파싱된 명령어를 받아 실제 바다거북스프 게임 로직(Service)을 호출하고 결과를 반환한다.
+// GameCommandHandler: 사용자의 파싱된 명령어를 받아 실제 바다거북스프 게임 로직(Service)을 호출하고 결과를 반환합니다.
 type GameCommandHandler struct {
 	gameService      *tssvc.GameService
 	surrenderHandler *SurrenderHandler
@@ -25,7 +25,7 @@ type GameCommandHandler struct {
 	logger           *slog.Logger
 }
 
-// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성한다.
+// NewGameCommandHandler: 새로운 GameCommandHandler 인스턴스를 생성합니다.
 func NewGameCommandHandler(
 	gameService *tssvc.GameService,
 	surrenderHandler *SurrenderHandler,
@@ -42,7 +42,7 @@ func NewGameCommandHandler(
 	}
 }
 
-// ProcessCommand: 명령어의 종류(Start, Ask, Answer 등)에 따라 적절한 핸들러 로직을 분기하여 실행한다.
+// ProcessCommand: 명령어의 종류(Start, Ask, Answer 등)에 따라 적절한 핸들러 로직을 분기하여 실행합니다.
 func (h *GameCommandHandler) ProcessCommand(ctx context.Context, message mqmsg.InboundMessage, command Command) (string, error) {
 	if h.shouldRegisterPlayer(command) {
 		_ = h.gameService.RegisterPlayer(ctx, message.ChatID, message.UserID)

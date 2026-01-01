@@ -12,19 +12,19 @@ import (
 
 const logTextLimit = 100
 
-// InjectionGuard 는 타입이다.
+// InjectionGuard: 사용자 입력의 악성 여부를 검사하는 인터페이스입니다.
 type InjectionGuard interface {
 	IsMalicious(ctx context.Context, input string) (bool, error)
 	ValidateOrThrow(ctx context.Context, input string) (string, error)
 }
 
-// McpInjectionGuard 는 타입이다.
+// McpInjectionGuard: MCP LLM 서버를 통해 Injection 검사를 수행하는 구현체입니다.
 type McpInjectionGuard struct {
 	restClient *llmrest.Client
 	logger     *slog.Logger
 }
 
-// NewMcpInjectionGuard 는 동작을 수행한다.
+// NewMcpInjectionGuard: McpInjectionGuard 인스턴스를 생성합니다.
 func NewMcpInjectionGuard(restClient *llmrest.Client, logger *slog.Logger) *McpInjectionGuard {
 	if logger == nil {
 		logger = slog.Default()
@@ -35,7 +35,7 @@ func NewMcpInjectionGuard(restClient *llmrest.Client, logger *slog.Logger) *McpI
 	}
 }
 
-// IsMalicious 는 동작을 수행한다.
+// IsMalicious: 입력이 악성인지 검사합니다.
 func (g *McpInjectionGuard) IsMalicious(ctx context.Context, input string) (bool, error) {
 	malicious, err := g.restClient.GuardIsMalicious(ctx, input)
 	if err != nil {
@@ -44,7 +44,8 @@ func (g *McpInjectionGuard) IsMalicious(ctx context.Context, input string) (bool
 	return malicious, nil
 }
 
-// ValidateOrThrow 는 동작을 수행한다.
+// ValidateOrThrow: 입력을 검증하고 악성이면 에러를 반환합니다.
+// 정상적인 입력은 정규화하여 반환합니다.
 func (g *McpInjectionGuard) ValidateOrThrow(ctx context.Context, input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", cerrors.MalformedInputError{Message: "empty input"}

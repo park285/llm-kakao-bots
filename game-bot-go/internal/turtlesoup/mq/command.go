@@ -41,8 +41,8 @@ type Command struct {
 	Answer          string
 }
 
-// RequiresLock: 이 명령어를 실행할 때 게임 상태 보호를 위한 분산 락(Write Lock)이 필요한지 여부를 반환한다.
-// 단순 조회나 도움말 등은 락이 필요 없을 수 있다.
+// RequiresLock: 이 명령어를 실행할 때 게임 상태 보호를 위한 분산 락(Write Lock)이 필요한지 여부를 반환합니다.
+// 단순 조회나 도움말 등은 락이 필요 없습니다.
 func (c Command) RequiresLock() bool {
 	switch c.Kind {
 	case CommandHelp, CommandUnknown:
@@ -52,8 +52,8 @@ func (c Command) RequiresLock() bool {
 	}
 }
 
-// WaitingMessageKey: 명령어가 처리되는 동안(AI 생성 등) 사용자에게 보여줄 '처리 중...' 메시지 키를 반환한다.
-// 즉시 처리되는 명령어의 경우 nil을 반환한다.
+// WaitingMessageKey: 명령어가 처리되는 동안(AI 생성 등) 사용자에게 보여줄 '처리 중...' 메시지 키를 반환합니다.
+// 즉시 처리되는 명령어의 경우 nil을 반환합니다.
 func (c Command) WaitingMessageKey() *string {
 	switch c.Kind {
 	case CommandStart:

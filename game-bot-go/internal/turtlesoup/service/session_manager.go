@@ -9,13 +9,13 @@ import (
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 )
 
-// GameSessionManager 는 타입이다.
+// GameSessionManager: 게임 세션의 저장, 조회, 삭제 및 락 관리를 담당합니다.
 type GameSessionManager struct {
 	sessionStore *tsredis.SessionStore
 	lockManager  *tsredis.LockManager
 }
 
-// NewGameSessionManager 는 동작을 수행한다.
+// NewGameSessionManager: GameSessionManager 인스턴스를 생성합니다.
 func NewGameSessionManager(sessionStore *tsredis.SessionStore, lockManager *tsredis.LockManager) *GameSessionManager {
 	return &GameSessionManager{
 		sessionStore: sessionStore,
@@ -23,7 +23,7 @@ func NewGameSessionManager(sessionStore *tsredis.SessionStore, lockManager *tsre
 	}
 }
 
-// WithLock 는 동작을 수행한다.
+// WithLock: 세션 락을 획득한 상태에서 콜백을 실행합니다.
 func (m *GameSessionManager) WithLock(
 	ctx context.Context,
 	sessionID string,
@@ -36,7 +36,7 @@ func (m *GameSessionManager) WithLock(
 	return nil
 }
 
-// WithOwnerLock 는 동작을 수행한다.
+// WithOwnerLock: 세션 소유자 기준으로 락을 획득한 후 콜백을 실행합니다.
 func (m *GameSessionManager) WithOwnerLock(
 	ctx context.Context,
 	sessionID string,
@@ -55,7 +55,7 @@ func (m *GameSessionManager) WithOwnerLock(
 	return m.WithLock(ctx, sessionID, holderName, block)
 }
 
-// Load 는 동작을 수행한다.
+// Load: 세션 ID로 게임 상태를 조회합니다. 없으면 nil을 반환합니다.
 func (m *GameSessionManager) Load(ctx context.Context, sessionID string) (*tsmodel.GameState, error) {
 	state, err := m.sessionStore.LoadGameState(ctx, sessionID)
 	if err != nil {
@@ -64,7 +64,7 @@ func (m *GameSessionManager) Load(ctx context.Context, sessionID string) (*tsmod
 	return state, nil
 }
 
-// LoadOrThrow 는 동작을 수행한다.
+// LoadOrThrow: 세션 ID로 게임 상태를 조회하고, 없으면 에러를 반환합니다.
 func (m *GameSessionManager) LoadOrThrow(ctx context.Context, sessionID string) (tsmodel.GameState, error) {
 	state, err := m.Load(ctx, sessionID)
 	if err != nil {
@@ -76,7 +76,7 @@ func (m *GameSessionManager) LoadOrThrow(ctx context.Context, sessionID string) 
 	return *state, nil
 }
 
-// Save 는 동작을 수행한다.
+// Save: 게임 상태를 Redis에 저장합니다.
 func (m *GameSessionManager) Save(ctx context.Context, state tsmodel.GameState) error {
 	if err := m.sessionStore.SaveGameState(ctx, state); err != nil {
 		return fmt.Errorf("save game state failed: %w", err)
@@ -84,7 +84,7 @@ func (m *GameSessionManager) Save(ctx context.Context, state tsmodel.GameState) 
 	return nil
 }
 
-// Refresh 는 동작을 수행한다.
+// Refresh: 세션 TTL을 갱신합니다.
 func (m *GameSessionManager) Refresh(ctx context.Context, sessionID string) error {
 	_, err := m.sessionStore.RefreshTTL(ctx, sessionID)
 	if err != nil {
@@ -93,7 +93,7 @@ func (m *GameSessionManager) Refresh(ctx context.Context, sessionID string) erro
 	return nil
 }
 
-// Delete 는 동작을 수행한다.
+// Delete: 세션을 삭제합니다.
 func (m *GameSessionManager) Delete(ctx context.Context, sessionID string) error {
 	if err := m.sessionStore.DeleteSession(ctx, sessionID); err != nil {
 		return fmt.Errorf("delete session failed: %w", err)
@@ -101,7 +101,7 @@ func (m *GameSessionManager) Delete(ctx context.Context, sessionID string) error
 	return nil
 }
 
-// EnsureSessionExists 는 동작을 수행한다.
+// EnsureSessionExists: 세션이 존재하는지 확인하고, 없으면 에러를 반환합니다.
 func (m *GameSessionManager) EnsureSessionExists(ctx context.Context, sessionID string) error {
 	exists, err := m.sessionStore.SessionExists(ctx, sessionID)
 	if err != nil {

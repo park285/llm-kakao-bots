@@ -68,3 +68,14 @@ func (c Command) WaitingMessageKey() *string {
 		return nil
 	}
 }
+
+// RequiresLock: 이 명령어를 실행할 때 게임 상태 보호를 위한 분산 락(Write Lock)이 필요한지 여부를 반환합니다.
+// 단순 조회나 도움말 등은 락이 필요 없습니다.
+func (c Command) RequiresLock() bool {
+	switch c.Kind {
+	case CommandHelp, CommandUnknown, CommandStatus, CommandModelInfo, CommandUserStats, CommandRoomStats, CommandAdminUsage:
+		return false
+	default:
+		return true
+	}
+}

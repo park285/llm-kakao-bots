@@ -14,7 +14,7 @@ import (
 // MessageQueueNotifier: turtlesoup 전용 큐 알림을 위한 공통 notifier alias 입니다.
 type MessageQueueNotifier = commonmq.MessageQueueNotifier
 
-// NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성한다.
+// NewMessageQueueNotifier: 새로운 MessageQueueNotifier 인스턴스를 생성합니다.
 func NewMessageQueueNotifier(provider *messageprovider.Provider, logger *slog.Logger) *MessageQueueNotifier {
 	cfg := commonmq.QueueNotifierConfig{
 		UserAnonymousKey: tsmessages.UserAnonymous,

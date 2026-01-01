@@ -28,7 +28,7 @@ type MessageQueueProcessor struct {
 	logger                *slog.Logger
 }
 
-// NewMessageQueueProcessor: MessageQueueProcessor 인스턴스를 생성하고 필요한 종속성을 주입한다.
+// NewMessageQueueProcessor: MessageQueueProcessor 인스턴스를 생성하고 필요한 종속성을 주입합니다.
 func NewMessageQueueProcessor(
 	queueCoordinator *MessageQueueCoordinator,
 	lockManager *tsredis.LockManager,
@@ -49,7 +49,7 @@ func NewMessageQueueProcessor(
 	}
 }
 
-// EnqueueAndNotify: 처리 불가능한 메시지를 대기열에 추가하고, 사용자에게 대기 상태 알림 메시지(순번 등)를 전송한다.
+// EnqueueAndNotify: 처리 불가능한 메시지를 대기열에 추가하고, 사용자에게 대기 상태 알림 메시지(순번 등)를 전송합니다.
 func (p *MessageQueueProcessor) EnqueueAndNotify(
 	ctx context.Context,
 	chatID string,
@@ -116,8 +116,8 @@ func (p *MessageQueueProcessor) buildQueueMessage(
 	}
 }
 
-// ProcessQueuedMessages: 해당 채팅방의 대기열에 쌓인 메시지들을 하나씩 꺼내어 순차적으로 처리한다.
-// 무한 루프 방지를 위해 최대 반복 횟수 제한(MQMaxQueueIterations)을 둔다.
+// ProcessQueuedMessages: 해당 채팅방의 대기열에 쌓인 메시지들을 하나씩 꺼내어 순차적으로 처리합니다.
+// 무한 루프 방지를 위해 최대 반복 횟수 제한(MQMaxQueueIterations)을 둡니다.
 func (p *MessageQueueProcessor) ProcessQueuedMessages(ctx context.Context, chatID string, emit func(mqmsg.OutboundMessage) error) {
 	iterations := 0
 	for iterations < tsconfig.MQMaxQueueIterations {

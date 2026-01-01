@@ -23,7 +23,7 @@ type CommandParser struct {
 	askRe       *regexp.Regexp
 }
 
-// NewCommandParser: 주어진 접두사(prefix)를 사용하는 새로운 CommandParser를 생성한다.
+// NewCommandParser: 주어진 접두사(prefix)를 사용하는 새로운 CommandParser를 생성합니다.
 func NewCommandParser(prefix string) *CommandParser {
 	base := parser.NewBaseParser(prefix, "/스프")
 	p := &CommandParser{BaseParser: base}
@@ -41,7 +41,7 @@ func NewCommandParser(prefix string) *CommandParser {
 	return p
 }
 
-// Parse: 입력된 메시지 문자열을 파싱하여 Command 객체로 반환한다.
+// Parse: 입력된 메시지 문자열을 파싱하여 Command 객체로 반환합니다.
 func (p *CommandParser) Parse(message string) *Command {
 	text := p.TrimMessage(message)
 	if text == "" {

@@ -3,15 +3,14 @@ package service
 import (
 	"context"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
+	"google.golang.org/grpc"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
@@ -37,37 +36,32 @@ func TestPrepareNewGame(t *testing.T) {
 	sessionManager := NewGameSessionManager(sessionStore, lockManager)
 	dedupStore := tsredis.NewPuzzleDedupStore(client, logger)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/sessions" && r.Method == http.MethodPost {
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"session_id": "sess_llm_1",
-			})
-			return
-		}
-		if r.URL.Path == "/api/turtle-soup/puzzles" && r.Method == http.MethodPost {
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"title":      "Test Puzzle",
-				"scenario":   "A man walks into a bar...",
-				"solution":   "He was blind.",
-				"category":   "mystery",
-				"difficulty": 3,
-				"hints":      []string{"Hint 1"},
-			})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer server.Close()
+	stub := &turtlesoupLLMGRPCStub{
+		generatePuzzle: func() *llmrest.TurtleSoupPuzzleGenerationResponse {
+			return &llmrest.TurtleSoupPuzzleGenerationResponse{
+				Title:      "Test Puzzle",
+				Scenario:   "A man walks into a bar...",
+				Solution:   "He was blind.",
+				Category:   "mystery",
+				Difficulty: 3,
+				Hints:      []string{"Hint 1"},
+			}
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
 	llmClient, err := llmrest.New(llmrest.Config{
-		BaseURL: server.URL,
+		BaseURL: baseURL,
 		Timeout: 1 * time.Second,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		_ = llmClient.Close()
+	})
 
 	puzzleCfg := tsconfig.PuzzleConfig{
 		RewriteEnabled: false,
@@ -130,16 +124,26 @@ func TestPrepareNewGame(t *testing.T) {
 	})
 
 	t.Run("PuzzleGenerationError", func(t *testing.T) {
-		serverErr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-		}))
-		defer serverErr.Close()
+		stubErr := &turtlesoupLLMGRPCStub{
+			hasError: func() bool {
+				return true
+			},
+		}
+		baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+			llmv1.RegisterLLMServiceServer(s, stubErr)
+		})
 
-		clientErr, _ := llmrest.New(llmrest.Config{BaseURL: serverErr.URL})
+		clientErr, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+		if err != nil {
+			t.Fatalf("llm client init failed: %v", err)
+		}
+		t.Cleanup(func() {
+			_ = clientErr.Close()
+		})
 		svcErr := NewGameSetupService(clientErr, NewPuzzleService(clientErr, puzzleCfg, dedupStore, logger), sessionManager, logger)
 
 		chatID := prefix + "chat_err"
-		_, err := svcErr.PrepareNewGame(ctx, prefix+"session_err", "user_1", chatID, nil, nil, nil)
+		_, err = svcErr.PrepareNewGame(ctx, prefix+"session_err", "user_1", chatID, nil, nil, nil)
 		if err == nil {
 			t.Error("expected error due to puzzle generation failure")
 		}

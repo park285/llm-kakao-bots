@@ -8,13 +8,13 @@ import (
 
 // MQ 메시지 파싱 에러 목록.
 var (
-	// ErrMissingChatID 는 패키지 변수다.
+	// ErrMissingChatID: 채팅방 ID가 누락된 경우 반환되는 에러입니다.
 	ErrMissingChatID  = errors.New("missing chat id")
 	ErrMissingContent = errors.New("missing content")
 	ErrMissingUserID  = errors.New("missing user id")
 )
 
-// InboundMessage 는 타입이다.
+// InboundMessage: MQ에서 수신한 인바운드 메시지 구조체입니다.
 type InboundMessage struct {
 	ChatID   string
 	UserID   string
@@ -23,18 +23,18 @@ type InboundMessage struct {
 	Sender   *string
 }
 
-// OutboundType 는 타입이다.
+// OutboundType: 아웃바운드 메시지의 유형을 나타냅니다 (waiting, final, error).
 type OutboundType string
 
 // OutboundType 상수 목록.
 const (
-	// OutboundWaiting 는 상수다.
+	// OutboundWaiting: 처리 중임을 알리는 대기 메시지입니다.
 	OutboundWaiting OutboundType = "waiting"
 	OutboundFinal   OutboundType = "final"
 	OutboundError   OutboundType = "error"
 )
 
-// OutboundMessage 는 타입이다.
+// OutboundMessage: MQ로 발행할 아웃바운드 메시지 구조체입니다.
 type OutboundMessage struct {
 	ChatID   string
 	Text     string
@@ -42,22 +42,22 @@ type OutboundMessage struct {
 	Type     OutboundType
 }
 
-// NewWaiting 는 동작을 수행한다.
+// NewWaiting: 처리 중 상태의 대기 메시지를 생성합니다.
 func NewWaiting(chatID string, text string, threadID *string) OutboundMessage {
 	return OutboundMessage{ChatID: chatID, Text: text, ThreadID: threadID, Type: OutboundWaiting}
 }
 
-// NewFinal 는 동작을 수행한다.
+// NewFinal: 최종 응답 메시지를 생성합니다.
 func NewFinal(chatID string, text string, threadID *string) OutboundMessage {
 	return OutboundMessage{ChatID: chatID, Text: text, ThreadID: threadID, Type: OutboundFinal}
 }
 
-// NewError 는 동작을 수행한다.
+// NewError: 에러 응답 메시지를 생성합니다.
 func NewError(chatID string, text string, threadID *string) OutboundMessage {
 	return OutboundMessage{ChatID: chatID, Text: text, ThreadID: threadID, Type: OutboundError}
 }
 
-// ToStreamValues 는 동작을 수행한다.
+// ToStreamValues: 메시지를 Redis Stream 발행용 map으로 변환합니다.
 func (m OutboundMessage) ToStreamValues() map[string]any {
 	values := map[string]any{
 		"chatId": m.ChatID,
@@ -70,7 +70,7 @@ func (m OutboundMessage) ToStreamValues() map[string]any {
 	return values
 }
 
-// ParseInboundMessage 는 동작을 수행한다.
+// ParseInboundMessage: Redis Stream 필드에서 인바운드 메시지를 파싱합니다.
 func ParseInboundMessage(fields map[string]string) (InboundMessage, error) {
 	chatID := strings.TrimSpace(fields["room"])
 	if chatID == "" {

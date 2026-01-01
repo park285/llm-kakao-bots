@@ -7,42 +7,42 @@ import (
 	commonconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/config"
 )
 
-// ServerConfig 는 타입이다.
+// ServerConfig: HTTP/gRPC 서버 설정입니다.
 type ServerConfig = commonconfig.ServerConfig
 
-// ServerTuningConfig 는 타입이다.
+// ServerTuningConfig: 서버 성능 튜닝 옵션입니다.
 type ServerTuningConfig = commonconfig.ServerTuningConfig
 
-// CommandsConfig 는 타입이다.
+// CommandsConfig: 봇 명령어 접두사 설정입니다.
 type CommandsConfig = commonconfig.CommandsConfig
 
 // LlmConfig: LLM 서버 통신 설정 alias
 type LlmConfig = commonconfig.LlmConfig
 
-// PuzzleConfig 는 타입이다.
+// PuzzleConfig: 퍼즐 생성 관련 설정입니다.
 type PuzzleConfig struct {
-	RewriteEnabled bool
+	RewriteEnabled bool // Preset 퍼즐 사용 시 시나리오를 재작성할지 여부
 }
 
-// RedisConfig 는 타입이다.
+// RedisConfig: Redis/Valkey 캐시 연결 설정입니다.
 type RedisConfig = commonconfig.RedisConfig
 
-// ValkeyMQConfig 는 타입이다.
+// ValkeyMQConfig: Valkey 기반 메시지 큐 연결 설정입니다.
 type ValkeyMQConfig = commonconfig.ValkeyMQConfig
 
-// AccessConfig 는 타입이다.
+// AccessConfig: 채팅방/사용자 접근 제어 설정입니다.
 type AccessConfig = commonconfig.AccessConfig
 
-// LogConfig 는 타입이다.
+// LogConfig: 로그 출력 설정입니다.
 type LogConfig = commonconfig.LogConfig
 
-// InjectionGuardConfig 는 타입이다.
+// InjectionGuardConfig: Injection 검사 캐시 설정입니다.
 type InjectionGuardConfig struct {
-	CacheTTL        time.Duration
-	CacheMaxEntries int
+	CacheTTL        time.Duration // 캐시 TTL (Time To Live)
+	CacheMaxEntries int           // LRU 캐시 최대 엔트리 수
 }
 
-// Config 는 타입이다.
+// Config: TurtleSoup 서비스 전체 설정을 통합하는 구조체입니다.
 type Config struct {
 	Server         ServerConfig
 	ServerTuning   ServerTuningConfig
@@ -56,7 +56,7 @@ type Config struct {
 	Log            LogConfig
 }
 
-// LoadFromEnv 는 동작을 수행한다.
+// LoadFromEnv: 환경 변수에서 전체 설정을 읽어옵니다.
 func LoadFromEnv() (*Config, error) {
 	server, err := readServerConfig()
 	if err != nil {
@@ -153,6 +153,7 @@ func readRedisConfig() (RedisConfig, error) {
 		[]string{"REDIS_HOST", "CACHE_HOST"},
 		[]string{"REDIS_PORT", "CACHE_PORT"},
 		[]string{"REDIS_PASSWORD", "CACHE_PASSWORD"},
+		[]string{"CACHE_SOCKET_PATH", "REDIS_SOCKET_PATH"},
 		"localhost",
 		6379,
 		"",

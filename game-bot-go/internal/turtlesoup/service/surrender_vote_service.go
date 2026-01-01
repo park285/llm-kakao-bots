@@ -10,13 +10,14 @@ import (
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
 )
 
-// SurrenderVoteService 는 타입이다.
+// SurrenderVoteService: 항복 투표 기능을 관리하는 서비스입니다.
+// 투표 시작, 찬성, 결과 확인 등을 담당합니다.
 type SurrenderVoteService struct {
 	sessionManager *GameSessionManager
 	voteStore      *tsredis.SurrenderVoteStore
 }
 
-// NewSurrenderVoteService 는 동작을 수행한다.
+// NewSurrenderVoteService: SurrenderVoteService 인스턴스를 생성합니다.
 func NewSurrenderVoteService(sessionManager *GameSessionManager, voteStore *tsredis.SurrenderVoteStore) *SurrenderVoteService {
 	return &SurrenderVoteService{
 		sessionManager: sessionManager,
@@ -24,12 +25,12 @@ func NewSurrenderVoteService(sessionManager *GameSessionManager, voteStore *tsre
 	}
 }
 
-// RequireSession 는 동작을 수행한다.
+// RequireSession: 세션이 존재하는지 확인합니다.
 func (s *SurrenderVoteService) RequireSession(ctx context.Context, chatID string) error {
 	return s.sessionManager.EnsureSessionExists(ctx, chatID)
 }
 
-// ResolvePlayers 는 동작을 수행한다.
+// ResolvePlayers: 현재 게임에 참여 중인 플레이어 목록을 반환합니다.
 func (s *SurrenderVoteService) ResolvePlayers(ctx context.Context, chatID string) ([]string, error) {
 	state, err := s.sessionManager.Load(ctx, chatID)
 	if err != nil {
@@ -45,7 +46,7 @@ func (s *SurrenderVoteService) ResolvePlayers(ctx context.Context, chatID string
 	return state.Players, nil
 }
 
-// ActiveVote 는 동작을 수행한다.
+// ActiveVote: 현재 진행 중인 항복 투표를 조회합니다.
 func (s *SurrenderVoteService) ActiveVote(ctx context.Context, chatID string) (*tsmodel.SurrenderVote, error) {
 	vote, err := s.voteStore.Get(ctx, chatID)
 	if err != nil {
@@ -54,22 +55,23 @@ func (s *SurrenderVoteService) ActiveVote(ctx context.Context, chatID string) (*
 	return vote, nil
 }
 
-// VoteStartResultType 는 타입이다.
+// VoteStartResultType: 투표 시작 결과 유형을 나타냅니다.
 type VoteStartResultType int
 
-// VoteStartImmediate 는 투표 시작 결과 상수 목록이다.
+// VoteStartImmediate: 투표 시작 결과 상수 목록입니다.
 const (
 	VoteStartImmediate VoteStartResultType = iota
 	VoteStartStarted
 )
 
-// VoteStartResult 는 타입이다.
+// VoteStartResult: 투표 시작 결과를 담는 구조체입니다.
 type VoteStartResult struct {
 	Type VoteStartResultType
 	Vote tsmodel.SurrenderVote
 }
 
-// StartVote 는 동작을 수행한다.
+// StartVote: 새 항복 투표를 시작합니다.
+// 1인 게임이면 즉시 승인되고, 다중 플레이어면 과반수 동의가 필요합니다.
 func (s *SurrenderVoteService) StartVote(ctx context.Context, chatID string, initiator string, players []string) (VoteStartResult, error) {
 	vote := tsmodel.SurrenderVote{
 		Initiator:       initiator,
@@ -88,10 +90,10 @@ func (s *SurrenderVoteService) StartVote(ctx context.Context, chatID string, ini
 	return VoteStartResult{Type: VoteStartStarted, Vote: vote}, nil
 }
 
-// VoteApprovalResultType 는 타입이다.
+// VoteApprovalResultType: 투표 찬성 결과 유형을 나타냅니다.
 type VoteApprovalResultType int
 
-// VoteApprovalCompleted 는 투표 승인 결과 상수 목록이다.
+// VoteApprovalCompleted: 투표 승인 결과 상수 목록입니다.
 const (
 	VoteApprovalCompleted VoteApprovalResultType = iota
 	VoteApprovalProgress
@@ -101,13 +103,14 @@ const (
 	VoteApprovalPersistenceFailure
 )
 
-// VoteApprovalResult 는 타입이다.
+// VoteApprovalResult: 투표 찬성 처리 결과를 담는 구조체입니다.
 type VoteApprovalResult struct {
 	Type VoteApprovalResultType
 	Vote *tsmodel.SurrenderVote
 }
 
-// Approve 는 동작을 수행한다.
+// Approve: 사용자의 항복 투표 찬성을 처리합니다.
+// 과반수가 찬성하면 투표가 완료됩니다.
 func (s *SurrenderVoteService) Approve(ctx context.Context, chatID string, userID string) (VoteApprovalResult, error) {
 	vote, err := s.voteStore.Get(ctx, chatID)
 	if err != nil {
@@ -142,7 +145,7 @@ func (s *SurrenderVoteService) Approve(ctx context.Context, chatID string, userI
 	return VoteApprovalResult{Type: VoteApprovalProgress, Vote: updated}, nil
 }
 
-// Clear 는 동작을 수행한다.
+// Clear: 항복 투표 데이터를 삭제합니다.
 func (s *SurrenderVoteService) Clear(ctx context.Context, chatID string) error {
 	if err := s.voteStore.Clear(ctx, chatID); err != nil {
 		return fmt.Errorf("clear surrender vote failed: %w", err)

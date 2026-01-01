@@ -454,11 +454,9 @@ func (s *GameMessageService) formatModelInfo(cfg *llmrest.ModelConfigResponse) s
 		verifyModel = strings.TrimSpace(*cfg.ModelVerify)
 	}
 
-	transportMode := "h1"
+	transportMode := "grpc"
 	if cfg.TransportMode != nil && strings.TrimSpace(*cfg.TransportMode) != "" {
 		transportMode = strings.TrimSpace(*cfg.TransportMode)
-	} else if cfg.HTTP2Enabled {
-		transportMode = "h2c"
 	}
 
 	temperature := fmt.Sprintf("%.2f", cfg.Temperature)

@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -15,10 +12,12 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/glebarez/sqlite"
 	"github.com/valkey-io/valkey-go"
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	qconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/config"
@@ -29,8 +28,9 @@ import (
 
 type testEnv struct {
 	svc          *RiddleService
+	llmClient    *llmrest.Client
+	stopLLM      func()
 	client       valkey.Client
-	ts           *httptest.Server
 	db           *gorm.DB
 	mockResponse string
 	t            *testing.T
@@ -77,24 +77,44 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// 5. LLM Client (Mock Server)
 	prefix := testhelper.UniqueTestPrefix(t)
 	env := &testEnv{client: client, db: db, mockResponse: "{}", t: t, prefix: prefix} // Default empty JSON
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// 토픽 선택 API mock
-		if strings.Contains(r.URL.Path, "/api/twentyq/topics/select") {
-			fmt.Fprint(w, `{"name":"테스트토픽","category":"object","details":{"type":"test"}}`)
-			return
-		}
-		// 기타 요청은 동적 mock 응답 사용
-		fmt.Fprint(w, env.mockResponse)
-	}))
-	env.ts = ts
+	stub := &twentyqLLMGRPCStub{
+		guardMalicious: func(_ *llmv1.GuardIsMaliciousRequest) (bool, error) {
+			return false, nil
+		},
+		generateHints: func(_ *llmv1.TwentyQGenerateHintsRequest) (*llmv1.TwentyQGenerateHintsResponse, error) {
+			var payload struct {
+				Hints []string `json:"hints"`
+			}
+			_ = json.Unmarshal([]byte(env.mockResponse), &payload)
+			if len(payload.Hints) == 0 {
+				payload.Hints = []string{"It has fur"}
+			}
+			return &llmv1.TwentyQGenerateHintsResponse{Hints: payload.Hints}, nil
+		},
+		verifyGuess: func(_ *llmv1.TwentyQVerifyGuessRequest) (*llmv1.TwentyQVerifyGuessResponse, error) {
+			var payload struct {
+				Result string `json:"result"`
+			}
+			_ = json.Unmarshal([]byte(env.mockResponse), &payload)
+			result := strings.ToUpper(strings.TrimSpace(payload.Result))
+			if result == "" {
+				return &llmv1.TwentyQVerifyGuessResponse{Result: nil, RawText: ""}, nil
+			}
+			return &llmv1.TwentyQVerifyGuessResponse{Result: &result, RawText: result}, nil
+		},
+	}
+	baseURL, stop := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
+	env.stopLLM = stop
 
 	llmClient, err := llmrest.New(llmrest.Config{
-		BaseURL: ts.URL, // Use test server URL
+		BaseURL: baseURL,
 	})
 	if err != nil {
 		t.Fatalf("llm client init failed: %v", err)
 	}
+	env.llmClient = llmClient
 
 	// 6. MessageProvider
 	msgProvider, err := messageprovider.NewFromYAML(`
@@ -170,8 +190,13 @@ func (e *testEnv) chatID(suffix string) string {
 
 func (e *testEnv) teardown() {
 	testhelper.CleanupTestKeys(e.t, e.client, "20q:")
+	if e.llmClient != nil {
+		_ = e.llmClient.Close()
+	}
 	e.client.Close()
-	e.ts.Close()
+	if e.stopLLM != nil {
+		e.stopLLM()
+	}
 }
 
 func TestRiddleService_Start(t *testing.T) {
@@ -359,7 +384,7 @@ func TestRiddleService_LLMFailure(t *testing.T) {
 
 	env.svc.Start(ctx, chatID, userID, nil)
 
-	env.ts.Close() // Simulate network failure
+	env.stopLLM() // Simulate network failure
 
 	_, err := env.svc.Answer(ctx, chatID, userID, &sender, "Some Question")
 	if err == nil {
@@ -723,16 +748,22 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 	// Let's do a manual specific setup for this test to handle malicious endpoint.
 	mr, _ := miniredis.Run()
 	defer mr.Close()
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/guard") {
-			w.Write([]byte(`{"malicious": true}`))
-			return
-		}
-		w.Write([]byte(`{}`))
-	}))
-	defer ts.Close()
+	stub := &twentyqLLMGRPCStub{
+		guardMalicious: func(_ *llmv1.GuardIsMaliciousRequest) (bool, error) {
+			return true, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	llmClient, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	llmClient, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = llmClient.Close()
+	})
 	// Use miniredis with valkey client
 
 	valkeyClient, _ := valkey.NewClient(valkey.ClientOption{
@@ -753,7 +784,7 @@ func TestRiddleService_MaliciousInput(t *testing.T) {
 
 	svc := NewRiddleService(llmClient, "/20q", msgProvider, qredis.NewLockManager(valkeyClient, logger), sStore, nil, qredis.NewHistoryStore(valkeyClient, logger), nil, nil, nil, nil, nil, nil, nil, logger)
 
-	_, err := svc.Answer(ctx, chatID, user1, nil, "bad input")
+	_, err = svc.Answer(ctx, chatID, user1, nil, "bad input")
 	if err == nil {
 		t.Error("expected error for malicious input")
 	}
@@ -815,43 +846,22 @@ func TestRiddleService_Success_Complex(t *testing.T) {
 }
 
 func TestRiddleService_Normalize_EdgeCases(t *testing.T) {
-	// Custom setup for finer mock control
-	mr, _ := miniredis.Run()
-	defer mr.Close()
+	stub := &twentyqLLMGRPCStub{
+		guardMalicious: func(_ *llmv1.GuardIsMaliciousRequest) (bool, error) {
+			return false, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/guard") {
-			// Malicious check
-			var req map[string]string
-			_ = json.NewDecoder(r.Body).Decode(&req) // check body?
-			// Simpler: if query param or body contains "bad_norm"
-			// Actually standard client sends JSON body: {"text": "..."}
-			// We can just return false by default, true if specific keyword.
-			// But we want "Normalize -> Different -> then Malicious".
-			// So:
-			// 1. Guard check 1 (original): "bad_hidden" -> false (allowed initially?)
-			// 2. Normalize: "bad_hidden" -> "bad_norm"
-			// 3. Guard check 2 (normalized): "bad_norm" -> true (blocked)
-
-			// We need to peek body.
-			// io.ReadAll(r.Body) ...
-			// Since this is complex to reliable mock with single static handler,
-			// we can trust the logic flow if we can trigger "normalized != original".
-
-			// Let's just return safe for now, unless we can inspect.
-			// Assuming client.GuardIsMalicious sends "content".
-			w.Write([]byte(`{"malicious": false}`))
-			return
-		}
-		if strings.Contains(r.URL.Path, "/normalize") {
-			w.WriteHeader(http.StatusInternalServerError) // Force error
-			return
-		}
-		w.Write([]byte(`{}`))
-	}))
-	defer ts.Close()
-
-	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	client, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	svc := NewRiddleService(client, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 

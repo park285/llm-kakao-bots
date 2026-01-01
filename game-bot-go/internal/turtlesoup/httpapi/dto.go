@@ -64,7 +64,6 @@ type HintResponse struct {
 // LlmDebugTransport: LLM 디버그 전송 설정 정보 DTO
 type LlmDebugTransport struct {
 	BaseURL               string `json:"baseUrl"`
-	HTTP2Enabled          bool   `json:"http2Enabled"`
 	TimeoutSeconds        int64  `json:"timeoutSeconds"`
 	ConnectTimeoutSeconds int64  `json:"connectTimeoutSeconds"`
 }

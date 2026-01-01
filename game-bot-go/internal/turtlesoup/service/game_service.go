@@ -15,7 +15,8 @@ import (
 	tssecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/security"
 )
 
-// GameService 는 타입이다.
+// GameService: TurtleSoup 게임의 핵심 비즈니스 로직을 담당하는 서비스입니다.
+// 게임 시작, 질문 처리, 정답 제출, 힌트, 항복 등의 기능을 제공합니다.
 type GameService struct {
 	restClient     *llmrest.Client
 	sessionManager *GameSessionManager
@@ -24,7 +25,7 @@ type GameService struct {
 	logger         *slog.Logger
 }
 
-// NewGameService 는 동작을 수행한다.
+// NewGameService: GameService 인스턴스를 생성합니다.
 func NewGameService(
 	restClient *llmrest.Client,
 	sessionManager *GameSessionManager,
@@ -41,7 +42,8 @@ func NewGameService(
 	}
 }
 
-// StartGame 는 동작을 수행한다.
+// StartGame: 새 게임을 시작하고 퍼즐을 생성합니다.
+// 난이도, 카테고리, 테마를 선택적으로 지정할 수 있습니다.
 func (s *GameService) StartGame(
 	ctx context.Context,
 	sessionID string,
@@ -67,7 +69,8 @@ func (s *GameService) StartGame(
 	return state, nil
 }
 
-// RegisterPlayer 는 동작을 수행한다.
+// RegisterPlayer: 진행 중인 게임에 플레이어를 등록합니다.
+// 이미 등록된 플레이어는 무시됩니다.
 func (s *GameService) RegisterPlayer(ctx context.Context, sessionID string, userID string) error {
 	err := s.sessionManager.WithLock(ctx, sessionID, &userID, func(ctx context.Context) error {
 		state, err := s.sessionManager.Load(ctx, sessionID)
@@ -95,14 +98,15 @@ func (s *GameService) RegisterPlayer(ctx context.Context, sessionID string, user
 	return err
 }
 
-// AnswerQuestionResult 는 타입이다.
+// AnswerQuestionResult: 질문에 대한 응답 결과를 담는 구조체입니다.
 type AnswerQuestionResult struct {
 	Answer        string
 	QuestionCount int
 	History       []tsmodel.HistoryEntry
 }
 
-// AskQuestion 는 동작을 수행한다.
+// AskQuestion: LLM에 질문을 전달하고 예/아니오 답변을 받습니다.
+// 질문 유효성 검증 및 Injection Guard를 거친 후 처리합니다.
 func (s *GameService) AskQuestion(ctx context.Context, sessionID string, question string) (tsmodel.GameState, AnswerQuestionResult, error) {
 	if !isValidQuestion(question) {
 		return tsmodel.GameState{}, AnswerQuestionResult{}, cerrors.InvalidQuestionError{Message: "invalid question format"}
@@ -181,7 +185,8 @@ func (s *GameService) AskQuestion(ctx context.Context, sessionID string, questio
 	return state, answerResult, nil
 }
 
-// SubmitSolution 는 동작을 수행한다.
+// SubmitSolution: 플레이어의 정답 제출을 검증합니다.
+// 정답이면 게임을 종료하고, 오답이면 계속 진행합니다.
 func (s *GameService) SubmitSolution(ctx context.Context, sessionID string, playerAnswer string) (tsmodel.GameState, tsmodel.ValidationResult, error) {
 	if !isValidAnswer(playerAnswer) {
 		return tsmodel.GameState{}, "", cerrors.InvalidAnswerError{Message: "invalid answer format"}
@@ -254,7 +259,7 @@ func (s *GameService) SubmitSolution(ctx context.Context, sessionID string, play
 	return state, validation, nil
 }
 
-// SubmitAnswer 는 동작을 수행한다.
+// SubmitAnswer: SubmitSolution의 래퍼로, AnswerResult 형태로 결과를 반환합니다.
 func (s *GameService) SubmitAnswer(ctx context.Context, sessionID string, answer string) (tsmodel.AnswerResult, error) {
 	state, result, err := s.SubmitSolution(ctx, sessionID, answer)
 	if err != nil {
@@ -276,7 +281,8 @@ func (s *GameService) SubmitAnswer(ctx context.Context, sessionID string, answer
 	}, nil
 }
 
-// RequestHint 는 동작을 수행한다.
+// RequestHint: LLM에 힌트를 요청합니다.
+// 최대 힌트 횟수를 초과하면 에러를 반환합니다.
 func (s *GameService) RequestHint(ctx context.Context, sessionID string) (tsmodel.GameState, string, error) {
 	var state tsmodel.GameState
 	err := s.sessionManager.WithOwnerLock(ctx, sessionID, func(ctx context.Context) error {
@@ -324,7 +330,8 @@ func (s *GameService) RequestHint(ctx context.Context, sessionID string) (tsmode
 	return state, latestHint, nil
 }
 
-// Surrender 는 동작을 수행한다.
+// Surrender: 게임을 포기하고 정답을 공개합니다.
+// 세션을 삭제하고 LLM 세션도 종료합니다.
 func (s *GameService) Surrender(ctx context.Context, sessionID string) (tsmodel.SurrenderResult, error) {
 	var out tsmodel.SurrenderResult
 	err := s.sessionManager.WithOwnerLock(ctx, sessionID, func(ctx context.Context) error {
@@ -360,12 +367,12 @@ func (s *GameService) Surrender(ctx context.Context, sessionID string) (tsmodel.
 	return out, nil
 }
 
-// GetGameState 는 동작을 수행한다.
+// GetGameState: 현재 게임 상태를 조회합니다.
 func (s *GameService) GetGameState(ctx context.Context, sessionID string) (tsmodel.GameState, error) {
 	return s.sessionManager.LoadOrThrow(ctx, sessionID)
 }
 
-// EndGame 는 동작을 수행한다.
+// EndGame: 게임을 강제 종료하고 모든 리소스를 정리합니다.
 func (s *GameService) EndGame(ctx context.Context, sessionID string) error {
 	err := s.sessionManager.WithOwnerLock(ctx, sessionID, func(ctx context.Context) error {
 		loaded, loadErr := s.sessionManager.Load(ctx, sessionID)

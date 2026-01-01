@@ -112,51 +112,39 @@ func (c *Client) TurtleSoupAnswerQuestion(
 	solution string,
 	question string,
 ) (*TurtleSoupAnswerResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		req := &llmv1.TurtleSoupAnswerQuestionRequest{
-			ChatId:    &chatID,
-			Namespace: &namespace,
-			Scenario:  scenario,
-			Solution:  solution,
-			Question:  question,
-		}
-		resp, err := c.grpcClient.TurtleSoupAnswerQuestion(callCtx, req)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup answer failed: %w", err)
-		}
-
-		history := make([]TurtleSoupHistoryItem, 0, len(resp.History))
-		for _, item := range resp.History {
-			if item == nil {
-				continue
-			}
-			history = append(history, TurtleSoupHistoryItem{Question: item.Question, Answer: item.Answer})
-		}
-
-		return &TurtleSoupAnswerResponse{
-			Answer:        resp.Answer,
-			RawText:       resp.RawText,
-			QuestionCount: int(resp.QuestionCount),
-			History:       history,
-		}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	req := TurtleSoupAnswerRequest{
-		ChatID:    &chatID,
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	req := &llmv1.TurtleSoupAnswerQuestionRequest{
+		ChatId:    &chatID,
 		Namespace: &namespace,
 		Scenario:  scenario,
 		Solution:  solution,
 		Question:  question,
 	}
-
-	var out TurtleSoupAnswerResponse
-	if err := c.Post(ctx, "/api/turtle-soup/answers", req, &out); err != nil {
-		return nil, err
+	resp, err := c.grpcClient.TurtleSoupAnswerQuestion(callCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup answer failed: %w", err)
 	}
-	return &out, nil
+
+	history := make([]TurtleSoupHistoryItem, 0, len(resp.History))
+	for _, item := range resp.History {
+		if item == nil {
+			continue
+		}
+		history = append(history, TurtleSoupHistoryItem{Question: item.Question, Answer: item.Answer})
+	}
+
+	return &TurtleSoupAnswerResponse{
+		Answer:        resp.Answer,
+		RawText:       resp.RawText,
+		QuestionCount: int(resp.QuestionCount),
+		History:       history,
+	}, nil
 }
 
 // TurtleSoupGenerateHint: 힌트 생성을 요청합니다.
@@ -168,38 +156,26 @@ func (c *Client) TurtleSoupGenerateHint(
 	solution string,
 	level int,
 ) (*TurtleSoupHintResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		req := &llmv1.TurtleSoupGenerateHintRequest{
-			ChatId:    &chatID,
-			Namespace: &namespace,
-			Scenario:  scenario,
-			Solution:  solution,
-			Level:     int32(level),
-		}
-		resp, err := c.grpcClient.TurtleSoupGenerateHint(callCtx, req)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup hint failed: %w", err)
-		}
-
-		return &TurtleSoupHintResponse{Hint: resp.Hint, Level: int(resp.Level)}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	req := TurtleSoupHintRequest{
-		ChatID:    &chatID,
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	req := &llmv1.TurtleSoupGenerateHintRequest{
+		ChatId:    &chatID,
 		Namespace: &namespace,
 		Scenario:  scenario,
 		Solution:  solution,
-		Level:     level,
+		Level:     int32(level),
+	}
+	resp, err := c.grpcClient.TurtleSoupGenerateHint(callCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup hint failed: %w", err)
 	}
 
-	var out TurtleSoupHintResponse
-	if err := c.Post(ctx, "/api/turtle-soup/hints", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
+	return &TurtleSoupHintResponse{Hint: resp.Hint, Level: int(resp.Level)}, nil
 }
 
 // TurtleSoupValidateSolution: 사용자의 정답 시도를 검증합니다.
@@ -210,36 +186,25 @@ func (c *Client) TurtleSoupValidateSolution(
 	solution string,
 	playerAnswer string,
 ) (*TurtleSoupValidateResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		req := &llmv1.TurtleSoupValidateSolutionRequest{
-			ChatId:       &chatID,
-			Namespace:    &namespace,
-			Solution:     solution,
-			PlayerAnswer: playerAnswer,
-		}
-		resp, err := c.grpcClient.TurtleSoupValidateSolution(callCtx, req)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup validate failed: %w", err)
-		}
-
-		return &TurtleSoupValidateResponse{Result: resp.Result, RawText: resp.RawText}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	req := TurtleSoupValidateRequest{
-		ChatID:       &chatID,
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	req := &llmv1.TurtleSoupValidateSolutionRequest{
+		ChatId:       &chatID,
 		Namespace:    &namespace,
 		Solution:     solution,
 		PlayerAnswer: playerAnswer,
 	}
-
-	var out TurtleSoupValidateResponse
-	if err := c.Post(ctx, "/api/turtle-soup/validations", req, &out); err != nil {
-		return nil, err
+	resp, err := c.grpcClient.TurtleSoupValidateSolution(callCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup validate failed: %w", err)
 	}
-	return &out, nil
+
+	return &TurtleSoupValidateResponse{Result: resp.Result, RawText: resp.RawText}, nil
 }
 
 // TurtleSoupRewriteScenario: 사용자가 입력한 시나리오를 게임에 맞게 최적화/재작성합니다.
@@ -250,126 +215,102 @@ func (c *Client) TurtleSoupRewriteScenario(
 	solution string,
 	difficulty int,
 ) (*TurtleSoupRewriteResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		req := &llmv1.TurtleSoupRewriteScenarioRequest{
-			Title:      title,
-			Scenario:   scenario,
-			Solution:   solution,
-			Difficulty: int32(difficulty),
-		}
-		resp, err := c.grpcClient.TurtleSoupRewriteScenario(callCtx, req)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup rewrite failed: %w", err)
-		}
-
-		return &TurtleSoupRewriteResponse{
-			Scenario:         resp.Scenario,
-			Solution:         resp.Solution,
-			OriginalScenario: resp.OriginalScenario,
-			OriginalSolution: resp.OriginalSolution,
-		}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	req := TurtleSoupRewriteRequest{
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	req := &llmv1.TurtleSoupRewriteScenarioRequest{
 		Title:      title,
 		Scenario:   scenario,
 		Solution:   solution,
-		Difficulty: difficulty,
+		Difficulty: int32(difficulty),
+	}
+	resp, err := c.grpcClient.TurtleSoupRewriteScenario(callCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup rewrite failed: %w", err)
 	}
 
-	var out TurtleSoupRewriteResponse
-	if err := c.Post(ctx, "/api/turtle-soup/rewrites", req, &out); err != nil {
-		return nil, err
-	}
-	return &out, nil
+	return &TurtleSoupRewriteResponse{
+		Scenario:         resp.Scenario,
+		Solution:         resp.Solution,
+		OriginalScenario: resp.OriginalScenario,
+		OriginalSolution: resp.OriginalSolution,
+	}, nil
 }
 
 // TurtleSoupGeneratePuzzle: 새로운 퍼즐을 자동으로 생성합니다.
 func (c *Client) TurtleSoupGeneratePuzzle(ctx context.Context, req TurtleSoupPuzzleGenerationRequest) (*TurtleSoupPuzzleGenerationResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		grpcReq := &llmv1.TurtleSoupGeneratePuzzleRequest{
-			Category: req.Category,
-			Theme:    req.Theme,
-		}
-		if req.Difficulty != nil {
-			value := int32(*req.Difficulty)
-			grpcReq.Difficulty = &value
-		}
-
-		resp, err := c.grpcClient.TurtleSoupGeneratePuzzle(callCtx, grpcReq)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup generate puzzle failed: %w", err)
-		}
-
-		return &TurtleSoupPuzzleGenerationResponse{
-			Title:      resp.Title,
-			Scenario:   resp.Scenario,
-			Solution:   resp.Solution,
-			Category:   resp.Category,
-			Difficulty: int(resp.Difficulty),
-			Hints:      resp.Hints,
-		}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	var out TurtleSoupPuzzleGenerationResponse
-	if err := c.Post(ctx, "/api/turtle-soup/puzzles", req, &out); err != nil {
-		return nil, err
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	grpcReq := &llmv1.TurtleSoupGeneratePuzzleRequest{
+		Category: req.Category,
+		Theme:    req.Theme,
 	}
-	return &out, nil
+	if req.Difficulty != nil {
+		value := int32(*req.Difficulty)
+		grpcReq.Difficulty = &value
+	}
+
+	resp, err := c.grpcClient.TurtleSoupGeneratePuzzle(callCtx, grpcReq)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup generate puzzle failed: %w", err)
+	}
+
+	return &TurtleSoupPuzzleGenerationResponse{
+		Title:      resp.Title,
+		Scenario:   resp.Scenario,
+		Solution:   resp.Solution,
+		Category:   resp.Category,
+		Difficulty: int(resp.Difficulty),
+		Hints:      resp.Hints,
+	}, nil
 }
 
 // TurtleSoupGetRandomPuzzle: 프리셋 퍼즐 중 하나를 랜덤으로 가져옵니다.
 func (c *Client) TurtleSoupGetRandomPuzzle(ctx context.Context, difficulty *int) (*TurtleSoupPuzzlePresetResponse, error) {
-	if c.grpcClient != nil {
-		callCtx, cancel := c.grpcCallContext(ctx)
-		defer cancel()
-
-		req := &llmv1.TurtleSoupGetRandomPuzzleRequest{}
-		if difficulty != nil {
-			value := int32(*difficulty)
-			req.Difficulty = &value
-		}
-
-		resp, err := c.grpcClient.TurtleSoupGetRandomPuzzle(callCtx, req)
-		if err != nil {
-			return nil, fmt.Errorf("grpc turtlesoup get random puzzle failed: %w", err)
-		}
-
-		var id *int
-		if resp.Id != nil {
-			value := int(*resp.Id)
-			id = &value
-		}
-
-		var diff *int
-		if resp.Difficulty != nil {
-			value := int(*resp.Difficulty)
-			diff = &value
-		}
-
-		return &TurtleSoupPuzzlePresetResponse{
-			ID:         id,
-			Title:      resp.Title,
-			Question:   resp.Question,
-			Answer:     resp.Answer,
-			Difficulty: diff,
-		}, nil
+	if c.grpcClient == nil {
+		return nil, ErrGRPCClientRequired
 	}
 
-	path := "/api/turtle-soup/puzzles/random"
+	callCtx, cancel := c.grpcCallContext(ctx)
+	defer cancel()
+
+	req := &llmv1.TurtleSoupGetRandomPuzzleRequest{}
 	if difficulty != nil {
-		path = fmt.Sprintf("%s?difficulty=%d", path, *difficulty)
+		value := int32(*difficulty)
+		req.Difficulty = &value
 	}
 
-	var out TurtleSoupPuzzlePresetResponse
-	if err := c.Get(ctx, path, &out); err != nil {
-		return nil, err
+	resp, err := c.grpcClient.TurtleSoupGetRandomPuzzle(callCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("grpc turtlesoup get random puzzle failed: %w", err)
 	}
-	return &out, nil
+
+	var id *int
+	if resp.Id != nil {
+		value := int(*resp.Id)
+		id = &value
+	}
+
+	var diff *int
+	if resp.Difficulty != nil {
+		value := int(*resp.Difficulty)
+		diff = &value
+	}
+
+	return &TurtleSoupPuzzlePresetResponse{
+		ID:         id,
+		Title:      resp.Title,
+		Question:   resp.Question,
+		Answer:     resp.Answer,
+		Difficulty: diff,
+	}, nil
 }

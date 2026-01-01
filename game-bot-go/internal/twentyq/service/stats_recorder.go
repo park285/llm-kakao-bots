@@ -17,7 +17,7 @@ import (
 // GameResult: 게임 결과 타입 정의
 type GameResult string
 
-// GameResultCorrect 는 게임 결과 상수 목록이다.
+// GameResultCorrect: 게임 결과 상수 목록입니다.
 const (
 	GameResultCorrect   GameResult = "CORRECT"
 	GameResultSurrender GameResult = "SURRENDER"

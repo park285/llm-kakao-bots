@@ -13,7 +13,7 @@ import (
 )
 
 // ToValkeyDataConfig: 데이터 저장소 연결을 위한 Valkey 설정 객체를 생성합니다.
-// 프로덕션 환경 효율성을 위해 클라이언트 사이드 캐싱이 활성화됩니다.
+// SocketPath가 설정되면 UDS 모드로 동작하며, 프로덕션 환경 효율성을 위해 클라이언트 사이드 캐싱이 활성화됩니다.
 func ToValkeyDataConfig(cfg commonconfig.RedisConfig) valkeyx.Config {
 	return valkeyx.Config{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
@@ -25,6 +25,7 @@ func ToValkeyDataConfig(cfg commonconfig.RedisConfig) valkeyx.Config {
 		PoolSize:     cfg.PoolSize,
 		MinIdleConns: cfg.MinIdleConns,
 		DisableCache: false, // 프로덕션에서는 캐싱 활성화
+		SocketPath:   cfg.SocketPath,
 	}
 }
 

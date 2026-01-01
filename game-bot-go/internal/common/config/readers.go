@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// ReadLlmConfigFromEnv: LLM 서버 통신 설정을 환경 변수에서 읽어옵니다.
+// ReadLlmConfigFromEnv: LLM 서버 gRPC 통신 설정을 환경 변수에서 읽어옵니다.
 func ReadLlmConfigFromEnv() (LlmConfig, error) {
 	llmTimeoutSeconds, err := Int64FromEnv("LLM_TIMEOUT_SECONDS", 30)
 	if err != nil {
@@ -21,39 +21,15 @@ func ReadLlmConfigFromEnv() (LlmConfig, error) {
 		)
 	}
 
-	llmRequireGRPC, err := BoolFromEnv("LLM_REQUIRE_GRPC", true)
-	if err != nil {
-		return LlmConfig{}, fmt.Errorf("read LLM_REQUIRE_GRPC failed: %w", err)
-	}
-
-	llmHTTP2Enabled, err := BoolFromEnv("LLM_HTTP2_ENABLED", true)
-	if err != nil {
-		return LlmConfig{}, fmt.Errorf("read LLM_HTTP2_ENABLED failed: %w", err)
-	}
-
-	llmRetryMaxAttempts, err := IntFromEnv("LLM_RETRY_MAX_ATTEMPTS", 2)
-	if err != nil {
-		return LlmConfig{}, fmt.Errorf("read LLM_RETRY_MAX_ATTEMPTS failed: %w", err)
-	}
-
-	llmRetryDelay, err := DurationMillisFromEnv("LLM_RETRY_DELAY_MS", 200)
-	if err != nil {
-		return LlmConfig{}, fmt.Errorf("read LLM_RETRY_DELAY_MS failed: %w", err)
-	}
-
 	return LlmConfig{
-		BaseURL:          StringFromEnv("LLM_BASE_URL", "grpc://localhost:40528"),
-		RequireGRPC:      llmRequireGRPC,
-		APIKey:           StringFromEnvFirstNonEmpty([]string{"LLM_API_KEY", "HTTP_API_KEY"}, ""),
-		Timeout:          time.Duration(llmTimeoutSeconds) * time.Second,
-		ConnectTimeout:   time.Duration(llmConnectTimeoutSeconds) * time.Second,
-		HTTP2Enabled:     llmHTTP2Enabled,
-		RetryMaxAttempts: llmRetryMaxAttempts,
-		RetryDelay:       llmRetryDelay,
+		BaseURL:        StringFromEnv("LLM_BASE_URL", "grpc://localhost:40528"),
+		APIKey:         StringFromEnvFirstNonEmpty([]string{"LLM_API_KEY", "HTTP_API_KEY"}, ""),
+		Timeout:        time.Duration(llmTimeoutSeconds) * time.Second,
+		ConnectTimeout: time.Duration(llmConnectTimeoutSeconds) * time.Second,
 	}, nil
 }
 
-// ReadServerConfigFromEnv 는 동작을 수행한다.
+// ReadServerConfigFromEnv: HTTP 서버 호스트와 포트 설정을 환경 변수에서 읽어옵니다.
 func ReadServerConfigFromEnv(defaultPort int) (ServerConfig, error) {
 	serverPort, err := IntFromEnv("SERVER_PORT", defaultPort)
 	if err != nil {
@@ -97,11 +73,14 @@ func ReadServerTuningConfigFromEnv() (ServerTuningConfig, error) {
 	}, nil
 }
 
-// ReadRedisConfigFromEnv 는 동작을 수행한다.
+// ReadRedisConfigFromEnv: Redis(Valkey) 연결 설정을 환경 변수에서 읽어옵니다.
+// 여러 환경 변수 키 중 첫 번째로 값이 존재하는 것을 사용합니다.
+// socketPathKeys가 설정되면 UDS 모드로 동작하며, TCP 설정보다 우선합니다.
 func ReadRedisConfigFromEnv(
 	hostKeys []string,
 	portKeys []string,
 	passwordKeys []string,
+	socketPathKeys []string,
 	defaultHost string,
 	defaultPort int,
 	defaultPassword string,
@@ -111,11 +90,15 @@ func ReadRedisConfigFromEnv(
 		return RedisConfig{}, fmt.Errorf("read redis port failed: %w", err)
 	}
 
+	// UDS 경로가 있으면 UDS 모드, 없으면 TCP 모드
+	socketPath := StringFromEnvFirstNonEmpty(socketPathKeys, "")
+
 	return RedisConfig{
-		Host:     StringFromEnvFirstNonEmpty(hostKeys, defaultHost),
-		Port:     port,
-		Password: StringFromEnvFirstNonEmpty(passwordKeys, defaultPassword),
-		DB:       0,
+		Host:       StringFromEnvFirstNonEmpty(hostKeys, defaultHost),
+		Port:       port,
+		Password:   StringFromEnvFirstNonEmpty(passwordKeys, defaultPassword),
+		DB:         0,
+		SocketPath: socketPath,
 
 		DialTimeout:  10 * time.Second,
 		ReadTimeout:  3 * time.Second,
@@ -126,7 +109,7 @@ func ReadRedisConfigFromEnv(
 	}, nil
 }
 
-// ReadLogConfigFromEnv 는 동작을 수행한다.
+// ReadLogConfigFromEnv: 로그 파일 출력 설정(디렉터리, 크기, 백업 수)을 환경 변수에서 읽어옵니다.
 func ReadLogConfigFromEnv() (LogConfig, error) {
 	dir := StringFromEnv("LOG_DIR", "")
 	if strings.TrimSpace(dir) == "" {
@@ -171,7 +154,7 @@ func ReadLogConfigFromEnv() (LogConfig, error) {
 	}, nil
 }
 
-// ValkeyMQConfigEnvOptions 는 타입이다.
+// ValkeyMQConfigEnvOptions: ValkeyMQ 설정 읽기에 사용할 환경 변수 키 및 기본값 옵션입니다.
 type ValkeyMQConfigEnvOptions struct {
 	HostKeys     []string
 	PortKeys     []string
@@ -262,7 +245,8 @@ func readValkeyMQTuning(opts ValkeyMQConfigEnvOptions) (valkeyMQTuning, error) {
 	}, nil
 }
 
-// ReadValkeyMQConfigFromEnv 는 동작을 수행한다.
+// ReadValkeyMQConfigFromEnv: Valkey 기반 메시지 큐 설정을 환경 변수에서 읽어옵니다.
+// 연결 정보, Consumer Group, Stream 키, 튜닝 파라미터를 포함합니다.
 func ReadValkeyMQConfigFromEnv(opts ValkeyMQConfigEnvOptions) (ValkeyMQConfig, error) {
 	port, err := IntFromEnvFirstNonEmpty(opts.PortKeys, opts.DefaultPort)
 	if err != nil {
@@ -340,7 +324,7 @@ func ReadValkeyMQConfigFromEnv(opts ValkeyMQConfigEnvOptions) (ValkeyMQConfig, e
 	}, nil
 }
 
-// AccessConfigEnvOptions 는 타입이다.
+// AccessConfigEnvOptions: 접근 제어 설정 읽기에 사용할 환경 변수 접두사 및 기본값입니다.
 type AccessConfigEnvOptions struct {
 	EnvPrefix string
 
@@ -350,7 +334,8 @@ type AccessConfigEnvOptions struct {
 	DefaultAllowedChatIDs []string
 }
 
-// ReadAccessConfigFromEnv 는 동작을 수행한다.
+// ReadAccessConfigFromEnv: 채팅방/사용자 접근 제어 설정을 환경 변수에서 읽어옵니다.
+// 허용/차단 목록과 Passthrough 모드를 설정합니다.
 func ReadAccessConfigFromEnv(opts AccessConfigEnvOptions) (AccessConfig, error) {
 	prefix := opts.EnvPrefix
 

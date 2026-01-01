@@ -16,7 +16,7 @@ type ErrorMapping struct {
 	Params []messageprovider.Param
 }
 
-// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 보여줄 적절한 메시지 매핑을 반환한다.
+// GetErrorMapping: 발생한 에러를 분석하여 사용자에게 보여줄 적절한 메시지 매핑을 반환합니다.
 func GetErrorMapping(err error) ErrorMapping {
 	var (
 		sessionNotFound  *tserrors.SessionNotFoundError

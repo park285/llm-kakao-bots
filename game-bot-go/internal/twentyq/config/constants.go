@@ -36,7 +36,7 @@ const (
 	HintDisplayInterval = 5
 )
 
-// RedisKeyPrefix 는 Redis 키 상수 목록이다.
+// RedisKeyPrefix: Redis 키 상수 목록입니다.
 const (
 	RedisKeyPrefix        = "20q"
 	RedisKeySessionPrefix = RedisKeyPrefix + ":riddle:session"
@@ -58,19 +58,19 @@ const (
 	DefaultExchangeRateAPIURL = "https://api.frankfurter.app/latest?from=USD&to=KRW"
 )
 
-// RedisSessionTTLSeconds 는 Redis TTL 상수 목록이다.
+// RedisSessionTTLSeconds: Redis TTL 상수 목록입니다.
 const (
 	RedisSessionTTLSeconds    = 12 * 60 * 60
 	RedisLockTTLSeconds       = 5
 	RedisProcessingTTLSeconds = 200
 )
 
-// MQMaxQueueIterations 는 twentyq 전용 상수이다.
+// MQMaxQueueIterations: twentyq 전용 상수입니다.
 const (
 	MQMaxQueueIterations = 100
 )
 
-// DefaultInboundStreamKey 는 twentyq 인바운드 스트림 키이다.
+// DefaultInboundStreamKey: twentyq 인바운드 스트림 키입니다.
 const (
 	DefaultInboundStreamKey = "kakao:20q"
 )

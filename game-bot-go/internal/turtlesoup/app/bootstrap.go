@@ -8,7 +8,7 @@ import (
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 )
 
-// Initialize 는 TurtleSoup 애플리케이션 의존성을 초기화하고 ServerApp을 반환한다.
+// Initialize: TurtleSoup 애플리케이션 의존성을 초기화하고 ServerApp을 반환합니다.
 func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*bootstrap.ServerApp, func(), error) {
 	restClient, err := newTurtleSoupRestClient(cfg)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 // ReplyPublisher: commonmq.ReplyPublisher alias
 type ReplyPublisher = commonmq.ReplyPublisher
 
-// NewReplyPublisher: 공통 응답 발행자를 바다거북 스프 서비스용으로 생성한다.
+// NewReplyPublisher: 공통 응답 발행자를 바다거북 스프 서비스용으로 생성합니다.
 func NewReplyPublisher(publisher *commonmq.StreamPublisher) *ReplyPublisher {
 	return commonmq.NewReplyPublisher(publisher)
 }

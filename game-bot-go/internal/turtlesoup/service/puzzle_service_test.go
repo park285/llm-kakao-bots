@@ -2,19 +2,15 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strconv"
-	"strings"
 	"testing"
 
-	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
+	"google.golang.org/grpc"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/ptr"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
@@ -30,8 +26,9 @@ type puzzleMockResponses struct {
 
 type puzzleTestEnv struct {
 	svc        *PuzzleService
+	llmClient  *llmrest.Client
+	stopLLM    func()
 	client     valkey.Client
-	ts         *httptest.Server
 	dedupStore *tsredis.PuzzleDedupStore
 	mocks      puzzleMockResponses
 	callCount  int
@@ -46,73 +43,56 @@ func setupPuzzleTestEnv(t *testing.T, rewriteEnabled bool) *puzzleTestEnv {
 
 	env := &puzzleTestEnv{client: client, dedupStore: dedupStore}
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		env.callCount++
-		if env.mocks.err {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		path := r.URL.Path
-
-		if strings.Contains(path, "/api/turtle-soup/puzzles/random") {
-			if env.mocks.preset != nil {
-				json.NewEncoder(w).Encode(env.mocks.preset)
-			} else {
-				diff := 1
-				if d := r.URL.Query().Get("difficulty"); d != "" {
-					diff, _ = strconv.Atoi(d)
-				}
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupPuzzlePresetResponse{
-					Title:      ptr.String("Preset Title"),
-					Question:   ptr.String("Preset Question"),
-					Answer:     ptr.String("Preset Answer"),
-					Difficulty: &diff,
-				})
-			}
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/puzzles") {
+	stub := &turtlesoupLLMGRPCStub{
+		callCount: &env.callCount,
+		hasError: func() bool {
+			return env.mocks.err
+		},
+		generatePuzzle: func() *llmrest.TurtleSoupPuzzleGenerationResponse {
 			if env.mocks.generate != nil {
-				json.NewEncoder(w).Encode(env.mocks.generate)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupPuzzleGenerationResponse{
-					Title:      "Gen Title",
-					Scenario:   "Gen Scenario",
-					Solution:   "Gen Solution",
-					Category:   "mystery",
-					Difficulty: 1,
-					Hints:      []string{"h1", "h2"},
-				})
+				return env.mocks.generate
 			}
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/rewrites") {
+			return &llmrest.TurtleSoupPuzzleGenerationResponse{
+				Title:      "Gen Title",
+				Scenario:   "Gen Scenario",
+				Solution:   "Gen Solution",
+				Category:   "mystery",
+				Difficulty: 1,
+				Hints:      []string{"h1", "h2"},
+			}
+		},
+		getRandomPuzzle: func() *llmrest.TurtleSoupPuzzlePresetResponse {
+			if env.mocks.preset != nil {
+				return env.mocks.preset
+			}
+			diff := 1
+			return &llmrest.TurtleSoupPuzzlePresetResponse{
+				Title:      ptr.String("Preset Title"),
+				Question:   ptr.String("Preset Question"),
+				Answer:     ptr.String("Preset Answer"),
+				Difficulty: &diff,
+			}
+		},
+		rewriteScenario: func() *llmrest.TurtleSoupRewriteResponse {
 			if env.mocks.rewrite != nil {
-				json.NewEncoder(w).Encode(env.mocks.rewrite)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupRewriteResponse{
-					Scenario: "Rewritten Scenario",
-					Solution: "Rewritten Solution",
-				})
+				return env.mocks.rewrite
 			}
-			return
-		}
+			return &llmrest.TurtleSoupRewriteResponse{Scenario: "Rewritten Scenario", Solution: "Rewritten Solution"}
+		},
+	}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{}`)
-	}))
-	env.ts = ts
+	baseURL, stop := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
+	env.stopLLM = stop
 
 	llmClient, err := llmrest.New(llmrest.Config{
-		BaseURL: ts.URL,
+		BaseURL: baseURL,
 	})
 	if err != nil {
 		t.Fatalf("llm client init failed: %v", err)
 	}
+	env.llmClient = llmClient
 
 	cfg := tsconfig.PuzzleConfig{RewriteEnabled: rewriteEnabled}
 	env.svc = NewPuzzleService(llmClient, cfg, dedupStore, logger)
@@ -122,8 +102,13 @@ func setupPuzzleTestEnv(t *testing.T, rewriteEnabled bool) *puzzleTestEnv {
 
 func (e *puzzleTestEnv) teardown(t *testing.T) {
 	testhelper.CleanupTestKeys(t, e.client, tsconfig.RedisKeyPrefix+":")
+	if e.llmClient != nil {
+		_ = e.llmClient.Close()
+	}
 	e.client.Close()
-	e.ts.Close()
+	if e.stopLLM != nil {
+		e.stopLLM()
+	}
 }
 
 func TestPuzzleService_GeneratePuzzle_Success(t *testing.T) {
@@ -179,7 +164,7 @@ func TestPuzzleService_GeneratePuzzle_DeepErrors(t *testing.T) {
 	env := setupPuzzleTestEnv(t, false)
 	defer env.teardown(t)
 
-	env.ts.Close() // Kill server to force connection errors
+	env.stopLLM() // Kill server to force connection errors
 
 	ctx := context.Background()
 	_, err := env.svc.GeneratePuzzle(ctx, PuzzleGenerationRequest{}, testhelper.UniqueTestPrefix(t)+"chat_err")

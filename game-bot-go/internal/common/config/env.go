@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// IntFromEnv: 환경 변수에서 정수 값을 읽어온다.
+// IntFromEnv: 환경 변수에서 정수 값을 읽어옵니다.
 func IntFromEnv(key string, defaultValue int) (int, error) {
 	rawValue, ok := os.LookupEnv(key)
 	if !ok {
@@ -28,7 +28,7 @@ func IntFromEnv(key string, defaultValue int) (int, error) {
 	return value, nil
 }
 
-// Int64FromEnv: 환경 변수에서 64비트 정수 값을 읽어온다.
+// Int64FromEnv: 환경 변수에서 64비트 정수 값을 읽어옵니다.
 func Int64FromEnv(key string, defaultValue int64) (int64, error) {
 	rawValue, ok := os.LookupEnv(key)
 	if !ok {
@@ -48,7 +48,7 @@ func Int64FromEnv(key string, defaultValue int64) (int64, error) {
 	return value, nil
 }
 
-// DurationSecondsFromEnv: 환경 변수에서 초 단위 시간을 읽어 Duration으로 변환한다.
+// DurationSecondsFromEnv: 환경 변수에서 초 단위 시간을 읽어 Duration으로 변환합니다.
 func DurationSecondsFromEnv(key string, defaultSeconds int64) (time.Duration, error) {
 	valueSeconds, err := Int64FromEnv(key, defaultSeconds)
 	if err != nil {
@@ -60,7 +60,7 @@ func DurationSecondsFromEnv(key string, defaultSeconds int64) (time.Duration, er
 	return time.Duration(valueSeconds) * time.Second, nil
 }
 
-// DurationMillisFromEnv: 환경 변수에서 밀리초 단위 시간을 읽어 Duration으로 변환한다.
+// DurationMillisFromEnv: 환경 변수에서 밀리초 단위 시간을 읽어 Duration으로 변환합니다.
 func DurationMillisFromEnv(key string, defaultMillis int64) (time.Duration, error) {
 	valueMillis, err := Int64FromEnv(key, defaultMillis)
 	if err != nil {
@@ -72,7 +72,7 @@ func DurationMillisFromEnv(key string, defaultMillis int64) (time.Duration, erro
 	return time.Duration(valueMillis) * time.Millisecond, nil
 }
 
-// BoolFromEnv: 환경 변수에서 불리언 값을 읽어온다. (true/1/yes/y, false/0/no/n)
+// BoolFromEnv: 환경 변수에서 불리언 값을 읽어옵니다. (true/1/yes/y, false/0/no/n)
 func BoolFromEnv(key string, defaultValue bool) (bool, error) {
 	rawValue, ok := os.LookupEnv(key)
 	if !ok {
@@ -94,7 +94,7 @@ func BoolFromEnv(key string, defaultValue bool) (bool, error) {
 	}
 }
 
-// StringFromEnv: 환경 변수에서 문자열 값을 읽어온다.
+// StringFromEnv: 환경 변수에서 문자열 값을 읽어옵니다.
 func StringFromEnv(key string, defaultValue string) string {
 	rawValue, ok := os.LookupEnv(key)
 	if !ok {
@@ -109,7 +109,7 @@ func StringFromEnv(key string, defaultValue string) string {
 	return rawValue
 }
 
-// StringListFromEnv: 환경 변수에서 구분자(공백, 콤마 등)로 분리된 문자열 목록을 읽어온다.
+// StringListFromEnv: 환경 변수에서 구분자(공백, 콤마 등)로 분리된 문자열 목록을 읽어옵니다.
 func StringListFromEnv(key string, defaultValue []string) []string {
 	rawValue, ok := os.LookupEnv(key)
 	if !ok {
@@ -141,7 +141,7 @@ func StringListFromEnv(key string, defaultValue []string) []string {
 	return items
 }
 
-// StringFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 것을 반환한다.
+// StringFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 것을 반환합니다.
 func StringFromEnvFirstNonEmpty(keys []string, defaultValue string) string {
 	for _, key := range keys {
 		rawValue, ok := os.LookupEnv(key)
@@ -159,7 +159,7 @@ func StringFromEnvFirstNonEmpty(keys []string, defaultValue string) string {
 	return defaultValue
 }
 
-// IntFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 정수를 반환한다.
+// IntFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 정수를 반환합니다.
 func IntFromEnvFirstNonEmpty(keys []string, defaultValue int) (int, error) {
 	for _, key := range keys {
 		rawValue, ok := os.LookupEnv(key)
@@ -182,7 +182,7 @@ func IntFromEnvFirstNonEmpty(keys []string, defaultValue int) (int, error) {
 	return defaultValue, nil
 }
 
-// Int64FromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 64비트 정수를 반환한다.
+// Int64FromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 64비트 정수를 반환합니다.
 func Int64FromEnvFirstNonEmpty(keys []string, defaultValue int64) (int64, error) {
 	for _, key := range keys {
 		rawValue, ok := os.LookupEnv(key)
@@ -205,7 +205,7 @@ func Int64FromEnvFirstNonEmpty(keys []string, defaultValue int64) (int64, error)
 	return defaultValue, nil
 }
 
-// BoolFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 불리언을 반환한다.
+// BoolFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 불리언을 반환합니다.
 func BoolFromEnvFirstNonEmpty(keys []string, defaultValue bool) (bool, error) {
 	for _, key := range keys {
 		rawValue, ok := os.LookupEnv(key)
@@ -230,7 +230,7 @@ func BoolFromEnvFirstNonEmpty(keys []string, defaultValue bool) (bool, error) {
 	return defaultValue, nil
 }
 
-// StringListFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 문자열 목록을 반환한다.
+// StringListFromEnvFirstNonEmpty: 여러 환경 변수 키 중 첫 번째로 값이 존재하는 문자열 목록을 반환합니다.
 func StringListFromEnvFirstNonEmpty(keys []string, defaultValue []string) []string {
 	for _, key := range keys {
 		rawValue, ok := os.LookupEnv(key)

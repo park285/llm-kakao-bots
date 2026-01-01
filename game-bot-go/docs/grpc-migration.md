@@ -1,6 +1,6 @@
 # gRPC 마이그레이션 가이드
 
-> 최종 업데이트: 2025-12-30
+> 최종 업데이트: 2025-12-31
 
 ## 개요
 
@@ -75,23 +75,20 @@
 ### 3.2 핵심 설정
 
 ```bash
-# 프로덕션 권장 설정
+# BaseURL은 항상 grpc:// 스킴을 사용해야 합니다 (HTTP fallback 제거됨)
 LLM_BASE_URL=grpc://mcp-llm-server:40528
-LLM_REQUIRE_GRPC=true   # 기본값 true - grpc:// 스킴만 허용
-
-# 로컬 개발 (HTTP 허용)
-LLM_BASE_URL=http://127.0.0.1:40527
-LLM_REQUIRE_GRPC=false  # HTTP 스킴 허용
 ```
 
 ### 3.3 스킴별 동작
 
-| 스킴 | RequireGRPC=true | RequireGRPC=false |
-|------|------------------|-------------------|
-| `grpc://` | ✅ gRPC 통신 | ✅ gRPC 통신 |
-| `http://` | ❌ 시작 실패 (Fail-Fast) | ✅ HTTP 통신 |
-| `https://` | ❌ 시작 실패 (Fail-Fast) | ✅ HTTPS 통신 |
-| `grpcs://` | ❌ 미지원 (TLS 비활성) | ❌ 미지원 (TLS 비활성) |
+| 스킴 | 동작 |
+|------|------|
+| `grpc://` | ✅ gRPC 통신 |
+| `http://` | ❌ 시작 실패 (Fail-Fast) |
+| `https://` | ❌ 시작 실패 (Fail-Fast) |
+| `grpcs://` | ❌ 미지원 (TLS 비활성) |
+
+> **Note**: HTTP fallback 코드가 2025-12-31에 제거되어, grpc:// 스킴만 허용됩니다.
 
 ---
 
@@ -115,76 +112,66 @@ cfg.Llm
 
 ```go
 func New(cfg Config) (*Client, error) {
-    // URL 파싱
-    parsedBaseURL, err := url.Parse(cfg.BaseURL)
-    
-    // grpcs:// 차단 (TLS 미지원)
-    if scheme == "grpcs" {
-        return nil, fmt.Errorf("grpcs not supported: tls disabled")
+    // grpc:// 스킴 파싱 (HTTP fallback 제거됨)
+    if !strings.HasPrefix(strings.ToLower(baseURL), "grpc://") {
+        return nil, fmt.Errorf("grpc scheme required: base url must start with grpc://")
     }
-    
-    // Fail-Fast: RequireGRPC=true일 때 grpc:// 스킴만 허용
-    if cfg.RequireGRPC && scheme != "grpc" {
-        return nil, fmt.Errorf("grpc required: base url scheme must be grpc, got %q", scheme)
-    }
-    
+
     // gRPC 클라이언트 초기화
-    if scheme == "grpc" {
-        conn, err := grpc.NewClient(
-            grpcTarget,
-            grpc.WithTransportCredentials(insecure.NewCredentials()),
-            grpc.WithUnaryInterceptor(interceptor),
-        )
-        client.grpcConn = conn
-        client.grpcClient = llmv1.NewLLMServiceClient(conn)
-    }
+    conn, err := grpc.NewClient(
+        host,
+        grpc.WithTransportCredentials(insecure.NewCredentials()),
+        grpc.WithUnaryInterceptor(interceptor),
+    )
+    client.grpcConn = conn
+    client.grpcClient = llmv1.NewLLMServiceClient(conn)
 }
 ```
 
-### 4.3 gRPC 메서드 분기 패턴
+### 4.3 gRPC 전용 메서드 (항상 gRPC 사용)
 
 ```go
 func (c *Client) TwentyQAnswerQuestion(ctx context.Context, ...) (*TwentyQAnswerResponse, error) {
-    // gRPC 클라이언트가 있으면 gRPC 사용
-    if c.grpcClient != nil {
-        callCtx, cancel := c.grpcCallContext(ctx)
-        defer cancel()
-        
-        resp, err := c.grpcClient.TwentyQAnswerQuestion(callCtx, &llmv1.TwentyQAnswerQuestionRequest{
-            ChatId:    &chatID,
-            Namespace: &namespace,
-            Target:    target,
-            Category:  category,
-            Question:  question,
-            Details:   detailsPb,
-        })
-        if err != nil {
-            return nil, fmt.Errorf("grpc twentyq answer failed: %w", err)
-        }
-        
-        return &TwentyQAnswerResponse{
-            Scale:   resp.Scale,
-            RawText: resp.RawText,
-        }, nil
+    if c.grpcClient == nil {
+        return nil, ErrGRPCClientRequired
     }
-    
-    // HTTP Fallback (RequireGRPC=false일 때만 도달)
-    var out TwentyQAnswerResponse
-    if err := c.Post(ctx, "/api/twentyq/answers", req, &out); err != nil {
-        return nil, err
+
+    callCtx, cancel := c.grpcCallContext(ctx)
+    defer cancel()
+
+    resp, err := c.grpcClient.TwentyQAnswerQuestion(callCtx, &llmv1.TwentyQAnswerQuestionRequest{
+        ChatId:    &chatID,
+        Namespace: &namespace,
+        Target:    target,
+        Category:  category,
+        Question:  question,
+        Details:   detailsPb,
+    })
+    if err != nil {
+        return nil, fmt.Errorf("grpc twentyq answer failed: %w", err)
     }
-    return &out, nil
+
+    return &TwentyQAnswerResponse{
+        Scale:   resp.Scale,
+        RawText: resp.RawText,
+    }, nil
 }
 ```
 
-### 4.4 제거된 데드 코드
+### 4.4 제거된 코드 (2025-12-31)
 
 | 항목 | 파일 | 이유 |
 |------|------|------|
+| HTTP fallback 코드 | common.go, twentyq.go, turtlesoup.go | gRPC 전용으로 전환 |
+| `RequireGRPC` 필드 | config/types.go | 더 이상 필요 없음 (grpc 스킴 필수) |
+| `HTTP2Enabled` 필드 | config/types.go | HTTP 제거로 불필요 |
+| `RetryMaxAttempts`, `RetryDelay` | config/types.go | HTTP 재시도 로직 제거 |
+| `Get`, `Post`, `Delete` 메서드 | client.go | HTTP fallback 제거로 불필요 |
+| HTTP 테스트 | client_test.go | HTTP 코드 제거로 불필요 |
 | `CreateSession` 메서드 | common.go | 봇에서 미사용 (서버 측 자체 생성) |
 | `GetUsage` 메서드 | common.go | `GetTotalUsage`로 대체됨 |
-| `SessionCreateRequest` 타입 | models.go | CreateSession 제거로 불필요 |
-| `SessionCreateResponse` 타입 | models.go | CreateSession 제거로 불필요 |
+
+**제거된 코드 양**: ~1,259줄 (-1,994 삭제 / +735 추가)
 
 ---
 
@@ -253,15 +240,7 @@ turtle-soup-bot:
     LLM_BASE_URL: grpc://mcp-llm-server:40528
 ```
 
-### 6.2 로컬 개발 설정
-
-```bash
-# .env
-LLM_BASE_URL=http://127.0.0.1:40527
-LLM_REQUIRE_GRPC=false  # HTTP 허용
-```
-
-### 6.3 헬스 체크 확인
+### 6.2 헬스 체크 확인
 
 ```bash
 # HTTP 헬스 체크 (mcp-llm-server)
@@ -295,11 +274,9 @@ docker logs mcp-llm-server 2>&1 | grep grpc_request
 grpc required: base url scheme must be grpc, got "http"
 ```
 
-**원인**: `LLM_REQUIRE_GRPC=true` (기본값)인데 `LLM_BASE_URL`이 `http://`로 시작
+**원인**: `LLM_BASE_URL`이 `grpc://`로 시작하지 않음 (HTTP fallback 제거됨)
 
-**해결**:
-- 프로덕션: `LLM_BASE_URL=grpc://mcp-llm-server:40528`
-- 로컬 개발: `LLM_REQUIRE_GRPC=false` 추가
+**해결**: `LLM_BASE_URL=grpc://mcp-llm-server:40528`로 설정
 
 ### 7.2 gRPC 연결 실패
 
@@ -326,8 +303,7 @@ rpc error: code = Unauthenticated desc = invalid api key
 ## 8. 마이그레이션 체크리스트
 
 - [ ] 환경 변수 이름 변경 (`LLM_REST_*` → `LLM_*`)
-- [ ] `LLM_BASE_URL`을 `grpc://` 스킴으로 변경
-- [ ] `LLM_REQUIRE_GRPC=false`를 로컬 개발 환경에만 적용
+- [ ] `LLM_BASE_URL`을 `grpc://` 스킴으로 변경 (**필수**)
 - [ ] mcp-llm-server에서 `GRPC_ENABLED=true` 확인
 - [ ] Docker 이미지 재빌드 (`--no-cache` 권장)
 - [ ] 컨테이너 재시작 후 gRPC 서버 시작 로그 확인
@@ -339,4 +315,5 @@ rpc error: code = Unauthenticated desc = invalid api key
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|----------|
+| 2025-12-31 | 2.0 | HTTP fallback 코드 완전 제거, gRPC 전용으로 전환 |
 | 2025-12-30 | 1.0 | 초기 gRPC 마이그레이션 완료 |

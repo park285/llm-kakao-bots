@@ -4,30 +4,35 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
-	json "github.com/goccy/go-json"
+	"google.golang.org/grpc"
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 )
 
 func TestMcpInjectionGuard_IsMalicious(t *testing.T) {
 	mockMalicious := false
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/api/guard/checks") {
-			json.NewEncoder(w).Encode(llmrest.GuardMaliciousResponse{Malicious: mockMalicious})
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+	stub := &guardOnlyLLMGRPCStub{
+		handler: func(ctx context.Context, _ *llmv1.GuardIsMaliciousRequest) (*llmv1.GuardIsMaliciousResponse, error) {
+			return &llmv1.GuardIsMaliciousResponse{Malicious: mockMalicious}, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	client, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	guard := NewMcpInjectionGuard(client, logger)
 
@@ -54,16 +59,22 @@ func TestMcpInjectionGuard_IsMalicious(t *testing.T) {
 
 func TestMcpInjectionGuard_ValidateOrThrow(t *testing.T) {
 	mockMalicious := false
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/api/guard/checks") {
-			json.NewEncoder(w).Encode(llmrest.GuardMaliciousResponse{Malicious: mockMalicious})
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
+	stub := &guardOnlyLLMGRPCStub{
+		handler: func(ctx context.Context, _ *llmv1.GuardIsMaliciousRequest) (*llmv1.GuardIsMaliciousResponse, error) {
+			return &llmv1.GuardIsMaliciousResponse{Malicious: mockMalicious}, nil
+		},
+	}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
 
-	client, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	client, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	guard := NewMcpInjectionGuard(client, logger)
 

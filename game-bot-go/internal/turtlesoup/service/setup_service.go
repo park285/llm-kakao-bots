@@ -11,7 +11,7 @@ import (
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 )
 
-// GameSetupService 는 타입이다.
+// GameSetupService: 게임 시작 전 퍼즐 생성 및 세션 초기화를 담당하는 서비스입니다.
 type GameSetupService struct {
 	restClient     *llmrest.Client
 	puzzleService  *PuzzleService
@@ -19,7 +19,7 @@ type GameSetupService struct {
 	logger         *slog.Logger
 }
 
-// NewGameSetupService 는 동작을 수행한다.
+// NewGameSetupService: GameSetupService 인스턴스를 생성합니다.
 func NewGameSetupService(
 	restClient *llmrest.Client,
 	puzzleService *PuzzleService,
@@ -34,13 +34,14 @@ func NewGameSetupService(
 	}
 }
 
-// GameSetupResult 는 타입이다.
+// GameSetupResult: 게임 셋업 결과(GameState 및 Puzzle)를 담는 구조체입니다.
 type GameSetupResult struct {
 	State  tsmodel.GameState
 	Puzzle tsmodel.Puzzle
 }
 
-// PrepareNewGame 는 동작을 수행한다.
+// PrepareNewGame: 새 게임을 준비하고 퍼즐을 생성합니다.
+// 기존 세션이 있으면 에러를 반환하고, 해결된 세션은 삭제 후 새로 생성합니다.
 func (s *GameSetupService) PrepareNewGame(
 	ctx context.Context,
 	sessionID string,

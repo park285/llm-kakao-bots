@@ -11,48 +11,52 @@ import (
 	tsmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/messages"
 )
 
-// MessageSender 는 타입이다.
+// MessageSender: MQ로 게임 관련 메시지를 발행하는 서비스입니다.
+// 공통 BaseMessageSender를 내부적으로 사용하여 핵심 로직을 위임합니다.
 type MessageSender struct {
-	msgProvider *messageprovider.Provider
-	publish     func(ctx context.Context, msg mqmsg.OutboundMessage) error
+	base *commonmq.BaseMessageSender
 }
 
-// NewMessageSender 는 동작을 수행한다.
+// NewMessageSender: MessageSender 인스턴스를 생성합니다.
 func NewMessageSender(msgProvider *messageprovider.Provider, publish func(ctx context.Context, msg mqmsg.OutboundMessage) error) *MessageSender {
 	return &MessageSender{
-		msgProvider: msgProvider,
-		publish:     publish,
+		base: commonmq.NewBaseMessageSender(msgProvider, publish, commonmq.MessageSenderConfig{
+			MessageMaxLength:       tsconfig.KakaoMessageMaxLength,
+			LockErrorKey:           tsmessages.LockRequestInProgress,
+			LockErrorWithHolderKey: tsmessages.LockRequestInProgressWithHolder,
+			UseFinalForErrors:      false, // turtlesoup는 에러를 Error 타입으로 전송
+		}),
 	}
 }
 
-// SendFinal 는 동작을 수행한다.
+// SendFinal: 최종 응답 메시지를 발송합니다. 긴 메시지는 청크로 분할합니다.
 func (s *MessageSender) SendFinal(ctx context.Context, message mqmsg.InboundMessage, text string) error {
-	if err := commonmq.SendFinalChunked(ctx, s.publish, message.ChatID, text, message.ThreadID, tsconfig.KakaoMessageMaxLength); err != nil {
-		return fmt.Errorf("send final failed: %w", err)
+	if err := s.base.SendFinal(ctx, message.ChatID, text, message.ThreadID); err != nil {
+		return fmt.Errorf("send final message: %w", err)
 	}
 	return nil
 }
 
-// SendWaiting 는 동작을 수행한다.
+// SendWaiting: 처리 중이라는 대기 상태 메시지를 발송합니다.
 func (s *MessageSender) SendWaiting(ctx context.Context, message mqmsg.InboundMessage, command Command) error {
-	if err := commonmq.SendWaitingFromCommand(ctx, s.publish, s.msgProvider, message.ChatID, message.ThreadID, command); err != nil {
-		return fmt.Errorf("send waiting failed: %w", err)
+	if err := s.base.SendWaiting(ctx, message.ChatID, message.ThreadID, command); err != nil {
+		return fmt.Errorf("send waiting message: %w", err)
 	}
 	return nil
 }
 
-// SendError 는 동작을 수행한다.
+// SendError: 에러 메시지를 발송합니다.
 func (s *MessageSender) SendError(ctx context.Context, message mqmsg.InboundMessage, mapping ErrorMapping) error {
-	return s.publish(ctx, mqmsg.NewError(message.ChatID, s.msgProvider.Get(mapping.Key, mapping.Params...), message.ThreadID))
+	if err := s.base.SendError(ctx, message.ChatID, message.ThreadID, mapping.Key, mapping.Params...); err != nil {
+		return fmt.Errorf("send error message: %w", err)
+	}
+	return nil
 }
 
-// SendLockError 는 동작을 수행한다.
+// SendLockError: 락 경합 시 에러 메시지를 발송합니다.
 func (s *MessageSender) SendLockError(ctx context.Context, message mqmsg.InboundMessage, holderName *string) error {
-	if holderName != nil && *holderName != "" {
-		text := s.msgProvider.Get(tsmessages.LockRequestInProgressWithHolder, messageprovider.P("holder", *holderName))
-		return s.publish(ctx, mqmsg.NewError(message.ChatID, text, message.ThreadID))
+	if err := s.base.SendLockError(ctx, message.ChatID, message.ThreadID, holderName); err != nil {
+		return fmt.Errorf("send lock error message: %w", err)
 	}
-
-	text := s.msgProvider.Get(tsmessages.LockRequestInProgress)
-	return s.publish(ctx, mqmsg.NewError(message.ChatID, text, message.ThreadID))
+	return nil
 }

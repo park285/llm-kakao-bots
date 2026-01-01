@@ -16,7 +16,8 @@ import (
 	tssecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/security"
 )
 
-// GameMessageService 는 타입이다.
+// GameMessageService: MQ 메시지를 수신하여 게임 커맨드로 처리하는 서비스입니다.
+// 접근 제어, 락 관리, 커맨드 큐잉 등을 담당합니다.
 type GameMessageService struct {
 	commandHandler        *GameCommandHandler
 	messageSender         *MessageSender
@@ -30,7 +31,7 @@ type GameMessageService struct {
 	logger                *slog.Logger
 }
 
-// NewGameMessageService 는 동작을 수행한다.
+// NewGameMessageService: GameMessageService 인스턴스를 생성합니다.
 func NewGameMessageService(
 	commandHandler *GameCommandHandler,
 	messageSender *MessageSender,
@@ -57,7 +58,8 @@ func NewGameMessageService(
 	}
 }
 
-// HandleMessage 는 동작을 수행한다.
+// HandleMessage: MQ에서 수신한 메시지를 처리합니다.
+// 접근 제어 확인 후 커맨드를 파싱하고 디스패치합니다.
 func (s *GameMessageService) HandleMessage(ctx context.Context, message mqmsg.InboundMessage) {
 	if !s.isAccessAllowed(message) {
 		return
@@ -131,7 +133,7 @@ func (s *GameMessageService) runCommand(ctx context.Context, message mqmsg.Inbou
 	return s.commandHandler.ProcessCommand(ctx, message, command)
 }
 
-// HandleQueuedCommand 는 동작을 수행한다.
+// HandleQueuedCommand: 큐에 대기 중이던 커맨드를 처리합니다.
 func (s *GameMessageService) HandleQueuedCommand(
 	ctx context.Context,
 	message mqmsg.InboundMessage,

@@ -3,22 +3,24 @@ package service
 import (
 	"context"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
-	json "github.com/goccy/go-json"
+	"google.golang.org/grpc"
+
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	qmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/model"
 )
 
 type usageTestEnv struct {
-	handler *UsageHandler
-	ts      *httptest.Server
-	mocks   struct {
+	handler   *UsageHandler
+	llmClient *llmrest.Client
+	stopLLM   func()
+	mocks     struct {
 		daily   *llmrest.DailyUsageResponse
 		weekly  *llmrest.UsageListResponse
 		monthly *llmrest.UsageResponse
@@ -40,65 +42,114 @@ func (s fixedExchangeRateService) RateInfo(ctx context.Context) string {
 func setupUsageTestEnv(t *testing.T) *usageTestEnv {
 	env := &usageTestEnv{}
 	model := "gemini-3-flash-preview"
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		if strings.Contains(r.URL.Path, "/api/usage/daily") {
+	stub := &twentyqLLMGRPCStub{
+		getDailyUsage: func() (*llmv1.DailyUsageResponse, error) {
 			if env.mocks.daily != nil {
-				json.NewEncoder(w).Encode(env.mocks.daily)
-			} else {
-				// Default mock
-					json.NewEncoder(w).Encode(llmrest.DailyUsageResponse{
-						UsageDate:    "2023-01-01",
-						InputTokens:  1_000_000,
-						OutputTokens: 1_000_000,
-						TotalTokens:  2_000_000,
-						RequestCount: 10,
-						Model:        &model,
-					})
+				serverModel := ""
+				if env.mocks.daily.Model != nil {
+					serverModel = *env.mocks.daily.Model
 				}
-				return
+				return &llmv1.DailyUsageResponse{
+					UsageDate:       env.mocks.daily.UsageDate,
+					InputTokens:     env.mocks.daily.InputTokens,
+					OutputTokens:    env.mocks.daily.OutputTokens,
+					TotalTokens:     env.mocks.daily.TotalTokens,
+					ReasoningTokens: env.mocks.daily.ReasoningTokens,
+					RequestCount:    env.mocks.daily.RequestCount,
+					Model:           serverModel,
+				}, nil
 			}
-
-		if strings.Contains(r.URL.Path, "/api/usage/recent") {
+			return &llmv1.DailyUsageResponse{
+				UsageDate:       "2023-01-01",
+				InputTokens:     1_000_000,
+				OutputTokens:    1_000_000,
+				TotalTokens:     2_000_000,
+				ReasoningTokens: 0,
+				RequestCount:    10,
+				Model:           model,
+			}, nil
+		},
+		getRecentUsage: func(_ *llmv1.GetRecentUsageRequest) (*llmv1.UsageListResponse, error) {
 			if env.mocks.weekly != nil {
-				json.NewEncoder(w).Encode(env.mocks.weekly)
-			} else {
-					json.NewEncoder(w).Encode(llmrest.UsageListResponse{
-						Usages:            []llmrest.DailyUsageResponse{},
-						TotalInputTokens:  7_000_000,
-						TotalOutputTokens: 14_000_000,
-						TotalTokens:       21_000_000,
-						Model:             &model,
+				serverModel := ""
+				if env.mocks.weekly.Model != nil {
+					serverModel = *env.mocks.weekly.Model
+				}
+				usages := make([]*llmv1.DailyUsageResponse, 0, len(env.mocks.weekly.Usages))
+				for _, item := range env.mocks.weekly.Usages {
+					itemModel := ""
+					if item.Model != nil {
+						itemModel = *item.Model
+					}
+					usages = append(usages, &llmv1.DailyUsageResponse{
+						UsageDate:       item.UsageDate,
+						InputTokens:     item.InputTokens,
+						OutputTokens:    item.OutputTokens,
+						TotalTokens:     item.TotalTokens,
+						ReasoningTokens: item.ReasoningTokens,
+						RequestCount:    item.RequestCount,
+						Model:           itemModel,
 					})
 				}
-				return
+				return &llmv1.UsageListResponse{
+					Usages:            usages,
+					TotalInputTokens:  env.mocks.weekly.TotalInputTokens,
+					TotalOutputTokens: env.mocks.weekly.TotalOutputTokens,
+					TotalTokens:       env.mocks.weekly.TotalTokens,
+					TotalRequestCount: env.mocks.weekly.TotalRequestCount,
+					Model:             serverModel,
+				}, nil
 			}
-
-		// Monthly via DB endpoint mock (check fetch logic in llmrest if changed)
-		// UsageHandler calls GetUsageTotalFromDB -> /api/usage/total
-		if strings.Contains(r.URL.Path, "/api/usage/total") {
+			return &llmv1.UsageListResponse{
+				Usages:            nil,
+				TotalInputTokens:  7_000_000,
+				TotalOutputTokens: 14_000_000,
+				TotalTokens:       21_000_000,
+				TotalRequestCount: 0,
+				Model:             model,
+			}, nil
+		},
+		getTotalUsage: func(_ *llmv1.GetTotalUsageRequest) (*llmv1.UsageResponse, error) {
 			if env.mocks.monthly != nil {
-				json.NewEncoder(w).Encode(env.mocks.monthly)
-			} else {
-					json.NewEncoder(w).Encode(llmrest.UsageResponse{
-						InputTokens:  1_000_000,
-						OutputTokens: 2_000_000,
-						TotalTokens:  3_000_000,
-						Model:        &model,
-					})
+				serverModel := ""
+				if env.mocks.monthly.Model != nil {
+					serverModel = *env.mocks.monthly.Model
 				}
-				return
+				reasoning := int64(0)
+				if env.mocks.monthly.ReasoningTokens != nil {
+					reasoning = int64(*env.mocks.monthly.ReasoningTokens)
+				}
+				return &llmv1.UsageResponse{
+					InputTokens:     int64(env.mocks.monthly.InputTokens),
+					OutputTokens:    int64(env.mocks.monthly.OutputTokens),
+					TotalTokens:     int64(env.mocks.monthly.TotalTokens),
+					ReasoningTokens: reasoning,
+					Model:           serverModel,
+				}, nil
 			}
+			return &llmv1.UsageResponse{
+				InputTokens:     1_000_000,
+				OutputTokens:    2_000_000,
+				TotalTokens:     3_000_000,
+				ReasoningTokens: 0,
+				Model:           model,
+			}, nil
+		},
+	}
 
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	env.ts = ts
+	baseURL, stop := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
+	env.stopLLM = stop
 
-	llmClient, err := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	llmClient, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
 	if err != nil {
 		t.Fatal(err)
 	}
+	env.llmClient = llmClient
+	t.Cleanup(func() {
+		_ = llmClient.Close()
+	})
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	msgProvider, _ := messageprovider.NewFromYAML(`
@@ -141,7 +192,12 @@ error:
 }
 
 func (e *usageTestEnv) teardown() {
-	e.ts.Close()
+	if e.llmClient != nil {
+		_ = e.llmClient.Close()
+	}
+	if e.stopLLM != nil {
+		e.stopLLM()
+	}
 }
 
 func TestUsageHandler_Permission(t *testing.T) {
@@ -260,13 +316,17 @@ func TestUsageHandler_ModelOverride(t *testing.T) {
 }
 
 func TestUsageHandler_Errors(t *testing.T) {
-	// Setup server that returns 500
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer ts.Close()
-
-	llmClient, _ := llmrest.New(llmrest.Config{BaseURL: ts.URL})
+	stubErr := &twentyqLLMGRPCStub{hasError: func() bool { return true }}
+	baseURL, _ := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stubErr)
+	})
+	llmClient, err := llmrest.New(llmrest.Config{BaseURL: baseURL})
+	if err != nil {
+		t.Fatalf("llm client init failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = llmClient.Close()
+	})
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	msgProvider, _ := messageprovider.NewFromYAML(`
 usage:

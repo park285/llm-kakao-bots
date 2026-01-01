@@ -31,17 +31,25 @@ type Config struct {
 
 	// UseTLS: TLS(SSL) 연결 사용 여부.
 	UseTLS bool
+
+	// SocketPath: Unix Domain Socket 경로.
+	// 비어있지 않으면 Addr 대신 UDS로 연결합니다.
+	SocketPath string
 }
 
 // NewClient: 주어진 설정을 바탕으로 Valkey 클라이언트 인스턴스를 생성하고 초기화합니다.
+// SocketPath가 설정되면 UDS로 연결하고, 비어있으면 TCP로 연결합니다.
 func NewClient(cfg Config) (valkey.Client, error) {
+	socketPath := strings.TrimSpace(cfg.SocketPath)
 	addr := strings.TrimSpace(cfg.Addr)
-	if addr == "" {
-		return nil, errors.New("valkey addr is empty")
+
+	// UDS 모드가 아닌 경우 addr 필수
+	if socketPath == "" && addr == "" {
+		return nil, errors.New("valkey addr is empty and socket path not set")
 	}
 
 	var tlsConfig *tls.Config
-	if cfg.UseTLS {
+	if cfg.UseTLS && socketPath == "" {
 		host, _, err := net.SplitHostPort(addr)
 		if err != nil {
 			host = addr
@@ -52,8 +60,15 @@ func NewClient(cfg Config) (valkey.Client, error) {
 		}
 	}
 
+	// InitAddress 설정: UDS 모드에서도 필요 (valkey-go 내부 구조상)
+	initAddr := addr
+	if socketPath != "" {
+		// UDS 모드에서는 소켓 경로를 주소로 사용
+		initAddr = socketPath
+	}
+
 	opts := valkey.ClientOption{
-		InitAddress:  []string{addr},
+		InitAddress:  []string{initAddr},
 		Username:     cfg.Username,
 		Password:     cfg.Password,
 		SelectDB:     cfg.DB,
@@ -61,9 +76,20 @@ func NewClient(cfg Config) (valkey.Client, error) {
 		DisableCache: cfg.DisableCache,
 	}
 
-	// Timeout 설정
-	if cfg.DialTimeout > 0 {
-		opts.Dialer.Timeout = cfg.DialTimeout
+	// UDS 모드: 커스텀 DialCtxFn 설정
+	if socketPath != "" {
+		opts.DialCtxFn = func(ctx context.Context, _ string, _ *net.Dialer, _ *tls.Config) (net.Conn, error) {
+			var d net.Dialer
+			if cfg.DialTimeout > 0 {
+				d.Timeout = cfg.DialTimeout
+			}
+			return d.DialContext(ctx, "unix", socketPath)
+		}
+	} else {
+		// TCP 모드: Timeout 설정
+		if cfg.DialTimeout > 0 {
+			opts.Dialer.Timeout = cfg.DialTimeout
+		}
 	}
 
 	// PoolSize/MinIdleConns는 BlockingPool 설정으로 매핑합니다.

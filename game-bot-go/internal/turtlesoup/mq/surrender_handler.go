@@ -18,7 +18,7 @@ type SurrenderHandler struct {
 	msgProvider *messageprovider.Provider
 }
 
-// NewSurrenderHandler: 새로운 SurrenderHandler 인스턴스를 생성한다.
+// NewSurrenderHandler: 새로운 SurrenderHandler 인스턴스를 생성합니다.
 func NewSurrenderHandler(gameService *tssvc.GameService, voteService *tssvc.SurrenderVoteService, msgProvider *messageprovider.Provider) *SurrenderHandler {
 	return &SurrenderHandler{
 		gameService: gameService,
@@ -70,7 +70,7 @@ func (h *SurrenderHandler) HandleConsensus(ctx context.Context, chatID string, u
 	}
 }
 
-// HandleAgree: 항복에 동의 투표를 하고 결과를 반환한다.
+// HandleAgree: 항복에 동의 투표를 하고 결과를 반환합니다.
 func (h *SurrenderHandler) HandleAgree(ctx context.Context, chatID string, userID string) (string, error) {
 	if err := h.voteService.RequireSession(ctx, chatID); err != nil {
 		return "", fmt.Errorf("require session failed: %w", err)

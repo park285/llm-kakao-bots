@@ -14,12 +14,12 @@ type MessageBuilder struct {
 	provider *messageprovider.Provider
 }
 
-// NewMessageBuilder: 새로운 MessageBuilder 인스턴스를 생성한다.
+// NewMessageBuilder: 새로운 MessageBuilder 인스턴스를 생성합니다.
 func NewMessageBuilder(provider *messageprovider.Provider) *MessageBuilder {
 	return &MessageBuilder{provider: provider}
 }
 
-// BuildStatusHeader: 현재 게임 상태(질문 수, 힌트 수 등)를 요약한 헤더 문자열을 생성한다.
+// BuildStatusHeader: 현재 게임 상태(질문 수, 힌트 수 등)를 요약한 헤더 문자열을 생성합니다.
 func (b *MessageBuilder) BuildStatusHeader(state tsmodel.GameState) string {
 	return b.provider.Get(
 		tsmessages.AnswerHistoryHeader,
@@ -29,7 +29,7 @@ func (b *MessageBuilder) BuildStatusHeader(state tsmodel.GameState) string {
 	)
 }
 
-// BuildSummary: 게임 진행 기록(질문/답변) 요약본을 생성한다.
+// BuildSummary: 게임 진행 기록(질문/답변) 요약본을 생성합니다.
 func (b *MessageBuilder) BuildSummary(history []tsmodel.HistoryEntry) string {
 	if len(history) == 0 {
 		return b.provider.Get(tsmessages.SummaryEmpty)
@@ -48,7 +48,7 @@ func (b *MessageBuilder) BuildSummary(history []tsmodel.HistoryEntry) string {
 	return header + "\n" + strings.Join(lines, "\n")
 }
 
-// BuildHintBlock: 사용된 힌트 목록을 포맷팅하여 생성한다.
+// BuildHintBlock: 사용된 힌트 목록을 포맷팅하여 생성합니다.
 func (b *MessageBuilder) BuildHintBlock(hints []string) string {
 	if len(hints) == 0 {
 		return b.provider.Get(tsmessages.HintSectionNone)

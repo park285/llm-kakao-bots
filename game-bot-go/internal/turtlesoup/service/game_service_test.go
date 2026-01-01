@@ -3,20 +3,17 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
 	"github.com/valkey-io/valkey-go"
+	"google.golang.org/grpc"
 
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
+	llmv1 "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest/pb/llm/v1"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/testhelper"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
@@ -34,8 +31,9 @@ type mockResponses struct {
 
 type testEnv struct {
 	svc          *GameService
+	llmClient    *llmrest.Client
+	stopLLM      func()
 	client       valkey.Client
-	ts           *httptest.Server
 	sessionStore *tsredis.SessionStore
 	mocks        mockResponses
 	t            *testing.T
@@ -56,83 +54,58 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	prefix := testhelper.UniqueTestPrefix(t)
 	env := &testEnv{client: client, sessionStore: sessionStore, t: t, prefix: prefix}
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		path := r.URL.Path
-
-		if strings.Contains(path, "/api/guard/checks") {
-			json.NewEncoder(w).Encode(llmrest.GuardMaliciousResponse{Malicious: env.mocks.guardMalicious})
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/puzzles") {
+	stub := &turtlesoupLLMGRPCStub{
+		guardMalicious: func() bool {
+			return env.mocks.guardMalicious
+		},
+		generatePuzzle: func() *llmrest.TurtleSoupPuzzleGenerationResponse {
 			if env.mocks.puzzle != nil {
-				json.NewEncoder(w).Encode(env.mocks.puzzle)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupPuzzleGenerationResponse{
-					Title:      "Test Puzzle",
-					Scenario:   "A man walks into a bar...",
-					Solution:   "He was thirsty.",
-					Category:   "mystery",
-					Difficulty: 1,
-				})
+				return env.mocks.puzzle
 			}
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/answers") {
+			return &llmrest.TurtleSoupPuzzleGenerationResponse{
+				Title:      "Test Puzzle",
+				Scenario:   "A man walks into a bar...",
+				Solution:   "He was thirsty.",
+				Category:   "mystery",
+				Difficulty: 1,
+			}
+		},
+		answerQuestion: func() *llmrest.TurtleSoupAnswerResponse {
 			if env.mocks.answer != nil {
-				json.NewEncoder(w).Encode(env.mocks.answer)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupAnswerResponse{
-					Answer:        "No",
-					History:       []llmrest.TurtleSoupHistoryItem{{Question: "Is it food?", Answer: "No"}},
-					QuestionCount: 1,
-				})
+				return env.mocks.answer
 			}
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/validations") {
+			return &llmrest.TurtleSoupAnswerResponse{
+				Answer:        "No",
+				History:       []llmrest.TurtleSoupHistoryItem{{Question: "Is it food?", Answer: "No"}},
+				QuestionCount: 1,
+			}
+		},
+		validateSolution: func() *llmrest.TurtleSoupValidateResponse {
 			if env.mocks.validation != nil {
-				json.NewEncoder(w).Encode(env.mocks.validation)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupValidateResponse{
-					Result: "NO",
-				})
+				return env.mocks.validation
 			}
-			return
-		}
-
-		if strings.Contains(path, "/api/turtle-soup/hints") {
+			return &llmrest.TurtleSoupValidateResponse{Result: "NO"}
+		},
+		generateHint: func() *llmrest.TurtleSoupHintResponse {
 			if env.mocks.hint != nil {
-				json.NewEncoder(w).Encode(env.mocks.hint)
-			} else {
-				json.NewEncoder(w).Encode(llmrest.TurtleSoupHintResponse{
-					Hint:  "This is a hint",
-					Level: 1,
-				})
+				return env.mocks.hint
 			}
-			return
-		}
+			return &llmrest.TurtleSoupHintResponse{Hint: "This is a hint", Level: 1}
+		},
+	}
 
-		if strings.Contains(path, "/api/sessions") {
-			// DELETE /api/sessions/:id 만 지원
-			json.NewEncoder(w).Encode(llmrest.SessionEndResponse{Message: "ended", ID: "sess1"})
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, `{}`)
-	}))
-	env.ts = ts
+	baseURL, stop := testhelper.StartTestGRPCServer(t, func(s *grpc.Server) {
+		llmv1.RegisterLLMServiceServer(s, stub)
+	})
+	env.stopLLM = stop
 
 	llmClient, err := llmrest.New(llmrest.Config{
-		BaseURL: ts.URL,
+		BaseURL: baseURL,
 	})
 	if err != nil {
 		t.Fatalf("llm client init failed: %v", err)
 	}
+	env.llmClient = llmClient
 
 	puzzleConfig := tsconfig.PuzzleConfig{RewriteEnabled: false}
 	puzzleService := NewPuzzleService(llmClient, puzzleConfig, dedupStore, logger)
@@ -150,8 +123,13 @@ func (e *testEnv) chatID(suffix string) string {
 
 func (e *testEnv) teardown() {
 	testhelper.CleanupTestKeys(e.t, e.client, tsconfig.RedisKeyPrefix+":")
+	if e.llmClient != nil {
+		_ = e.llmClient.Close()
+	}
 	e.client.Close()
-	e.ts.Close()
+	if e.stopLLM != nil {
+		e.stopLLM()
+	}
 }
 
 func TestGameService_StartGame(t *testing.T) {

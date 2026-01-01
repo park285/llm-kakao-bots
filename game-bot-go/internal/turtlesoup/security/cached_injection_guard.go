@@ -15,7 +15,8 @@ import (
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
 )
 
-// CachedInjectionGuard 는 타입이다.
+// CachedInjectionGuard: LRU + TTL 캐시를 적용한 Injection Guard 래퍼입니다.
+// singleflight를 사용하여 동일 입력에 대한 중복 호출을 방지합니다.
 type CachedInjectionGuard struct {
 	inner  InjectionGuard
 	cache  *commoncache.TTLLRUCache
@@ -23,7 +24,7 @@ type CachedInjectionGuard struct {
 	sf     singleflight.Group
 }
 
-// NewCachedInjectionGuard 는 동작을 수행한다.
+// NewCachedInjectionGuard: CachedInjectionGuard 인스턴스를 생성합니다.
 func NewCachedInjectionGuard(
 	inner InjectionGuard,
 	ttl time.Duration,
@@ -40,7 +41,8 @@ func NewCachedInjectionGuard(
 	}
 }
 
-// IsMalicious 는 동작을 수행한다.
+// IsMalicious: 캐시를 확인한 후 악성 여부를 검사합니다.
+// 캐시 미스 시 inner guard를 호출하고 결과를 캐싱합니다.
 func (g *CachedInjectionGuard) IsMalicious(ctx context.Context, input string) (bool, error) {
 	if g == nil || g.inner == nil {
 		return false, nil
@@ -100,7 +102,7 @@ func (g *CachedInjectionGuard) IsMalicious(ctx context.Context, input string) (b
 	}
 }
 
-// ValidateOrThrow 는 동작을 수행한다.
+// ValidateOrThrow: 입력을 검증하고 악성이면 에러를 반환합니다.
 func (g *CachedInjectionGuard) ValidateOrThrow(ctx context.Context, input string) (string, error) {
 	if strings.TrimSpace(input) == "" {
 		return "", cerrors.MalformedInputError{Message: "empty input"}
