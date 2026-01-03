@@ -4,13 +4,14 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 
 	json "github.com/goccy/go-json"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/health"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/messageprovider"
 	qmessages "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/messages"
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
@@ -37,11 +38,11 @@ func Register(
 ) {
 	// GET /health - 헬스체크
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		respondJSON(w, http.StatusOK, map[string]any{
-			"status":     "ok",
-			"goroutines": runtime.NumGoroutine(),
-		})
+		respondJSON(w, http.StatusOK, health.Get())
 	})
+
+	// GET /metrics - Prometheus 메트릭 (장기 히스토리 분석용)
+	mux.Handle("GET /metrics", promhttp.Handler())
 
 	// POST /api/twentyq/riddles - 게임 시작
 	mux.HandleFunc("POST /api/twentyq/riddles", func(w http.ResponseWriter, r *http.Request) {

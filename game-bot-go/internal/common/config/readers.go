@@ -384,3 +384,32 @@ func ReadAccessConfigFromEnv(opts AccessConfigEnvOptions) (AccessConfig, error) 
 		Passthrough:    passthrough,
 	}, nil
 }
+
+// ReadTelemetryConfigFromEnv: OpenTelemetry 분산 추적 설정을 환경 변수에서 읽어옵니다.
+// OTEL_ 접두사로 시작하는 표준 OpenTelemetry 환경 변수를 사용합니다.
+func ReadTelemetryConfigFromEnv(serviceName string) (TelemetryConfig, error) {
+	enabled, err := BoolFromEnv("OTEL_ENABLED", false)
+	if err != nil {
+		return TelemetryConfig{}, fmt.Errorf("read OTEL_ENABLED failed: %w", err)
+	}
+
+	insecure, err := BoolFromEnv("OTEL_EXPORTER_OTLP_INSECURE", true)
+	if err != nil {
+		return TelemetryConfig{}, fmt.Errorf("read OTEL_EXPORTER_OTLP_INSECURE failed: %w", err)
+	}
+
+	sampleRate, err := Float64FromEnv("OTEL_SAMPLE_RATE", 1.0)
+	if err != nil {
+		return TelemetryConfig{}, fmt.Errorf("read OTEL_SAMPLE_RATE failed: %w", err)
+	}
+
+	return TelemetryConfig{
+		Enabled:        enabled,
+		ServiceName:    StringFromEnv("OTEL_SERVICE_NAME", serviceName),
+		ServiceVersion: StringFromEnv("OTEL_SERVICE_VERSION", "1.0.0"),
+		Environment:    StringFromEnv("OTEL_ENVIRONMENT", "production"),
+		OTLPEndpoint:   StringFromEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "jaeger:4317"),
+		OTLPInsecure:   insecure,
+		SampleRate:     sampleRate,
+	}, nil
+}

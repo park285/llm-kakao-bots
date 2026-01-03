@@ -10,7 +10,12 @@ import (
 	"time"
 
 	"github.com/valkey-io/valkey-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/telemetry"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/valkeyx"
 )
 
@@ -91,6 +96,19 @@ func (c *StreamConsumer) Run(ctx context.Context, handler func(ctx context.Conte
 			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
 				return nil
 			}
+
+			// NOGROUP 에러 시 컨슈머 그룹 자동 재생성 시도
+			if isNoGroupOrNoStreamErr(err) {
+				c.logger.Info("consumer_group_missing_recreating", "stream", cfg.Stream, "group", cfg.Group)
+				if recreateErr := c.ensureGroup(ctx, cfg); recreateErr != nil {
+					c.logger.Warn("consumer_group_recreate_failed", "err", recreateErr, "stream", cfg.Stream, "group", cfg.Group)
+				} else {
+					c.logger.Info("consumer_group_recreated", "stream", cfg.Stream, "group", cfg.Group)
+					backoff = cfg.BackoffInitial // 성공 시 백오프 리셋
+					continue
+				}
+			}
+
 			c.logger.Warn("xreadgroup_failed", "err", err, "stream", cfg.Stream, "group", cfg.Group, "backoff", backoff)
 
 			// 지수 백오프 대기 후 재시도
@@ -180,16 +198,48 @@ func (c *StreamConsumer) handleMessage(
 	msg XMessage,
 	handler func(ctx context.Context, msg XMessage) error,
 ) {
-	handleErr := handler(ctx, msg)
+	tracer := otel.Tracer("game-bot-go/valkey-consumer")
+
+	// 1. 메시지 헤더에서 부모 Context 추출 (미래 확장용)
+	// 현재는 메시지에 TraceContext가 없으므로 새 Trace 시작
+	carrier := telemetry.MapCarrier(msg.Values)
+	parentCtx := telemetry.ExtractContext(ctx, carrier)
+
+	// 2. Root Span 시작 (SpanKindConsumer로 표시)
+	spanCtx, span := tracer.Start(parentCtx, "Valkey.ProcessMessage",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(
+			attribute.String("messaging.system", "valkey"),
+			attribute.String("messaging.destination", cfg.Stream),
+			attribute.String("messaging.message_id", msg.ID),
+			attribute.String("messaging.consumer_group", cfg.Group),
+		),
+	)
+	defer span.End()
+
+	// 3. 생성된 spanCtx를 비즈니스 로직에 전달
+	handleErr := handler(spanCtx, msg)
 	if handleErr != nil {
-		c.logger.Error("message_handler_failed", "err", handleErr, "stream", cfg.Stream, "group", cfg.Group, "id", msg.ID)
+		span.RecordError(handleErr)
+		span.SetStatus(codes.Error, handleErr.Error())
+		c.logger.ErrorContext(spanCtx, "message_handler_failed",
+			"err", handleErr,
+			"stream", cfg.Stream,
+			"id", msg.ID,
+		)
 		if !cfg.AckOnError {
 			return
 		}
+	} else {
+		span.SetStatus(codes.Ok, "")
 	}
 
-	if errAck := c.ackWithRetry(ctx, cfg, msg.ID); errAck != nil {
-		c.logger.Warn("xack_failed", "err", errAck, "stream", cfg.Stream, "group", cfg.Group, "id", msg.ID)
+	if errAck := c.ackWithRetry(spanCtx, cfg, msg.ID); errAck != nil {
+		c.logger.WarnContext(spanCtx, "xack_failed",
+			"err", errAck,
+			"stream", cfg.Stream,
+			"id", msg.ID,
+		)
 	}
 }
 

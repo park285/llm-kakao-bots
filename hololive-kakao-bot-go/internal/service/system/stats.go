@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // ServiceGoroutines: 개별 서비스의 goroutine 통계
@@ -47,7 +48,8 @@ type Collector struct {
 func NewCollector(endpoints []ServiceEndpoint) *Collector {
 	return &Collector{
 		httpClient: &http.Client{
-			Timeout: 2 * time.Second,
+			Timeout:   2 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
 		endpoints: endpoints,
 	}

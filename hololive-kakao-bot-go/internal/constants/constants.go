@@ -266,29 +266,6 @@ var CORSConfig = struct {
 	},
 }
 
-// AdminUIConfig: Admin UI 정적 파일/캐시 설정입니다.
-var AdminUIConfig = struct {
-	AssetsRoute         string
-	AssetsURLPrefix     string
-	AssetsDir           string
-	IndexPath           string
-	FaviconRoute        string
-	FaviconPath         string
-	CacheControlAssets  string
-	CacheControlHTML    string
-	CacheControlFavicon string
-}{
-	AssetsRoute:         "/assets",
-	AssetsURLPrefix:     "/assets/",
-	AssetsDir:           "./admin-ui/dist/assets",
-	IndexPath:           "./admin-ui/dist/index.html",
-	FaviconRoute:        "/favicon.svg",
-	FaviconPath:         "./admin-ui/dist/favicon.svg",
-	CacheControlAssets:  "public, max-age=31536000, immutable",
-	CacheControlHTML:    "no-store, no-cache, must-revalidate",
-	CacheControlFavicon: "public, max-age=86400",
-}
-
 // RequestTimeout: HTTP 요청 및 서비스 타임아웃 설정
 var RequestTimeout = struct {
 	AdminRequest      time.Duration
@@ -304,35 +281,6 @@ var RequestTimeout = struct {
 	WebhookProcessing: 30 * time.Second,
 	AlarmService:      10 * time.Second,
 	DatabasePing:      5 * time.Second,
-}
-
-// SessionConfig: 세션 관련 설정입니다.
-// ExpiryDuration: 세션 TTL (heartbeat 미수신 시 만료)
-// HeartbeatInterval: 프론트엔드 heartbeat 주기 (반드시 IdleTimeout보다 짧아야 함)
-// IdleTimeout: 클라이언트 유휴 상태 타임아웃 (idle 상태에서는 세션 즉시 만료)
-// AbsoluteTimeout: 절대 만료 시간 (OWASP 권고: 최초 로그인 후 재인증 강제)
-// TokenRotation: 하트비트 시 세션 ID 갱신 여부 (토큰 탈취 피해 최소화)
-// RotationInterval: Token Rotation 최소 간격 (잦은 교체 방지, Valkey 부하 감소)
-// GracePeriod: Token Rotation 시 기존 세션 유예 시간 (Race Condition 방지)
-// IdleSessionTTL: idle=true 수신 시 세션 TTL 단축값 (즉시 만료 유도)
-var SessionConfig = struct {
-	ExpiryDuration    time.Duration
-	HeartbeatInterval time.Duration
-	IdleTimeout       time.Duration
-	AbsoluteTimeout   time.Duration
-	TokenRotation     bool
-	RotationInterval  time.Duration
-	GracePeriod       time.Duration
-	IdleSessionTTL    time.Duration
-}{
-	ExpiryDuration:    1 * time.Hour,    // 브라우저 닫기 → 1시간 후 Valkey 세션 만료
-	HeartbeatInterval: 5 * time.Minute,  // 프론트엔드 heartbeat 주기 (IdleTimeout의 절반)
-	IdleTimeout:       10 * time.Minute, // 10분 유휴 → 세션 즉시 만료
-	AbsoluteTimeout:   8 * time.Hour,    // 8시간 후 무조건 재로그인 강제 (OWASP)
-	TokenRotation:     true,             // 하트비트 시 새 세션 ID 발급
-	RotationInterval:  15 * time.Minute, // 15분마다만 세션 ID 교체 (잦은 Rotation 방지)
-	GracePeriod:       30 * time.Second, // Token Rotation 시 기존 세션 30초 유지 (병렬 요청 보호)
-	IdleSessionTTL:    10 * time.Second, // idle=true 시 세션 TTL 10초로 단축
 }
 
 // DatabaseConfig: 데이터베이스 연결 설정입니다.

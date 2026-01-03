@@ -6,11 +6,17 @@ import (
 	"os"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/bootstrap"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/health"
 	tsapp "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/app"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 )
 
+// Version: 빌드 시 ldflags로 주입됨 (예: -ldflags="-X main.Version=1.0.0")
+var Version = "dev"
+
 func main() {
+	health.Init(Version)
+
 	logger := bootstrap.NewLogger()
 	slog.SetDefault(logger)
 

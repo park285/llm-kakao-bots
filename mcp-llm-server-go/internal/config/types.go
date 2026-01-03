@@ -208,4 +208,16 @@ type Config struct {
 	HTTPAuth      HTTPAuthConfig
 	HTTPRateLimit HTTPRateLimitConfig
 	Database      DatabaseConfig
+	Telemetry     TelemetryConfig
+}
+
+// TelemetryConfig: OpenTelemetry 분산 추적 설정입니다.
+type TelemetryConfig struct {
+	Enabled        bool    // 트레이싱 활성화 여부
+	ServiceName    string  // 서비스 식별자 (예: "mcp-llm-server")
+	ServiceVersion string  // 서비스 버전 (예: "1.0.0")
+	Environment    string  // 배포 환경 (예: "production")
+	OTLPEndpoint   string  // OTLP collector 주소 (예: "jaeger:4317")
+	OTLPInsecure   bool    // TLS 없이 연결 (내부망 전용)
+	SampleRate     float64 // 샘플링 비율 (0.0 ~ 1.0)
 }

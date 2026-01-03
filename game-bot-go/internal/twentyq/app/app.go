@@ -28,6 +28,7 @@ import (
 	qrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/repository"
 	qsecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/security"
 	qsvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/twentyq/service"
+	"github.com/valkey-io/valkey-go"
 )
 
 type twentyQStores struct {
@@ -336,21 +337,41 @@ func newTwentyQStatsRecorder(cfg *qconfig.Config, repo *qrepo.Repository, logger
 func newTwentyQHTTPMux(
 	riddleService *qsvc.RiddleService,
 	db *gorm.DB,
+	valkeyClient valkey.Client,
+	sessionStore *qredis.SessionStore,
 	msgProvider *messageprovider.Provider,
 	logger *slog.Logger,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
 	qhttpapi.Register(mux, riddleService, db, msgProvider, logger)
+
+	qhttpapi.RegisterAdminRoutes(mux, qhttpapi.AdminDeps{
+		DB:           db,
+		ValkeyClient: valkeyClient,
+		SessionStore: sessionStore,
+		Logger:       logger,
+	})
+
 	return mux
 }
 
 func newTwentyQHTTPServer(cfg *qconfig.Config, mux *http.ServeMux) *http.Server {
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+
+	// OTel 설정: 환경변수에서 읽음 (bootstrap에서 이미 초기화됨)
+	otelEnabled := cfg.Telemetry.Enabled
+	otelServiceName := cfg.Telemetry.ServiceName
+	if otelServiceName == "" {
+		otelServiceName = "twentyq-bot"
+	}
+
 	return httpserver.NewServer(addr, mux, httpserver.ServerOptions{
 		UseH2C:            true,
 		ReadHeaderTimeout: cfg.ServerTuning.ReadHeaderTimeout,
 		IdleTimeout:       cfg.ServerTuning.IdleTimeout,
 		MaxHeaderBytes:    cfg.ServerTuning.MaxHeaderBytes,
+		EnableOTel:        otelEnabled,
+		OTelServiceName:   otelServiceName,
 	})
 }
 

@@ -8,11 +8,13 @@ import (
 	"math"
 	"math/rand/v2"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/genai"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
@@ -689,9 +691,24 @@ func (c *Client) selectClient(ctx context.Context) (*genai.Client, error) {
 	}
 
 	timeout := time.Duration(c.cfg.Gemini.TimeoutSeconds) * time.Second
+
+	// OTel HTTP Transport: 분산 추적이 활성화되면 HTTP 요청을 추적함
+	var httpClient *http.Client
+	if c.cfg.Telemetry.Enabled {
+		httpClient = &http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport,
+				otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+					return "Gemini." + r.Method
+				}),
+			),
+			Timeout: timeout,
+		}
+	}
+
 	client, err := genai.NewClient(context.WithoutCancel(ctx), &genai.ClientConfig{
-		APIKey:  key,
-		Backend: genai.BackendGeminiAPI,
+		APIKey:     key,
+		Backend:    genai.BackendGeminiAPI,
+		HTTPClient: httpClient, // nil이면 SDK가 기본 클라이언트 사용
 		HTTPOptions: genai.HTTPOptions{
 			Timeout: genai.Ptr(timeout),
 		},

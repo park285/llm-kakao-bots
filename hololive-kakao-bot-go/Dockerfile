@@ -4,21 +4,7 @@ ARG GO_VERSION=1.25.5
 ARG ALPINE_VERSION=3.23
 
 # ==========================================
-# Stage 1: Build Frontend
-# ==========================================
-FROM node:22-alpine AS frontend-builder
-WORKDIR /app/admin-ui
-
-# Install dependencies first for caching
-COPY admin-ui/package.json admin-ui/package-lock.json ./
-RUN npm install
-
-# Copy source and build
-COPY admin-ui/ .
-RUN npm run build
-
-# ==========================================
-# Stage 2: Build Backend
+# Stage 1: Build Backend
 # ==========================================
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
@@ -29,18 +15,17 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 COPY . .
 
-# Copy built frontend assets from frontend-builder
-COPY --from=frontend-builder /app/admin-ui/dist ./admin-ui/dist
-
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOEXPERIMENT=greenteagc \
     go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /dist/bin/bot ./cmd/bot && \
-    mkdir -p /dist/logs /dist/admin-ui /dist/internal/domain /dist/internal/adapter && \
-    cp -r admin-ui/dist /dist/admin-ui/ && \
+    mkdir -p /dist/logs /dist/internal/domain /dist/internal/adapter && \
     cp -r internal/domain/data /dist/internal/domain/ && \
     cp -r internal/adapter/templates /dist/internal/adapter/ && \
     cp config.example.json config.json official_japanese_names.json /dist/
 
+# ==========================================
+# Stage 2: Production Runtime
+# ==========================================
 FROM alpine:${ALPINE_VERSION}
 
 RUN apk add --no-cache ca-certificates tzdata && \

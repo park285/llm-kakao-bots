@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/health"
@@ -39,6 +40,9 @@ func RegisterHealthRoutes(router *gin.Engine, cfg *config.Config) {
 		}
 		c.JSON(status, payload)
 	})
+
+	// Prometheus 메트릭 (장기 히스토리 분석용)
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	router.GET("/health/models", func(c *gin.Context) {
 		defaultModel := cfg.Gemini.DefaultModel

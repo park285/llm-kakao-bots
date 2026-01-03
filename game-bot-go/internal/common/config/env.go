@@ -48,6 +48,26 @@ func Int64FromEnv(key string, defaultValue int64) (int64, error) {
 	return value, nil
 }
 
+// Float64FromEnv: 환경 변수에서 64비트 실수 값을 읽어옵니다.
+func Float64FromEnv(key string, defaultValue float64) (float64, error) {
+	rawValue, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue, nil
+	}
+
+	rawValue = strings.TrimSpace(rawValue)
+	if rawValue == "" {
+		return defaultValue, nil
+	}
+
+	value, err := strconv.ParseFloat(rawValue, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid float64 env %s=%q: %w", key, rawValue, err)
+	}
+
+	return value, nil
+}
+
 // DurationSecondsFromEnv: 환경 변수에서 초 단위 시간을 읽어 Duration으로 변환합니다.
 func DurationSecondsFromEnv(key string, defaultSeconds int64) (time.Duration, error) {
 	valueSeconds, err := Int64FromEnv(key, defaultSeconds)

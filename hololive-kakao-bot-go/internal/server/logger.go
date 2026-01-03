@@ -12,7 +12,7 @@ import (
 // skipPaths는 다음 형식을 지원합니다:
 //   - "/exact/path": 정확히 일치하는 경로 스킵
 //   - "*/suffix": 해당 suffix로 끝나는 경로 스킵 (예: "*/stream")
-//   - "/prefix*": 해당 prefix로 시작하는 경로 스킵 (예: "/admin/api/ws*")
+//   - "/prefix*": 해당 prefix로 시작하는 경로 스킵 (예: "/api/holo/ws*")
 func LoggerMiddleware(ctx context.Context, logger *slog.Logger, skipPaths ...string) gin.HandlerFunc {
 	// 스킵 설정 분류
 	exactSkip := make(map[string]bool)

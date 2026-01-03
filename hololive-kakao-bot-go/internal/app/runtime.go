@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,13 +29,10 @@ type BotRuntime struct {
 	MQConsumer *mq.ValkeyMQConsumer
 	Scheduler  *youtube.Scheduler
 
-	AdminHandler      *server.AdminHandler
-	Sessions          *server.ValkeySessionStore
-	SecurityConfig    *server.SecurityConfig
-	AdminAllowedCIDRs []*net.IPNet
-	AdminRouter       *gin.Engine
-	AdminAddr         string
-	AdminServer       *http.Server
+	AdminHandler *server.AdminHandler
+	AdminRouter  *gin.Engine
+	AdminAddr    string
+	AdminServer  *http.Server
 
 	cleanup func()
 }

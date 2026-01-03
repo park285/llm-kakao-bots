@@ -2,9 +2,11 @@
 
 어드민 대시보드의 세션 관리 및 하트비트 메커니즘에 대한 보안 설계 문서입니다.
 
+> 현재 구현 기준: **admin-dashboard**가 인증/세션을 담당합니다. (`hololive-bot-go`는 `/api/holo/*` 도메인 API만 제공)
+
 ---
 
-## 📋 목차
+## 목차
 
 - [개요](#개요)
 - [보안 설계 원칙](#보안-설계-원칙)
@@ -43,11 +45,11 @@
 - 서버는 `idle: true` 요청 시 **세션 TTL을 10초로 단축** (즉시 만료 유도)
 
 ```
-사용자 활동 있음 → idle: false → 세션 TTL 갱신 ✅
+사용자 활동 있음 → idle: false → 세션 TTL 갱신
 사용자 활동 없음 → idle: true  → 세션 TTL 10초로 단축 → 10초 후 자동 만료
 ```
 
-> **⚠️ 보안 강화**: 단순히 갱신만 거부하면 기존 TTL 동안 세션이 유지됩니다. 
+> **보안 강화**: 단순히 갱신만 거부하면 기존 TTL 동안 세션이 유지됩니다. 
 > TTL을 10초로 단축하여 공격자가 탈취한 토큰의 유효 시간을 최소화합니다.
 
 ### 2. 절대 만료 시간 (OWASP 권고)
@@ -101,7 +103,7 @@ session := &Session{
 하트비트 요청 → 기존 세션 검증 → 새 세션 생성 → 기존 세션 TTL=30초 설정 → 새 쿠키 설정
 ```
 
-> **💡 Grace Period**: SPA 환경에서 하트비트와 API 요청이 거의 동시에 발생할 수 있습니다.
+> **Grace Period**: SPA 환경에서 하트비트와 API 요청이 거의 동시에 발생할 수 있습니다.
 > 기존 세션을 30초간 유지하여 진행 중인 요청이 정상 처리되도록 합니다.
 
 ### 6. HeartbeatInterval < IdleTimeout 규칙
@@ -125,19 +127,20 @@ HeartbeatInterval(5분) < IdleTimeout(10분)
 ### Session 구조체
 
 ```go
-// internal/server/session.go
+// admin-dashboard/backend/internal/auth/auth.go
 type Session struct {
     ID                string    `json:"id"`
     CreatedAt         time.Time `json:"created_at"`
     ExpiresAt         time.Time `json:"expires_at"`
     AbsoluteExpiresAt time.Time `json:"absolute_expires_at"`  // OWASP 권고
+    LastRotatedAt     time.Time `json:"last_rotated_at,omitempty"`
 }
 ```
 
 ### SessionProvider 인터페이스
 
 ```go
-// internal/server/session.go
+// admin-dashboard/backend/internal/auth/auth.go
 type SessionProvider interface {
     CreateSession(ctx context.Context) (*Session, error)
     GetSession(ctx context.Context, sessionID string) (*Session, error)
@@ -154,30 +157,26 @@ type SessionProvider interface {
 ### SessionConfig 설정
 
 ```go
-// internal/constants/constants.go
+// admin-dashboard/backend/internal/config/config.go
 var SessionConfig = struct {
-    ExpiryDuration    time.Duration  // 슬라이딩 TTL (기본 1시간)
-    HeartbeatInterval time.Duration  // 프론트엔드 하트비트 주기 (기본 5분)
-    IdleTimeout       time.Duration  // 유휴 타임아웃 (기본 10분)
-    AbsoluteTimeout   time.Duration  // 절대 만료 시간 (기본 8시간)
-    TokenRotation     bool           // 토큰 갱신 활성화 (기본 true)
-    GracePeriod       time.Duration  // Token Rotation 시 기존 세션 유예 시간 (기본 30초)
-    IdleSessionTTL    time.Duration  // idle=true 시 세션 TTL 단축값 (기본 10초)
+    ExpiryDuration   time.Duration  // 슬라이딩 TTL
+    AbsoluteTimeout  time.Duration  // 절대 만료 시간
+    IdleSessionTTL   time.Duration  // idle=true 시 세션 TTL 단축값
+    GracePeriod      time.Duration  // Token Rotation 시 기존 세션 유예 시간
+    RotationInterval time.Duration  // Token Rotation 최소 간격
 }{
-    ExpiryDuration:    1 * time.Hour,
-    HeartbeatInterval: 5 * time.Minute,   // IdleTimeout의 절반
-    IdleTimeout:       10 * time.Minute,
-    AbsoluteTimeout:   8 * time.Hour,
-    TokenRotation:     true,
-    GracePeriod:       30 * time.Second,  // Race Condition 방지
-    IdleSessionTTL:    10 * time.Second,  // 즉시 만료 유도
+    ExpiryDuration:   30 * time.Minute,
+    AbsoluteTimeout:  8 * time.Hour,
+    IdleSessionTTL:   10 * time.Second,
+    GracePeriod:      30 * time.Second,
+    RotationInterval: 15 * time.Minute,
 }
 ```
 
 ### API 응답 DTO (JSON 타입 일치)
 
 ```go
-// internal/server/admin_auth.go
+// admin-dashboard/backend/internal/server/server.go
 type heartbeatResponse struct {
     Status            string `json:"status"`
     Rotated           bool   `json:"rotated,omitempty"`
@@ -190,7 +189,7 @@ type heartbeatResponse struct {
 
 ## 하트비트 API
 
-### `POST /admin/api/heartbeat`
+### `POST /admin/api/auth/heartbeat`
 
 세션 TTL을 갱신하고, 선택적으로 토큰을 갱신합니다.
 
@@ -236,7 +235,7 @@ type heartbeatResponse struct {
 | `status` | `string` | 상태 ("idle") |
 | `idle_rejected` | `boolean` | 유휴 상태로 인해 갱신이 거부됨 |
 
-> **⚠️ 주의**: `idle_rejected: true` 응답 시 서버에서 세션 TTL을 10초로 단축합니다.
+> **주의**: `idle_rejected: true` 응답 시 서버에서 세션 TTL을 10초로 단축합니다.
 > 클라이언트는 이 응답을 받으면 즉시 로그아웃 처리하거나 경고 모달을 표시해야 합니다.
 
 #### Response (401 - 세션 만료)
@@ -269,7 +268,7 @@ type heartbeatResponse struct {
 |--------|--------|------|
 | `SESSION_TOKEN_ROTATION` | `true` | 하트비트 시 세션 ID 갱신 활성화 여부 |
 
-> **참고**: 세션 타임아웃 값들 (`ExpiryDuration`, `IdleTimeout`, `AbsoluteTimeout`)은 `constants.SessionConfig`에서 관리됩니다. 환경변수로 오버라이드가 필요하면 `config/config.go`에서 추가 구현이 필요합니다.
+> **참고**: 세션 타임아웃 값들은 `admin-dashboard/backend/internal/config/config.go`의 `SessionConfig`에서 관리됩니다.
 
 ---
 
@@ -285,10 +284,10 @@ type heartbeatResponse struct {
 
 [사용자 반응 있음] (연장 버튼 클릭 or 활동 감지)
 → 타이머 리셋
-→ 서버로 POST /heartbeat { idle: false } 전송 (TTL 복원)
+→ 서버로 POST /admin/api/auth/heartbeat { idle: false } 전송 (TTL 복원)
 
 [사용자 반응 없음] (1분 추가 경과 = 총 10분)
-→ 서버로 POST /heartbeat { idle: true } 전송
+→ 서버로 POST /admin/api/auth/heartbeat { idle: true } 전송
 → 서버: TTL 10초 단축
 → 클라이언트: 즉시 로그인 페이지로 리다이렉트
 ```
@@ -319,7 +318,7 @@ useEffect(() => {
 
 ```typescript
 const sendHeartbeat = async (idle: boolean) => {
-  const response = await fetch('/admin/api/heartbeat', {
+  const response = await fetch('/admin/api/auth/heartbeat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -400,7 +399,7 @@ if (remainingSeconds < 300) {
 
 이 구현은 [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)를 준수합니다.
 
-### ✅ 적용된 권고사항
+### 적용된 권고사항
 
 | OWASP 권고 | 구현 |
 |------------|------|
@@ -431,7 +430,7 @@ sequenceDiagram
     participant S as Server
     participant V as Valkey
 
-    C->>S: POST /heartbeat { idle: false }
+    C->>S: POST /admin/api/auth/heartbeat { idle: false }
     S->>V: GetSession(old_ID)
     V-->>S: session data
     S->>S: Check AbsoluteExpiresAt
@@ -463,7 +462,7 @@ sequenceDiagram
     participant S as Server
     participant V as Valkey
 
-    C->>S: POST /heartbeat { idle: true }
+    C->>S: POST /admin/api/auth/heartbeat { idle: true }
     S->>V: GetSession(sessionID)
     V-->>S: session data
     
@@ -481,22 +480,22 @@ sequenceDiagram
 
 ---
 
-## 🔍 구현 체크리스트 (Implementation Notes)
+## 구현 체크리스트 (Implementation Notes)
 
 개발 시 반드시 확인해야 할 핵심 사항들입니다.
 
-### 1. ✅ 핸들러 로직 순서 (Critical)
+### 1. 핸들러 로직 순서 (Critical)
 
 `HandleHeartbeat`에서 메서드 호출 순서가 매우 중요합니다.
 
 ```go
-// ✅ 올바른 순서 (현재 구현: internal/server/admin_auth.go)
-func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
-    // ... 세션 검증 ...
+// 올바른 순서 (현재 구현: admin-dashboard/backend/internal/server/server.go)
+func (s *Server) handleHeartbeat(c *gin.Context) {
+	    // ... 세션 검증 ...
 
-    // 1️⃣ 먼저 RefreshSessionWithValidation 호출 (TTL 1시간 복원)
-    refreshed, absoluteExpired, err := h.sessions.RefreshSessionWithValidation(ctx, sessionID, req.Idle)
-    if err != nil { /* 에러 처리 */ }
+	    // 1️⃣ 먼저 RefreshSessionWithValidation 호출 (TTL 1시간 복원)
+	    refreshed, absoluteExpired, err := s.sessions.RefreshSessionWithValidation(ctx, sessionID, req.Idle)
+	    if err != nil { /* 에러 처리 */ }
 
     // 절대 만료 처리
     if absoluteExpired {
@@ -510,16 +509,16 @@ func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
         return
     }
 
-    // 2️⃣ 그 다음 RotateSession 호출 (새 세션 ID 발급)
-    if h.config.SessionTokenRotation {
-        newSession, rotateErr := h.sessions.RotateSession(ctx, sessionID)
-        if rotateErr == nil {
-            newSignedSessionID := SignSessionID(newSession.ID, h.securityCfg.SessionSecret)
-            SetSecureCookie(c, sessionCookieName, newSignedSessionID, 0, h.securityCfg.ForceHTTPS)
-            response.Rotated = true
-            response.AbsoluteExpiresAt = newSession.AbsoluteExpiresAt.Unix()
-        }
-    }
+	    // 2️⃣ 그 다음 RotateSession 호출 (새 세션 ID 발급)
+	    if s.cfg.SessionTokenRotation {
+	        newSession, rotateErr := s.sessions.RotateSession(ctx, sessionID)
+	        if rotateErr == nil {
+	            newSignedSessionID := auth.SignSessionID(newSession.ID, s.cfg.AdminSecretKey)
+	            auth.SetSecureCookie(c, auth.SessionCookieName, newSignedSessionID, 0, s.cfg.ForceHTTPS)
+	            response.Rotated = true
+	            response.AbsoluteExpiresAt = newSession.AbsoluteExpiresAt.Unix()
+	        }
+	    }
 
     c.JSON(200, response)
 }
@@ -527,15 +526,15 @@ func (h *AdminHandler) HandleHeartbeat(c *gin.Context) {
 
 **이유**: 먼저 `RefreshSessionWithValidation`으로 TTL을 1시간으로 복원해야, `RotateSession` 내부의 `ttl <= GracePeriod` 검사(중복 회전 방지)를 통과하여 정상적으로 토큰이 교체됩니다.
 
-> **⚠️ 주의**: 순서가 바뀌면 "자연 만료 임박 세션"이 회전되지 않을 수 있습니다.
+> **주의**: 순서가 바뀌면 "자연 만료 임박 세션"이 회전되지 않을 수 있습니다.
 
 ---
 
-### 2. ✅ 멀티 탭 '팀킬(Team Kill)' 방지
+### 2. 멀티 탭 '팀킬(Team Kill)' 방지
 
 **문제**: 탭 A가 `idle=true`를 보내 TTL을 10초로 줄이면, 활발히 작업 중이던 탭 B가 (하트비트 주기가 오기 전이라면) 10초 뒤에 의도치 않게 로그아웃될 수 있습니다.
 
-**현재 구현** (`admin-ui/src/hooks/useActivityDetection.ts`):
+**현재 구현** (`admin-dashboard/frontend/src/hooks/useActivityDetection.ts`):
 
 ```typescript
 const CHANNEL_NAME = 'admin_session'
@@ -563,7 +562,7 @@ export function useActivityDetection(idleTimeoutMs: number) {
 
   // BroadcastChannel 설정
   useEffect(() => {
-    // ⚠️ 호환성 체크: 구형 Safari(15.4 미만) 등에서는 미지원
+    // 호환성 체크: 구형 Safari(15.4 미만) 등에서는 미지원
     if (typeof BroadcastChannel === 'undefined') return
 
     channelRef.current = new BroadcastChannel(CHANNEL_NAME)
@@ -594,44 +593,42 @@ export function useActivityDetection(idleTimeoutMs: number) {
 
 ---
 
-### 3. ✅ 명시적 로그아웃 처리
+### 3. 명시적 로그아웃 처리
 
 사용자가 '로그아웃' 버튼을 직접 눌렀을 때는 Grace Period를 적용하면 **안 됩니다**.
 
-**현재 구현** (`internal/server/admin_auth.go`):
+**현재 구현** (`admin-dashboard/backend/internal/server/server.go`):
 
 ```go
-// HandleLogout: 관리자 로그아웃을 처리합니다. (JSON API)
-// ⚠️ 명시적 로그아웃 시에는 Grace Period를 적용하지 않고 DeleteSession으로 즉시 삭제합니다.
-// RotateSession이나 expireSession을 사용하면 안 됩니다.
-func (h *AdminHandler) HandleLogout(c *gin.Context) {
-    signedSessionID, _ := c.Cookie(sessionCookieName)
-    if signedSessionID != "" {
-        // 서명 검증 후 즉시 삭제 (Grace Period 없음)
-        if sessionID, valid := ValidateSessionSignature(signedSessionID, h.securityCfg.SessionSecret); valid {
-            h.sessions.DeleteSession(c.Request.Context(), sessionID)  // ✅ 즉시 삭제 (DEL)
-        }
-    }
+// handleLogout: 명시적 로그아웃 시 세션 즉시 삭제 (Grace Period 적용 금지)
+func (s *Server) handleLogout(c *gin.Context) {
+	    signedSessionID, _ := c.Cookie(auth.SessionCookieName)
+	    if signedSessionID != "" {
+	        // 서명 검증 후 즉시 삭제 (Grace Period 없음)
+	        if sessionID, valid := auth.ValidateSessionSignature(signedSessionID, s.cfg.AdminSecretKey); valid {
+	            s.sessions.DeleteSession(c.Request.Context(), sessionID)  // 즉시 삭제 (DEL)
+	        }
+	    }
 
-    ClearSecureCookie(c, sessionCookieName, h.securityCfg.ForceHTTPS)
+	    auth.ClearSecureCookie(c, auth.SessionCookieName, s.cfg.ForceHTTPS)
 
-    c.JSON(200, gin.H{
-        "status":  "ok",
-        "message": "Logout successful",
-    })
-}
+	    c.JSON(200, gin.H{
+	        "status":  "ok",
+	        "message": "Logout successful",
+	    })
+	}
 ```
 
 ---
 
-### 4. ✅ 시간 단위 변환 (Seconds vs Milliseconds)
+### 4. 시간 단위 변환 (Seconds vs Milliseconds)
 
 | 구분 | 단위 | 예시 |
 |------|------|------|
 | **백엔드** | Unix Timestamp (초) | `1735568988` |
 | **프론트엔드 (JS/TS)** | 밀리초 | `Date.now()` → `1735568988000` |
 
-**현재 구현** (`admin-ui/src/lib/utils.ts`):
+**현재 구현** (`admin-dashboard/frontend/src/lib/utils.ts`):
 
 ```typescript
 /**
@@ -677,34 +674,20 @@ if (response.absolute_expires_at) {
 
 ---
 
-### 5. 🛡️ 방어적 코드 (RotateSession 내 중복 회전 방지)
+### 5. 방어적 코드 (RotateSession 내 중복 회전 방지)
 
-**현재 구현** (`internal/server/session_valkey.go`):
+**현재 구현** (`admin-dashboard/backend/internal/auth/auth.go`):
 
 ```go
-func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID string) (*Session, error) {
-    // 기존 세션 조회
-    oldSession, err := s.GetSession(ctx, oldSessionID)
-    if err != nil || oldSession == nil {
-        return nil, fmt.Errorf("session not found")
-    }
+	func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID string) (*Session, error) {
+	    // RotationInterval 내에는 회전하지 않음 (중복 회전 방지)
+	    rotationInterval := config.SessionConfig.RotationInterval
+	    if !oldSession.LastRotatedAt.IsZero() && time.Since(oldSession.LastRotatedAt) < rotationInterval {
+	        return oldSession, nil
+	    }
 
-    // [방어적 코드: 중복 회전 방지]
-    // ⚠️ NOTE: 현재 HandleHeartbeat 흐름에서는 RefreshSessionWithValidation이 먼저 호출되어
-    // TTL을 1시간으로 연장하므로, 정상 흐름에서는 이 조건이 실행되지 않습니다.
-    // 다만, 향후 Refresh 로직 변경이나 직접 RotateSession 호출 시를 대비한 방어적 코드입니다.
-    key := sessionKeyPrefix + oldSessionID
-    ttlResp := s.client.Do(ctx, s.client.B().Ttl().Key(key).Build())
-    if ttl, err := ttlResp.AsInt64(); err == nil && ttl > 0 {
-        graceThreshold := int64((constants.SessionConfig.GracePeriod + 5*time.Second).Seconds())
-        if ttl <= graceThreshold {
-            // 이미 회전 진행 중인 세션 → 중복 회전 방지
-            return oldSession, nil
-        }
-    }
-
-    // ... 새 세션 생성 및 Grace Period 적용 ...
-}
+	    // ... 새 세션 생성 및 Grace Period 적용 ...
+	}
 ```
 
 ---
@@ -713,11 +696,11 @@ func (s *ValkeySessionStore) RotateSession(ctx context.Context, oldSessionID str
 
 | 파일 | 설명 |
 |------|------|
-| `internal/constants/constants.go` | `SessionConfig` 설정 (GracePeriod, IdleSessionTTL 포함) |
-| `internal/server/session.go` | `Session` 구조체, `SessionProvider` 인터페이스 |
-| `internal/server/session_valkey.go` | Valkey 기반 세션 저장소 구현 (expireSession 헬퍼 포함) |
-| `internal/server/admin_auth.go` | `HandleHeartbeat` 핸들러 |
-| `internal/config/config.go` | `SessionTokenRotation` 환경변수 로드 |
+| `admin-dashboard/backend/internal/config/config.go` | `SessionConfig`, `SESSION_TOKEN_ROTATION` 로드 |
+| `admin-dashboard/backend/internal/auth/auth.go` | `Session`, `SessionProvider`, `ValkeySessionStore`, 서명/쿠키 유틸 |
+| `admin-dashboard/backend/internal/server/server.go` | `handleLogin`, `handleLogout`, `handleHeartbeat` |
+| `admin-dashboard/frontend/src/hooks/useActivityDetection.ts` | 멀티 탭 활동 감지/동기화 |
+| `admin-dashboard/frontend/src/lib/utils.ts` | Unix time 변환 유틸 |
 
 ---
 

@@ -677,3 +677,69 @@ func TestClient_GRPC_Methods(t *testing.T) {
 		}
 	})
 }
+
+func TestExtractRequestID(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		expected string
+	}{
+		{
+			name:     "nil context",
+			ctx:      nil,
+			expected: "",
+		},
+		{
+			name:     "empty context",
+			ctx:      context.Background(),
+			expected: "",
+		},
+		{
+			name:     "with typed key",
+			ctx:      WithRequestID(context.Background(), "typed-id-123"),
+			expected: "typed-id-123",
+		},
+		{
+			name:     "with string key",
+			ctx:      context.WithValue(context.Background(), "request_id", "string-id-456"),
+			expected: "string-id-456",
+		},
+		{
+			name:     "typed key takes precedence",
+			ctx:      WithRequestID(context.WithValue(context.Background(), "request_id", "string-id"), "typed-id"),
+			expected: "typed-id",
+		},
+		{
+			name:     "empty string value ignored",
+			ctx:      context.WithValue(context.Background(), "request_id", ""),
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractRequestID(tt.ctx)
+			if got != tt.expected {
+				t.Errorf("extractRequestID() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestWithRequestID(t *testing.T) {
+	ctx := context.Background()
+	id := "test-request-id-789"
+
+	newCtx := WithRequestID(ctx, id)
+
+	// Context should contain the ID
+	got := extractRequestID(newCtx)
+	if got != id {
+		t.Errorf("WithRequestID() then extractRequestID() = %q, want %q", got, id)
+	}
+
+	// Original context should be unchanged
+	if extractRequestID(ctx) != "" {
+		t.Error("original context should not be modified")
+	}
+}

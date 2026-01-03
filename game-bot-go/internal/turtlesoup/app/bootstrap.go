@@ -34,11 +34,25 @@ func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 		return nil, nil, err
 	}
 
+	db, cleanupDB, err := newTurtleSoupDB(ctx, cfg, logger)
+	if err != nil {
+		cleanupDataValkey()
+		cleanupMQValkey()
+		return nil, nil, err
+	}
+
+	if _, err := newTurtleSoupRepository(ctx, db); err != nil {
+		cleanupDB()
+		cleanupDataValkey()
+		cleanupMQValkey()
+		return nil, nil, err
+	}
+
 	stores := newTurtleSoupStores(dataValkeyClient, logger)
 	services := newTurtleSoupServices(cfg, restClient, msgProvider, replyPublisher, injectionGuard, stores, logger)
 	gameService := newTurtleSoupGameService(services)
 
-	httpMux := newTurtleSoupHTTPMux(cfg, restClient, gameService, logger)
+	httpMux := newTurtleSoupHTTPMux(cfg, restClient, db, dataValkeyClient.Client, gameService, stores.sessionStore, logger)
 	httpServer := newTurtleSoupHTTPServer(cfg, httpMux)
 
 	streamConsumer := newTurtleSoupStreamConsumer(cfg, mqValkeyClient, logger)
@@ -47,6 +61,7 @@ func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 	serverApp := newTurtleSoupServerApp(logger, httpServer, mqPipeline)
 
 	cleanup := func() {
+		cleanupDB()
 		cleanupDataValkey()
 		cleanupMQValkey()
 	}

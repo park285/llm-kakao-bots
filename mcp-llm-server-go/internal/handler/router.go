@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/middleware"
@@ -25,14 +26,25 @@ func NewRouter(
 	setGinMode(cfg.Logging.Level)
 
 	router := gin.New()
-	router.Use(
+
+	// 미들웨어 체인: OTel이 가장 앞에 있어야 모든 요청을 추적함
+	middlewares := []gin.HandlerFunc{
 		middleware.RequestID(),
 		middleware.RequestLogger(logger),
 		gin.Recovery(),
 		gzip.Gzip(gzip.DefaultCompression),
 		middleware.APIKeyAuth(cfg),
 		middleware.RateLimit(cfg),
-	)
+	}
+
+	// OTel 미들웨어: 활성화된 경우에만 추가 (가장 앞에 배치)
+	if cfg.Telemetry.Enabled {
+		middlewares = append([]gin.HandlerFunc{
+			otelgin.Middleware(cfg.Telemetry.ServiceName),
+		}, middlewares...)
+	}
+
+	router.Use(middlewares...)
 
 	RegisterHealthRoutes(router, cfg)
 	llmHandler.RegisterRoutes(router)

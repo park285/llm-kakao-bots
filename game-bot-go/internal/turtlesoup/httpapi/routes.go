@@ -4,11 +4,13 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	cerrors "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/errors"
+	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/health"
 	commonhttputil "github.com/park285/llm-kakao-bots/game-bot-go/internal/common/httputil"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/llmrest"
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
@@ -31,11 +33,11 @@ const maxBodyBytes = 1 << 20
 // Register: TurtleSoup 게임 API 라우트를 HTTP 멀티플렉서에 등록합니다.
 func Register(mux *http.ServeMux, llmCfg tsconfig.LlmConfig, restClient *llmrest.Client, gameService *tssvc.GameService, logger *slog.Logger) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]any{
-			"status":     "ok",
-			"goroutines": runtime.NumGoroutine(),
-		})
+		_ = commonhttputil.WriteJSON(w, http.StatusOK, health.Get())
 	})
+
+	// GET /metrics - Prometheus 메트릭 (장기 히스토리 분석용)
+	mux.Handle("GET /metrics", promhttp.Handler())
 
 	mux.HandleFunc("GET /debug/models", func(w http.ResponseWriter, r *http.Request) {
 		handleDebugModels(w, r, llmCfg, restClient, logger)

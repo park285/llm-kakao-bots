@@ -16,13 +16,17 @@ services:
     restart: always
     labels:
       deunhealth.restart.on.unhealthy: "true"
+    shm_size: 256mb
+    command:
+      - postgres
+      - -c
+      - unix_socket_permissions=0777
     environment:
       POSTGRES_DB: ${DB_NAME:-twentyq}
       POSTGRES_USER: ${DB_USER:-twentyq_app}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "5432:5432"
+    # ports: 제거됨 - 내부 통신은 UDS(pg-socket) 사용, Docker 내부망(llm-bot-net)으로만 접근
     volumes:
       - pg-data-v18:/var/lib/postgresql/data
       - pg-socket:/var/run/postgresql
@@ -48,8 +52,7 @@ services:
     container_name: valkey-cache
     labels:
       deunhealth.restart.on.unhealthy: "true"
-    ports:
-      - "6379:6379"
+    # ports: 제거됨 - 내부 통신은 UDS(valkey-cache-socket) 사용
     volumes:
       - valkey-cache-data:/data
       - valkey-cache-socket:/var/run/valkey
@@ -79,7 +82,7 @@ services:
     labels:
       deunhealth.restart.on.unhealthy: "true"
     ports:
-      - "1833:1833"
+      - "172.17.0.1:1833:1833" # docker0 bridge gateway - redroid(Iris)만 접근 가능
     volumes:
       - valkey-mq-data:/data
       - ./logs:/var/log/valkey-mq
@@ -132,6 +135,12 @@ services:
       DB_SOCKET_PATH: /var/run/postgresql
       GUARD_THRESHOLD: 0.6
       GRPC_SOCKET_PATH: /var/run/grpc/llm.sock
+      # OpenTelemetry
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: mcp-llm-server
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SAMPLE_RATE: "1.0"
     volumes:
       - ./logs:/app/logs
       - grpc-socket:/var/run/grpc
@@ -141,9 +150,11 @@ services:
         condition: service_healthy
       valkey-cache:
         condition: service_healthy
+      jaeger:
+        condition: service_healthy
     ports:
-      - "40527:40527"
-      - "40528:40528"
+      - "127.0.0.1:40527:40527" # HTTP API - 로컬 디버깅용
+      - "127.0.0.1:40528:40528" # gRPC - 로컬 grpcurl 디버깅용
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "-T", "5", "http://localhost:40527/health/ready" ]
       interval: 30s
@@ -187,6 +198,12 @@ services:
       DB_SOCKET_PATH: /var/run/postgresql
       LOG_DIR: /app/logs
       GOMEMLIMIT: "450MiB"
+      # OpenTelemetry
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: twentyq-bot
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SAMPLE_RATE: "1.0"
     deploy:
       resources:
         limits:
@@ -197,7 +214,7 @@ services:
       - valkey-cache-socket:/var/run/valkey:ro
       - pg-socket:/var/run/postgresql:ro
     ports:
-      - "30081:30081"
+      - "127.0.0.1:30081:30081" # 로컬 디버깅용
     depends_on:
       postgres:
         condition: service_healthy
@@ -207,11 +224,13 @@ services:
         condition: service_healthy
       mcp-llm-server:
         condition: service_healthy
+      jaeger:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:30081/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
+      test: [ "CMD", "wget", "-q", "--spider", "-T", "5", "http://127.0.0.1:30081/health" ]
       interval: 30s
-      timeout: 45s
-      retries: 1
+      timeout: 10s
+      retries: 3
       start_period: 10s
     logging: *default-logging
     security_opt:
@@ -239,8 +258,19 @@ services:
       CACHE_PORT: 6379
       MQ_HOST: valkey-mq
       MQ_PORT: 1833
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_SOCKET_PATH: /var/run/postgresql
+      TURTLE_DB_NAME: turtlesoup
+      TURTLE_DB_USER: turtlesoup_app
       LOG_DIR: /app/logs
       GOMEMLIMIT: "450MiB"
+      # OpenTelemetry
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: turtle-soup-bot
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SAMPLE_RATE: "1.0"
     deploy:
       resources:
         limits:
@@ -250,20 +280,25 @@ services:
       - ./logs:/app/logs
       - grpc-socket:/var/run/grpc:ro
       - valkey-cache-socket:/var/run/valkey:ro
+      - pg-socket:/var/run/postgresql:ro
     ports:
-      - "30082:30082"
+      - "127.0.0.1:30082:30082" # 로컬 디버깅용
     depends_on:
+      postgres:
+        condition: service_healthy
       valkey-cache:
         condition: service_healthy
       valkey-mq:
         condition: service_healthy
       mcp-llm-server:
         condition: service_healthy
+      jaeger:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "for i in 1 2 3 4 5 6; do wget -q --spider -T 2 http://127.0.0.1:30082/health && exit 0; [ $$i -lt 6 ] && sleep 5; done; exit 1" ]
+      test: [ "CMD", "wget", "-q", "--spider", "-T", "5", "http://127.0.0.1:30082/health" ]
       interval: 30s
-      timeout: 45s
-      retries: 1
+      timeout: 10s
+      retries: 3
       start_period: 10s
     logging: *default-logging
     security_opt:
@@ -301,19 +336,30 @@ services:
       SERVICES_LLM_SERVER_HEALTH_URL: http://mcp-llm-server:40527/health
       SERVICES_GAME_BOT_TWENTYQ_HEALTH_URL: http://twentyq-bot:30081/health
       SERVICES_GAME_BOT_TURTLE_HEALTH_URL: http://turtle-soup-bot:30082/health
+      # OpenTelemetry
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: hololive-bot
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: "true"
+      OTEL_SAMPLE_RATE: "1.0"
+      # Docker Socket Proxy (보안: 직접 소켓 마운트 대신 제한된 API만 허용)
+      DOCKER_HOST: tcp://docker-proxy:2375
     volumes:
       - ./logs:/app/logs
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - valkey-cache-socket:/var/run/valkey:ro
       - pg-socket:/var/run/postgresql:ro
     ports:
-      - "30001:30001"
+      - "127.0.0.1:30001:30001" # 로컬 디버깅용
     depends_on:
       postgres:
         condition: service_healthy
       valkey-cache:
         condition: service_healthy
       valkey-mq:
+        condition: service_healthy
+      docker-proxy:
+        condition: service_started
+      jaeger:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -333,16 +379,190 @@ services:
       - llm-bot-net
 
   # ==========================================
-  # Container Health Monitor (DeUnhealth)
+  # Admin Dashboard (공통 관리 서비스)
   # ==========================================
-  deunhealth:
-    image: qmcgaw/deunhealth:latest
-    container_name: deunhealth
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    container_name: admin-dashboard
     restart: always
-    network_mode: none
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
+    env_file:
+      - ./.env
     environment:
-      TZ: Asia/Seoul
+      PORT: 30090
+      ENV: production
       LOG_LEVEL: info
+      LOG_DIR: /app/logs
+      FORCE_HTTPS: "true"
+      # 인증: 관리자 로그인 + 세션 서명(HMAC)
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS_HASH: ${ADMIN_PASS_HASH:?required}
+      SESSION_SECRET: ${SESSION_SECRET:?required}
+      SESSION_TOKEN_ROTATION: "true"
+      # 외부 서비스
+      VALKEY_URL: valkey-cache:6379
+      JAEGER_QUERY_URL: http://jaeger:16686
+      DOCKER_HOST: tcp://docker-proxy:2375
+      # 봇 프록시 URL (도메인별 API 위임)
+      HOLO_BOT_URL: http://hololive-bot:30001
+      TWENTYQ_BOT_URL: http://twentyq-bot:30081
+      TURTLE_BOT_URL: http://turtle-soup-bot:30082
+      # OpenTelemetry
+      OTEL_ENABLED: "true"
+      OTEL_SERVICE_NAME: admin-dashboard
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
+      OTEL_SAMPLE_RATE: "1.0"
+      # Prometheus /metrics 보호 (필수: Bearer 또는 X-API-Key 필요)
+      METRICS_API_KEY: ${METRICS_API_KEY:?set METRICS_API_KEY in .env}
+      GOMEMLIMIT: "256MiB"
+      CACHE_SOCKET_PATH: /var/run/valkey/valkey-cache.sock
+    volumes:
+      - ./logs:/app/logs
+      - valkey-cache-socket:/var/run/valkey:ro
+    ports:
+      - "127.0.0.1:30090:30090" # Cloudflare Tunnel via localhost
+    depends_on:
+      valkey-cache:
+        condition: service_healthy
+      docker-proxy:
+        condition: service_started
+      jaeger:
+        condition: service_healthy
+      hololive-bot:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "-T", "5", "http://localhost:30090/health" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-bot-net
+
+  # ==========================================
+  # Observability (OpenTelemetry)
+  # ==========================================
+  jaeger:
+    image: jaegertracing/jaeger:2.13.0
+    container_name: jaeger
+    user: root # Badger 볼륨 쓰기 권한을 위해 필요
+    restart: unless-stopped
+    labels:
+      deunhealth.restart.on.unhealthy: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+    volumes:
+      - jaeger-badger-data:/badger
+      - ./jaeger-config.yaml:/etc/jaeger/config.yaml:ro
+      - ./jaeger-ui-config.json:/etc/jaeger/ui-config.json:ro
+    command: [ "--config", "/etc/jaeger/config.yaml" ]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Badger Compaction 시 메모리 스파이크 대비
+    healthcheck:
+      # v2: healthcheckv2 extension 사용 (포트 13133)
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:13133/status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-bot-net
+
+  # Prometheus - SPM 메트릭 스토리지
+  # Prometheus가 bearer_token_file을 사용하므로, 토큰 파일을 먼저 생성해야 합니다.
+  prometheus-metrics-token-init:
+    image: alpine:3.23
+    container_name: prometheus-metrics-token-init
+    restart: "no"
+    environment:
+      METRICS_API_KEY: ${METRICS_API_KEY:?set METRICS_API_KEY in .env}
+    volumes:
+      - ./secrets:/secrets:rw
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+
+        if [ "${METRICS_API_KEY}" = "change_me" ]; then
+          echo "METRICS_API_KEY must be set (not change_me)" >&2
+          exit 1
+        fi
+
+        mkdir -p /secrets
+        printf '%s' "${METRICS_API_KEY}" > /secrets/admin-dashboard-metrics.token
+        chmod 0644 /secrets/admin-dashboard-metrics.token
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-bot-net
+
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    container_name: prometheus
+    restart: unless-stopped
+    depends_on:
+      prometheus-metrics-token-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./secrets:/etc/prometheus/secrets:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-bot-net
+
+  # ==========================================
+  # Docker Socket Proxy 
+  # 봇/모니터가 직접 docker.sock에 접근하지 않고, 제한된 API만 허용
+  # ==========================================
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: docker-proxy
+    restart: always
+    environment:
+      #(1=허용, 0=차단)
+      CONTAINERS: 1 # 컨테이너 목록/상태 조회
+      POST: 1 # 컨테이너 시작/중지/재시작 (POST 요청)
+      LOGS: 1 # 로그 조회
+      BUILD: 0 # 이미지 빌드 차단
+      EXEC: 0 # exec 명령 차단
+      IMAGES: 0 # 이미지 관리 차단
+      NETWORKS: 0 # 네트워크 관리 차단
+      VOLUMES: 0 # 볼륨 관리 차단
+      SWARM: 0 # Swarm 관리 차단
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
@@ -352,11 +572,39 @@ services:
     logging: *default-logging
     security_opt:
       - no-new-privileges:true
+    networks:
+      - llm-bot-net
+
+  # ==========================================
+  # Container Health Monitor (DeUnhealth)
+  # ==========================================
+  deunhealth:
+    image: qmcgaw/deunhealth:latest
+    container_name: deunhealth
+    restart: always
+    environment:
+      TZ: Asia/Seoul
+      LOG_LEVEL: info
+      DOCKER_HOST: tcp://docker-proxy:2375
+    depends_on:
+      docker-proxy:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 32m
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - llm-bot-net
 
 volumes:
   pg-data-v18:
   valkey-cache-data:
   valkey-mq-data:
+  jaeger-badger-data: # Jaeger 트레이스 데이터 영속화
+  prometheus-data: # Prometheus SPM 메트릭 데이터
   grpc-socket:
     driver: local
     driver_opts:

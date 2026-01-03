@@ -1,0 +1,44 @@
+# Prometheus Configuration for Jaeger SPM
+# Jaeger SpanMetrics에서 생성된 RED 메트릭을 수집
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# TSDB 보관 정책 (deprecated CLI 플래그 대신 설정 파일에서 관리)
+storage:
+  tsdb:
+    retention:
+      time: 7d
+
+scrape_configs:
+  # Jaeger SpanMetrics Exporter (SPM RED 메트릭)
+  - job_name: 'jaeger-spanmetrics'
+    static_configs:
+      - targets: ['jaeger:8889']
+    scrape_interval: 10s
+
+  # Jaeger 내부 메트릭 (선택 사항)
+  - job_name: 'jaeger-internal'
+    static_configs:
+      - targets: ['jaeger:8888']
+    scrape_interval: 30s
+
+  # 서비스 런타임 메트릭 (Go 런타임: goroutines, memory, GC 등)
+  - job_name: 'app-runtime'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+        - 'twentyq-bot:30081'
+        - 'turtle-soup-bot:30082'
+        - 'hololive-bot:30001'
+        - 'mcp-llm-server:40527'
+
+  # Admin Dashboard 메트릭 (Bearer 토큰 보호)
+  - job_name: 'admin-dashboard'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    bearer_token_file: '/etc/prometheus/secrets/admin-dashboard-metrics.token'
+    static_configs:
+      - targets: ['admin-dashboard:30090']

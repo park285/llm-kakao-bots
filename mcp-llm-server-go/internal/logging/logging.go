@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,21 +11,29 @@ import (
 	"time"
 
 	"github.com/lmittmann/tint"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 )
 
 const (
-	defaultLogFileName = "server.log"
+	defaultLogFileName  = "server.log"
+	combinedLogFileName = "combined.log"
 )
 
 // NewLogger: 로거를 생성합니다.
 func NewLogger(cfg config.LoggingConfig) (*slog.Logger, error) {
+	return NewLoggerWithOTel(cfg, false)
+}
+
+// NewLoggerWithOTel: OTel 상관관계 기능을 포함한 로거를 생성합니다.
+// enableOTel이 true면 로그에 trace_id/span_id가 자동으로 추가됩니다.
+func NewLoggerWithOTel(cfg config.LoggingConfig, enableOTel bool) (*slog.Logger, error) {
 	level := parseLevel(cfg.Level)
 	logDir := strings.TrimSpace(cfg.LogDir)
 	if logDir == "" {
-		logger := newLogger(os.Stdout, level, false)
+		logger := newLogger(os.Stdout, level, false, enableOTel)
 		slog.SetDefault(logger)
 		return logger, nil
 	}
@@ -42,6 +51,7 @@ func NewLogger(cfg config.LoggingConfig) (*slog.Logger, error) {
 		return nil, fmt.Errorf("create log dir failed: %w", err)
 	}
 
+	// 서비스별 로그 파일
 	logFile := &lumberjack.Logger{
 		Filename:   filepath.Join(logDir, defaultLogFileName),
 		MaxSize:    cfg.MaxSizeMB,
@@ -50,20 +60,41 @@ func NewLogger(cfg config.LoggingConfig) (*slog.Logger, error) {
 		Compress:   cfg.Compress,
 	}
 
-	writer := io.MultiWriter(os.Stdout, logFile)
-	logger := newLogger(writer, level, true)
+	// 통합 로그 파일 (combined.log) - 모든 서비스의 로그가 여기에 모임
+	combinedLogFile := &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, combinedLogFileName),
+		MaxSize:    cfg.MaxSizeMB * 3, // 서비스 합산이므로 더 큰 용량
+		MaxBackups: cfg.MaxBackups,
+		MaxAge:     cfg.MaxAgeDays,
+		Compress:   cfg.Compress,
+	}
+
+	// stdout + 서비스별 로그 + 통합 로그에 동시 출력
+	writer := io.MultiWriter(os.Stdout, logFile, combinedLogFile)
+	logger := newLogger(writer, level, true, enableOTel)
 	slog.SetDefault(logger)
-	logger.Info("file_logging_enabled", "path", logFile.Filename)
+	logger.Info("file_logging_enabled",
+		slog.String("path", logFile.Filename),
+		slog.String("combined", combinedLogFile.Filename),
+		slog.Bool("otel_correlation", enableOTel),
+	)
 	return logger, nil
 }
 
-func newLogger(writer io.Writer, level slog.Level, noColor bool) *slog.Logger {
-	return slog.New(tint.NewHandler(writer, &tint.Options{
+func newLogger(writer io.Writer, level slog.Level, noColor bool, enableOTel bool) *slog.Logger {
+	var handler slog.Handler = tint.NewHandler(writer, &tint.Options{
 		Level:      level,
 		TimeFormat: time.RFC3339,
 		AddSource:  true,
 		NoColor:    noColor,
-	}))
+	})
+
+	// OTel 활성화 시 trace_id/span_id 자동 추가
+	if enableOTel {
+		handler = &OTelHandler{inner: handler}
+	}
+
+	return slog.New(handler)
 }
 
 func parseLevel(level string) slog.Level {
@@ -77,4 +108,33 @@ func parseLevel(level string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
+}
+
+// OTelHandler: slog.Handler를 래핑하여 trace_id/span_id를 자동으로 로그에 추가합니다.
+type OTelHandler struct {
+	inner slog.Handler
+}
+
+func (h *OTelHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.inner.Enabled(ctx, level)
+}
+
+func (h *OTelHandler) Handle(ctx context.Context, record slog.Record) error {
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		spanCtx := span.SpanContext()
+		record.AddAttrs(
+			slog.String("trace_id", spanCtx.TraceID().String()),
+			slog.String("span_id", spanCtx.SpanID().String()),
+		)
+	}
+	return h.inner.Handle(ctx, record)
+}
+
+func (h *OTelHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &OTelHandler{inner: h.inner.WithAttrs(attrs)}
+}
+
+func (h *OTelHandler) WithGroup(name string) slog.Handler {
+	return &OTelHandler{inner: h.inner.WithGroup(name)}
 }

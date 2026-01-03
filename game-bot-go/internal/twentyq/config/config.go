@@ -72,6 +72,7 @@ type Config struct {
 	Log          LogConfig
 	Stats        StatsConfig
 	Usage        UsageConfig
+	Telemetry    commonconfig.TelemetryConfig // OpenTelemetry 분산 추적
 }
 
 // LoadFromEnv: 환경 변수로부터 전체 애플리케이션 설정을 로드합니다.
@@ -118,6 +119,13 @@ func LoadFromEnv() (*Config, error) {
 		return nil, err
 	}
 	usage := readUsageConfig()
+	telemetry, err := commonconfig.ReadTelemetryConfigFromEnv("twentyq-bot")
+	if err != nil {
+		return nil, fmt.Errorf("read telemetry config: %w", err)
+	}
+
+	// Telemetry 연동: gRPC 클라이언트도 OTel trace context 전파 활성화
+	llmCfg.EnableOTel = telemetry.Enabled
 
 	return &Config{
 		Server:       server,
@@ -132,6 +140,7 @@ func LoadFromEnv() (*Config, error) {
 		Log:          log,
 		Stats:        stats,
 		Usage:        usage,
+		Telemetry:    telemetry,
 	}, nil
 }
 

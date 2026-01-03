@@ -12,16 +12,62 @@ import (
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/di"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/health"
+	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/telemetry"
 )
 
+// Version: 빌드 시 ldflags로 주입됨 (예: -ldflags="-X main.Version=1.0.0")
+var Version = "dev"
+
 func main() {
+	health.Init(Version)
+
+	// Graceful Shutdown을 위해 os.Exit 대신 exitCode 변수 사용
+	var exitCode int
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	app, err := di.InitializeApp()
 	if err != nil {
-		log.Fatalf("failed to initialize app: %v", err)
+		log.Printf("failed to initialize app: %v", err)
+		exitCode = 1
+		return
 	}
 	defer func() {
 		app.Close()
 	}()
+
+	// OpenTelemetry Provider 초기화
+	otelProvider, err := telemetry.NewProvider(context.Background(), telemetry.Config{
+		Enabled:        app.Config.Telemetry.Enabled,
+		ServiceName:    app.Config.Telemetry.ServiceName,
+		ServiceVersion: app.Config.Telemetry.ServiceVersion,
+		Environment:    app.Config.Telemetry.Environment,
+		OTLPEndpoint:   app.Config.Telemetry.OTLPEndpoint,
+		OTLPInsecure:   app.Config.Telemetry.OTLPInsecure,
+		SampleRate:     app.Config.Telemetry.SampleRate,
+	})
+	if err != nil {
+		app.Logger.Error("otel_init_failed", "err", err)
+		exitCode = 1
+		return
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if shutdownErr := otelProvider.Shutdown(shutdownCtx); shutdownErr != nil {
+			app.Logger.Error("otel_shutdown_failed", "err", shutdownErr)
+		}
+	}()
+
+	if otelProvider.IsEnabled() {
+		app.Logger.Info("otel_enabled",
+			"service", app.Config.Telemetry.ServiceName,
+			"endpoint", app.Config.Telemetry.OTLPEndpoint,
+			"sample_rate", app.Config.Telemetry.SampleRate,
+		)
+	}
 
 	config.LogEnvStatus(app.Config, app.Logger)
 	app.Logger.Info(
@@ -127,6 +173,7 @@ func main() {
 	}
 
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 }

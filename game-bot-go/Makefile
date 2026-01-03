@@ -1,5 +1,12 @@
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
+IMAGE_NAME ?= game-bot-go
+
+VERSION := $(shell cat VERSION)
+VERSION_PARTS := $(subst ., ,$(VERSION))
+MAJOR := $(word 1,$(VERSION_PARTS))
+MINOR := $(word 2,$(VERSION_PARTS))
+PATCH := $(word 3,$(VERSION_PARTS))
 
 .PHONY: lint
 lint:
@@ -13,12 +20,43 @@ fmt:
 test:
 	$(GO) test ./...
 
-.PHONY: wire
-wire:
-	$(GO) generate -tags=wireinject ./...
-
 .PHONY: build
-build: lint
+build: lint build-bin
+
+.PHONY: build-bin
+build-bin:
 	mkdir -p bin
-	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -o bin/twentyq ./cmd/twentyq
-	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -o bin/turtlesoup ./cmd/turtlesoup
+	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -ldflags="-X main.Version=$(VERSION)" -o bin/twentyq ./cmd/twentyq
+	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -ldflags="-X main.Version=$(VERSION)" -o bin/turtlesoup ./cmd/turtlesoup
+
+.PHONY: version
+version:
+	@echo $(VERSION)
+
+.PHONY: bump-patch
+bump-patch:
+	@echo "$(MAJOR).$(MINOR).$(shell expr $(PATCH) + 1)" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
+
+.PHONY: bump-minor
+bump-minor:
+	@echo "$(MAJOR).$(shell expr $(MINOR) + 1).0" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
+
+.PHONY: bump-major
+bump-major:
+	@echo "$(shell expr $(MAJOR) + 1).0.0" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
+
+.PHONY: docker-build
+docker-build: bump-patch
+	docker build -t $(IMAGE_NAME):$(shell cat VERSION) -t $(IMAGE_NAME):latest .
+	@echo "Built $(IMAGE_NAME):$(shell cat VERSION)"
+
+.PHONY: docker-build-no-bump
+docker-build-no-bump:
+	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
+
+.PHONY: clean
+clean:
+	rm -rf bin/

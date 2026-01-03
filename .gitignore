@@ -14,6 +14,8 @@
 credentials.json
 secrets.yml
 secrets.yaml
+secrets/*
+!secrets/.gitkeep
 
 # ============================================
 # Python (mcp-llm-server)
@@ -123,6 +125,7 @@ backups/
 # ============================================
 .serena/
 .claude/
+.gemini/
 *.ai.md
 *-ai-notes.md
 *.backup
@@ -187,6 +190,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# OpenAPI Generator output (auto-generated)
+**/src/api/generated/
+
 # ============================================
 # Repository-specific (Go)
 # ============================================
@@ -194,6 +200,7 @@ yarn-error.log*
 hololive-kakao-bot-go/config.json
 hololive-kakao-bot-go/bot
 hololive-kakao-bot-go/fetch_profiles
+admin-dashboard/backend/admin
 
 # ============================================
 # Explicitly Include (Override)

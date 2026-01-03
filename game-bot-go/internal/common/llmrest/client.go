@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -21,6 +22,7 @@ type Config struct {
 	APIKey         string
 	Timeout        time.Duration
 	ConnectTimeout time.Duration
+	EnableOTel     bool // OpenTelemetry 계측 활성화
 }
 
 // Client: LLM 서버와 gRPC로 통신하기 위한 클라이언트입니다.
@@ -53,6 +55,10 @@ func New(cfg Config) (*Client, error) {
 		if apiKey != "" {
 			ctx = metadata.AppendToOutgoingContext(ctx, "x-api-key", apiKey)
 		}
+		// Context에서 Request ID를 추출하여 메타데이터로 전파
+		if reqID := extractRequestID(ctx); reqID != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "x-request-id", reqID)
+		}
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 
@@ -63,6 +69,11 @@ func New(cfg Config) (*Client, error) {
 			grpc.MaxCallRecvMsgSize(grpcMaxMsgSizeBytes),
 			grpc.MaxCallSendMsgSize(grpcMaxMsgSizeBytes),
 		),
+	}
+
+	// OTel StatsHandler: TraceContext 자동 전파
+	if cfg.EnableOTel {
+		baseOpts = append(baseOpts, grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 	}
 
 	var target string
@@ -81,7 +92,8 @@ func New(cfg Config) (*Client, error) {
 
 		// passthrough 스킴 사용: gRPC가 주소를 그대로 사용함
 		target = "passthrough:///" + socketPath
-		dialOpts = append(baseOpts, grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+		dialOpts = baseOpts
+		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "unix", socketPath)
 		}))
@@ -146,4 +158,29 @@ func (c *Client) Close() error {
 		return fmt.Errorf("grpc conn close failed: %w", err)
 	}
 	return nil
+}
+
+// requestIDKey: Context에서 Request ID를 저장하는 키 타입
+type requestIDKey struct{}
+
+// extractRequestID: Context에서 Request ID를 추출합니다.
+// 여러 키 형식(문자열, 별도 타입)을 순차적으로 확인합니다.
+func extractRequestID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	// 1. 별도 타입 키 확인 (권장 방식)
+	if v, ok := ctx.Value(requestIDKey{}).(string); ok && v != "" {
+		return v
+	}
+	// 2. 문자열 키 확인 (호환성)
+	if v, ok := ctx.Value("request_id").(string); ok && v != "" {
+		return v
+	}
+	return ""
+}
+
+// WithRequestID: Context에 Request ID를 추가합니다.
+func WithRequestID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, id)
 }

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -76,9 +77,9 @@ func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Liste
 	var udsLis net.Listener
 	if socketPath != "" {
 		// 기존 소켓 파일이 있으면 삭제함 (비정상 종료 시 잔존 파일 처리)
-		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
+		if removeErr := os.Remove(socketPath); removeErr != nil && !os.IsNotExist(removeErr) {
 			_ = tcpLis.Close()
-			return nil, nil, nil, fmt.Errorf("remove existing socket: %w", err)
+			return nil, nil, nil, fmt.Errorf("remove existing socket: %w", removeErr)
 		}
 
 		udsLis, err = lc.Listen(listenCtx, "unix", socketPath)
@@ -92,13 +93,20 @@ func NewServer(cfg *config.Config, logger *slog.Logger) (*grpc.Server, net.Liste
 		}
 	}
 
-	server := grpc.NewServer(
+	serverOpts := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(maxRecvMsgSizeBytes),
 		grpc.ChainUnaryInterceptor(
 			unaryInterceptor(logger, apiKey, apiKeyRequired),
 			errorMapperInterceptor(),
 		),
-	)
+	}
+
+	// OTel StatsHandler: TraceContext 자동 추출
+	if cfg != nil && cfg.Telemetry.Enabled {
+		serverOpts = append(serverOpts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	}
+
+	server := grpc.NewServer(serverOpts...)
 	return server, tcpLis, udsLis, nil
 }
 

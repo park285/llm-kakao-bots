@@ -1,7 +1,12 @@
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
 IMAGE_NAME ?= mcp-llm-server
-IMAGE_TAG ?= latest
+
+VERSION := $(shell cat VERSION)
+VERSION_PARTS := $(subst ., ,$(VERSION))
+MAJOR := $(word 1,$(VERSION_PARTS))
+MINOR := $(word 2,$(VERSION_PARTS))
+PATCH := $(word 3,$(VERSION_PARTS))
 
 .PHONY: lint
 lint:
@@ -20,25 +25,41 @@ test-coverage:
 	$(GO) test ./... -coverprofile=coverage.out
 	$(GO) tool cover -html=coverage.out -o coverage.html
 
-.PHONY: wire
-wire:
-	$(GO) generate -tags=wireinject ./...
-
 .PHONY: build
 build: lint build-bin
 
 .PHONY: build-bin
 build-bin:
 	mkdir -p bin
-	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -o bin/server ./cmd/server
+	CGO_ENABLED=0 $(GO) build -tags go_json -trimpath -ldflags="-X main.Version=$(VERSION)" -o bin/server ./cmd/server
+
+.PHONY: version
+version:
+	@echo $(VERSION)
+
+.PHONY: bump-patch
+bump-patch:
+	@echo "$(MAJOR).$(MINOR).$(shell expr $(PATCH) + 1)" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
+
+.PHONY: bump-minor
+bump-minor:
+	@echo "$(MAJOR).$(shell expr $(MINOR) + 1).0" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
+
+.PHONY: bump-major
+bump-major:
+	@echo "$(shell expr $(MAJOR) + 1).0.0" > VERSION
+	@echo "Version bumped to $$(cat VERSION)"
 
 .PHONY: docker-build
-docker-build:
-	docker build -f Dockerfile.prod -t $(IMAGE_NAME):$(IMAGE_TAG) .
+docker-build: bump-patch
+	docker build -f Dockerfile.prod -t $(IMAGE_NAME):$(shell cat VERSION) -t $(IMAGE_NAME):latest .
+	@echo "Built $(IMAGE_NAME):$(shell cat VERSION)"
 
-.PHONY: docker-push
-docker-push:
-	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+.PHONY: docker-build-no-bump
+docker-build-no-bump:
+	docker build -f Dockerfile.prod -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
 
 .PHONY: clean
 clean:

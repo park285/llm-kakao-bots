@@ -5,18 +5,30 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
+	"github.com/kapu/hololive-kakao-bot-go/internal/platform/telemetry"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
 
+// Version: 빌드 시 ldflags로 주입됨 (예: -ldflags="-X main.Version=1.0.0")
+var Version = "dev"
+
 func main() {
+	// Graceful Shutdown을 위해 os.Exit 대신 exitCode 변수 사용
+	var exitCode int
+	defer func() {
+		os.Exit(exitCode)
+	}()
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 
 	// slog 기반 로거 초기화 (파일 로깅 포함)
@@ -29,11 +41,43 @@ func main() {
 	}, "bot.log", cfg.Logging.Level)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
-		os.Exit(1)
+		exitCode = 1
+		return
+	}
+
+	// OpenTelemetry Provider 초기화
+	otelProvider, err := telemetry.NewProvider(context.Background(), telemetry.Config{
+		Enabled:        cfg.Telemetry.Enabled,
+		ServiceName:    cfg.Telemetry.ServiceName,
+		ServiceVersion: cfg.Telemetry.ServiceVersion,
+		Environment:    cfg.Telemetry.Environment,
+		OTLPEndpoint:   cfg.Telemetry.OTLPEndpoint,
+		OTLPInsecure:   cfg.Telemetry.OTLPInsecure,
+		SampleRate:     cfg.Telemetry.SampleRate,
+	})
+	if err != nil {
+		logger.Error("otel_init_failed", slog.Any("err", err))
+		exitCode = 1
+		return
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if shutdownErr := otelProvider.Shutdown(shutdownCtx); shutdownErr != nil {
+			logger.Error("otel_shutdown_failed", slog.Any("err", shutdownErr))
+		}
+	}()
+
+	if otelProvider.IsEnabled() {
+		logger.Info("otel_enabled",
+			slog.String("service", cfg.Telemetry.ServiceName),
+			slog.String("endpoint", cfg.Telemetry.OTLPEndpoint),
+			slog.Float64("sample_rate", cfg.Telemetry.SampleRate),
+		)
 	}
 
 	logger.Info("Hololive KakaoTalk Bot starting...",
-		slog.String("version", cfg.Version),
+		slog.String("version", Version),
 		slog.String("log_level", cfg.Logging.Level),
 	)
 
@@ -42,7 +86,8 @@ func main() {
 	buildCancel()
 	if err != nil {
 		logger.Error("Failed to assemble application services", slog.Any("error", err))
-		os.Exit(1)
+		exitCode = 1
+		return
 	}
 	defer runtime.Close()
 

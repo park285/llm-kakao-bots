@@ -44,7 +44,7 @@ func Initialize(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*
 
 	riddleService := newTwentyQRiddleService(cfg, restClient, msgProvider, stores, statsRecorder, logger)
 
-	httpMux := newTwentyQHTTPMux(riddleService, db, msgProvider, logger)
+	httpMux := newTwentyQHTTPMux(riddleService, db, dataValkeyClient.Client, stores.sessionStore, msgProvider, logger)
 	httpServer := newTwentyQHTTPServer(cfg, httpMux)
 
 	mqValkeyClient, cleanupMQValkey, err := newTwentyQMQValkey(ctx, cfg, logger)

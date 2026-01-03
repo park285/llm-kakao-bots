@@ -1,8 +1,6 @@
 package redis
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -12,44 +10,16 @@ import (
 	tsconfig "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/config"
 )
 
-// ProcessingLockService: 채팅방 단위의 처리 중 상태를 관리하는 락 서비스 (common/processinglock 래퍼)
-type ProcessingLockService struct {
-	service *processinglock.Service
-}
+// ProcessingLockService: 채팅방 단위의 처리 중 상태를 관리하는 락 서비스
+// common/processinglock.DomainService의 별칭입니다.
+type ProcessingLockService = processinglock.DomainService
 
 // NewProcessingLockService: 새로운 ProcessingLockService 인스턴스를 생성합니다.
 func NewProcessingLockService(client valkey.Client, logger *slog.Logger) *ProcessingLockService {
-	return &ProcessingLockService{
-		service: processinglock.New(
-			client,
-			logger,
-			processingKey,
-			time.Duration(tsconfig.RedisProcessingTTLSeconds)*time.Second,
-		),
-	}
-}
-
-// StartProcessing: 처리를 시작하고 락을 설정합니다.
-func (s *ProcessingLockService) StartProcessing(ctx context.Context, chatID string) error {
-	if err := processinglock.WrapStartProcessingError(chatID, s.service.Start(ctx, chatID)); err != nil {
-		return fmt.Errorf("start processing failed: %w", err)
-	}
-	return nil
-}
-
-// FinishProcessing: 처리를 완료하고 락을 해제합니다.
-func (s *ProcessingLockService) FinishProcessing(ctx context.Context, chatID string) error {
-	if err := processinglock.WrapFinishProcessingError(s.service.Finish(ctx, chatID)); err != nil {
-		return fmt.Errorf("finish processing failed: %w", err)
-	}
-	return nil
-}
-
-// IsProcessing: 현재 처리가 진행 중인지 확인합니다.
-func (s *ProcessingLockService) IsProcessing(ctx context.Context, chatID string) (bool, error) {
-	processing, err := s.service.IsProcessing(ctx, chatID)
-	if err != nil {
-		return false, fmt.Errorf("check processing failed: %w", processinglock.WrapIsProcessingError(err))
-	}
-	return processing, nil
+	return processinglock.NewDomainService(
+		client,
+		logger,
+		processingKey,
+		time.Duration(tsconfig.RedisProcessingTTLSeconds)*time.Second,
+	)
 }

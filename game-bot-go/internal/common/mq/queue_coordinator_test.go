@@ -122,7 +122,7 @@ func TestQueueCoordinator_wrapsStoreErrors(t *testing.T) {
 			store := &queueCoordinatorStoreStub{}
 			tt.configStore(store, sentinel)
 
-			coordinator := NewQueueCoordinator[string, int, int](store, newTestLogger(), QueueCoordinatorConfig[string, int]{})
+			coordinator := NewQueueCoordinator(store, newTestLogger(), QueueCoordinatorConfig[string, int]{})
 			err := tt.call(coordinator)
 			if err == nil {
 				t.Fatalf("expected error")
@@ -136,4 +136,3 @@ func TestQueueCoordinator_wrapsStoreErrors(t *testing.T) {
 		})
 	}
 }
-

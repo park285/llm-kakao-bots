@@ -55,7 +55,7 @@ func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 
 func isNoisyInfoPath(path string) bool {
 	switch path {
-	case "/health", "/health/ready", "/health/models":
+	case "/health", "/health/ready", "/health/models", "/metrics":
 		return true
 	default:
 		return false

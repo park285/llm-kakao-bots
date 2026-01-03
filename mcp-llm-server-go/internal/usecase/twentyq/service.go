@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	twentyqdomain "github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/domain/twentyq"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/gemini"
@@ -17,7 +19,6 @@ import (
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/prompt"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/toon"
-	"golang.org/x/text/unicode/norm"
 )
 
 // Service: TwentyQ 비즈니스 로직(HTTP/gRPC 공용) 구현체입니다.

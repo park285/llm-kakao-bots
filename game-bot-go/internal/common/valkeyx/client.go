@@ -85,11 +85,9 @@ func NewClient(cfg Config) (valkey.Client, error) {
 			}
 			return d.DialContext(ctx, "unix", socketPath)
 		}
-	} else {
+	} else if cfg.DialTimeout > 0 {
 		// TCP 모드: Timeout 설정
-		if cfg.DialTimeout > 0 {
-			opts.Dialer.Timeout = cfg.DialTimeout
-		}
+		opts.Dialer.Timeout = cfg.DialTimeout
 	}
 
 	// PoolSize/MinIdleConns는 BlockingPool 설정으로 매핑합니다.

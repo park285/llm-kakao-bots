@@ -150,23 +150,11 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 
 	youTubeScheduler := ProvideYouTubeScheduler(deps)
 	youTubeService := ProvideYouTubeService(infra.ytStack)
-	valkeySessionStore := ProvideSessionStore(deps.Cache, logger)
-	loginRateLimiter := ProvideLoginRateLimiter()
-	securityConfig := ProvideSecurityConfig(cfg)
-	adminCredentials := ProvideAdminCredentials(cfg)
 	systemCollector := ProvideSystemCollector(cfg)
 
-	adminHandler := ProvideAdminHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Alarm, deps.Holodex, youTubeService, infra.ytStack.StatsRepo, deps.Activity, deps.Settings, deps.ACL, cfg, valkeySessionStore, loginRateLimiter, securityConfig, adminCredentials, systemCollector, logger)
+	adminHandler := ProvideAdminHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Alarm, deps.Holodex, youTubeService, infra.ytStack.StatsRepo, deps.Activity, deps.Settings, deps.ACL, systemCollector, logger)
 
-	adminAllowedCIDRs, err := ProvideAdminAllowedCIDRs(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// Docker 서비스 (선택적 - 소켓 마운트 필요)
-	dockerService := ProvideDockerService(logger)
-
-	adminRouter, err := ProvideAdminRouter(ctx, logger, adminHandler, dockerService, valkeySessionStore, securityConfig, adminAllowedCIDRs, deps.MemberRepo, deps.Settings)
+	adminRouter, err := ProvideAdminRouter(ctx, cfg, logger, adminHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -181,9 +169,6 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 		MQConsumer:        valkeyMQConsumer,
 		Scheduler:         youTubeScheduler,
 		AdminHandler:      adminHandler,
-		Sessions:          valkeySessionStore,
-		SecurityConfig:    securityConfig,
-		AdminAllowedCIDRs: adminAllowedCIDRs,
 		AdminRouter:       adminRouter,
 		AdminAddr:         adminAddr,
 		AdminServer:       adminServer,

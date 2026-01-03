@@ -124,9 +124,6 @@ services:
 | 카테고리 | 변수명 | 설명 | 기본값 |
 | :--- | :--- | :--- | :--- |
 | **서버** | `SERVER_PORT` | 봇 웹 서버 포트 | `30001` |
-| | `ADMIN_PASS_HASH` | 관리자 패널 비밀번호 (Bcrypt 해시) | **필수** |
-| | `SESSION_SECRET` | 세션 보안을 위한 시크릿 키 | **필수** |
-| | `ADMIN_ALLOWED_IPS` | 관리자 페이지 접근 허용 IP (쉼표 구분) | (전체 허용) |
 | **Holodex** | `HOLODEX_API_KEY_1` | Holodex API 키 (여러 개 등록 가능 _1~_5) | **필수** |
 | **YouTube** | `YOUTUBE_API_KEY` | YouTube Data API 키 (구독자 수 조회용) | - |
 | **Kakao** | `KAKAO_ROOMS` | 봇이 응답할 카카오톡 방 이름 목록 (쉼표 구분) | `홀로라이브 알림방` |
@@ -136,6 +133,8 @@ services:
 | **Cache** | `CACHE_HOST`, `_PORT` | Valkey(Redis) 캐시 서버 정보 | `localhost`, `6379` |
 | **MQ** | `MQ_HOST`, `_PORT` | ValkeyMQ 서버 정보 | `localhost`, `1833` |
 | **Logging** | `LOG_LEVEL` | 로그 레벨 (`debug`, `info`, `warn`, `error`) | `info` |
+
+> 참고: 관리자 콘솔(Auth/Docker/Logs/Traces)은 `admin-dashboard`로 분리되었으며, `hololive-bot`은 `/api/holo/*` 도메인 API만 제공합니다.
 
 ## 🕹 명령어 목록
 

@@ -11,5 +11,6 @@ func NewFromConfig(cfg commonconfig.LlmConfig) (*Client, error) {
 		APIKey:         cfg.APIKey,
 		Timeout:        cfg.Timeout,
 		ConnectTimeout: cfg.ConnectTimeout,
+		EnableOTel:     cfg.EnableOTel,
 	})
 }

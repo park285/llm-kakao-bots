@@ -181,5 +181,6 @@ func buildConfig() *Config {
 			UsageBatchMaxBackoffSeconds:          getEnvNonNegativeInt("DB_USAGE_BATCH_MAX_BACKOFF_SECONDS", 60),
 			UsageBatchErrorLogMaxIntervalSeconds: getEnvNonNegativeInt("DB_USAGE_BATCH_ERROR_LOG_MAX_INTERVAL_SECONDS", 60),
 		},
+		Telemetry: readTelemetryConfig(),
 	}
 }

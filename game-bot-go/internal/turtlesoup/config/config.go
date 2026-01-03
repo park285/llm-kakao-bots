@@ -42,6 +42,17 @@ type InjectionGuardConfig struct {
 	CacheMaxEntries int           // LRU 캐시 최대 엔트리 수
 }
 
+// PostgresConfig: PostgreSQL 데이터베이스 설정
+type PostgresConfig struct {
+	Host       string
+	Port       int
+	SocketPath string
+	Name       string
+	User       string
+	Password   string
+	SSLMode    string
+}
+
 // Config: TurtleSoup 서비스 전체 설정을 통합하는 구조체입니다.
 type Config struct {
 	Server         ServerConfig
@@ -51,9 +62,11 @@ type Config struct {
 	Puzzle         PuzzleConfig
 	Redis          RedisConfig
 	Valkey         ValkeyMQConfig
+	Postgres       PostgresConfig
 	Access         AccessConfig
 	InjectionGuard InjectionGuardConfig
 	Log            LogConfig
+	Telemetry      commonconfig.TelemetryConfig
 }
 
 // LoadFromEnv: 환경 변수에서 전체 설정을 읽어옵니다.
@@ -83,6 +96,10 @@ func LoadFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	postgres, err := readPostgresConfig()
+	if err != nil {
+		return nil, err
+	}
 	access, err := readAccessConfig()
 	if err != nil {
 		return nil, err
@@ -95,6 +112,12 @@ func LoadFromEnv() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	telemetry, err := commonconfig.ReadTelemetryConfigFromEnv("turtle-soup-bot")
+	if err != nil {
+		return nil, fmt.Errorf("read telemetry config: %w", err)
+	}
+
+	llmCfg.EnableOTel = telemetry.Enabled
 
 	return &Config{
 		Server:         server,
@@ -104,9 +127,11 @@ func LoadFromEnv() (*Config, error) {
 		Puzzle:         puzzle,
 		Redis:          redis,
 		Valkey:         valkey,
+		Postgres:       postgres,
 		Access:         access,
 		InjectionGuard: injectionGuard,
 		Log:            log,
+		Telemetry:      telemetry,
 	}, nil
 }
 
@@ -267,4 +292,21 @@ func readLogConfig() (LogConfig, error) {
 		return LogConfig{}, fmt.Errorf("read log config failed: %w", err)
 	}
 	return cfg, nil
+}
+
+func readPostgresConfig() (PostgresConfig, error) {
+	port, err := commonconfig.IntFromEnv("DB_PORT", 5432)
+	if err != nil {
+		return PostgresConfig{}, fmt.Errorf("read DB_PORT failed: %w", err)
+	}
+
+	return PostgresConfig{
+		Host:       commonconfig.StringFromEnv("DB_HOST", "localhost"),
+		Port:       port,
+		SocketPath: commonconfig.StringFromEnv("DB_SOCKET_PATH", ""),
+		Name:       commonconfig.StringFromEnv("TURTLE_DB_NAME", "turtlesoup"),
+		User:       commonconfig.StringFromEnv("TURTLE_DB_USER", "turtlesoup_app"),
+		Password:   commonconfig.StringFromEnv("DB_PASSWORD", ""),
+		SSLMode:    commonconfig.StringFromEnv("DB_SSLMODE", "disable"),
+	}, nil
 }

@@ -2,14 +2,14 @@ package repository
 
 import "time"
 
-// GameSession 게임 세션 기록.
+// GameSession: 게임 세션 기록
 // 복합 인덱스: idx_game_sessions_room_stats (chat_id, completed_at, result)
-// - GetRoomStats 쿼리 최적화 (Covering Index로 테이블 스캔 없이 집계 가능)
 type GameSession struct {
 	ID               uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	SessionID        string    `gorm:"column:session_id;not null;uniqueIndex"`
 	ChatID           string    `gorm:"column:chat_id;not null;index:idx_game_sessions_room_stats,priority:1"`
 	Category         string    `gorm:"column:category;not null;index"`
+	Target           string    `gorm:"column:target;not null;default:''"`
 	Result           string    `gorm:"column:result;not null;index:idx_game_sessions_room_stats,priority:3"`
 	ParticipantCount int       `gorm:"column:participant_count;not null"`
 	QuestionCount    int       `gorm:"column:question_count;not null;default:0"`
@@ -18,12 +18,10 @@ type GameSession struct {
 	CreatedAt        time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName: game_sessions 테이블 이름 반환
 func (GameSession) TableName() string { return "game_sessions" }
 
-// GameLog 게임 로그 (참여자별 기록).
+// GameLog: 게임 로그 (참여자별 기록)
 // 복합 인덱스: idx_game_logs_activity (chat_id, completed_at, sender)
-// - GetRoomStats 참여자 활동 쿼리 최적화 (GROUP BY sender, COUNT DISTINCT)
 type GameLog struct {
 	ID              uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	ChatID          string    `gorm:"column:chat_id;not null;index:idx_game_logs_activity,priority:1"`
@@ -39,10 +37,9 @@ type GameLog struct {
 	CreatedAt       time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName: game_logs 테이블 이름 반환
 func (GameLog) TableName() string { return "game_logs" }
 
-// UserStats: 사용자 통계 집계 테이블 모델
+// UserStats: 사용자 통계 집계
 type UserStats struct {
 	ID                   string     `gorm:"column:id;primaryKey"`
 	ChatID               string     `gorm:"column:chat_id;not null;index"`
@@ -64,10 +61,9 @@ type UserStats struct {
 	Version              int64      `gorm:"column:version;not null;default:0"`
 }
 
-// TableName: user_stats 테이블 이름 반환
 func (UserStats) TableName() string { return "user_stats" }
 
-// UserNicknameMap: 사용자 닉네임 매핑 테이블 모델
+// UserNicknameMap: 사용자 닉네임 매핑
 type UserNicknameMap struct {
 	ID         uint64    `gorm:"column:id;primaryKey;autoIncrement"`
 	ChatID     string    `gorm:"column:chat_id;not null;uniqueIndex:idx_user_nickname_map_chat_user"`
@@ -77,5 +73,29 @@ type UserNicknameMap struct {
 	CreatedAt  time.Time `gorm:"column:created_at;not null;autoCreateTime"`
 }
 
-// TableName: user_nickname_map 테이블 이름 반환
 func (UserNicknameMap) TableName() string { return "user_nickname_map" }
+
+// AuditLog: 판정 리뷰 로그 (AI 오판 기록)
+type AuditLog struct {
+	ID            uint64    `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	SessionID     string    `gorm:"column:session_id;not null;index" json:"sessionId"`
+	QuestionIndex int       `gorm:"column:question_index;not null" json:"questionIndex"`
+	Verdict       string    `gorm:"column:verdict;not null" json:"verdict"`
+	Reason        string    `gorm:"column:reason" json:"reason"`
+	AdminUserID   string    `gorm:"column:admin_user_id;not null" json:"adminUserId"`
+	CreatedAt     time.Time `gorm:"column:created_at;not null;autoCreateTime" json:"createdAt"`
+}
+
+func (AuditLog) TableName() string { return "audit_logs" }
+
+// RefundLog: 스탯 복원 로그
+type RefundLog struct {
+	ID          uint64    `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	SessionID   string    `gorm:"column:session_id;not null;index" json:"sessionId"`
+	UserID      string    `gorm:"column:user_id;not null;index" json:"userId"`
+	AdminUserID string    `gorm:"column:admin_user_id;not null" json:"adminUserId"`
+	Reason      string    `gorm:"column:reason" json:"reason"`
+	CreatedAt   time.Time `gorm:"column:created_at;not null;autoCreateTime" json:"createdAt"`
+}
+
+func (RefundLog) TableName() string { return "refund_logs" }

@@ -30,7 +30,7 @@ type Config struct {
 	Logging              LoggingConfig
 	Bot                  BotConfig
 	Services             ServicesConfig
-	SessionTokenRotation bool // 하트비트 시 세션 ID 갱신 여부 (토큰 탈취 피해 최소화)
+	Telemetry            TelemetryConfig // OpenTelemetry 분산 추적
 	Version              string
 }
 
@@ -53,14 +53,9 @@ type ValkeyMQConfig struct {
 	ReplyStreamMaxLen   int
 }
 
-// ServerConfig: 관리자용 웹 대시보드 및 API 서버 설정
+// ServerConfig: HTTP 서버 설정
 type ServerConfig struct {
-	Port            int
-	AdminUser       string
-	AdminPassHash   string // bcrypt 해시
-	SessionSecret   string // 세션 HMAC 서명용
-	ForceHTTPS      bool   // HTTPS 강제 여부
-	AdminAllowedIPs []string
+	Port int
 }
 
 // KakaoConfig: 카카오톡 채팅방 허용 목록 및 접근 제어(ACL) 설정
@@ -238,6 +233,17 @@ type ServicesConfig struct {
 	GameBotTurtleHealthURL  string // game-bot-go turtlesoup health URL
 }
 
+// TelemetryConfig: OpenTelemetry 분산 추적 설정
+type TelemetryConfig struct {
+	Enabled        bool    // 트레이싱 활성화 여부
+	ServiceName    string  // 서비스 식별자 (ex "hololive-bot")
+	ServiceVersion string  // 서비스 버전 (ex "1.0.0")
+	Environment    string  // 배포 환경 (ex "production")
+	OTLPEndpoint   string  // OTLP collector 주소 (ex "jaeger:4317")
+	OTLPInsecure   bool    // TLS 없이 연결 (내부망 전용)
+	SampleRate     float64 // 샘플링 비율 (0.0 ~ 1.0)
+}
+
 // Load: .env 파일 및 환경 변수로부터 설정을 로드하고, 기본값을 적용하여 Config 객체를 생성합니다.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
@@ -263,19 +269,14 @@ func Load() (*Config, error) {
 				"MQ_REPLY_STREAM_MAX_LEN",
 				int(constants.MQConfig.ReplyStreamMaxLen),
 			),
-		},
-		Server: ServerConfig{
-			Port:            getEnvInt("SERVER_PORT", 30001),
-			AdminUser:       getEnv("ADMIN_USER", "admin"),
-			AdminPassHash:   getEnv("ADMIN_PASS_HASH", ""),
-			SessionSecret:   getEnv("SESSION_SECRET", ""),
-			ForceHTTPS:      getEnvBool("FORCE_HTTPS", false),
-			AdminAllowedIPs: parseCommaSeparated(getEnv("ADMIN_ALLOWED_IPS", "")),
-		},
-		Kakao: KakaoConfig{
-			Rooms:      parseCommaSeparated(getEnv("KAKAO_ROOMS", "홀로라이브 알림방")),
-			ACLEnabled: getEnvBool("KAKAO_ACL_ENABLED", true),
-		},
+			},
+			Server: ServerConfig{
+				Port: getEnvInt("SERVER_PORT", 30001),
+			},
+			Kakao: KakaoConfig{
+				Rooms:      parseCommaSeparated(getEnv("KAKAO_ROOMS", "홀로라이브 알림방")),
+				ACLEnabled: getEnvBool("KAKAO_ACL_ENABLED", true),
+			},
 		Holodex: HolodexConfig{
 			APIKeys: collectAPIKeys("HOLODEX_API_KEY_"),
 		},
@@ -319,9 +320,17 @@ func Load() (*Config, error) {
 			GameBotTwentyQHealthURL: getEnv("SERVICES_GAME_BOT_TWENTYQ_HEALTH_URL", ""),
 			GameBotTurtleHealthURL:  getEnv("SERVICES_GAME_BOT_TURTLE_HEALTH_URL", ""),
 		},
-		SessionTokenRotation: getEnvBool("SESSION_TOKEN_ROTATION", constants.SessionConfig.TokenRotation),
-		Version:              util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
-	}
+			Telemetry: TelemetryConfig{
+				Enabled:        getEnvBool("OTEL_ENABLED", false),
+				ServiceName:    getEnv("OTEL_SERVICE_NAME", "hololive-bot"),
+				ServiceVersion: getEnv("OTEL_SERVICE_VERSION", "1.0.0"),
+			Environment:    getEnv("OTEL_ENVIRONMENT", "production"),
+			OTLPEndpoint:   getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "jaeger:4317"),
+				OTLPInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+				SampleRate:     getEnvFloat("OTEL_SAMPLE_RATE", 1.0),
+			},
+			Version: util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
+		}
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
@@ -340,12 +349,6 @@ func (c *Config) Validate() error {
 	}
 	if len(c.Holodex.APIKeys) == 0 {
 		return fmt.Errorf("at least one HOLODEX_API_KEY is required")
-	}
-	if c.Server.AdminPassHash == "" {
-		return fmt.Errorf("ADMIN_PASS_HASH is required for admin panel")
-	}
-	if c.Server.SessionSecret == "" {
-		return fmt.Errorf("SESSION_SECRET is required for session security")
 	}
 	return nil
 }
@@ -370,6 +373,15 @@ func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if boolVal, err := strconv.ParseBool(value); err == nil {
 			return boolVal
+		}
+	}
+	return defaultValue
+}
+
+func getEnvFloat(key string, defaultValue float64) float64 {
+	if value := os.Getenv(key); value != "" {
+		if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
+			return floatVal
 		}
 	}
 	return defaultValue

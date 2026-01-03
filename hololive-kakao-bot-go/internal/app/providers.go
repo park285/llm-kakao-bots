@@ -19,7 +19,6 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/alarm"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
-	"github.com/kapu/hololive-kakao-bot-go/internal/service/docker"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/matcher"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
@@ -126,7 +125,6 @@ func ProvideMemberCache(
 	}
 
 	// Valkey member database 초기화 (이름 -> 채널ID 맵)
-	// NOTE: 기존에는 wire_gen.go에 로직이 섞여 있었으나, 생성 코드 순수성을 위해 provider로 이동
 	members, err := repo.GetAllMembers(ctx)
 	if err != nil {
 		logger.Warn("Failed to load members for member database init", slog.Any("error", err))
@@ -312,16 +310,7 @@ func ProvideSettingsService(logger *slog.Logger) *settings.Service {
 	return settings.NewSettingsService("settings.json", logger)
 }
 
-// ProvideDockerService - Docker 관리 서비스 생성 (선택적)
-func ProvideDockerService(logger *slog.Logger) *docker.Service {
-	svc, err := docker.NewService(logger, "20q-kakao-bot")
-	if err != nil {
-		logger.Warn("Docker service init failed (container management disabled)", slog.Any("error", err))
-		return nil
-	}
-	logger.Info("Docker management service enabled")
-	return svc
-}
+// NOTE: Docker 및 Jaeger 서비스는 admin-dashboard로 이동됨
 
 // ProvideACLService - 접근 제어 서비스 생성 (PostgreSQL 영구화)
 func ProvideACLService(

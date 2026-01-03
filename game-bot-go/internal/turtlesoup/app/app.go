@@ -2,12 +2,17 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/valkey-io/valkey-go"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/bootstrap"
 	"github.com/park285/llm-kakao-bots/game-bot-go/internal/common/di"
@@ -22,6 +27,7 @@ import (
 	tsmodel "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/model"
 	tsmq "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/mq"
 	tsredis "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/redis"
+	tsrepo "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/repository"
 	tssecurity "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/security"
 	tssvc "github.com/park285/llm-kakao-bots/game-bot-go/internal/turtlesoup/service"
 )
@@ -258,21 +264,42 @@ func newTurtleSoupMessageProvider(cfg *tsconfig.Config) (*messageprovider.Provid
 func newTurtleSoupHTTPMux(
 	cfg *tsconfig.Config,
 	restClient *llmrest.Client,
+	db *gorm.DB,
+	valkeyClient valkey.Client,
 	gameService *tssvc.GameService,
+	sessionStore *tsredis.SessionStore,
 	logger *slog.Logger,
 ) *http.ServeMux {
 	mux := http.NewServeMux()
 	httpapi.Register(mux, cfg.Llm, restClient, gameService, logger)
+
+	httpapi.RegisterTurtleAdminRoutes(mux, httpapi.TurtleAdminDeps{
+		DB:           db,
+		ValkeyClient: valkeyClient,
+		SessionStore: sessionStore,
+		Logger:       logger,
+	})
+
 	return mux
 }
 
 func newTurtleSoupHTTPServer(cfg *tsconfig.Config, mux *http.ServeMux) *http.Server {
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+
+	// OTel 설정
+	otelEnabled := cfg.Telemetry.Enabled
+	otelServiceName := cfg.Telemetry.ServiceName
+	if otelServiceName == "" {
+		otelServiceName = "turtle-soup-bot"
+	}
+
 	return httpserver.NewServer(addr, mux, httpserver.ServerOptions{
 		UseH2C:            true,
 		ReadHeaderTimeout: cfg.ServerTuning.ReadHeaderTimeout,
 		IdleTimeout:       cfg.ServerTuning.IdleTimeout,
 		MaxHeaderBytes:    cfg.ServerTuning.MaxHeaderBytes,
+		EnableOTel:        otelEnabled,
+		OTelServiceName:   otelServiceName,
 	})
 }
 
@@ -294,4 +321,72 @@ func newTurtleSoupServerApp(
 			},
 		},
 	)
+}
+
+func newTurtleSoupDB(
+	ctx context.Context,
+	cfg *tsconfig.Config,
+	logger *slog.Logger,
+) (*gorm.DB, func(), error) {
+	db, sqlDB, err := openTurtleSoupPostgres(ctx, cfg.Postgres)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open postgres failed: %w", err)
+	}
+
+	closeFn := func() {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			logger.Warn("postgres_close_failed", "err", closeErr)
+		}
+	}
+	return db, closeFn, nil
+}
+
+func newTurtleSoupRepository(ctx context.Context, db *gorm.DB) (*tsrepo.Repository, error) {
+	repo := tsrepo.New(db)
+	if err := repo.AutoMigrate(ctx); err != nil {
+		return nil, fmt.Errorf("auto migrate failed: %w", err)
+	}
+	return repo, nil
+}
+
+func openTurtleSoupPostgres(ctx context.Context, cfg tsconfig.PostgresConfig) (*gorm.DB, *sql.DB, error) {
+	var dsn string
+	if cfg.SocketPath != "" {
+		dsn = fmt.Sprintf(
+			"host=%s user=%s password=%s dbname=%s sslmode=%s",
+			cfg.SocketPath,
+			cfg.User,
+			cfg.Password,
+			cfg.Name,
+			cfg.SSLMode,
+		)
+	} else {
+		dsn = fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Host,
+			cfg.Port,
+			cfg.User,
+			cfg.Password,
+			cfg.Name,
+			cfg.SSLMode,
+		)
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("gorm open failed: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, nil, fmt.Errorf("get sql db failed: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := sqlDB.PingContext(pingCtx); err != nil {
+		return nil, nil, fmt.Errorf("db ping failed: %w", err)
+	}
+
+	return db, sqlDB, nil
 }

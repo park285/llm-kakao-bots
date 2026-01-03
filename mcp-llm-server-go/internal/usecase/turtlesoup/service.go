@@ -356,7 +356,7 @@ func (s *Service) GetRandomPuzzle() (RandomPuzzleResult, error) {
 
 	puzzle, err := s.loader.GetRandomPuzzle()
 	if err != nil {
-		return RandomPuzzleResult{}, err
+		return RandomPuzzleResult{}, fmt.Errorf("get random puzzle: %w", err)
 	}
 
 	return RandomPuzzleResult{
@@ -376,7 +376,7 @@ func (s *Service) GetRandomPuzzleByDifficulty(difficulty int) (RandomPuzzleResul
 
 	puzzle, err := s.loader.GetRandomPuzzleByDifficulty(difficulty)
 	if err != nil {
-		return RandomPuzzleResult{}, err
+		return RandomPuzzleResult{}, fmt.Errorf("get random puzzle by difficulty: %w", err)
 	}
 
 	return RandomPuzzleResult{

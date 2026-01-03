@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
@@ -21,13 +20,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
-// AdminCredentials: 관리자 계정 정보를 담는 구조체 (사용자명, 비밀번호 해시)
-type AdminCredentials struct {
-	User     string
-	PassHash string
-}
-
-// ProvideBot: 봇 인스턴스를 생성하여 제공한다. (Wire 의존성 주입용)
+// ProvideBot: 봇 인스턴스를 생성하여 제공함
 func ProvideBot(deps *bot.Dependencies) (*bot.Bot, error) {
 	created, err := bot.NewBot(deps)
 	if err != nil {
@@ -49,32 +42,6 @@ func ProvideValkeyMQConsumer(
 		return nil, fmt.Errorf("failed to create valkey MQ consumer")
 	}
 	return consumer, nil
-}
-
-// ProvideSessionStore: 세션 저장소(Valkey 백엔드)를 생성하여 제공합니다.
-func ProvideSessionStore(cacheSvc *cache.Service, logger *slog.Logger) *server.ValkeySessionStore {
-	return server.NewValkeySessionStore(cacheSvc.GetClient(), logger)
-}
-
-// ProvideLoginRateLimiter: 로그인 시도 제한(Rate Limiter)을 생성하여 제공합니다.
-func ProvideLoginRateLimiter() *server.LoginRateLimiter {
-	return server.NewLoginRateLimiter()
-}
-
-// ProvideSecurityConfig: 보안 관련 설정(세션 비밀키 등)을 로드하여 제공합니다.
-func ProvideSecurityConfig(cfg *config.Config) *server.SecurityConfig {
-	return &server.SecurityConfig{
-		SessionSecret: cfg.Server.SessionSecret,
-		ForceHTTPS:    cfg.Server.ForceHTTPS,
-	}
-}
-
-// ProvideAdminCredentials: 관리자 자격 증명을 설정에서 로드하여 제공합니다.
-func ProvideAdminCredentials(cfg *config.Config) AdminCredentials {
-	return AdminCredentials{
-		User:     cfg.Server.AdminUser,
-		PassHash: cfg.Server.AdminPassHash,
-	}
 }
 
 // ProvideSystemCollector: 시스템 리소스 수집기를 생성하여 제공합니다.
@@ -99,11 +66,6 @@ func ProvideAdminHandler(
 	activityLogger *activity.Logger,
 	settingsSvc *settings.Service,
 	aclSvc *acl.Service,
-	cfg *config.Config,
-	sessions *server.ValkeySessionStore,
-	rateLimiter *server.LoginRateLimiter,
-	securityCfg *server.SecurityConfig,
-	adminCreds AdminCredentials,
 	systemSvc *system.Collector,
 	logger *slog.Logger,
 ) *server.AdminHandler {
@@ -118,24 +80,9 @@ func ProvideAdminHandler(
 		activityLogger,
 		settingsSvc,
 		aclSvc,
-		cfg,
-		sessions,
-		rateLimiter,
-		securityCfg,
-		adminCreds.User,
-		adminCreds.PassHash,
 		systemSvc,
 		logger,
 	)
-}
-
-// ProvideAdminAllowedCIDRs: 관리자 페이지 접근 허용 IP 대역을 설정에서 로드하고 파싱하여 제공합니다.
-func ProvideAdminAllowedCIDRs(cfg *config.Config) ([]*net.IPNet, error) {
-	allowed, err := server.NewIPAllowList(cfg.Server.AdminAllowedIPs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create admin allowlist: %w", err)
-	}
-	return allowed, nil
 }
 
 // ProvideYouTubeService: YouTube 서비스 인스턴스를 제공합니다.

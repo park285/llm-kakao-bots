@@ -16,7 +16,7 @@
 
 ### 1. 달성된 마일스톤 목록 조회
 
-**GET** `/admin/api/milestones`
+**GET** `/admin/api/holo/milestones`
 
 달성된 마일스톤 목록을 최신순으로 반환합니다. 페이지네이션 및 필터링을 지원합니다.
 
@@ -70,7 +70,7 @@
 
 ### 2. 마일스톤 직전 멤버 조회
 
-**GET** `/admin/api/milestones/near`
+**GET** `/admin/api/holo/milestones/near`
 
 마일스톤 달성이 임박한 멤버 목록을 반환합니다.
 
@@ -117,7 +117,7 @@
 
 ### 3. 마일스톤 통계 요약
 
-**GET** `/admin/api/milestones/stats`
+**GET** `/admin/api/holo/milestones/stats`
 
 마일스톤 관련 전체 통계를 반환합니다.
 

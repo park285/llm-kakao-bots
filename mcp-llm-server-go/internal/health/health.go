@@ -6,13 +6,27 @@ import (
 	"net"
 	"net/url"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/config"
 	"github.com/park285/llm-kakao-bots/mcp-llm-server-go/internal/session"
 )
 
-var startTime = time.Now()
+var (
+	startTime = time.Now()
+	version   = "dev"
+	initOnce  sync.Once
+)
+
+// Init: 서비스 시작 시 호출 (버전 정보 설정)
+func Init(v string) {
+	initOnce.Do(func() {
+		if v != "" {
+			version = v
+		}
+	})
+}
 
 // Component: 상태 구성 요소입니다.
 type Component struct {
@@ -23,6 +37,9 @@ type Component struct {
 // Response: 상태 응답 본문입니다.
 type Response struct {
 	Status       string               `json:"status"`
+	Version      string               `json:"version"`
+	Uptime       string               `json:"uptime"`
+	Goroutines   int                  `json:"goroutines"`
 	Components   map[string]Component `json:"components"`
 	SessionStore map[string]any       `json:"session_store"`
 }
@@ -50,6 +67,9 @@ func Collect(ctx context.Context, cfg *config.Config, deepChecks bool) Response 
 
 	return Response{
 		Status:       overall,
+		Version:      version,
+		Uptime:       formatDuration(time.Since(startTime)),
+		Goroutines:   runtime.NumGoroutine(),
 		Components:   components,
 		SessionStore: sessionStoreStatus.Detail,
 	}
@@ -61,9 +81,29 @@ func buildAppStatus() Component {
 		Status: "ok",
 		Detail: map[string]any{
 			"uptime_seconds": uptimeSeconds,
+			"uptime":         formatDuration(time.Since(startTime)),
+			"version":        version,
 			"goroutines":     runtime.NumGoroutine(),
 		},
 	}
+}
+
+// formatDuration: Duration을 사람이 읽기 쉬운 형식으로 변환
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	d -= m * time.Minute
+	s := d / time.Second
+
+	if h > 0 {
+		return time.Duration(h*time.Hour + m*time.Minute + s*time.Second).String()
+	}
+	if m > 0 {
+		return time.Duration(m*time.Minute + s*time.Second).String()
+	}
+	return time.Duration(s * time.Second).String()
 }
 
 func buildGeminiStatus(cfg *config.Config) Component {

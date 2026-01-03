@@ -137,7 +137,7 @@ func Build(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Conta
 		ctx = context.Background()
 	}
 
-	// Wire 생성 의존성 주입 사용
+	// 의존성 주입 초기화
 	deps, cleanup, err := InitializeBotDependencies(ctx, cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize dependencies: %w", err)

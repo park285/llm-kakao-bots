@@ -99,3 +99,16 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+// readTelemetryConfig: OpenTelemetry 설정을 환경 변수에서 읽습니다.
+func readTelemetryConfig() TelemetryConfig {
+	return TelemetryConfig{
+		Enabled:        getEnvBool("OTEL_ENABLED", false),
+		ServiceName:    getEnvString("OTEL_SERVICE_NAME", "mcp-llm-server"),
+		ServiceVersion: getEnvString("OTEL_SERVICE_VERSION", "1.0.0"),
+		Environment:    getEnvString("OTEL_ENVIRONMENT", "production"),
+		OTLPEndpoint:   getEnvString("OTEL_EXPORTER_OTLP_ENDPOINT", "jaeger:4317"),
+		OTLPInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+		SampleRate:     getEnvFloat("OTEL_SAMPLE_RATE", 1.0),
+	}
+}
