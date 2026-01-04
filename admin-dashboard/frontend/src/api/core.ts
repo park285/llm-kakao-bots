@@ -406,3 +406,35 @@ export const tracesApi = {
         }
     },
 }
+
+// Status API
+export interface ServiceStatus {
+    name: string
+    available: boolean
+    version?: string
+    uptime?: string
+    goroutines: number
+}
+
+export interface AggregatedStatus {
+    version: string
+    uptime: string
+    startedAt: number
+    services: ServiceStatus[]
+    totalGoroutines: number
+    availableServices: number
+    totalServices: number
+    adminGoroutines: number
+}
+
+export const statusApi = {
+    get: async (): Promise<AggregatedStatus> => {
+        const response = await fetch('/admin/api/status', {
+            credentials: 'include',
+        })
+        if (!response.ok) {
+            throw new Error('Failed to fetch status')
+        }
+        return await response.json()
+    },
+}

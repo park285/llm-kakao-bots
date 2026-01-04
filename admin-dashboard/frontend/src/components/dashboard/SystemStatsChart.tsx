@@ -118,7 +118,7 @@ export const SystemStatsChart = () => {
     const [currentStats, setCurrentStats] = useState<SystemStats | null>(null)
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/admin/api/holo/ws/system-stats`
+    const wsUrl = `${protocol}//${window.location.host}/admin/api/ws/system-stats`
 
     const { isConnected } = useWebSocket<SystemStats>(wsUrl, {
         parseMessage: (data) => {

@@ -204,6 +204,11 @@ func (s *Server) setupTracesRoutes(authenticated *gin.RouterGroup) {
 func (s *Server) setupStatusRoutes(authenticated *gin.RouterGroup) {
 	statusGroup := authenticated.Group("/status")
 	statusGroup.GET("", s.handleAggregatedStatus)
+
+	// WebSocket: 실시간 시스템 리소스 스트리밍 (CPU, Memory, Goroutines)
+	// 기존 /admin/api/holo/ws/system-stats → /admin/api/ws/system-stats로 이관
+	wsGroup := authenticated.Group("/ws")
+	wsGroup.GET("/system-stats", s.handleSystemStatsStream)
 }
 
 // setupProxyRoutes: 도메인 봇 프록시 라우트
@@ -499,11 +504,11 @@ func (s *Server) handleDockerHealth(c *gin.Context) {
 		return
 	}
 	available := s.dockerSvc.Available(c.Request.Context())
-	status := "ok"
+	dockerStatus := "ok"
 	if !available {
-		status = "unavailable"
+		dockerStatus = "unavailable"
 	}
-	c.JSON(http.StatusOK, gin.H{"status": status, "available": available})
+	c.JSON(http.StatusOK, gin.H{"status": dockerStatus, "available": available})
 }
 
 // handleDockerContainers godoc
@@ -1041,4 +1046,40 @@ func (s *Server) handleAggregatedStatus(c *gin.Context) {
 
 	result := s.statusCollector.GetAggregatedStatus(c.Request.Context())
 	c.JSON(http.StatusOK, result)
+}
+
+// handleSystemStatsStream: WebSocket을 통해 시스템 리소스 사용량을 실시간 스트리밍합니다.
+// 2초마다 CPU/메모리/고루틴 통계를 전송합니다.
+func (s *Server) handleSystemStatsStream(c *gin.Context) {
+	if s.statusCollector == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Status collector not initialized"})
+		return
+	}
+
+	// WebSocket 업그레이드
+	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		return
+	}
+	defer func() { _ = conn.Close() }()
+
+	ctx := c.Request.Context()
+	statsChan := make(chan *status.SystemStats, 1)
+
+	// 별도 goroutine에서 stats 스트리밍
+	go s.statusCollector.StreamSystemStats(ctx, statsChan)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case stats, ok := <-statsChan:
+			if !ok {
+				return
+			}
+			if err := conn.WriteJSON(stats); err != nil {
+				return
+			}
+		}
+	}
 }

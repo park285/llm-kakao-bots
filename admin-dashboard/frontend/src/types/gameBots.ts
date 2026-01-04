@@ -7,10 +7,11 @@ export interface PaginatedResponse<T> {
     data?: T
 }
 
+// TwentyQ 통합 통계 
 export interface TwentyQStats {
-    totalPlayed: number
-    totalCorrect: number
-    totalSurrender: number
+    totalGamesPlayed: number
+    totalGamesCompleted: number
+    totalSurrenders: number
     successRate: number
     activeSessions: number
     totalParticipants: number
@@ -245,9 +246,11 @@ export interface TurtleSoupStats {
     last24HoursSolve: number
 }
 
+// TurtleSoup 통합 통계 응답 (백엔드 TurtleAdminStatsResponse 래핑)
 export interface TurtleSoupStatsResponse {
     status: string
     stats: TurtleSoupStats
+    durationMs: number
 }
 
 export interface TurtleSoupActiveSession {

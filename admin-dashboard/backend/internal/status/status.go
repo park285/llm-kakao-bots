@@ -270,18 +270,5 @@ func (c *Collector) fetchStatsResponse(ctx context.Context, url string) (statsRe
 
 // formatDuration: time.Duration을 사람이 읽기 쉬운 형식으로 변환
 func formatDuration(d time.Duration) string {
-	d = d.Round(time.Second)
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	d -= m * time.Minute
-	s := d / time.Second
-
-	if h > 0 {
-		return time.Duration(h*time.Hour + m*time.Minute + s*time.Second).String()
-	}
-	if m > 0 {
-		return time.Duration(m*time.Minute + s*time.Second).String()
-	}
-	return time.Duration(s * time.Second).String()
+	return d.Round(time.Second).String()
 }

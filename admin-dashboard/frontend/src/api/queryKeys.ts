@@ -71,6 +71,11 @@ export const queryKeys = {
         dependencies: (lookback: string) => ['traces', 'dependencies', lookback] as const,
         metrics: (service: string, params?: MetricsParams) => ['traces', 'metrics', service, params] as const,
     },
+    /** 시스템 상태 통합 쿼리 키 */
+    status: {
+        all: ['status'] as const,
+        aggregated: ['status', 'aggregated'] as const,
+    },
 } as const
 
 /** Game Bot 관련 쿼리 키 (TwentyQ, TurtleSoup) */

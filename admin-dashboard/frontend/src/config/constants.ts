@@ -54,10 +54,11 @@ export const CONFIG = {
     ui: {
         /** 시스템 리소스 차트 서비스별 색상 매핑 */
         serviceColors: {
-            'hololive-bot': '#3b82f6', // blue-500
-            'llm-server': '#8b5cf6',   // violet-500
-            'twentyq': '#f59e0b',      // amber-500
-            'turtlesoup': '#10b981',   // emerald-500
+            'hololive-bot': '#0ea5e9',     // sky-500
+            'mcp-llm-server': '#8b5cf6',   // violet-500
+            'twentyq-bot': '#f59e0b',      // amber-500
+            'turtle-soup-bot': '#10b981',  // emerald-500
+            'admin-dashboard': '#64748b',  // slate-500
         } as Record<string, string>,
     },
 } as const

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -19,7 +20,11 @@ type etagWriter struct {
 
 func (w *etagWriter) Write(b []byte) (int, error) {
 	w.body.Write(b)
-	return w.ResponseWriter.Write(b)
+	n, err := w.ResponseWriter.Write(b)
+	if err != nil {
+		return n, fmt.Errorf("write response: %w", err)
+	}
+	return n, nil
 }
 
 // ETag: GET 요청에 대해 ETag 헤더 추가 및 조건부 요청 처리

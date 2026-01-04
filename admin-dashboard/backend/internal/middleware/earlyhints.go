@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/park285/llm-kakao-bots/admin-dashboard/internal/static"
 )
 

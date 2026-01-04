@@ -168,7 +168,7 @@ func main() {
 }
 
 // initializeApp: 애플리케이션 구성 요소를 초기화합니다.
-func initializeApp(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*bootstrap.ServerApp, func(), error) {
+func initializeApp(_ context.Context, cfg *config.Config, logger *slog.Logger) (*bootstrap.ServerApp, func(), error) {
 	var cleanupFns []func()
 	cleanup := func() {
 		for i := len(cleanupFns) - 1; i >= 0; i-- {

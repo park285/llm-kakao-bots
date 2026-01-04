@@ -1,12 +1,70 @@
 import { useTurtleSoupStats } from '@/hooks/useGameBots'
 import { StatCard } from '@/components/ui/StatCard'
+import { Skeleton } from '@/components/ui/Skeleton'
+
 import { Puzzle, CheckCircle, HelpCircle } from 'lucide-react'
 
 export default function TurtleSoupDashboard() {
     const { data, isLoading } = useTurtleSoupStats()
 
     if (isLoading) {
-        return <div className="p-8 text-center text-slate-500">통계 데이터를 불러오는 중...</div>
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                    <Skeleton className="w-6 h-6 rounded-full" />
+                    <Skeleton className="h-7 w-32" />
+                </div>
+
+                {/* Stat Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-8 w-24" />
+                                </div>
+                                <Skeleton className="h-12 w-12 rounded-xl" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Detailed Stats Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Solve Status Skeleton */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Skeleton className="w-5 h-5 rounded-full" />
+                            <Skeleton className="h-6 w-32" />
+                        </div>
+                        <div className="space-y-6">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-4 w-12" />
+                                    </div>
+                                    <Skeleton className="h-2 w-full rounded-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Hint Usage Skeleton */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Skeleton className="w-5 h-5 rounded-full" />
+                            <Skeleton className="h-6 w-32" />
+                        </div>
+                        <div className="flex flex-col items-center justify-center py-8 space-y-2">
+                            <Skeleton className="h-10 w-24" />
+                            <Skeleton className="h-4 w-40" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     const stats = data?.stats

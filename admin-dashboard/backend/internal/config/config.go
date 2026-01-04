@@ -91,7 +91,7 @@ func Load() *Config {
 		HoloBotURL:    getEnv("HOLO_BOT_URL", "http://hololive-bot:30001"),
 		TwentyQBotURL: getEnv("TWENTYQ_BOT_URL", "http://twentyq-bot:30081"),
 		TurtleBotURL:  getEnv("TURTLE_BOT_URL", "http://turtle-soup-bot:30082"),
-		LLMServerURL:  getEnv("LLM_SERVER_URL", "http://mcp-llm-server:30010"),
+		LLMServerURL:  getEnv("LLM_SERVER_URL", "http://mcp-llm-server:40527"), // LLM 서버 포트 수정
 
 		OTELEnabled:     getEnvBool("OTEL_ENABLED", false),
 		OTELEndpoint:    getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "jaeger:4317"),

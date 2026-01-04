@@ -1,5 +1,7 @@
 import { useTwentyQStats, useTwentyQCategoryStats } from '@/hooks/useGameBots'
 import { StatCard } from '@/components/ui/StatCard'
+import { Skeleton } from '@/components/ui/Skeleton'
+
 import { Brain, Trophy, Users, PlayCircle, CheckCircle } from 'lucide-react'
 
 export default function TwentyQDashboard() {
@@ -7,7 +9,73 @@ export default function TwentyQDashboard() {
     const { data: categoryData, isLoading: isCategoryLoading } = useTwentyQCategoryStats()
 
     if (isStatsLoading || isCategoryLoading) {
-        return <div className="p-8 text-center text-slate-500">통계 데이터를 불러오는 중...</div>
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                    <Skeleton className="w-6 h-6 rounded-full" />
+                    <Skeleton className="h-7 w-32" />
+                </div>
+
+                {/* Stat Cards Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-8 w-24" />
+                                </div>
+                                <Skeleton className="h-12 w-12 rounded-xl" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Detailed Stats Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Game Results Skeleton */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Skeleton className="w-5 h-5 rounded-full" />
+                            <Skeleton className="h-6 w-32" />
+                        </div>
+                        <div className="space-y-6">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-4 w-12" />
+                                    </div>
+                                    <Skeleton className="h-2 w-full rounded-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Category Stats Skeleton */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Skeleton className="w-5 h-5 rounded-full" />
+                            <Skeleton className="h-6 w-32" />
+                        </div>
+                        <div className="space-y-4">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="flex justify-between items-center p-2">
+                                    <div className="space-y-1.5">
+                                        <Skeleton className="h-4 w-28" />
+                                        <Skeleton className="h-3 w-16" />
+                                    </div>
+                                    <div className="space-y-1.5 flex flex-col items-end">
+                                        <Skeleton className="h-4 w-20" />
+                                        <Skeleton className="h-3 w-12" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     const stats = statsData?.stats
@@ -61,24 +129,24 @@ export default function TwentyQDashboard() {
                     </h3>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600">정답 맞춤 (AI 승리)</span>
-                            <span className="font-bold text-green-600">{stats.totalCorrect}회</span>
+                            <span className="text-slate-600">정답 맞춤</span>
+                            <span className="font-bold text-green-600">{stats.totalGamesCompleted}회</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
                             <div
                                 className="bg-green-500 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${(stats.totalCorrect / stats.totalPlayed) * 100}%` }}
+                                style={{ width: `${stats.totalGamesPlayed > 0 ? (stats.totalGamesCompleted / stats.totalGamesPlayed) * 100 : 0}%` }}
                             />
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600">포기 (플레이어 승리)</span>
-                            <span className="font-bold text-rose-600">{stats.totalSurrender}회</span>
+                            <span className="text-slate-600">포기</span>
+                            <span className="font-bold text-rose-600">{stats.totalSurrenders}회</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
                             <div
                                 className="bg-rose-500 h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${(stats.totalSurrender / stats.totalPlayed) * 100}%` }}
+                                style={{ width: `${stats.totalGamesPlayed > 0 ? (stats.totalSurrenders / stats.totalGamesPlayed) * 100 : 0}%` }}
                             />
                         </div>
                     </div>

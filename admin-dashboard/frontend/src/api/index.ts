@@ -13,7 +13,10 @@ export {
   dockerApi,
   systemLogsApi,
   tracesApi,
+  statusApi,
   // Types
+  type AggregatedStatus,
+  type ServiceStatus,
   type HeartbeatResponse,
   type DockerContainer,
   type TraceSummary,

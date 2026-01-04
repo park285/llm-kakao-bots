@@ -1,4 +1,6 @@
 import { useTurtleSoupSessions, useTurtleSoupDeleteSession, useTurtleSoupInjectHint } from '@/hooks/useGameBots'
+import { Skeleton } from '@/components/ui/Skeleton'
+
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -15,7 +17,37 @@ export default function TurtleSoupSessionsTable() {
     const [deleteId, setDeleteId] = useState<string | null>(null)
 
     if (isLoading) {
-        return <div className="p-8 text-center text-slate-500">세션 목록을 불러오는 중...</div>
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="w-6 h-6 rounded-full" />
+                        <Skeleton className="h-7 w-32" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {[...Array(6)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-5 w-16" />
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Skeleton className="h-3 w-16" />
+                                        <Skeleton className="h-3 w-16" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-6 w-16" />
+                            </div>
+                            <Skeleton className="h-3 w-48" />
+                            <div className="pt-2 flex items-center gap-2 border-t border-slate-50">
+                                <Skeleton className="h-8 flex-1" />
+                                <Skeleton className="h-8 flex-1" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
     }
 
     const sessions = data?.sessions || []

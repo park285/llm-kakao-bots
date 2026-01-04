@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { statsApi } from '@/api'
+import { statsApi, statusApi } from '@/api'
 import { queryKeys } from '@/api/queryKeys'
 import { Button, StatCard } from '@/components/ui'
 import {
@@ -11,25 +12,60 @@ import {
   ArrowRight,
   Activity,
   Server,
-  ShieldCheck,
+  Play,
   Bot,
-  Play
+  ShieldCheck,
+  Cpu,
+  ChevronDown
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { SystemStatsChart, ChannelStatsTable } from '@/components/dashboard'
 
 const StatsTab = () => {
   const navigate = useNavigate()
-  const { data: response, isLoading, isError, error, refetch } = useQuery({
+  const [selectedService, setSelectedService] = useState('hololive-bot')
+
+  // 1. Holo Bot 통계
+  const { data: holoStats, isLoading: isHoloLoading, isError: isHoloError, refetch: refetchHolo } = useQuery({
     queryKey: queryKeys.stats.summary,
     queryFn: statsApi.get,
     refetchInterval: 10000,
   })
 
+  // 2. 통합 시스템 상태
+  const { data: statusData, isLoading: isStatusLoading, isError: isStatusError, refetch: refetchStatus } = useQuery({
+    queryKey: queryKeys.status.aggregated,
+    queryFn: statusApi.get,
+    refetchInterval: 5000,
+  })
+
+  // 초기 로딩 완료 시 기본 서비스가 목록에 없으면 첫 번째 서비스 선택 (Optional)
+  useEffect(() => {
+    if (statusData?.services && statusData.services.length > 0) {
+      const exists = statusData.services.find(s => s.name === selectedService)
+      if (!exists) {
+        // 기본적으로 hololive-bot을 찾고, 없으면 첫 번째 것 선택
+        const defaultSvc = statusData.services.find(s => s.name === 'hololive-bot')
+        if (defaultSvc) setSelectedService('hololive-bot')
+        else if (statusData.services[0]) setSelectedService(statusData.services[0].name)
+      }
+    }
+  }, [statusData, selectedService])
+
+  // 현재 선택된 서비스 데이터 찾기
+  const currentServiceStats = statusData?.services.find(s => s.name === selectedService) || {
+    name: selectedService,
+    available: false,
+    version: '-',
+    uptime: '-',
+    goroutines: 0
+  }
+
   // 바로가기 핸들러
   const go = (path: string) => { void navigate(path) }
 
-  if (isLoading) {
+  // 둘 다 로딩 중일 때만 로더 표시
+  if (isHoloLoading && isStatusLoading) {
     return (
       <div className="flex justify-center items-center h-64 text-slate-400">
         <Loader2 className="animate-spin mr-2" />
@@ -38,14 +74,12 @@ const StatsTab = () => {
     )
   }
 
-  if (isError) {
+  // 치명적 에러 (둘 다 실패)
+  if (isHoloError && isStatusError) {
     return (
       <div className="text-center py-12 bg-rose-50 rounded-2xl border border-rose-100">
         <div className="text-rose-600 font-bold mb-2">통계를 불러올 수 없습니다</div>
-        <div className="text-xs text-rose-500 mb-4">
-          {error instanceof Error ? error.message : 'Unknown error'}
-        </div>
-        <Button onClick={() => { void refetch() }} className="bg-rose-600 hover:bg-rose-700 text-white">
+        <Button onClick={() => { void refetchHolo(); void refetchStatus(); }} className="bg-rose-600 hover:bg-rose-700 text-white">
           다시 시도
         </Button>
       </div>
@@ -55,23 +89,33 @@ const StatsTab = () => {
   const mainStats = [
     {
       label: '등록된 멤버',
-      value: response?.members || 0,
+      value: holoStats?.members || 0,
       variant: 'cyan' as const,
       icon: <Users size={24} />,
     },
     {
       label: '활성 알람',
-      value: response?.alarms || 0,
+      value: holoStats?.alarms || 0,
       variant: 'rose' as const,
       icon: <Bell size={24} />,
     },
     {
       label: '연동된 방',
-      value: response?.rooms || 0,
+      value: holoStats?.rooms || 0,
       variant: 'indigo' as const,
       icon: <MessageSquare size={24} />,
     },
   ]
+
+  // 서비스 아이콘 헬퍼
+  const getServiceIcon = (name: string) => {
+    if (name.includes('hololive')) return <Bot size={20} className="text-sky-500" />
+    if (name.includes('twentyq')) return <Bot size={20} className="text-violet-500" />
+    if (name.includes('turtle')) return <Bot size={20} className="text-emerald-500" />
+    if (name.includes('llm')) return <Cpu size={20} className="text-amber-500" />
+    if (name.includes('admin')) return <ShieldCheck size={20} className="text-slate-500" />
+    return <Server size={20} className="text-slate-400" />
+  }
 
   return (
     <div className="space-y-8">
@@ -106,11 +150,11 @@ const StatsTab = () => {
         </div>
       </motion.div>
 
-      {/* 2. 주요 지표 */}
+      {/* 2. 주요 지표 (Holo Bot) */}
       <div>
         <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Activity size={20} className="text-sky-500" />
-          실시간 현황
+          실시간 현황 (Hololive Bot)
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {mainStats.map((stat, idx) => (
@@ -132,48 +176,80 @@ const StatsTab = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 좌측 칼럼: 통계 & 시스템 상태 */}
+        {/* 좌측 칼럼: 시스템 상태 & 차트 */}
         <div className="lg:col-span-2 space-y-6">
-          <SystemStatsChart />
 
-          {/* 3. 시스템 상태 */}
+          {/* 3. 시스템 상태 (Compact & Selectable) */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Server size={20} className="text-slate-500" />
-              시스템 상태
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Server size={20} className="text-slate-500" />
+                서비스 상태
+              </h3>
+
+              {/* 서비스 선택기 */}
+              <div className="relative">
+                <select
+                  value={selectedService}
+                  onChange={(e) => setSelectedService(e.target.value)}
+                  className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  {statusData?.services.map(s => (
+                    <option key={s.name} value={s.name}>{s.name}</option>
+                  )) || <option value="hololive-bot">hololive-bot</option>}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" size={16} />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 상태 카드 */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                 <div>
-                  <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Server Status</div>
+                  <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Service Status</div>
                   <div className="flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                    </span>
-                    <span className="font-bold text-slate-700">Online</span>
+                    {currentServiceStats.available ? (
+                      <>
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                        <span className="font-bold text-slate-700">Online</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-3 h-3 rounded-full bg-rose-500" />
+                        <span className="font-bold text-slate-700">Offline</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center border border-slate-200">
-                  <ShieldCheck size={20} className="text-emerald-500" />
+                  <ShieldCheck size={20} className={currentServiceStats.available ? "text-emerald-500" : "text-rose-500"} />
                 </div>
               </div>
+
+              {/* 버전 & 리소스 카드 */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                 <div>
-                  <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Bot Version</div>
-                  <div className="font-bold text-slate-700 font-mono">{response?.version || 'Unknown'}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">Uptime: {response?.uptime || '-'}</div>
+                  <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Version Info</div>
+                  <div className="font-bold text-slate-700 font-mono text-sm">
+                    {currentServiceStats.version || 'Unknown'}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Uptime: {currentServiceStats.uptime || '-'}</div>
                 </div>
                 <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center border border-slate-200">
-                  <Bot size={20} className="text-indigo-500" />
+                  {getServiceIcon(currentServiceStats.name)}
                 </div>
               </div>
             </div>
           </div>
+
+          <SystemStatsChart />
         </div>
 
         {/* 4. 바로가기 */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col h-fit">
           <h3 className="text-lg font-bold text-slate-800 mb-4">바로가기</h3>
           <div className="space-y-3 flex-1">
             <button

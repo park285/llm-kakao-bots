@@ -3,9 +3,7 @@
 ARG GO_VERSION=1.25.5
 ARG ALPINE_VERSION=3.23
 
-# ==========================================
 # Stage 1: Build Frontend
-# ==========================================
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
@@ -16,10 +14,11 @@ RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-# ==========================================
 # Stage 2: Build Backend (with embedded frontend)
-# ==========================================
 FROM golang:${GO_VERSION}-alpine AS builder
+
+# 빌드 시 버전 주입 (docker-compose args 또는 --build-arg로 전달)
+ARG VERSION=dev
 
 WORKDIR /build
 
@@ -32,14 +31,12 @@ COPY backend/ .
 # internal/static/admin-ui/dist에 복사하여 embed.go에서 참조
 COPY --from=frontend-builder /app/frontend/dist ./internal/static/admin-ui/dist
 
-RUN CGO_ENABLED=0 GOOS=linux go build -tags=go_json -ldflags="-s -w" -o admin ./cmd/admin
+RUN CGO_ENABLED=0 GOOS=linux go build -tags=go_json -ldflags="-s -w -X main.Version=${VERSION}" -o admin ./cmd/admin
 
-# ==========================================
 # Stage 3: Production Runtime (Single Binary)
-# ==========================================
 FROM alpine:${ALPINE_VERSION}
 
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tini tzdata && \
     cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
     echo "Asia/Seoul" > /etc/timezone && \
     cp /usr/share/zoneinfo/Asia/Seoul /tmp/Seoul && \
@@ -64,4 +61,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 EXPOSE 30090
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["./admin"]

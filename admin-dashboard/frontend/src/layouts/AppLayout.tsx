@@ -42,9 +42,14 @@ export const AppLayout = () => {
 
     const navGroups = [
         {
-            title: 'Hololive',
+            title: 'Overview',
             items: [
-                { id: 'stats', label: '대시보드', icon: LayoutDashboard, path: '/dashboard/stats' },
+                { id: 'stats', label: '통합 대시보드', icon: LayoutDashboard, path: '/dashboard/stats' },
+            ]
+        },
+        {
+            title: 'Hololive Bot',
+            items: [
                 { id: 'streams', label: '방송 현황', icon: Radio, path: '/dashboard/streams' },
                 { id: 'members', label: '멤버 관리', icon: Users, path: '/dashboard/members' },
                 { id: 'milestones', label: '마일스톤', icon: Trophy, path: '/dashboard/milestones' },
@@ -60,7 +65,7 @@ export const AppLayout = () => {
             ]
         },
         {
-            title: 'System',
+            title: 'Infrastructure',
             items: [
                 { id: 'traces', label: 'Traces', icon: Activity, path: '/dashboard/traces' },
                 { id: 'logs', label: '로그', icon: ScrollText, path: '/dashboard/logs' },

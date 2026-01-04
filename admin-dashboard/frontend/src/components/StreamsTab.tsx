@@ -5,22 +5,46 @@ import { ExternalLink, Calendar, PlayCircle } from 'lucide-react'
 import type { Stream } from '@/types'
 
 /**
- * 이미지 최적화 헬퍼 (wsrv.nl 오픈 소스 이미지 프록시 사용)
- * - 캐싱, 리사이징, WebP 변환, 압축
- * - 고화질 디스플레이 대응을 위한 2x srcset 제공
+ * YouTube 썸네일 품질 옵션
+ * - 'max': maxresdefault (1280x720) - Live 스트림 카드용
+ * - 'sd': sddefault (640x480) - Upcoming 리스트용
+ * - 'high': hqdefault (480x360) - 작은 썸네일용
  */
-const getOptimizedThumbnail = (url?: string, width = 640) => {
+type ThumbnailQuality = 'max' | 'sd' | 'high'
+
+/**
+ * YouTube 썸네일을 지정된 해상도로 변환
+ */
+const getYouTubeThumbnail = (url?: string, quality: ThumbnailQuality = 'sd'): string | undefined => {
     if (!url) return undefined
-    // 품질 90%, 너비 640px으로 고화질 유지
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${String(width)}&q=90&output=webp`
+    // YouTube 썸네일 URL 패턴: .../vi/{videoId}/{quality}.jpg
+    const youtubePatterns = [
+        /\/vi\/([^/]+)\/(default|mqdefault|hqdefault|sddefault|maxresdefault)\.jpg/,
+        /\/vi_webp\/([^/]+)\/(default|mqdefault|hqdefault|sddefault|maxresdefault)\.webp/
+    ]
+    for (const pattern of youtubePatterns) {
+        const match = url.match(pattern)
+        if (match) {
+            const videoId = match[1]
+            const qualityMap = { max: 'maxresdefault', sd: 'sddefault', high: 'hqdefault' }
+            return `https://i.ytimg.com/vi/${videoId}/${qualityMap[quality]}.jpg`
+        }
+    }
+    return url
 }
 
-// Retina (2x) 대응 srcset 생성
-const getThumbnailSrcSet = (url?: string) => {
+/**
+ * 이미지 최적화 헬퍼 (wsrv.nl 오픈 소스 이미지 프록시 사용)
+ * - 캐싱, WebP 변환, 품질 최적화
+ * - YouTube 썸네일은 지정된 해상도로 변환 후 프록시 적용
+ * @param url - 원본 썸네일 URL
+ * @param quality - 'max' (1280x720) 또는 'high' (480x360)
+ */
+const getOptimizedThumbnail = (url?: string, quality: ThumbnailQuality = 'high') => {
     if (!url) return undefined
-    const w1x = getOptimizedThumbnail(url, 640)
-    const w2x = getOptimizedThumbnail(url, 1280)
-    return `${w1x} 1x, ${w2x} 2x`
+    const optimizedUrl = getYouTubeThumbnail(url, quality)
+    // 원본 해상도 유지, 품질 95%, WebP 변환
+    return `https://wsrv.nl/?url=${encodeURIComponent(optimizedUrl || url)}&q=95&output=webp`
 }
 
 const StreamsTab = () => {
@@ -66,18 +90,16 @@ const StreamsTab = () => {
                                 {stream.thumbnail ? (
                                     <div className="aspect-video relative overflow-hidden bg-slate-100">
                                         <img
-                                            src={getOptimizedThumbnail(stream.thumbnail)}
-                                            srcSet={getThumbnailSrcSet(stream.thumbnail)}
+                                            src={getOptimizedThumbnail(stream.thumbnail, 'max')}
                                             alt={stream.title}
                                             loading={index === 0 ? "eager" : "lazy"}
                                             decoding="async"
                                             fetchPriority={index === 0 ? "high" : "auto"}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             onError={(e) => {
-                                                // \ucd5c\uc801\ud654 \uc2e4\ud328 \uc2dc \uc6d0\ubcf8 URL\ub85c fallback
+                                                // 최적화 실패 시 원본 URL로 fallback
                                                 if (stream.thumbnail && e.currentTarget.src !== stream.thumbnail) {
                                                     e.currentTarget.src = stream.thumbnail;
-                                                    e.currentTarget.srcset = '';
                                                 } else {
                                                     e.currentTarget.style.display = 'none';
                                                 }
@@ -132,8 +154,7 @@ const StreamsTab = () => {
                                 <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-100 mr-4 relative flex items-center justify-center text-slate-300">
                                     {stream.thumbnail ? (
                                         <img
-                                            src={getOptimizedThumbnail(stream.thumbnail, 160)}
-                                            srcSet={`${getOptimizedThumbnail(stream.thumbnail, 160)} 1x, ${getOptimizedThumbnail(stream.thumbnail, 320)} 2x`}
+                                            src={getOptimizedThumbnail(stream.thumbnail)}
                                             alt={stream.title}
                                             loading="lazy"
                                             decoding="async"
@@ -141,7 +162,6 @@ const StreamsTab = () => {
                                             onError={(e) => {
                                                 if (stream.thumbnail && e.currentTarget.src !== stream.thumbnail) {
                                                     e.currentTarget.src = stream.thumbnail;
-                                                    e.currentTarget.srcset = '';
                                                 } else {
                                                     e.currentTarget.style.display = 'none';
                                                 }
