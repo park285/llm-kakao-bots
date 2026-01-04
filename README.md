@@ -47,14 +47,21 @@ llm/
 │   │   └── turtlesoup/       # 바다거북수프 로직
 │   └── Dockerfile.prod
 │
-├── hololive-kakao-bot-go/    # 홀로라이브 정보 봇
+├── hololive-kakao-bot-go/    # 홀로라이브 정보 봇 + API
 │   ├── internal/
 │   │   ├── command/          # 명령어 핸들러
-│   │   ├── service/          # 비즈니스 로직
-│   │   └── repository/       # 데이터 접근
+│   │   ├── server/           # API 핸들러 (OAuth, REST)
+│   │   ├── service/          # 비즈니스 로직 (auth, holodex, member)
+│   │   └── health/           # 헬스체크
 │   └── Dockerfile
 │
+├── admin-dashboard/          # 통합 관리 대시보드
+│   ├── backend/              # Go 백엔드
+│   └── frontend/             # React + TypeScript
+│
+├── build-all.sh              # 통합 버전 관리 및 Docker 빌드
 ├── docker-compose.prod.yml   # 프로덕션 스택
+├── prometheus.yml            # Prometheus 설정
 ├── .env                      # 환경 변수 (SSOT)
 ├── logs/                     # 로그 디렉터리
 └── backups/                  # 백업 스크립트
@@ -64,21 +71,24 @@ llm/
 
 ### 애플리케이션 서비스
 
-| 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
-|--------|------------|------|--------|------|
-| `mcp-llm-server` | mcp-llm-server | 40527 (HTTP), 40528 (gRPC) | 1GB | LLM 추론/가드/세션 |
-| `twentyq-bot` | twentyq-bot | 30081 | 512MB | 스무고개 게임 봇 |
-| `turtle-soup-bot` | turtle-soup-bot | 30082 | 512MB | 바다거북수프 게임 봇 |
-| `hololive-bot` | hololive-kakao-bot-go | 30001 | 512MB | 홀로라이브 정보 봇 |
-| `deunhealth` | deunhealth | - | 32MB | 컨테이너 헬스 모니터링 |
+| 서비스 | 컨테이너명 | 포트 | 메모리 | 버전 | 설명 |
+|--------|------------|------|--------|------|------|
+| `mcp-llm-server` | mcp-llm-server | 40527 (HTTP), 40528 (gRPC) | 1GB | 1.0.2 | LLM 추론/가드/세션 |
+| `twentyq-bot` | twentyq-bot | 30081 | 512MB | 1.0.2 | 스무고개 게임 봇 |
+| `turtle-soup-bot` | turtle-soup-bot | 30082 | 512MB | 1.0.2 | 바다거북수프 게임 봇 |
+| `hololive-bot` | hololive-kakao-bot-go | 30001 | 512MB | 2.0.2 | 홀로라이브 정보 봇 + API |
+| `admin-dashboard` | admin-dashboard | 30090 | 256MB | 1.0.3 | 통합 관리 대시보드 |
+| `deunhealth` | deunhealth | - | 32MB | - | 컨테이너 헬스 모니터링 |
 
 ### 인프라 서비스
 
 | 서비스 | 컨테이너명 | 포트 | 메모리 | 설명 |
 |--------|------------|------|--------|------|
-| `postgres` | llm-postgres | 5432 | 512MB | 통합 PostgreSQL |
+| `postgres` | llm-postgres | 5432 | 512MB | 통합 PostgreSQL 18 |
 | `valkey-cache` | valkey-cache | 6379 (TCP) + UDS | 512MB | 세션/캐시 (Dual-mode) |
 | `valkey-mq` | valkey-mq | 1833 | 256MB | Streams 메시지큐 |
+| `jaeger` | jaeger | 16686 (UI), 4317 (OTLP) | 256MB | 분산 추적 |
+| `prometheus` | prometheus | 9090 | 256MB | 메트릭 수집 |
 
 ### DeUnhealth (컨테이너 헬스 모니터)
 
@@ -186,10 +196,13 @@ vi .env
 ### 빌드 및 실행
 
 ```bash
-# 전체 빌드 (캐시 미사용)
-docker compose -f docker-compose.prod.yml build --no-cache
+# 통합 빌드 스크립트 (권장)
+./build-all.sh                      # 전체 서비스 버전 bump + 빌드
+./build-all.sh --no-bump            # 버전 bump 없이 빌드만
+./build-all.sh hololive-bot         # 특정 서비스만 빌드
 
-# 서비스 기동
+# 또는 docker compose 직접 사용
+docker compose -f docker-compose.prod.yml build --no-cache
 docker compose -f docker-compose.prod.yml up -d
 
 # 상태 확인
@@ -197,14 +210,18 @@ docker compose -f docker-compose.prod.yml ps
 
 # 헬스체크
 curl http://localhost:40527/health/ready
-curl http://localhost:8081/health
-curl http://localhost:8082/health
+curl http://localhost:30081/health
+curl http://localhost:30082/health
+curl http://localhost:30001/health
 ```
 
 ### 특정 서비스 재기동
 
 ```bash
-# 빌드 후 재기동
+# build-all.sh 사용 (권장)
+./build-all.sh hololive-bot twentyq-bot
+
+# 또는 docker compose 직접 사용
 docker compose -f docker-compose.prod.yml build twentyq-bot turtle-soup-bot
 docker compose -f docker-compose.prod.yml up -d twentyq-bot turtle-soup-bot
 
@@ -466,4 +483,4 @@ grpcurl -plaintext localhost:40528 describe llm.v1.LLMService
 
 ---
 
-**Last Updated**: 2026-01-01
+**Last Updated**: 2026-01-04
