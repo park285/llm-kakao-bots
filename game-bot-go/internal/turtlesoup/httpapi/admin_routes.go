@@ -145,8 +145,13 @@ func handleTurtleAdminStats(w http.ResponseWriter, r *http.Request, deps TurtleA
 		Last24HoursSolve: 0,
 	}
 
-	deps.Logger.Info("TURTLE_ADMIN_STATS_SUCCESS", "duration", time.Since(start).Milliseconds())
-	_ = commonhttputil.WriteJSON(w, http.StatusOK, response)
+	durationMs := time.Since(start).Milliseconds()
+	deps.Logger.Info("TURTLE_ADMIN_STATS_SUCCESS", "duration", durationMs)
+	_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"status":     "ok",
+		"stats":      response,
+		"durationMs": durationMs,
+	})
 }
 
 func handleTurtleAdminSessions(w http.ResponseWriter, r *http.Request, deps TurtleAdminDeps) {

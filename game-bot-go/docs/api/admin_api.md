@@ -32,25 +32,31 @@ Base URL: `/admin` (직접) 또는 `/admin/api/twentyq/admin` (프록시)
 **Response:**
 ```json
 {
-  "totalGamesPlayed": 1234,
-  "totalGamesCompleted": 890,
-  "totalSurrenders": 344,
-  "successRate": 72.12,
-  "activeSessions": 5,
-  "totalParticipants": 456,
-  "last24HoursGames": 23
+  "status": "ok",
+  "stats": {
+    "totalGamesPlayed": 1234,
+    "totalGamesCompleted": 890,
+    "totalSurrenders": 344,
+    "successRate": 72.12,
+    "activeSessions": 5,
+    "totalParticipants": 456,
+    "last24HoursGames": 23
+  },
+  "durationMs": 42
 }
 ```
 
 | 필드 | 타입 | 설명 |
 |:---|:---|:---|
-| `totalGamesPlayed` | int | 전체 플레이된 게임 수 |
-| `totalGamesCompleted` | int | 성공적으로 완료된 게임 수 |
-| `totalSurrenders` | int | 항복으로 종료된 게임 수 |
-| `successRate` | float | 성공률 (%) |
-| `activeSessions` | int | 현재 활성 세션 수 |
-| `totalParticipants` | int | 총 참여자 수 (고유 사용자) |
-| `last24HoursGames` | int | 최근 24시간 동안 완료된 게임 수 |
+| `status` | string | 응답 상태 ("ok") |
+| `stats.totalGamesPlayed` | int | 전체 플레이된 게임 수 |
+| `stats.totalGamesCompleted` | int | 성공적으로 완료된 게임 수 |
+| `stats.totalSurrenders` | int | 항복으로 종료된 게임 수 |
+| `stats.successRate` | float | 성공률 (%) |
+| `stats.activeSessions` | int | 현재 활성 세션 수 (Valkey SCAN) |
+| `stats.totalParticipants` | int | 총 참여자 수 (고유 사용자) |
+| `stats.last24HoursGames` | int | 최근 24시간 동안 완료된 게임 수 |
+| `durationMs` | int | 응답 생성 소요 시간 (ms) |
 
 ---
 
@@ -516,15 +522,31 @@ Base URL: `/admin` (직접) 또는 `/admin/api/turtle/admin` (프록시)
 **Response:**
 ```json
 {
-  "activeSessions": 3,
-  "totalSolved": 0,
-  "totalFailed": 0,
-  "solveRate": 0,
-  "avgQuestions": 0,
-  "avgHintsPerGame": 0,
-  "last24HoursSolve": 0
+  "status": "ok",
+  "stats": {
+    "activeSessions": 3,
+    "totalSolved": 0,
+    "totalFailed": 0,
+    "solveRate": 0,
+    "avgQuestions": 0,
+    "avgHintsPerGame": 0,
+    "last24HoursSolve": 0
+  },
+  "durationMs": 15
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|:---|:---|:---|
+| `status` | string | 응답 상태 ("ok") |
+| `stats.activeSessions` | int | 현재 활성 세션 수 (Valkey SCAN) |
+| `stats.totalSolved` | int | 해결된 퍼즐 수 |
+| `stats.totalFailed` | int | 실패/포기한 퍼즐 수 |
+| `stats.solveRate` | float | 해결률 (%) |
+| `stats.avgQuestions` | float | 게임당 평균 질문 수 |
+| `stats.avgHintsPerGame` | float | 게임당 평균 힌트 사용 수 |
+| `stats.last24HoursSolve` | int | 최근 24시간 해결 수 |
+| `durationMs` | int | 응답 생성 소요 시간 (ms) |
 
 > **Note:** 현재 PostgreSQL 연동이 없어 활성 세션 수만 조회됩니다. 향후 업데이트 예정.
 

@@ -216,8 +216,13 @@ func handleAdminStats(w http.ResponseWriter, r *http.Request, deps AdminDeps) {
 		Last24HoursGames:    int(stats.Last24Hours),
 	}
 
-	deps.Logger.Info("ADMIN_STATS_SUCCESS", "duration", time.Since(start).Milliseconds())
-	_ = commonhttputil.WriteJSON(w, http.StatusOK, response)
+	durationMs := time.Since(start).Milliseconds()
+	deps.Logger.Info("ADMIN_STATS_SUCCESS", "duration", durationMs)
+	_ = commonhttputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"status":     "ok",
+		"stats":      response,
+		"durationMs": durationMs,
+	})
 }
 
 // handleAdminSessions: 활성 세션 목록 조회 (Valkey SCAN)
