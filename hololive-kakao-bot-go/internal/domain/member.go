@@ -23,6 +23,7 @@ type Member struct {
 	NameJa      string   `json:"nameJa,omitempty"`
 	NameKo      string   `json:"nameKo,omitempty"`
 	IsGraduated bool     `json:"isGraduated,omitempty"`
+	Photo       string   `json:"photo,omitempty"` // YouTube 프로필 이미지 URL (고화질)
 }
 
 // MembersData: 전체 멤버 데이터의 메타데이터 및 목록, 빠른 조회를 위한 맵(Map)을 포함합니다.

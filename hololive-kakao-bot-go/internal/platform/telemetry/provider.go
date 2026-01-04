@@ -90,7 +90,10 @@ func (p *Provider) Shutdown(ctx context.Context) error {
 	if p.tracerProvider == nil {
 		return nil
 	}
-	return p.tracerProvider.Shutdown(ctx)
+	if err := p.tracerProvider.Shutdown(ctx); err != nil {
+		return fmt.Errorf("tracer provider shutdown: %w", err)
+	}
+	return nil
 }
 
 // IsEnabled: OpenTelemetry가 활성화되었는지 확인합니다.

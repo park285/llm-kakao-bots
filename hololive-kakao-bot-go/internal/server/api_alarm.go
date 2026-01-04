@@ -11,7 +11,7 @@ import (
 )
 
 // GetAlarms: 모든 알람을 JSON으로 반환합니다.
-func (h *AdminHandler) GetAlarms(c *gin.Context) {
+func (h *APIHandler) GetAlarms(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
 
@@ -30,7 +30,7 @@ func (h *AdminHandler) GetAlarms(c *gin.Context) {
 }
 
 // DeleteAlarm: 특정 알람을 삭제합니다.
-func (h *AdminHandler) DeleteAlarm(c *gin.Context) {
+func (h *APIHandler) DeleteAlarm(c *gin.Context) {
 	var req struct {
 		RoomID    string `json:"roomId" binding:"required"`
 		UserID    string `json:"userId" binding:"required"`

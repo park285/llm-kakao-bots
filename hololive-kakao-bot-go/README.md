@@ -168,3 +168,15 @@ services:
 ## 📝 라이선스
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+### Third-Party API Attribution
+
+#### Holodex API
+
+이 프로젝트는 [Holodex API](https://holodex.net)를 사용하여 VTuber 스트림 정보를 제공합니다.
+
+-   **API Provider**: [Holodex](https://holodex.net)
+-   **Terms of Service**: [https://holodex.net/api/terms](https://holodex.net/api/terms)
+-   **Disclaimer**: THE HOLODEX API IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
+
+Holodex API Terms of Service Section 6 (Attribution)에 따라 본 프로젝트는 Holodex를 API 제공자로 명시하며, 소스 코드 내에 라이선스 및 면책 조항에 대한 참조를 포함합니다.

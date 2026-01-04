@@ -11,7 +11,9 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/server"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/acl"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/activity"
+	authsvc "github.com/kapu/hololive-kakao-bot-go/internal/service/auth"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
@@ -54,11 +56,12 @@ func ProvideSystemCollector(cfg *config.Config) *system.Collector {
 	return system.NewCollector(endpoints)
 }
 
-// ProvideAdminHandler: 관리자 API 핸들러를 생성하여 제공한다. 모든 서비스 의존성을 주입받는다.
-func ProvideAdminHandler(
+// ProvideAPIHandler: Hololive API 핸들러를 생성하여 제공한다. 모든 서비스 의존성을 주입받는다.
+func ProvideAPIHandler(
 	repo *member.Repository,
 	memberCache *member.Cache,
 	valkeyCache *cache.Service,
+	profilesSvc *member.ProfileService,
 	alarm *notification.AlarmService,
 	holodexSvc *holodex.Service,
 	youtubeSvc *youtube.Service,
@@ -68,11 +71,12 @@ func ProvideAdminHandler(
 	aclSvc *acl.Service,
 	systemSvc *system.Collector,
 	logger *slog.Logger,
-) *server.AdminHandler {
-	return server.NewAdminHandler(
+) *server.APIHandler {
+	return server.NewAPIHandler(
 		repo,
 		memberCache,
 		valkeyCache,
+		profilesSvc,
 		alarm,
 		holodexSvc,
 		youtubeSvc,
@@ -83,6 +87,25 @@ func ProvideAdminHandler(
 		systemSvc,
 		logger,
 	)
+}
+
+// ProvideAuthService: 세션 기반 인증 서비스를 생성하여 제공합니다.
+func ProvideAuthService(
+	ctx context.Context,
+	postgres *database.PostgresService,
+	cacheSvc *cache.Service,
+	logger *slog.Logger,
+) (*authsvc.Service, error) {
+	svc, err := authsvc.NewService(ctx, postgres.GetGormDB(), cacheSvc, logger, authsvc.DefaultConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create auth service: %w", err)
+	}
+	return svc, nil
+}
+
+// ProvideAuthHandler: /api/auth 핸들러를 생성하여 제공합니다.
+func ProvideAuthHandler(authService *authsvc.Service, logger *slog.Logger) *server.AuthHandler {
+	return server.NewAuthHandler(authService, logger)
 }
 
 // ProvideYouTubeService: YouTube 서비스 인스턴스를 제공합니다.

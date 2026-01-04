@@ -6,6 +6,9 @@ import (
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/bot"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/cache"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/database"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/member"
 )
 
@@ -13,16 +16,23 @@ import (
 type coreInfrastructure struct {
 	deps         *bot.Dependencies
 	ytStack      *YouTubeStack
+	photoSync    *holodex.PhotoSyncService // 프로필 이미지 동기화 서비스
 	cleanupCache func()
 	cleanupDB    func()
 }
 
-// initCoreInfrastructure 는 공통 인프라를 초기화한다.
-func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*coreInfrastructure, error) {
-	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
-	irisClient := ProvideIrisClient(ctx, valkeyMQConfig, logger)
-	messageStack := ProvideMessageStack(cfg)
+// infraResources 는 캐시/DB 리소스를 담는다.
+type infraResources struct {
+	cacheService    *cache.Service
+	postgresService *database.PostgresService
+	memberRepo      *member.Repository
+	memberCache     *member.Cache
+	cleanupCache    func()
+	cleanupDB       func()
+}
 
+// initInfraResources 는 캐시/DB 리소스를 초기화한다.
+func initInfraResources(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*infraResources, error) {
 	valkeyConfig := ProvideValkeyConfig(cfg)
 	cacheResources, cleanupCache, err := ProvideCacheResources(valkeyConfig, logger)
 	if err != nil {
@@ -46,20 +56,43 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 		return nil, err
 	}
 
+	return &infraResources{
+		cacheService:    cacheService,
+		postgresService: postgresService,
+		memberRepo:      memberRepository,
+		memberCache:     memberCache,
+		cleanupCache:    cleanupCache,
+		cleanupDB:       cleanupDB,
+	}, nil
+}
+
+// initCoreInfrastructure 는 공통 인프라를 초기화한다.
+func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*coreInfrastructure, error) {
+	valkeyMQConfig := ProvideValkeyMQConfig(cfg)
+	irisClient := ProvideIrisClient(ctx, valkeyMQConfig, logger)
+	messageStack := ProvideMessageStack(cfg)
+
+	infra, err := initInfraResources(ctx, cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+	cacheService := infra.cacheService
+	postgresService := infra.postgresService
+
 	holodexAPIKeys := ProvideHolodexAPIKeys(cfg)
-	memberServiceAdapter := ProvideMemberServiceAdapter(memberCache)
+	memberServiceAdapter := ProvideMemberServiceAdapter(infra.memberCache)
 	scraperService := ProvideScraperService(cacheService, memberServiceAdapter, logger)
 	holodexService, err := ProvideHolodexService(holodexAPIKeys, cacheService, scraperService, logger)
 	if err != nil {
-		cleanupDB()
-		cleanupCache()
+		infra.cleanupDB()
+		infra.cleanupCache()
 		return nil, err
 	}
 
 	profileService, err := ProvideProfileService(ctx, cacheService, memberServiceAdapter, logger)
 	if err != nil {
-		cleanupDB()
-		cleanupCache()
+		infra.cleanupDB()
+		infra.cleanupCache()
 		return nil, err
 	}
 
@@ -69,7 +102,6 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 	// 앱 시작 시 알람 캐시 워밍 (DB에서 Valkey로 일괄 로드)
 	if warnErr := alarmService.WarmCacheFromDB(ctx); warnErr != nil {
 		logger.Warn("Failed to warm alarm cache from DB", "error", warnErr)
-		// 캐시 워밍 실패는 치명적이지 않음 - 계속 진행
 	}
 
 	memberDataProvider := ProvideMembersData(memberServiceAdapter)
@@ -81,18 +113,22 @@ func initCoreInfrastructure(ctx context.Context, cfg *config.Config, logger *slo
 
 	aclService, err := ProvideACLService(ctx, cfg, postgresService, cacheService, logger)
 	if err != nil {
-		cleanupDB()
-		cleanupCache()
+		infra.cleanupDB()
+		infra.cleanupCache()
 		return nil, err
 	}
 
-	deps := ProvideBotDependencies(cfg, logger, irisClient, messageStack, cacheService, postgresService, memberRepository, memberCache, holodexService, profileService, alarmService, memberMatcher, memberDataProvider, youTubeStack, activityLogger, settingsService, aclService)
+	deps := ProvideBotDependencies(cfg, logger, irisClient, messageStack, cacheService, postgresService, infra.memberRepo, infra.memberCache, holodexService, profileService, alarmService, memberMatcher, memberDataProvider, youTubeStack, activityLogger, settingsService, aclService)
+
+	// 프로필 이미지 동기화 서비스 생성 (7일 주기)
+	photoSyncService := holodex.NewPhotoSyncService(holodexService, infra.memberRepo, logger)
 
 	return &coreInfrastructure{
 		deps:         deps,
 		ytStack:      youTubeStack,
-		cleanupCache: cleanupCache,
-		cleanupDB:    cleanupDB,
+		photoSync:    photoSyncService,
+		cleanupCache: infra.cleanupCache,
+		cleanupDB:    infra.cleanupDB,
 	}, nil
 }
 
@@ -152,26 +188,33 @@ func buildBotRuntime(ctx context.Context, cfg *config.Config, logger *slog.Logge
 	youTubeService := ProvideYouTubeService(infra.ytStack)
 	systemCollector := ProvideSystemCollector(cfg)
 
-	adminHandler := ProvideAdminHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Alarm, deps.Holodex, youTubeService, infra.ytStack.StatsRepo, deps.Activity, deps.Settings, deps.ACL, systemCollector, logger)
+	apiHandler := ProvideAPIHandler(deps.MemberRepo, deps.MemberCache, deps.Cache, deps.Profiles, deps.Alarm, deps.Holodex, youTubeService, infra.ytStack.StatsRepo, deps.Activity, deps.Settings, deps.ACL, systemCollector, logger)
 
-	adminRouter, err := ProvideAdminRouter(ctx, cfg, logger, adminHandler)
+	authService, err := ProvideAuthService(ctx, deps.Postgres, deps.Cache, logger)
+	if err != nil {
+		return nil, err
+	}
+	authHandler := ProvideAuthHandler(authService, logger)
+
+	adminRouter, err := ProvideAPIRouter(ctx, cfg, logger, apiHandler, authHandler)
 	if err != nil {
 		return nil, err
 	}
 
-	adminAddr := ProvideAdminAddr(cfg)
-	adminServer := ProvideAdminServer(adminAddr, adminRouter)
+	adminAddr := ProvideAPIAddr(cfg)
+	adminServer := ProvideAPIServer(adminAddr, adminRouter)
 
 	return &BotRuntime{
-		Config:            cfg,
-		Logger:            logger,
-		Bot:               botBot,
-		MQConsumer:        valkeyMQConsumer,
-		Scheduler:         youTubeScheduler,
-		AdminHandler:      adminHandler,
-		AdminRouter:       adminRouter,
-		AdminAddr:         adminAddr,
-		AdminServer:       adminServer,
+		Config:      cfg,
+		Logger:      logger,
+		Bot:         botBot,
+		MQConsumer:  valkeyMQConsumer,
+		Scheduler:   youTubeScheduler,
+		PhotoSync:   infra.photoSync, // 프로필 이미지 동기화 서비스
+		APIHandler:  apiHandler,
+		AdminRouter: adminRouter,
+		AdminAddr:   adminAddr,
+		AdminServer: adminServer,
 	}, nil
 }
 

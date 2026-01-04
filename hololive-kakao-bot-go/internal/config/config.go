@@ -18,20 +18,20 @@ const maxHolodexAPIKeySlots = 5
 
 // Config: 홀로라이브 봇의 전체 동작에 필요한 설정을 담는 구조체
 type Config struct {
-	Iris                 IrisConfig
-	ValkeyMQ             ValkeyMQConfig
-	Server               ServerConfig
-	Kakao                KakaoConfig
-	Holodex              HolodexConfig
-	YouTube              YouTubeConfig
-	Valkey               ValkeyConfig
-	Postgres             PostgresConfig
-	Notification         NotificationConfig
-	Logging              LoggingConfig
-	Bot                  BotConfig
-	Services             ServicesConfig
-	Telemetry            TelemetryConfig // OpenTelemetry 분산 추적
-	Version              string
+	Iris         IrisConfig
+	ValkeyMQ     ValkeyMQConfig
+	Server       ServerConfig
+	Kakao        KakaoConfig
+	Holodex      HolodexConfig
+	YouTube      YouTubeConfig
+	Valkey       ValkeyConfig
+	Postgres     PostgresConfig
+	Notification NotificationConfig
+	Logging      LoggingConfig
+	Bot          BotConfig
+	Services     ServicesConfig
+	Telemetry    TelemetryConfig // OpenTelemetry 분산 추적
+	Version      string
 }
 
 // IrisConfig: Iris 웹훅 서버 연결 및 메시지 전송 관련 설정
@@ -55,7 +55,8 @@ type ValkeyMQConfig struct {
 
 // ServerConfig: HTTP 서버 설정
 type ServerConfig struct {
-	Port int
+	Port   int
+	APIKey string // API 인증용 시크릿 키 (X-API-Key 헤더로 검증)
 }
 
 // KakaoConfig: 카카오톡 채팅방 허용 목록 및 접근 제어(ACL) 설정
@@ -269,14 +270,15 @@ func Load() (*Config, error) {
 				"MQ_REPLY_STREAM_MAX_LEN",
 				int(constants.MQConfig.ReplyStreamMaxLen),
 			),
-			},
-			Server: ServerConfig{
-				Port: getEnvInt("SERVER_PORT", 30001),
-			},
-			Kakao: KakaoConfig{
-				Rooms:      parseCommaSeparated(getEnv("KAKAO_ROOMS", "홀로라이브 알림방")),
-				ACLEnabled: getEnvBool("KAKAO_ACL_ENABLED", true),
-			},
+		},
+		Server: ServerConfig{
+			Port:   getEnvInt("SERVER_PORT", 30001),
+			APIKey: getEnv("API_SECRET_KEY", ""),
+		},
+		Kakao: KakaoConfig{
+			Rooms:      parseCommaSeparated(getEnv("KAKAO_ROOMS", "홀로라이브 알림방")),
+			ACLEnabled: getEnvBool("KAKAO_ACL_ENABLED", true),
+		},
 		Holodex: HolodexConfig{
 			APIKeys: collectAPIKeys("HOLODEX_API_KEY_"),
 		},
@@ -320,17 +322,17 @@ func Load() (*Config, error) {
 			GameBotTwentyQHealthURL: getEnv("SERVICES_GAME_BOT_TWENTYQ_HEALTH_URL", ""),
 			GameBotTurtleHealthURL:  getEnv("SERVICES_GAME_BOT_TURTLE_HEALTH_URL", ""),
 		},
-			Telemetry: TelemetryConfig{
-				Enabled:        getEnvBool("OTEL_ENABLED", false),
-				ServiceName:    getEnv("OTEL_SERVICE_NAME", "hololive-bot"),
-				ServiceVersion: getEnv("OTEL_SERVICE_VERSION", "1.0.0"),
+		Telemetry: TelemetryConfig{
+			Enabled:        getEnvBool("OTEL_ENABLED", false),
+			ServiceName:    getEnv("OTEL_SERVICE_NAME", "hololive-bot"),
+			ServiceVersion: getEnv("OTEL_SERVICE_VERSION", "1.0.0"),
 			Environment:    getEnv("OTEL_ENVIRONMENT", "production"),
 			OTLPEndpoint:   getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "jaeger:4317"),
-				OTLPInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
-				SampleRate:     getEnvFloat("OTEL_SAMPLE_RATE", 1.0),
-			},
-			Version: util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
-		}
+			OTLPInsecure:   getEnvBool("OTEL_EXPORTER_OTLP_INSECURE", true),
+			SampleRate:     getEnvFloat("OTEL_SAMPLE_RATE", 1.0),
+		},
+		Version: util.TrimSpace(getEnv("APP_VERSION", "1.1.0-go")),
+	}
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)

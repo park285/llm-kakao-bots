@@ -8,7 +8,7 @@ import (
 )
 
 // GetRooms: 설정된 방 목록을 반환합니다.
-func (h *AdminHandler) GetRooms(c *gin.Context) {
+func (h *APIHandler) GetRooms(c *gin.Context) {
 	if h.acl == nil {
 		c.JSON(503, gin.H{"error": "ACL service not available"})
 		return
@@ -22,7 +22,7 @@ func (h *AdminHandler) GetRooms(c *gin.Context) {
 }
 
 // AddRoom: 화이트리스트에 새로운 방을 추가합니다.
-func (h *AdminHandler) AddRoom(c *gin.Context) {
+func (h *APIHandler) AddRoom(c *gin.Context) {
 	if h.acl == nil {
 		c.JSON(503, gin.H{"error": "ACL service not available"})
 		return
@@ -59,7 +59,7 @@ func (h *AdminHandler) AddRoom(c *gin.Context) {
 }
 
 // RemoveRoom: 화이트리스트에서 방을 제거합니다.
-func (h *AdminHandler) RemoveRoom(c *gin.Context) {
+func (h *APIHandler) RemoveRoom(c *gin.Context) {
 	if h.acl == nil {
 		c.JSON(503, gin.H{"error": "ACL service not available"})
 		return
@@ -91,7 +91,7 @@ func (h *AdminHandler) RemoveRoom(c *gin.Context) {
 }
 
 // SetACL: 방 ACL을 활성화 또는 비활성화합니다.
-func (h *AdminHandler) SetACL(c *gin.Context) {
+func (h *APIHandler) SetACL(c *gin.Context) {
 	if h.acl == nil {
 		c.JSON(503, gin.H{"error": "ACL service not available"})
 		return

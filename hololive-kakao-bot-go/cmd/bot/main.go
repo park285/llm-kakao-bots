@@ -10,6 +10,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/app"
 	"github.com/kapu/hololive-kakao-bot-go/internal/config"
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
+	"github.com/kapu/hololive-kakao-bot-go/internal/health"
 	"github.com/kapu/hololive-kakao-bot-go/internal/platform/telemetry"
 	"github.com/kapu/hololive-kakao-bot-go/internal/util"
 )
@@ -18,6 +19,9 @@ import (
 var Version = "dev"
 
 func main() {
+	// health 패키지 초기화 (버전/uptime 추적)
+	health.Init(Version)
+
 	// Graceful Shutdown을 위해 os.Exit 대신 exitCode 변수 사용
 	var exitCode int
 	defer func() {

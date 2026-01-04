@@ -17,6 +17,7 @@ import (
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/mq"
 	"github.com/kapu/hololive-kakao-bot-go/internal/server"
+	"github.com/kapu/hololive-kakao-bot-go/internal/service/holodex"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/youtube"
 )
 
@@ -28,11 +29,12 @@ type BotRuntime struct {
 	Bot        *bot.Bot
 	MQConsumer *mq.ValkeyMQConsumer
 	Scheduler  *youtube.Scheduler
+	PhotoSync  *holodex.PhotoSyncService // 프로필 이미지 동기화 서비스
 
-	AdminHandler *server.AdminHandler
-	AdminRouter  *gin.Engine
-	AdminAddr    string
-	AdminServer  *http.Server
+	APIHandler  *server.APIHandler
+	AdminRouter *gin.Engine
+	AdminAddr   string
+	AdminServer *http.Server
 
 	cleanup func()
 }
@@ -109,6 +111,14 @@ func (r *BotRuntime) Start(ctx context.Context, errCh chan<- error) {
 		r.Scheduler.Start(ctx)
 		if r.Logger != nil {
 			r.Logger.Info("YouTube ingestion scheduler started")
+		}
+	}
+
+	// 프로필 이미지 동기화 서비스 시작 (7일 주기 백그라운드 동기화)
+	if r.PhotoSync != nil {
+		go r.PhotoSync.Start(ctx)
+		if r.Logger != nil {
+			r.Logger.Info("Photo sync service started (7-day interval)")
 		}
 	}
 

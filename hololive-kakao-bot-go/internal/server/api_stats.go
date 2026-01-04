@@ -9,11 +9,12 @@ import (
 
 	"github.com/kapu/hololive-kakao-bot-go/internal/constants"
 	"github.com/kapu/hololive-kakao-bot-go/internal/domain"
+	"github.com/kapu/hololive-kakao-bot-go/internal/health"
 	"github.com/kapu/hololive-kakao-bot-go/internal/service/notification"
 )
 
 // GetStats: 봇 통계를 반환합니다. (성능 최적화를 위해 병렬 조회)
-func (h *AdminHandler) GetStats(c *gin.Context) {
+func (h *APIHandler) GetStats(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), constants.RequestTimeout.AdminRequest)
 	defer cancel()
 
@@ -35,8 +36,6 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 	}()
 	wg.Wait()
 
-	uptime := time.Since(h.startTime).Truncate(time.Second).String()
-
 	// ACL 서비스에서 rooms 수 조회
 	var roomCount int
 	if h.acl != nil {
@@ -49,14 +48,14 @@ func (h *AdminHandler) GetStats(c *gin.Context) {
 		"members": len(members),
 		"alarms":  len(alarmKeys),
 		"rooms":   roomCount,
-		"version": "v2.0.0-go",
-		"uptime":  uptime,
+		"version": health.GetVersion(),
+		"uptime":  health.GetUptime(),
 	})
 }
 
 // StreamSystemStats: WebSocket을 통해 시스템 리소스 사용량을 실시간 스트리밍합니다.
 // 2초마다 CPU/메모리 통계를 전송합니다.
-func (h *AdminHandler) StreamSystemStats(c *gin.Context) {
+func (h *APIHandler) StreamSystemStats(c *gin.Context) {
 	if h.systemStats == nil {
 		c.JSON(400, gin.H{
 			"status":  "error",

@@ -3,10 +3,11 @@
 ARG GO_VERSION=1.25.5
 ARG ALPINE_VERSION=3.23
 
-# ==========================================
 # Stage 1: Build Backend
-# ==========================================
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
+
+# 빌드 시 버전 주입 (docker-compose args 또는 --build-arg로 전달)
+ARG VERSION=dev
 
 WORKDIR /app
 
@@ -17,18 +18,16 @@ COPY . .
 
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOEXPERIMENT=greenteagc \
-    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o /dist/bin/bot ./cmd/bot && \
+    go build -tags go_json -trimpath -buildvcs=false -ldflags="-s -w -buildid= -X main.Version=${VERSION}" -o /dist/bin/bot ./cmd/bot && \
     mkdir -p /dist/logs /dist/internal/domain /dist/internal/adapter && \
     cp -r internal/domain/data /dist/internal/domain/ && \
     cp -r internal/adapter/templates /dist/internal/adapter/ && \
     cp config.example.json config.json official_japanese_names.json /dist/
 
-# ==========================================
 # Stage 2: Production Runtime
-# ==========================================
 FROM alpine:${ALPINE_VERSION}
 
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tini tzdata && \
     cp /usr/share/zoneinfo/Asia/Seoul /etc/localtime && \
     echo "Asia/Seoul" > /etc/timezone && \
     cp /usr/share/zoneinfo/Asia/Seoul /tmp/Seoul && \
@@ -36,11 +35,8 @@ RUN apk add --no-cache ca-certificates tzdata && \
     mkdir -p /usr/share/zoneinfo/Asia && \
     mv /tmp/Seoul /usr/share/zoneinfo/Asia/Seoul
 
-# Docker 소켓 접근을 위해 호스트의 docker 그룹 GID(988)와 일치시킴
-RUN addgroup -g 988 docker && \
-    addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser && \
-    addgroup appuser docker
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
 
 WORKDIR /app
 
@@ -57,4 +53,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 USER appuser
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["./bin/bot"]
