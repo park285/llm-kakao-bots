@@ -6,9 +6,7 @@ normalizers:
   - lower_case  # Converts input to lowercase, simplifying regex patterns
 
 rules:
-  # ==========================================
   # [CRITICAL] Jailbreak & Mode Manipulation
-  # ==========================================
   - id: en_dan_mode
     type: regex
     # Matches: "DAN mode", "Do Anything Now persona", "Developer mode enable"
@@ -25,9 +23,7 @@ rules:
       - "disable ethical guardrails"
     weight: 0.65
 
-  # ==========================================
   # [CORE] Prompt Injection & History Management
-  # ==========================================
   - id: en_ignore_instructions
     type: regex
     # Pattern: Verb -> Adjective -> Noun
@@ -40,9 +36,7 @@ rules:
     pattern: '(from\s*now\s*on|henceforth).{0,30}(you\s*are|act\s*as|you\s*will).{0,30}(answer|respond|do)'
     weight: 0.55
 
-  # ==========================================
   # [HIGH] System Exfiltration (Leakage)
-  # ==========================================
   - id: en_system_prompt_exfil
     type: regex
     # Matches: "Print system prompt", "Translate initial instructions"
@@ -54,9 +48,7 @@ rules:
     pattern: '(show|print|give|reveal).{0,40}(api_key|secret_key|token|password|credential)'
     weight: 0.8
 
-  # ==========================================
   # [TECHNIQUE] Advanced Bypass Attempts
-  # ==========================================
   - id: en_prefix_injection
     type: regex
     # Forces the AI to start response with affirmation ("Sure") to bypass refusal logic
@@ -74,9 +66,7 @@ rules:
     pattern: '```(system|prompt|yaml)|<system>|</system>|\[system\]'
     weight: 0.45
 
-  # ==========================================
   # [POLICY] Policy & Safety Bypass
-  # ==========================================
   - id: en_policy_bypass
     type: regex
     pattern: '(ignore|bypass|disable|remove).{0,40}(openai|safety|content|ethical).{0,30}(policy|filter|guideline|restriction)'
@@ -87,9 +77,7 @@ rules:
     pattern: '(hypothetically|imagine|pretend).{0,50}(illegal|harmful|unethical|restricted).{0,30}(answer|tell|show)'
     weight: 0.45
 
-  # ==========================================
   # [GAME] Solution Exfiltration (Optional)
-  # ==========================================
   - id: en_game_direct_answer
     type: regex
     pattern: '(tell|give|show).{0,30}(answer|solution|flag).{0,30}(directly|immediately|without explanation)'
