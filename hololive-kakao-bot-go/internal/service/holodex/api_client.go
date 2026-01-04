@@ -1,3 +1,14 @@
+// Holodex API Integration
+//
+// 본 코드는 Holodex API (https://holodex.net)를 사용하며, Holodex API Terms of Service를 준수합니다.
+//
+// Attribution (Holodex API Terms Section 6):
+//   - API Provider: Holodex (https://holodex.net)
+//   - License: https://holodex.net/api/terms
+//   - Disclaimer: THE HOLODEX API IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
+//
+// See: https://holodex.net/api/terms for full terms.
+
 package holodex
 
 import (
@@ -161,7 +172,8 @@ func (c *APIClient) newRequest(ctx context.Context, method, reqURL string, apiKe
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-APIKEY", apiKey)
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36")
+	// Holodex API Terms 준수를 위해 정직한 User-Agent 사용 (Section 6: Attribution)
+	req.Header.Set("User-Agent", "api.capu.blog/hololive-bot (Linux; +https://api.capu.blog; Holodex API client)")
 	return req, nil
 }
 

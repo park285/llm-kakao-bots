@@ -211,7 +211,7 @@ func (s *ScraperService) parseStreamElement(sel *goquery.Selection, currentDate 
 			slog.Any("error", err))
 	}
 
-	thumbnailURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
+	thumbnailURL := fmt.Sprintf("https://img.youtube.com/vi/%s/maxresdefault.jpg", videoID)
 
 	channelID := s.matchMemberToChannel(memberName)
 	if channelID == "" {

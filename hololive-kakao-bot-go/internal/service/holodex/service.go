@@ -140,7 +140,7 @@ func (h *Service) GetUpcomingStreams(ctx context.Context, hours int) ([]*domain.
 	params.Set("type", "stream")
 	params.Set("max_upcoming_hours", fmt.Sprintf("%d", util.Min(hours, 168)))
 	params.Set("order", "asc")
-	params.Set("orderby", "start_scheduled")
+	params.Set("sort", "start_scheduled")
 
 	body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
 	if err != nil {
@@ -189,49 +189,46 @@ func (h *Service) GetChannelSchedule(ctx context.Context, channelID string, hour
 		return h.filterUpcomingStreams(copied), nil
 	}
 
-	var statuses []domain.StreamStatus
+	// Holodex API는 콤마 구분 복수 status를 지원
+	// 기존 2회 호출을 단일 호출로 통합하여 latency 및 rate limit 부담 감소
+	var statusStr string
 	if includeLive {
-		statuses = []domain.StreamStatus{domain.StreamStatusLive, domain.StreamStatusUpcoming}
+		statusStr = string(domain.StreamStatusLive) + "," + string(domain.StreamStatusUpcoming)
 	} else {
-		statuses = []domain.StreamStatus{domain.StreamStatusUpcoming}
+		statusStr = string(domain.StreamStatusUpcoming)
 	}
 
-	allStreams := make([]*domain.Stream, 0)
+	params := url.Values{}
+	params.Set("channel_id", channelID)
+	params.Set("status", statusStr)
+	params.Set("type", "stream")
+	params.Set("max_upcoming_hours", fmt.Sprintf("%d", hours))
 
-	for _, status := range statuses {
-		params := url.Values{}
-		params.Set("channel_id", channelID)
-		params.Set("status", string(status))
-		params.Set("type", "stream")
-		params.Set("max_upcoming_hours", fmt.Sprintf("%d", hours))
+	body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
+	if err != nil {
+		h.logger.Error("Failed to get channel schedule",
+			slog.String("channel_id", channelID),
+			slog.String("status", statusStr),
+			slog.Any("error", err),
+		)
 
-		body, err := h.requester.DoRequest(ctx, "GET", "/live", params)
-		if err != nil {
-			h.logger.Error("Failed to get channel schedule",
+		if h.shouldUseFallback(err) && h.scraper != nil {
+			h.logger.Warn("Using scraper fallback for channel schedule",
 				slog.String("channel_id", channelID),
-				slog.String("status", string(status)),
-				slog.Any("error", err),
-			)
+				slog.Any("error", err))
 
-			if h.shouldUseFallback(err) && h.scraper != nil {
-				h.logger.Warn("Using scraper fallback for channel schedule",
-					slog.String("channel_id", channelID),
-					slog.Any("error", err))
-
-				return h.scraper.FetchChannel(ctx, channelID)
-			}
-
-			return nil, fmt.Errorf("get channel schedule: %w", err)
+			return h.scraper.FetchChannel(ctx, channelID)
 		}
 
-		var rawStreams []StreamRaw
-		if err := json.Unmarshal(body, &rawStreams); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal channel schedule: %w", err)
-		}
-
-		streams := h.mapStreamsResponse(rawStreams)
-		allStreams = append(allStreams, streams...)
+		return nil, fmt.Errorf("get channel schedule: %w", err)
 	}
+
+	var rawStreams []StreamRaw
+	if err := json.Unmarshal(body, &rawStreams); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal channel schedule: %w", err)
+	}
+
+	allStreams := h.mapStreamsResponse(rawStreams)
 
 	hololiveOnly := h.filterHololiveStreams(allStreams)
 
@@ -275,7 +272,7 @@ func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.C
 	query = util.TrimSpace(query)
 	params := url.Values{}
 	params.Set("org", "Hololive")
-	params.Set("name", query)
+	params.Set("type", "vtuber")
 	params.Set("limit", "50")
 
 	body, err := h.requester.DoRequest(ctx, "GET", "/channels", params)
@@ -297,9 +294,20 @@ func (h *Service) SearchChannels(ctx context.Context, query string) ([]*domain.C
 	)
 
 	filtered := make([]*domain.Channel, 0, len(channels))
+	normalizedQuery := strings.ToLower(query)
 	for _, ch := range channels {
 		if ch.Org != nil && *ch.Org == "Hololive" && !h.isHolostarsChannel(ch) {
-			filtered = append(filtered, ch)
+			// 쿼리가 비어있으면 모든 채널 반환, 아니면 이름 매칭 필터링
+			if normalizedQuery == "" {
+				filtered = append(filtered, ch)
+				continue
+			}
+			// 채널 이름 또는 영어 이름에 쿼리가 포함되는지 확인
+			nameMatch := strings.Contains(strings.ToLower(ch.Name), normalizedQuery)
+			englishMatch := ch.EnglishName != nil && strings.Contains(strings.ToLower(*ch.EnglishName), normalizedQuery)
+			if nameMatch || englishMatch {
+				filtered = append(filtered, ch)
+			}
 		}
 	}
 
@@ -348,6 +356,241 @@ func (h *Service) GetChannel(ctx context.Context, channelID string) (*domain.Cha
 	_ = h.cache.Set(ctx, cacheKey, channel, constants.CacheTTL.ChannelInfo)
 
 	return channel, nil
+}
+
+// GetChannels: 여러 채널 ID로 채널 정보를 배치 조회합니다.
+// 캐시를 우선 조회하고, 캐시 미스된 채널은 /channels 리스트 API로 한 번에 조회합니다.
+// 기존 N+1 개별 호출 패턴을 단일 호출로 최적화하여 rate limit 부담을 대폭 감소시킵니다.
+func (h *Service) GetChannels(ctx context.Context, channelIDs []string) (map[string]*domain.Channel, error) {
+	if len(channelIDs) == 0 {
+		return make(map[string]*domain.Channel), nil
+	}
+
+	result := make(map[string]*domain.Channel, len(channelIDs))
+	var missedIDs []string
+
+	// 캐시에서 먼저 조회
+	for _, id := range channelIDs {
+		cacheKey := fmt.Sprintf("channel_%s", id)
+		var cached domain.Channel
+		if err := h.cache.Get(ctx, cacheKey, &cached); err == nil && cached.ID != "" {
+			result[id] = &cached
+		} else {
+			missedIDs = append(missedIDs, id)
+		}
+	}
+
+	h.logger.Debug("GetChannels cache status",
+		slog.Int("total", len(channelIDs)),
+		slog.Int("cache_hits", len(result)),
+		slog.Int("cache_misses", len(missedIDs)),
+	)
+
+	// 캐시 미스가 없으면 바로 반환
+	if len(missedIDs) == 0 {
+		return result, nil
+	}
+
+	// 캐시 미스된 채널을 /channels 리스트 API로 한 번에 조회
+	// Holodex /channels API는 ID 필터를 지원하지 않으므로 org로 전체 조회 후 필터링
+	allChannels, err := h.fetchHololiveChannelList(ctx)
+	if err != nil {
+		h.logger.Warn("Failed to fetch channel list, falling back to individual queries",
+			slog.Any("error", err),
+			slog.Int("missed_count", len(missedIDs)),
+		)
+		// 폴백: 개별 조회 (기존 방식, 최대 5개 동시)
+		return h.fetchChannelsIndividually(ctx, channelIDs, result, missedIDs)
+	}
+
+	// 필요한 채널만 결과에 추가하고 캐시 저장
+	missedSet := make(map[string]bool, len(missedIDs))
+	for _, id := range missedIDs {
+		missedSet[id] = true
+	}
+
+	for _, ch := range allChannels {
+		if missedSet[ch.ID] {
+			result[ch.ID] = ch
+			// 개별 캐시 저장
+			cacheKey := fmt.Sprintf("channel_%s", ch.ID)
+			_ = h.cache.Set(ctx, cacheKey, ch, constants.CacheTTL.ChannelInfo)
+		}
+	}
+
+	h.logger.Info("GetChannels batch complete (optimized)",
+		slog.Int("requested", len(channelIDs)),
+		slog.Int("returned", len(result)),
+		slog.Int("from_list_api", len(result)-len(channelIDs)+len(missedIDs)),
+	)
+
+	return result, nil
+}
+
+// GetChannelsLiveStatus: 특정 채널들의 현재 생방송/예정 상태를 빠르게 조회합니다.
+// /users/live 엔드포인트를 사용하여 캐시된 결과를 반환합니다.
+// 주의: org, status, sort 필터링 미지원 - live+upcoming 모두 반환됨
+// 사용 시나리오: 알림 체크, 대시보드 상태 표시 등 빠른 상태 확인
+func (h *Service) GetChannelsLiveStatus(ctx context.Context, channelIDs []string) ([]*domain.Stream, error) {
+	if len(channelIDs) == 0 {
+		return []*domain.Stream{}, nil
+	}
+
+	// 채널 ID 목록으로 캐시 키 생성
+	cacheKey := fmt.Sprintf("channels_live_status_%s", strings.Join(channelIDs, ","))
+	var cached []*domain.Stream
+	if err := h.cache.Get(ctx, cacheKey, &cached); err == nil && cached != nil {
+		return cached, nil
+	}
+
+	params := url.Values{}
+	params.Set("channels", strings.Join(channelIDs, ","))
+
+	body, err := h.requester.DoRequest(ctx, "GET", "/users/live", params)
+	if err != nil {
+		h.logger.Error("Failed to get channels live status",
+			slog.Int("channel_count", len(channelIDs)),
+			slog.Any("error", err),
+		)
+		return nil, fmt.Errorf("get channels live status: %w", err)
+	}
+
+	var rawStreams []StreamRaw
+	if err := json.Unmarshal(body, &rawStreams); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal channels live status: %w", err)
+	}
+
+	streams := h.mapStreamsResponse(rawStreams)
+	filtered := h.filterHololiveStreams(streams)
+
+	// /users/live는 캐시된 결과이므로 짧은 TTL 적용 (30초)
+	_ = h.cache.Set(ctx, cacheKey, filtered, 30*time.Second)
+
+	h.logger.Debug("GetChannelsLiveStatus completed",
+		slog.Int("requested_channels", len(channelIDs)),
+		slog.Int("streams_found", len(filtered)),
+	)
+
+	return filtered, nil
+}
+
+// fetchHololiveChannelList: Hololive 채널 목록을 /channels API로 조회합니다.
+// 내부 캐시를 사용하여 반복 호출 시 효율을 높입니다.
+// Holodex API limit=100 제한으로 인해 페이지네이션을 사용합니다.
+func (h *Service) fetchHololiveChannelList(ctx context.Context) ([]*domain.Channel, error) {
+	const cacheKey = "hololive_channel_list"
+
+	var cached []*domain.Channel
+	if err := h.cache.Get(ctx, cacheKey, &cached); err == nil && cached != nil {
+		return cached, nil
+	}
+
+	var allChannels []*domain.Channel
+	const pageSize = 100
+	offset := 0
+
+	for {
+		params := url.Values{}
+		params.Set("org", "Hololive")
+		params.Set("type", "vtuber")
+		params.Set("limit", fmt.Sprintf("%d", pageSize))
+		params.Set("offset", fmt.Sprintf("%d", offset))
+
+		body, err := h.requester.DoRequest(ctx, "GET", "/channels", params)
+		if err != nil {
+			return nil, fmt.Errorf("fetch hololive channel list (offset=%d): %w", offset, err)
+		}
+
+		var rawChannels []ChannelRaw
+		if err := json.Unmarshal(body, &rawChannels); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal channel list: %w", err)
+		}
+
+		channels := h.mapChannelsResponse(rawChannels)
+		allChannels = append(allChannels, channels...)
+
+		// 마지막 페이지면 종료
+		if len(rawChannels) < pageSize {
+			break
+		}
+
+		offset += pageSize
+
+		// 무한 루프 방지 (최대 500개)
+		if offset >= 500 {
+			h.logger.Warn("Pagination limit reached", slog.Int("offset", offset))
+			break
+		}
+	}
+
+	h.logger.Debug("Fetched all Hololive channels", slog.Int("total", len(allChannels)))
+
+	// 5분간 캐시 (채널 정보는 자주 변하지 않음)
+	_ = h.cache.Set(ctx, cacheKey, allChannels, 5*time.Minute)
+
+	return allChannels, nil
+}
+
+// fetchChannelsIndividually: 개별 /channels/{id} API로 채널을 조회합니다. (폴백용)
+func (h *Service) fetchChannelsIndividually(ctx context.Context, channelIDs []string, result map[string]*domain.Channel, missedIDs []string) (map[string]*domain.Channel, error) {
+	const maxConcurrent = 5
+	semaphore := make(chan struct{}, maxConcurrent)
+	resultChan := make(chan struct {
+		id      string
+		channel *domain.Channel
+	}, len(missedIDs))
+
+	for _, id := range missedIDs {
+		go func(channelID string) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			select {
+			case <-ctx.Done():
+				resultChan <- struct {
+					id      string
+					channel *domain.Channel
+				}{channelID, nil}
+				return
+			default:
+			}
+
+			channel, err := h.GetChannel(ctx, channelID)
+			if err != nil {
+				h.logger.Warn("Failed to get channel in batch",
+					slog.String("channel_id", channelID),
+					slog.Any("error", err),
+				)
+				resultChan <- struct {
+					id      string
+					channel *domain.Channel
+				}{channelID, nil}
+				return
+			}
+			resultChan <- struct {
+				id      string
+				channel *domain.Channel
+			}{channelID, channel}
+		}(id)
+	}
+
+	for i := 0; i < len(missedIDs); i++ {
+		select {
+		case <-ctx.Done():
+			return result, fmt.Errorf("batch channel fetch canceled: %w", ctx.Err())
+		case r := <-resultChan:
+			if r.channel != nil {
+				result[r.id] = r.channel
+			}
+		}
+	}
+
+	h.logger.Info("GetChannels batch complete (fallback)",
+		slog.Int("requested", len(channelIDs)),
+		slog.Int("returned", len(result)),
+	)
+
+	return result, nil
 }
 
 func (h *Service) mapStreamsResponse(rawStreams []StreamRaw) []*domain.Stream {

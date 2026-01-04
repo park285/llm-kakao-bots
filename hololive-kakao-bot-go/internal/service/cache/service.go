@@ -32,6 +32,8 @@ type Config struct {
 	Password   string
 	DB         int
 	SocketPath string // UDS 경로 (비어있으면 TCP 사용)
+	// DisableCache: valkey-go client-side caching 비활성화 (miniredis/RESP2 호환)
+	DisableCache bool
 }
 
 // NewCacheService: 새로운 Valkey 캐시 서비스 인스턴스를 생성하고 연결을 수립합니다.
@@ -55,6 +57,7 @@ func NewCacheService(cfg Config, logger *slog.Logger) (*Service, error) {
 		ConnWriteTimeout:  constants.MQConfig.ConnWriteTimeout,
 		BlockingPoolSize:  constants.ValkeyConfig.BlockingPoolSize,
 		PipelineMultiplex: constants.ValkeyConfig.PipelineMultiplex,
+		DisableCache:      cfg.DisableCache,
 	}
 
 	// UDS 모드: 커스텀 DialCtxFn 설정
