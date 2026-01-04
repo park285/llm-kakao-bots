@@ -7,9 +7,7 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
-  # ==========================================
   # Storage & Infrastructure
-  # ==========================================
   postgres:
     image: postgres:18-alpine
     container_name: llm-postgres
@@ -106,13 +104,13 @@ services:
     networks:
       - llm-bot-net
 
-  # ==========================================
   #  Core Services (LLM Server)
-  # ==========================================
   mcp-llm-server:
     build:
       context: ./mcp-llm-server-go
       dockerfile: Dockerfile.prod
+      args:
+        VERSION: ${MCP_LLM_VERSION:-1.0.0}
     container_name: mcp-llm-server
     restart: always
     labels:
@@ -169,15 +167,14 @@ services:
       - no-new-privileges:true
     networks:
       - llm-bot-net
-
-  # ==========================================
   # Bot Applications (Go)
-  # ==========================================
   twentyq-bot:
     image: game-bot-go:prod
     build:
       context: ./game-bot-go
       dockerfile: Dockerfile.prod
+      args:
+        VERSION: ${GAME_BOT_VERSION:-1.0.0}
     container_name: twentyq-bot
     restart: always
     labels:
@@ -243,6 +240,8 @@ services:
     build:
       context: ./game-bot-go
       dockerfile: Dockerfile.prod
+      args:
+        VERSION: ${GAME_BOT_VERSION:-1.0.0}
     container_name: turtle-soup-bot
     restart: always
     labels:
@@ -310,12 +309,14 @@ services:
     build:
       context: ./hololive-kakao-bot-go
       dockerfile: Dockerfile
+      args:
+        VERSION: ${HOLO_BOT_VERSION:-2.0.0}
     container_name: hololive-kakao-bot-go
     restart: always
     labels:
       deunhealth.restart.on.unhealthy: "true"
     env_file:
-      - ./hololive-kakao-bot-go/.env
+      - ./.env
     environment:
       GOGC: "60"
       MQ_HOST: valkey-mq
@@ -378,13 +379,13 @@ services:
     networks:
       - llm-bot-net
 
-  # ==========================================
   # Admin Dashboard (공통 관리 서비스)
-  # ==========================================
   admin-dashboard:
     build:
       context: ./admin-dashboard
       dockerfile: Dockerfile
+      args:
+        VERSION: ${ADMIN_VERSION:-1.0.0}
     container_name: admin-dashboard
     restart: always
     labels:
@@ -448,9 +449,7 @@ services:
     networks:
       - llm-bot-net
 
-  # ==========================================
   # Observability (OpenTelemetry)
-  # ==========================================
   jaeger:
     image: jaegertracing/jaeger:2.13.0
     container_name: jaeger
@@ -544,10 +543,7 @@ services:
     networks:
       - llm-bot-net
 
-  # ==========================================
   # Docker Socket Proxy 
-  # 봇/모니터가 직접 docker.sock에 접근하지 않고, 제한된 API만 허용
-  # ==========================================
   docker-proxy:
     image: tecnativa/docker-socket-proxy:latest
     container_name: docker-proxy
@@ -575,9 +571,7 @@ services:
     networks:
       - llm-bot-net
 
-  # ==========================================
   # Container Health Monitor (DeUnhealth)
-  # ==========================================
   deunhealth:
     image: qmcgaw/deunhealth:latest
     container_name: deunhealth

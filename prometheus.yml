@@ -5,18 +5,32 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-# TSDB 보관 정책 (deprecated CLI 플래그 대신 설정 파일에서 관리)
-storage:
-  tsdb:
-    retention:
-      time: 7d
-
 scrape_configs:
   # Jaeger SpanMetrics Exporter (SPM RED 메트릭)
   - job_name: 'jaeger-spanmetrics'
     static_configs:
       - targets: ['jaeger:8889']
     scrape_interval: 10s
+    # Cardinality 폭발 방어: 위험한 라벨 제거/단순화
+    metric_relabel_configs:
+      # 1. 고유 ID 라벨이 포함된 메트릭 삭제 (시계열 폭발 예방)
+      - source_labels: [__name__]
+        regex: '.*(user_id|session_id|request_id|trace_id).*'
+        action: drop
+      # 2. http_target에서 쿼리 파라미터 제거 (경로만 유지)
+      - source_labels: [http_target]
+        regex: '(/[^?]*)\?.*'
+        replacement: '${1}'
+        target_label: http_target
+      # 3. url.path에서 동적 세그먼트 정규화 (UUID, 숫자 ID 등)
+      - source_labels: [url_path]
+        regex: '(/[^/]+)/[0-9a-f-]{36}(/.*)?'
+        replacement: '${1}/:id${2}'
+        target_label: url_path
+      - source_labels: [url_path]
+        regex: '(/[^/]+)/[0-9]+(/.*)?'
+        replacement: '${1}/:id${2}'
+        target_label: url_path
 
   # Jaeger 내부 메트릭 (선택 사항)
   - job_name: 'jaeger-internal'
