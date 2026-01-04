@@ -217,3 +217,8 @@ mcp-llm-server-go/internal/domain/twentyq/topics/*.backup.*
 
 # Gemini Agent Workflows (Local Only)
 .agent/
+
+# Sensitive directories
+.gemini/
+secrets/
+.agent/
